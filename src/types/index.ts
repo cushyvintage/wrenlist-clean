@@ -41,8 +41,10 @@ export interface Profile {
   updated_at: string
 }
 
-export interface Find {
+// Supabase `products` table type
+export interface Product {
   id: string
+  organization_id?: string // Optional for mock data
   user_id: string
   name: string
   category: string | null
@@ -66,6 +68,9 @@ export interface Find {
   created_at: string
   updated_at: string
 }
+
+// Alias for backwards compatibility
+export type Find = Product
 
 export interface FindWithMargin extends Find {
   margin_pct: number | null

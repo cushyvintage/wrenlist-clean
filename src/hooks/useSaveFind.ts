@@ -13,12 +13,14 @@ export function useSaveFind() {
       setIsLoading(true)
       setError(null)
 
+      // Insert into 'products' table (Supabase schema)
       const { data, error: err } = await supabase
-        .from('finds')
+        .from('products')
         .insert([
           {
             ...find,
-            user_id: 'current-user', // TODO: Get from auth context
+            user_id: find.user_id || 'current-user', // TODO: Get from auth context
+            // organization_id is required - must be set by caller or auth context
           },
         ])
         .select()

@@ -18,7 +18,13 @@ export function useFinds(options?: UseFIndsOptions) {
     const fetchFinds = async () => {
       try {
         setIsLoading(true)
-        let query = supabase.from('finds').select('*')
+
+        // Query the 'products' table (Supabase schema)
+        let query = supabase
+          .from('products')
+          .select('*')
+          // TODO: Filter by organization_id from auth context
+          // .eq('organization_id', organizationId)
 
         // Filter by status if provided
         if (options?.status && options.status !== 'all') {
