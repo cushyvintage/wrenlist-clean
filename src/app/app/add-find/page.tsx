@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
-import { PriceCalculator } from '@/components/wren/PriceCalculator'
 
 interface FormData {
   itemName: string
@@ -49,7 +48,7 @@ export default function AddFindPage() {
     sourceType: 'charity_shop',
     sourceName: '',
     costPaid: null,
-    dateSourced: new Date().toISOString().split('T')[0],
+    dateSourced: new Date().toISOString().substring(0, 10),
     sku: 'WR-AUTO-' + Date.now(),
     askingPrice: null,
     listOnEbay: true,
