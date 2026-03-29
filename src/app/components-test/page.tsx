@@ -11,29 +11,47 @@ import { ListingCard } from '@/components/wren/ListingCard'
 import { WrenInsight } from '@/components/wren/WrenInsight'
 import { PriceCalculator } from '@/components/wren/PriceCalculator'
 import { useState } from 'react'
+import type { Find, Listing } from '@/types'
 
 // Mock data
-const mockFind = {
+const mockFind: Find = {
   id: '123',
+  user_id: 'user_456',
   name: 'Carhartt Detroit Jacket',
   category: 'workwear',
+  brand: 'Carhartt',
+  size: 'M',
+  colour: 'brown',
+  condition: 'excellent',
+  description: 'Nice vintage jacket',
   cost_gbp: 12,
   asking_price_gbp: 145,
+  source_type: 'estate_sale',
   source_name: 'house clearance',
-  status: 'listed' as const,
   sourced_at: new Date().toISOString(),
+  status: 'listed',
+  sold_price_gbp: null,
+  sold_at: null,
+  photos: [],
+  ai_generated_description: null,
+  ai_suggested_price_low: null,
+  ai_suggested_price_high: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 }
 
-const mockListing = {
+const mockListing: Partial<Listing> & { find?: Partial<Find> } = {
   id: '456',
   find_id: '123',
-  platform: 'vinted' as const,
-  status: 'live' as const,
-  find: mockFind,
+  user_id: 'user_456',
+  platform: 'vinted',
+  status: 'live',
+  find: mockFind as Find,
   views: 42,
   platform_listing_id: 'vinted_123',
   listed_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 }
 
 export default function ComponentsTest() {
@@ -134,7 +152,7 @@ export default function ComponentsTest() {
           <div>
             <h2 className="text-lg font-medium text-ink mb-3">8. ListingCard</h2>
             <ListingCard
-              listing={mockListing}
+              listing={mockListing as any}
               onEdit={() => {}}
               onMarkSold={() => {}}
               onRelist={() => {}}
