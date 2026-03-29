@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
-import type { Find, Listing } from '@/types'
+import type { Find } from '@/types'
 
 // Mock data for demo
 const mockFinds: Find[] = [
@@ -21,7 +21,7 @@ const mockFinds: Find[] = [
     description: 'Vintage workwear jacket',
     cost_gbp: 12,
     asking_price_gbp: 145,
-    source_type: 'house_clearance',
+    source_type: 'estate_sale',
     source_name: 'house clearance',
     sourced_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'listed',
@@ -96,7 +96,7 @@ const mockFinds: Find[] = [
     description: 'Vintage leather duffle bag',
     cost_gbp: 22,
     asking_price_gbp: null,
-    source_type: 'haul',
+    source_type: 'other',
     source_name: 'haul #34',
     sourced_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'draft',
@@ -121,7 +121,7 @@ const mockFinds: Find[] = [
     description: 'Classic Clubmaster style sunglasses',
     cost_gbp: 3,
     asking_price_gbp: 55,
-    source_type: 'online',
+    source_type: 'online_haul',
     source_name: 'online haul',
     sourced_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'listed',
@@ -212,8 +212,8 @@ export default function InventoryPage() {
     const searchMatch =
       searchQuery === '' ||
       find.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      find.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      find.source_name.toLowerCase().includes(searchQuery.toLowerCase())
+      (find.category && find.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (find.source_name && find.source_name.toLowerCase().includes(searchQuery.toLowerCase()))
     return statusMatch && searchMatch
   })
 
@@ -235,12 +235,12 @@ export default function InventoryPage() {
     }
   }
 
-  const calculateMargin = (cost: number, asking: number | null) => {
-    if (!asking || asking === 0) return null
+  const calculateMargin = (cost: number | null, asking: number | null) => {
+    if (!cost || !asking || asking === 0) return null
     return Math.round(((asking - cost) / asking) * 100)
   }
 
-  const getEmoji = (category: string) => categoryEmojis[category] || categoryEmojis.default
+  const getEmoji = (category: string | null) => (category && categoryEmojis[category]) || categoryEmojis.default
 
   return (
     <div className="space-y-6">
