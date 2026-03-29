@@ -25,7 +25,7 @@ export interface AuthState {
 export type PlanId = 'free' | 'nester' | 'forager' | 'flock'
 export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
 export type FindCondition = 'excellent' | 'good' | 'fair'
-export type SourceType = 'estate_sale' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
+export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
 export type ListingStatus = 'draft' | 'live' | 'sold' | 'delisted'
 
@@ -92,7 +92,7 @@ export interface FindWithListings extends FindWithMargin {
 
 // Display labels
 export const SOURCE_LABELS: Record<SourceType, string> = {
-  estate_sale: 'Estate sale',
+  house_clearance: 'House clearance',
   charity_shop: 'Charity shop',
   car_boot: 'Car boot',
   online_haul: 'Online haul',

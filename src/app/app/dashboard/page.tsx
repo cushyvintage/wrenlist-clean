@@ -21,7 +21,7 @@ const mockFinds: Find[] = [
     description: 'Vintage workwear jacket',
     cost_gbp: 12,
     asking_price_gbp: 145,
-    source_type: 'estate_sale',
+    source_type: 'house_clearance',
     source_name: 'house clearance',
     sourced_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'listed',

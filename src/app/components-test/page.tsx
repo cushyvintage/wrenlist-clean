@@ -26,7 +26,7 @@ const mockFind: Find = {
   description: 'Nice vintage jacket',
   cost_gbp: 12,
   asking_price_gbp: 145,
-  source_type: 'estate_sale',
+  source_type: 'house_clearance',
   source_name: 'house clearance',
   sourced_at: new Date().toISOString(),
   status: 'listed',
