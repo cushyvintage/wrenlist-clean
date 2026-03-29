@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wrenlist - What we're building</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #fafafa;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: white;
+      padding: 3rem 2rem;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #111827;
+    }
+
+    .header .subtitle {
+      color: #6b7280;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 250px;
+      max-width: 400px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background-color: #059669;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #047857;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .status-filter {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .status-badge.consideration {
+      background-color: #fce7f3;
+      color: #831843;
+    }
+
+    .status-badge.planned {
+      background-color: #dbeafe;
+      color: #0c4a6e;
+    }
+
+    .status-badge.progress {
+      background-color: #fed7aa;
+      color: #92400e;
+    }
+
+    .status-badge.released {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-badge.active {
+      border-color: currentColor;
+      opacity: 1;
+    }
+
+    .status-badge:not(.active) {
+      opacity: 0.6;
+    }
+
+    .status-badge:hover {
+      opacity: 1;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #d1d5db;
+    }
+
+    .feature-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+
+    .feature-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.25rem;
+    }
+
+    .feature-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.25rem;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .badge-building {
+      background-color: #fef08a;
+      color: #713f12;
+    }
+
+    .badge-pending {
+      background-color: #dbeafe;
+      color: #0c4a6e;
+    }
+
+    .badge-live {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .feature-description {
+      color: #6b7280;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+
+    .feature-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .votes {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    .vote-btn {
+      background: none;
+      border: 1px solid #d1d5db;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #9ca3af;
+      transition: all 0.2s;
+    }
+
+    .vote-btn:hover {
+      border-color: #9ca3af;
+      color: #6b7280;
+    }
+
+    .vote-btn.active {
+      background-color: #f3f4f6;
+      border-color: #6b7280;
+      color: #111827;
+    }
+
+    .tags {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      background-color: #f3f4f6;
+      color: #6b7280;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 3rem;
+    }
+
+    .phase-section {
+      margin-bottom: 3rem;
+    }
+
+    .phase-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.875rem;
+      }
+
+      .header-controls {
+        flex-direction: column;
+      }
+
+      .search-box {
+        max-width: 100%;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>What we're <em style="font-style: italic;">building.</em></h1>
+    <p class="subtitle">Vintage resale platform for the modern seller. See what's coming next.</p>
+    <div class="header-controls">
+      <input type="text" class="search-box" id="searchBox" placeholder="Search features...">
+      <button class="btn btn-primary">+ Suggest a feature</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="status-filter" id="statusFilter">
+      <button class="status-badge consideration active" data-status="">All Features</button>
+      <button class="status-badge consideration" data-status="consideration">💭 Under consideration <span style="color: inherit;">(5)</span></button>
+      <button class="status-badge planned" data-status="planned">▶️ Planned <span style="color: inherit;">(8)</span></button>
+      <button class="status-badge progress" data-status="progress">⚙️ In progress <span style="color: inherit;">(4)</span></button>
+      <button class="status-badge released" data-status="released">✓ Released <span style="color: inherit;">(3)</span></button>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="phase-section">
+      <h2 class="phase-title">📋 Phase 1: Foundation (Weeks 1-2)</h2>
+      <div class="feature-grid" id="phase1">
+        <div class="feature-card" data-status="progress">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Authentication</div>
+              <span class="feature-badge badge-building">BUILDING</span>
+            </div>
+          </div>
+          <p class="feature-description">Email/password signup, login, session management, secure logout.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span id="auth-votes">24</span>
+            </div>
+            <div class="tags">
+              <span class="tag">core</span>
+              <span class="tag">auth</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="progress">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Dashboard</div>
+              <span class="feature-badge badge-building">BUILDING</span>
+            </div>
+          </div>
+          <p class="feature-description">Central hub showing inventory overview, active listings, recent sales, and quick navigation.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>18</span>
+            </div>
+            <div class="tags">
+              <span class="tag">core</span>
+              <span class="tag">ui</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="progress">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Product Inventory</div>
+              <span class="feature-badge badge-building">BUILDING</span>
+            </div>
+          </div>
+          <p class="feature-description">Create, edit, delete products with title, description, images, cost price, condition tracking.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>42</span>
+            </div>
+            <div class="tags">
+              <span class="tag">core</span>
+              <span class="tag">inventory</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="progress">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Marketplace Connections</div>
+              <span class="feature-badge badge-building">BUILDING</span>
+            </div>
+          </div>
+          <p class="feature-description">Link Vinted, eBay, Etsy, and other accounts. Auto-detect login via Skylark extension.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>37</span>
+            </div>
+            <div class="tags">
+              <span class="tag">marketplace</span>
+              <span class="tag">integration</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase-section">
+      <h2 class="phase-title">🔍 Phase 2: Sourcing (Weeks 3-4)</h2>
+      <div class="feature-grid" id="phase2">
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Sourcing Log</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">Track where items come from (charity shops, car boots). Rate locations by quality.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>15</span>
+            </div>
+            <div class="tags">
+              <span class="tag">sourcing</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Barcode Scanning</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">Scan ISBN/UPC in real-time. Instant value lookup. Quick add to inventory from the field.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>28</span>
+            </div>
+            <div class="tags">
+              <span class="tag">mobile</span>
+              <span class="tag">sourcing</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Add-Find Flow</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">Mobile-first workflow for sourcing. Photo capture, instant pricing, quick notes.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>22</span>
+            </div>
+            <div class="tags">
+              <span class="tag">mobile</span>
+              <span class="tag">core</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase-section">
+      <h2 class="phase-title">📦 Phase 3: Selling & Listings (Weeks 5-6)</h2>
+      <div class="feature-grid" id="phase3">
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Multi-Marketplace Listings</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">List same product across Vinted, eBay, Etsy simultaneously. Set different prices per platform.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>51</span>
+            </div>
+            <div class="tags">
+              <span class="tag">marketplace</span>
+              <span class="tag">core</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Auto-Delist on Sale</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">When item sells on one platform, automatically remove from all others. No double-sales.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>33</span>
+            </div>
+            <div class="tags">
+              <span class="tag">marketplace</span>
+              <span class="tag">automation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="planned">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Order Management</div>
+              <span class="feature-badge badge-pending">PLANNED</span>
+            </div>
+          </div>
+          <p class="feature-description">Auto-pull orders from all marketplaces. Track buyer, price, status. Mark as shipped.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>26</span>
+            </div>
+            <div class="tags">
+              <span class="tag">marketplace</span>
+              <span class="tag">orders</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="consideration">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Revenue Analytics</div>
+            </div>
+          </div>
+          <p class="feature-description">Dashboard showing revenue by marketplace, date, category. Track profitability trends.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>19</span>
+            </div>
+            <div class="tags">
+              <span class="tag">analytics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="phase-section">
+      <h2 class="phase-title">💰 Phase 4: Operations (Weeks 7-8)</h2>
+      <div class="feature-grid" id="phase4">
+        <div class="feature-card" data-status="consideration">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Expense Tracking</div>
+            </div>
+          </div>
+          <p class="feature-description">Log business expenses (postage, packaging, supplies). Categorize and track for tax deduction.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>12</span>
+            </div>
+            <div class="tags">
+              <span class="tag">operations</span>
+              <span class="tag">tax</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="consideration">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Mileage Tracking</div>
+            </div>
+          </div>
+          <p class="feature-description">Log trips to sourcing locations and post office. Auto-calculate UK 0.45/mile allowance.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>8</span>
+            </div>
+            <div class="tags">
+              <span class="tag">operations</span>
+              <span class="tag">tax</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="consideration">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Tax Reports</div>
+            </div>
+          </div>
+          <p class="feature-description">Generate quarterly/annual tax summaries. Export for accountant (CSV/PDF).</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>14</span>
+            </div>
+            <div class="tags">
+              <span class="tag">tax</span>
+              <span class="tag">export</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Released -->
+    <div class="phase-section">
+      <h2 class="phase-title">✅ Released</h2>
+      <div class="feature-grid" id="released">
+        <div class="feature-card" data-status="released">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Public Roadmap</div>
+              <span class="feature-badge badge-live">LIVE</span>
+            </div>
+          </div>
+          <p class="feature-description">See what's being built. Vote on features. Community input shapes our priorities.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>89</span>
+            </div>
+            <div class="tags">
+              <span class="tag">transparency</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="released">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Skylark Extension</div>
+              <span class="feature-badge badge-live">LIVE</span>
+            </div>
+          </div>
+          <p class="feature-description">Chrome extension that detects marketplace logins automatically. Zero manual account linking.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>76</span>
+            </div>
+            <div class="tags">
+              <span class="tag">extension</span>
+              <span class="tag">automation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" data-status="released">
+          <div class="feature-header">
+            <div>
+              <div class="feature-title">Schema Design</div>
+              <span class="feature-badge badge-live">LIVE</span>
+            </div>
+          </div>
+          <p class="feature-description">30-table database schema optimized for vintage resale. Normalized, indexed, production-ready.</p>
+          <div class="feature-meta">
+            <div class="votes">
+              <button class="vote-btn">👍</button>
+              <span>43</span>
+            </div>
+            <div class="tags">
+              <span class="tag">backend</span>
+              <span class="tag">database</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Last updated: March 29, 2026 • Wrenlist is built for vintage resellers, by a vintage reseller.</p>
+    <p style="margin-top: 1rem; font-size: 0.9rem;">👉 Have ideas? Suggest a feature above. Your feedback shapes our roadmap.</p>
+  </div>
+
+  <script>
+    // Status filtering
+    document.querySelectorAll('.status-badge').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.status-badge').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const status = this.dataset.status;
+        document.querySelectorAll('.feature-card').forEach(card => {
+          if (!status || card.dataset.status === status) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Vote buttons
+    document.querySelectorAll('.vote-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        this.classList.toggle('active');
+        const votesSpan = this.parentElement.querySelector('span');
+        let votes = parseInt(votesSpan.textContent);
+        votesSpan.textContent = this.classList.contains('active') ? votes + 1 : votes - 1;
+      });
+    });
+
+    // Search
+    document.getElementById('searchBox').addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      document.querySelectorAll('.feature-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
