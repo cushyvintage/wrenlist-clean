@@ -12,6 +12,7 @@
     "clean": "npm run format && npm run lint && npm run type-check"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@supabase/supabase-js": "^2.38.0",
     "lucide-react": "^1.7.0",
     "next": "^15.0.0",

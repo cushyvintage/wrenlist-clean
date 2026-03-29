@@ -57,7 +57,8 @@ Return JSON only, no markdown:
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const content = message.content[0]
+  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
   return JSON.parse(text)
 }
 
@@ -101,7 +102,8 @@ Return JSON only, no markdown:
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const content = message.content[0]
+  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
   return JSON.parse(text)
 }
 
@@ -158,6 +160,7 @@ Return JSON only, no markdown:
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const content = message.content[0]
+  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
   return JSON.parse(text)
 }
