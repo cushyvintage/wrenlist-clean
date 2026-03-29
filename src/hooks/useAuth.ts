@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/services/supabase'
 import { getCurrentUser, loginUser, logoutUser, registerUser } from '@/services/auth.service'
-import type { User, AuthState } from '@/types'
+import type { AuthState } from '@/types'
 
 export function useAuth(): AuthState & {
   register: (email: string, password: string) => Promise<void>
