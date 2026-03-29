@@ -204,22 +204,32 @@ Check:
 
 ## Deployment
 
-### Vercel
+### Setup Vercel + wrenlist.com Domain
 
-1. Push to GitHub
-2. Go to https://vercel.com
-3. Connect wrenlist-clean repo
-4. Set environment variables (same as `.env.local`)
-5. Deploy (automatically on push to main)
+**See `VERCEL_DEPLOYMENT.md` for complete step-by-step guide.**
 
-Vercel will:
-- Build Next.js
-- Run `npm run build`
-- Deploy to production (https://wrenlist.com)
+Quick summary:
+1. Create Supabase project (`wrenlist-clean`)
+2. Get credentials (URL + anon key)
+3. Connect wrenlist-clean repo to Vercel
+4. Add environment variables to Vercel settings
+5. Point wrenlist.com domain to Vercel
+6. Done! Auto-deploys on every `git push`
 
-### Supabase
+**Timeline**: 5-10 minutes total
 
-No changes needed—Supabase project is already hosted. Schema migrations run manually in Supabase dashboard.
+### What Happens Next
+
+- Every `git push origin main` → Vercel auto-builds + deploys to wrenlist.com
+- Pull requests get preview deployments (Vercel comments on PR)
+- Supabase is hosted (schema migrations in Supabase dashboard)
+- No manual deployment steps needed
+
+### Monitoring
+
+- View deployments: https://vercel.com/dashboard → wrenlist-clean
+- Check build logs if something fails
+- See preview URLs for PRs
 
 ---
 
