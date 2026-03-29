@@ -1,15 +1,155 @@
+/* styles/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  @apply border-gray-200;
+:root {
+  /* ── Wrenlist colour tokens ── */
+  --cream:          #F5F0E8;
+  --cream-md:       #EDE8DE;
+  --cream-dk:       #E0D9CC;
+  --sage:           #3D5C3A;
+  --sage-lt:        #5A7A57;
+  --sage-dk:        #2C4428;
+  --sage-dim:       #8A9E88;
+  --sage-pale:      #D4E2D2;
+  --ink:            #1E2E1C;
+  --ink-md:         #4A5E48;
+  --ink-lt:         #6B7D6A;
+  --amber:          #BA7517;
+  --amber-lt:       #EDD9A3;
+  --amber-dk:       #7A5010;
+  --sidebar-bg:     #1E2E1C;
+
+  /* ── Fonts ── */
+  --font-serif:  'Cormorant Garamond', Georgia, serif;
+  --font-sans:   'Jost', sans-serif;
+  --font-mono:   'DM Mono', 'Courier New', monospace;
 }
 
-body {
-  @apply bg-white text-gray-900;
+@layer base {
+  body {
+    background-color: var(--cream);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Typography scale */
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  /* Prices, margins, counts always use mono */
+  .tabular-nums {
+    font-family: var(--font-mono);
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+@layer components {
+  /* Sidebar (dark forest green - not a Tailwind default) */
+  .sidebar {
+    background-color: var(--sidebar-bg);
+    width: 210px;
+    flex-shrink: 0;
+  }
+
+  /* Display text (Cormorant) */
+  .font-display {
+    font-family: var(--font-serif);
+  }
+
+  /* Mono numbers */
+  .font-mono-data {
+    font-family: var(--font-mono);
+  }
+
+  /* Eyebrow label */
+  .eyebrow {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sage-dim);
+  }
+
+  /* Panel component */
+  .panel {
+    background: white;
+    border: 1px solid rgba(61, 92, 58, 0.14);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 18px;
+    border-bottom: 1px solid rgba(61, 92, 58, 0.1);
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--sage-dim);
+  }
+
+  /* Stat card */
+  .stat-card {
+    background: var(--cream-md);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+
+  /* Insight card */
+  .insight-card {
+    background: var(--cream-md);
+    border-radius: 6px;
+    padding: 18px 20px;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    background: var(--sage);
+    color: var(--cream);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    padding: 7px 18px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: background 150ms;
+    font-family: var(--font-sans);
+  }
+  .btn-primary:hover {
+    background: var(--sage-dk);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-lt);
+    font-size: 13px;
+    font-weight: 400;
+    padding: 7px 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(61, 92, 58, 0.22);
+    cursor: pointer;
+    transition: all 150ms;
+    font-family: var(--font-sans);
+  }
+  .btn-ghost:hover {
+    background: var(--cream-md);
+    color: var(--ink);
+  }
 }

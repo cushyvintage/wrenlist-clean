@@ -2,7 +2,10 @@
  * Shared TypeScript types for Wrenlist
  */
 
-// Auth
+// ============================================================================
+// AUTH
+// ============================================================================
+
 export interface User {
   id: string
   email: string
@@ -15,33 +18,125 @@ export interface AuthState {
   error: Error | null
 }
 
-// Products
-export interface Product {
+// ============================================================================
+// DOMAIN TYPES (Design System)
+// ============================================================================
+
+export type PlanId = 'free' | 'nester' | 'forager' | 'flock'
+export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
+export type FindCondition = 'excellent' | 'good' | 'fair'
+export type SourceType = 'estate_sale' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
+export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
+export type ListingStatus = 'draft' | 'live' | 'sold' | 'delisted'
+
+export interface Profile {
   id: string
-  userId: string
-  title: string
-  description: string
-  category: string
-  status: 'available' | 'listed' | 'sold' | 'archived'
-  costPrice: number
-  estimatedValue: number
-  condition: string
-  acquiredFrom?: string
-  acquiredDate?: string
-  createdAt: string
-  updatedAt: string
+  full_name: string | null
+  location: string | null
+  plan: PlanId
+  stripe_customer_id: string | null
+  finds_this_month: number
+  finds_reset_at: string
+  created_at: string
+  updated_at: string
 }
 
-export interface ProductImage {
+export interface Find {
   id: string
-  productId: string
-  url: string
-  altText?: string
-  isPrimary: boolean
-  createdAt: string
+  user_id: string
+  name: string
+  category: string | null
+  brand: string | null
+  size: string | null
+  colour: string | null
+  condition: FindCondition | null
+  description: string | null
+  cost_gbp: number | null
+  asking_price_gbp: number | null
+  source_type: SourceType | null
+  source_name: string | null
+  sourced_at: string | null
+  status: FindStatus
+  sold_price_gbp: number | null
+  sold_at: string | null
+  photos: string[]
+  ai_generated_description: string | null
+  ai_suggested_price_low: number | null
+  ai_suggested_price_high: number | null
+  created_at: string
+  updated_at: string
 }
 
-// Marketplace
+export interface FindWithMargin extends Find {
+  margin_pct: number | null
+  roi_pct: number | null
+}
+
+export interface Listing {
+  id: string
+  find_id: string
+  user_id: string
+  platform: Platform
+  platform_listing_id: string | null
+  status: ListingStatus
+  listed_at: string | null
+  delisted_at: string | null
+  views: number
+  created_at: string
+  updated_at: string
+}
+
+export interface FindWithListings extends FindWithMargin {
+  listings: Listing[]
+}
+
+// Display labels
+export const SOURCE_LABELS: Record<SourceType, string> = {
+  estate_sale: 'Estate sale',
+  charity_shop: 'Charity shop',
+  car_boot: 'Car boot',
+  online_haul: 'Online haul',
+  flea_market: 'Flea market',
+  other: 'Other',
+}
+
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  vinted: 'Vinted',
+  ebay: 'eBay UK',
+  etsy: 'Etsy',
+  shopify: 'Shopify',
+}
+
+export const CATEGORIES = [
+  'Denim',
+  'Workwear',
+  'Footwear',
+  'Bags',
+  'Tops',
+  'Womenswear',
+  'Menswear',
+  'Accessories',
+  'Outerwear',
+  'Knitwear',
+  'Vintage',
+  'Other',
+] as const
+
+// Formatters
+export function formatMargin(pct: number | null): string {
+  if (pct === null) return '—'
+  return `${Math.round(pct)}%`
+}
+
+export function formatGBP(amount: number | null): string {
+  if (amount === null) return '—'
+  return `£${amount.toFixed(2)}`
+}
+
+// ============================================================================
+// MARKETPLACE
+// ============================================================================
+
 export interface MarketplaceAccount {
   id: string
   userId: string
@@ -73,7 +168,10 @@ export interface MarketplaceListing {
   syncedAt?: string
 }
 
-// API Responses
+// ============================================================================
+// API RESPONSES
+// ============================================================================
+
 export interface ApiResponse<T> {
   data?: T
   error?: string
