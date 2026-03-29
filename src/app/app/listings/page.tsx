@@ -407,7 +407,7 @@ export default function ListingsPage() {
               className="bg-white border border-sage/14 rounded-md p-4 grid grid-cols-[60px_1fr_auto] gap-4 items-start hover:bg-cream transition-colors"
             >
               {/* Thumbnail + Category Emoji */}
-              <div className="w-15 h-15 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0">
+              <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0">
                 {getCategoryEmoji(listing.find?.category || undefined)}
               </div>
 

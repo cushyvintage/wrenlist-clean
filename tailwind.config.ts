@@ -32,6 +32,16 @@ const config: Config = {
           lt: '#EDD9A3',
           dk: '#7A5010',
         },
+        red: {
+          DEFAULT: '#C0392B',
+          lt: '#F4CCCC',
+          dk: '#8B2817',
+        },
+        blue: {
+          DEFAULT: '#1A5FA8',
+          lt: '#C6D9F0',
+          dk: '#154180',
+        },
         sidebar: '#1E2E1C',
       },
       fontFamily: {
