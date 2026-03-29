@@ -37,10 +37,10 @@ Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage)
 
 | File | Purpose |
 |------|---------|
+| `database.md` | **✅ LIVE** Database schema, tables, columns, indexes |
 | `ARCHITECTURE.md` | System design, data flow, marketplace layer |
-| `SCHEMA.md` | Database schema with relationships |
 | `API.md` | REST API endpoints and contracts |
-| `MARKETPLACE_SERVICES.md` | Skylark extension integration |
+| `COMPONENT_LIBRARY.md` | Reusable UI components (Wren design system) |
 | `SETUP.md` | Local dev setup |
 | `PRD.md` | Product requirements by phase |
 
@@ -107,10 +107,11 @@ export async function getProducts(filters?: ProductFilters): Promise<Product[]> 
 ```
 
 ### After Feature Complete
-1. Add endpoint to API.md (if it's a route)
-2. Update SCHEMA.md if touching database
-3. Commit: `feat: [Phase 1.X] Brief description`
-4. Run `npm run clean` before pushing
+1. **Update database.md** if creating/modifying tables (include schema changes)
+2. Add endpoint to API.md (if it's a new route)
+3. Update COMPONENT_LIBRARY.md if adding new components
+4. Commit: `feat: [Phase X] Brief description`
+5. Run `npm run clean` before pushing
 
 ---
 
