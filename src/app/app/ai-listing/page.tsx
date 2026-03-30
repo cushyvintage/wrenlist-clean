@@ -2,7 +2,6 @@
 
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
-import { Button } from '@/components/wren/Button'
 
 export default function AIListingPage() {
   return (
@@ -156,7 +155,6 @@ Sourced from a private estate in East London. Smoke-free, pet-free home. Dispatc
 
           {/* Pricing insight */}
           <InsightCard
-            title="pricing"
             text="Excellent condition Carhartt Detroit jackets at size M are averaging £142 on eBay UK. Your £145 ask is well-positioned."
           />
 

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { InsightCard } from '@/components/wren/InsightCard'
-import { Button } from '@/components/wren/Button'
 import type { Find, Listing } from '@/types'
 
 // Mock data
@@ -66,7 +65,7 @@ const mockFind: Find & { listings: Listing[] } = {
 const margin = Math.round(((mockFind.asking_price_gbp! - mockFind.cost_gbp!) / mockFind.cost_gbp!) * 100)
 
 export default function FindDetailPage() {
-  const [find, setFind] = useState(mockFind)
+  const [find] = useState(mockFind)
 
   return (
     <div className="space-y-6">
@@ -78,7 +77,7 @@ export default function FindDetailPage() {
           </a>
           <span className="text-border-md">/</span>
           <h1 className="text-lg font-serif text-ink">{find.name}</h1>
-          <Badge status={find.status}>{find.status}</Badge>
+          <Badge status={find.status} />
         </div>
         <div className="flex gap-3">
           <button className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition">
@@ -129,7 +128,7 @@ export default function FindDetailPage() {
                     </span>
                     <span className="text-sm font-medium text-ink capitalize">{listing.platform}</span>
                   </div>
-                  <Badge status="listed">{listing.status}</Badge>
+                  <Badge status="listed" />
                 </div>
               ))}
               <button className="w-full p-3 border border-dashed border-border rounded text-sm text-ink-lt hover:bg-cream-md transition">
@@ -300,7 +299,6 @@ export default function FindDetailPage() {
 
           {/* Insight */}
           <InsightCard
-            title="wren insight"
             text="Carhartt Detroit jackets in brown are moving fast on eBay right now — average sell time 8 days, avg price £138. Your asking price of £145 is positioned well. Consider crosslisting to Depop for the younger buyer segment."
           />
         </div>

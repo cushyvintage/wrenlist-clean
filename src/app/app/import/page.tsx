@@ -227,9 +227,10 @@ export default function ImportPage() {
                 <div className="text-xs text-ink-lt mt-1">
                   {item.category} · eBay listing #{item.listingId} · listed {item.listedAt}
                 </div>
-                <Badge status={item.status === 'new' ? 'draft' : 'listed'}>
-                  {item.status === 'new' ? 'not in wren' : 'already in wren'}
-                </Badge>
+                <Badge
+                  status={item.status === 'new' ? 'draft' : 'listed'}
+                  label={item.status === 'new' ? 'not in wren' : 'already in wren'}
+                />
               </div>
               <div className="text-right">
                 <div className="font-mono font-semibold text-sm text-ink">£{item.price}</div>
@@ -254,7 +255,6 @@ export default function ImportPage() {
 
       {/* Insight */}
       <InsightCard
-        title="wren insight"
         text="Your eBay footwear is averaging 96% margin — prioritise importing those first to get your analytics working for you."
       />
     </div>

@@ -82,7 +82,7 @@ const categoryColors: Record<string, string> = {
 export default function ExpensesPage() {
   const router = useRouter()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm] = useState('')
 
   const categories: (Expense['category'] | 'all')[] = ['all', 'packaging', 'postage', 'platform fees', 'supplies', 'vehicle', 'other']
 
@@ -91,8 +91,6 @@ export default function ExpensesPage() {
     const matchesSearch = !searchTerm || exp.description.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
-
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 100)
 
   return (
     <div className="space-y-6">

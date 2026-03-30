@@ -51,7 +51,7 @@ const mockSupplier: Supplier = {
   avgMargin: 94,
 }
 
-export default function SupplierDetailPage({ params }: { params: { id: string } }) {
+export default function SupplierDetailPage() {
   return (
     <div className="space-y-6">
       {/* Topbar */}
