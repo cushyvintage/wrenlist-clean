@@ -22,6 +22,7 @@ interface FormData {
   listOnVinted: boolean
   listOnEtsy: boolean
   listOnShopify: boolean
+  photos: File[]
 }
 
 const sourceTypes = [
@@ -39,10 +40,12 @@ export default function AddFindPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
 
   useEffect(() => {
     document.title = 'Add Find | Wrenlist'
   }, [])
+
   const [formData, setFormData] = useState<FormData>({
     itemName: '',
     category: 'clothing',
@@ -61,10 +64,40 @@ export default function AddFindPage() {
     listOnVinted: true,
     listOnEtsy: false,
     listOnShopify: false,
+    photos: [],
   })
 
   const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const remainingSlots = 10 - formData.photos.length
+    const filesToAdd = files.slice(0, remainingSlots)
+
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...prev.photos, ...filesToAdd],
+    }))
+
+    filesToAdd.forEach((file) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreviews((prev) => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+
+    e.target.value = ''
+  }
+
+  const removePhoto = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index),
+    }))
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   /**
@@ -132,6 +165,52 @@ export default function AddFindPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN - Main form */}
         <div className="lg:col-span-2 space-y-6">
+          {/* PHOTOS */}
+          <Panel title="photos">
+            <div className="space-y-4">
+              <div
+                className="border-2 border-dashed border-sage/30 rounded-lg p-8 text-center hover:border-sage/50 transition-colors cursor-pointer group"
+                onClick={() => document.getElementById('photo-input')?.click()}
+              >
+                <input
+                  id="photo-input"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={formData.photos.length >= 10}
+                  className="hidden"
+                />
+                <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">📷</div>
+                <p className="text-sm text-ink mb-1">
+                  {formData.photos.length >= 10
+                    ? 'Maximum 10 photos reached'
+                    : 'Drag photos here or click to browse'}
+                </p>
+                <p className="text-xs text-sage-dim">
+                  {formData.photos.length}/10 photos • JPG, PNG up to 5MB each
+                </p>
+              </div>
+
+              {/* Photo thumbnails */}
+              {photoPreviews.length > 0 && (
+                <div className="grid grid-cols-5 gap-2">
+                  {photoPreviews.map((preview, idx) => (
+                    <div key={idx} className="relative group rounded overflow-hidden border border-sage/14">
+                      <img src={preview} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover" />
+                      <button
+                        onClick={() => removePhoto(idx)}
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                      >
+                        <span className="text-white text-lg">✕</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Panel>
+
           {/* ITEM DETAILS */}
           <Panel title="item details">
             <div className="space-y-4">
@@ -289,7 +368,9 @@ export default function AddFindPage() {
                     type="number"
                     step="0.01"
                     value={formData.costPaid ?? ''}
-                    onChange={(e) => handleInputChange('costPaid', e.target.value ? parseFloat(e.target.value) : null)}
+                    onChange={(e) =>
+                      handleInputChange('costPaid', e.target.value ? parseFloat(e.target.value) : null)
+                    }
                     placeholder="0.00"
                     className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
                   />
@@ -334,9 +415,25 @@ export default function AddFindPage() {
 
         {/* RIGHT COLUMN - Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          {/* PRICING */}
-          <Panel title="pricing">
+          {/* PRICING & MARGIN */}
+          <Panel title="pricing & margin">
             <div className="space-y-3">
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
+                  cost paid (£)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.costPaid ?? ''}
+                  onChange={(e) =>
+                    handleInputChange('costPaid', e.target.value ? parseFloat(e.target.value) : null)
+                  }
+                  placeholder="0.00"
+                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
                   asking price (£)
@@ -353,25 +450,42 @@ export default function AddFindPage() {
                 />
               </div>
 
-              {/* Margin display */}
-              {formData.costPaid && formData.askingPrice && (
-                <div className="bg-cream-md rounded p-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-ink-lt">cost</span>
-                    <span className="font-mono">£{formData.costPaid.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-lt">asking</span>
-                    <span className="font-mono">£{formData.askingPrice.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-sage/14 pt-2">
-                    <span className="text-sage font-medium">margin</span>
-                    <span className="font-mono text-sage font-medium">{margin}%</span>
-                  </div>
+              {/* Live margin calculator */}
+              {(formData.costPaid || formData.askingPrice) && (
+                <div className="bg-sage-pale/40 rounded p-3 space-y-2 text-sm border border-sage/20">
+                  {formData.costPaid && (
+                    <div className="flex justify-between">
+                      <span className="text-ink-lt">cost</span>
+                      <span className="font-mono text-ink">£{formData.costPaid.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {formData.askingPrice && (
+                    <div className="flex justify-between">
+                      <span className="text-ink-lt">asking</span>
+                      <span className="font-mono text-ink">£{formData.askingPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {formData.costPaid && formData.askingPrice && (
+                    <div className="flex justify-between border-t border-sage/20 pt-2">
+                      <span className="text-sage font-medium">margin</span>
+                      <span className="font-mono text-sage font-semibold text-lg">{margin}%</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </Panel>
+
+          {/* AI SUGGESTIONS */}
+          <div className="border-l-4 border-sage bg-sage-pale/30 rounded p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-medium text-sage">🪶 Wren AI suggestions</span>
+              <span className="text-xs text-sage-dim">coming soon</span>
+            </div>
+            <p className="text-xs text-ink-lt leading-relaxed">
+              Upload photos to get AI-powered suggestions for category, brand detection, price recommendations, and more.
+            </p>
+          </div>
 
           {/* LIST ON */}
           <Panel title="list on">
@@ -382,10 +496,7 @@ export default function AddFindPage() {
                 { key: 'listOnEtsy', label: 'Etsy', status: 'api_pending', disabled: true },
                 { key: 'listOnShopify', label: 'Shopify', status: 'not_connected' },
               ].map(({ key, label, status, disabled }) => (
-                <label
-                  key={key}
-                  className={`flex items-center gap-3 cursor-pointer text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
+                <label key={key} className={`flex items-center gap-3 cursor-pointer text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <input
                     type="checkbox"
                     checked={(formData as any)[key]}
@@ -395,11 +506,7 @@ export default function AddFindPage() {
                   />
                   <span className="text-ink">{label}</span>
                   {status && (
-                    <span
-                      className={`text-xs ml-auto ${
-                        status === 'api_pending' ? 'text-amber' : 'text-sage-dim'
-                      }`}
-                    >
+                    <span className={`text-xs ml-auto ${status === 'api_pending' ? 'text-amber' : 'text-sage-dim'}`}>
                       {status === 'via_extension'
                         ? 'via extension'
                         : status === 'api_pending'
@@ -419,9 +526,7 @@ export default function AddFindPage() {
 
           {/* ERROR MESSAGE */}
           {error && (
-            <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">
-              {error}
-            </div>
+            <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">{error}</div>
           )}
 
           {/* SAVE BUTTON */}
