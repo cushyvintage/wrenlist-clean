@@ -22,6 +22,7 @@ export default function MileagePage() {
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [vehicles, setVehicles] = useState<string[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filterVehicle, setFilterVehicle] = useState<string | null>(null)
 
   // Fetch mileage entries
