@@ -46,11 +46,11 @@ test.describe('Add Find Flow', () => {
   test.describe('Form submission and validation', () => {
     test('should display error when item name is empty', async ({ page }) => {
       // Try to save without filling required field
-      const saveButton = page.locator('button:has-text(/save find/i)')
+      const saveButton = page.getByRole('button', { name: /save find/i })
       await saveButton.click()
 
       // Should show error message
-      await expect(page.locator('text=/Item name is required/i')).toBeVisible()
+      await expect(page.locator('text=Item name is required')).toBeVisible()
     })
 
     test('should allow filling form with valid data', async ({ page }) => {
@@ -129,7 +129,7 @@ test.describe('Add Find Flow', () => {
 
   test.describe('Form navigation', () => {
     test('should have save button', async ({ page }) => {
-      const saveButton = page.locator('button:has-text(/save find|submit/i)')
+      const saveButton = page.getByRole('button', { name: /save find/i })
       await expect(saveButton).toBeVisible()
     })
 
@@ -143,7 +143,7 @@ test.describe('Add Find Flow', () => {
       await selects.first().selectOption('clothing')
 
       // Save
-      const saveButton = page.locator('button:has-text(/save find|submit/i)')
+      const saveButton = page.getByRole('button', { name: /save find/i })
       await saveButton.click()
 
       // Should navigate to inventory on success (or show error if API fails)
