@@ -2,21 +2,39 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { sendPasswordResetEmail } from '@/services/auth.service'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
   const [step, setStep] = useState<'email' | 'confirmation'>('email')
-  const [email, setEmail] = useState('jordan@example.com')
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+
+    if (!email) {
+      setError('Please enter your email address')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setIsSubmitting(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
+
+    try {
+      await sendPasswordResetEmail(email)
       setStep('confirmation')
-    }, 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -55,6 +73,13 @@ export default function ForgotPasswordPage() {
                 Enter your email and we'll send you a reset link. It expires in 30 minutes.
               </p>
 
+              {/* Error message */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-xs font-medium text-ink-lt mb-2 uppercase tracking-wide">
@@ -65,7 +90,8 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-3 bg-cream-md border border-border rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-sage"
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-3 bg-cream-md border border-border rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-sage disabled:opacity-50"
                     required
                   />
                 </div>

@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test'
 
+/**
+ * Operations Tests
+ * Tests Expenses and Mileage tracking functionality
+ */
 test.describe('Operations - Expenses & Mileage', () => {
   test.describe('Expenses page', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/app/expenses')
+      await page.waitForLoadState('networkidle')
     })
 
     test('should display expenses page', async ({ page }) => {
@@ -147,6 +152,7 @@ test.describe('Operations - Expenses & Mileage', () => {
   test.describe('Mileage page', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/app/mileage')
+      await page.waitForLoadState('networkidle')
     })
 
     test('should display mileage page', async ({ page }) => {

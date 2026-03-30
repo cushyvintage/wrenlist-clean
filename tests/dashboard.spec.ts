@@ -1,8 +1,13 @@
 import { test, expect, devices } from '@playwright/test'
 
+/**
+ * Dashboard Tests
+ * Tests dashboard loading, widgets, and responsive layout
+ */
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/app/dashboard')
+    await page.waitForLoadState('networkidle')
   })
 
   test.describe('Dashboard structure', () => {

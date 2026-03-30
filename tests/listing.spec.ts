@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test'
 
+/**
+ * Listings (Marketplace) Tests
+ * Tests creating, viewing, and managing marketplace listings
+ */
 test.describe('Listings (Marketplace)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/app/listings')
+    await page.waitForLoadState('networkidle')
   })
 
   test.describe('Listings page structure', () => {
@@ -11,37 +16,42 @@ test.describe('Listings (Marketplace)', () => {
     })
 
     test('should have main heading', async ({ page }) => {
-      // Check for any main heading
-      const heading = page.locator('h1, h2').first()
-      await expect(heading).toBeVisible()
+      // Check for main heading
+      const headings = page.locator('h1, h2')
+      const count = await headings.count()
+      expect(count).toBeGreaterThan(0)
     })
 
-    test('should be accessible without authentication (or redirect to login)', async ({ page }) => {
-      const url = page.url()
-      const isAccessible = url.includes('/app/listings') || url.includes('/login')
-      expect(isAccessible).toBe(true)
+    test('should load without errors', async ({ page }) => {
+      const errorMessages = page.locator('text=/error|failed|unable/i')
+      const count = await errorMessages.count()
+      expect(count).toBe(0)
     })
   })
 
-  test.describe('Create new listing', () => {
-    test('should allow navigation to create listing form', async ({ page }) => {
-      // Look for add/create button
-      const createButton = page.locator('button:has-text("Add"), button:has-text("Create"), button:has-text("New")')
+  test.describe('Listings display', () => {
+    test('should display listings in table or list format', async ({ page }) => {
+      // Check for table
+      const hasTable = await page.locator('table').isVisible().catch(() => false)
+      const hasTableHeader = await page.locator('th').first().isVisible().catch(() => false)
 
-      if (await createButton.isVisible()) {
-        await createButton.first().click()
-        // Should navigate to form or modal
-        await page.waitForLoadState('networkidle')
-      }
+      // If no table, should have list items
+      const hasListItems = await page.locator('text=/listed|draft|sold/i').isVisible().catch(() => false)
+
+      const hasContent = hasTable || hasTableHeader || hasListItems
+      expect(hasContent).toBe(true)
     })
 
-    test('should display listing table or list', async ({ page }) => {
-      // Check for table or list structure
-      const hasTable = await page.locator('table').isVisible().catch(() => false)
-      const hasList = await page.locator('div').filter({ hasText: /listed|pending/ }).isVisible().catch(() => false)
+    test('should display listing data if any exist', async ({ page }) => {
+      // Look for listing indicators
+      const tableRows = page.locator('tbody tr')
+      const listItems = page.locator('text=/£/') // Price indicator
 
-      const hasContent = hasTable || hasList
-      expect(hasContent).toBe(true)
+      const hasRows = (await tableRows.count()) > 0
+      const hasItems = (await listItems.count()) > 0
+
+      // Either table rows or price displays
+      expect(hasRows || hasItems).toBe(true)
     })
   })
 

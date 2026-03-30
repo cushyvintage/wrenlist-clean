@@ -19,13 +19,28 @@ export default function RegisterPage() {
     setError(null)
 
     // Validation
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
+    if (!fullName.trim() || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (fullName.trim().length < 2) {
+      setError('Full name must be at least 2 characters')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
       return
     }
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
       return
     }
 
@@ -39,7 +54,7 @@ export default function RegisterPage() {
     try {
       await registerUser(email, password)
       // TODO: Save fullName to profile after registration
-      router.push('/app/dashboard')
+      router.push('/verify-email')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {

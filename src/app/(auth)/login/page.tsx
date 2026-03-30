@@ -14,6 +14,18 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    // Basic validation
+    if (!email || !password) {
+      setError('Please enter your email and password')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -66,9 +78,14 @@ export default function LoginPage() {
 
             {/* Password input */}
             <div>
-              <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium">
+                  Password
+                </label>
+                <a href="/forgot-password" className="text-xs text-sage-lt hover:text-sage transition-colors">
+                  Forgot?
+                </a>
+              </div>
               <input
                 type="password"
                 value={password}

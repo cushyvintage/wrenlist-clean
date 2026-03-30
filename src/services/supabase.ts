@@ -67,3 +67,50 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
+
+/**
+ * Reset password for user
+ */
+export async function resetPassword(email: string) {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getBaseUrl()}/auth/reset-password`,
+  })
+  if (error) throw error
+  return data
+}
+
+/**
+ * Update user password
+ */
+export async function updatePassword(newPassword: string) {
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+  if (error) throw error
+  return data
+}
+
+/**
+ * Resend verification email
+ */
+export async function resendVerificationEmail(email: string) {
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  })
+  if (error) throw error
+  return data
+}
+
+/**
+ * Get base URL for environment
+ */
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+  }
+  return 'http://localhost:3000'
+}

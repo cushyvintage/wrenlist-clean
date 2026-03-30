@@ -1,16 +1,52 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { getCurrentUser } from '@/services/auth.service'
+import { resendVerificationEmail } from '@/services/auth.service'
 
 export default function VerifyEmailPage() {
   const router = useRouter()
+  const [email, setEmail] = useState('')
   const [isResending, setIsResending] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Get current user's email
+    const getEmail = async () => {
+      try {
+        const user = await getCurrentUser()
+        if (user?.email) {
+          setEmail(user.email)
+        }
+      } catch (err) {
+        console.error('Failed to get user:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    getEmail()
+  }, [])
 
   const handleResend = async () => {
+    if (!email) return
+
     setIsResending(true)
-    // Simulate API call
-    setTimeout(() => setIsResending(false), 1000)
+    setMessage(null)
+
+    try {
+      await resendVerificationEmail(email)
+      setMessage({ type: 'success', text: 'Verification email sent! Check your inbox.' })
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to resend email',
+      })
+    } finally {
+      setIsResending(false)
+    }
   }
 
   return (
@@ -53,9 +89,22 @@ export default function VerifyEmailPage() {
 
           {/* Description */}
           <p className="text-ink-lt text-center mb-8 text-sm leading-relaxed">
-            We sent a verification link to <strong className="text-ink">jordan@example.com</strong>. Click the link
+            We sent a verification link to <strong className="text-ink">{isLoading ? 'your email' : email || 'you'}</strong>. Click the link
             to activate your account — it's the last step before you start listing.
           </p>
+
+          {/* Message */}
+          {message && (
+            <div
+              className={`mb-6 p-4 rounded text-sm ${
+                message.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
 
           {/* Main CTA */}
           <button
@@ -71,8 +120,8 @@ export default function VerifyEmailPage() {
               Didn't get it?{' '}
               <button
                 onClick={handleResend}
-                disabled={isResending}
-                className="text-sage-lt hover:text-sage transition font-medium"
+                disabled={isResending || isLoading}
+                className="text-sage-lt hover:text-sage transition font-medium disabled:opacity-50"
               >
                 {isResending ? 'Resending...' : 'Resend verification email'}
               </button>
