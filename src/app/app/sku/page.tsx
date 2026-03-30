@@ -76,7 +76,7 @@ export default function SKUPage() {
       <div className="grid grid-cols-2 gap-6">
         {/* Left: SKU Configuration */}
         <div className="space-y-4">
-          <Panel title="SKU pattern" action="save changes">
+          <Panel title="SKU pattern" action={{ text: "save changes" }}>
             <div className="p-5 space-y-4">
               {/* Pattern Template */}
               <div>
@@ -122,7 +122,7 @@ export default function SKUPage() {
           </Panel>
 
           {/* Barcode Settings */}
-          <Panel title="barcode format" action="configure">
+          <Panel title="barcode format" action={{ text: "configure" }}>
             <div className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
@@ -156,7 +156,7 @@ export default function SKUPage() {
 
         {/* Right: Recent SKUs */}
         <div>
-          <Panel title="recent SKUs" count={mockSKUs.length}>
+          <Panel title="recent SKUs">
             <div className="p-5 space-y-3 border-b border-sage/14">
               <input
                 type="text"

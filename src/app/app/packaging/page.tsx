@@ -81,7 +81,7 @@ const costByCategory = {
 }
 
 export default function PackagingPage() {
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm] = useState('')
 
   const filteredMaterials = mockMaterials.filter(m =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -153,7 +153,7 @@ export default function PackagingPage() {
       <div className="grid grid-cols-3 gap-6">
         {/* Left: Stock table */}
         <div className="col-span-2">
-          <Panel title="stock levels" action="update stock">
+          <Panel title="stock levels" action={{ text: "update stock" }}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-wider text-sage-dim font-medium border-b border-sage/14">
@@ -219,7 +219,7 @@ export default function PackagingPage() {
             </div>
           </Panel>
 
-          <Panel title="link to find types" action="configure">
+          <Panel title="link to find types" action={{ text: "configure" }}>
             <div className="p-4 text-xs text-ink-lt leading-relaxed">
               Packaging is automatically matched to find categories. Footwear uses small boxes + bubble wrap. Clothing uses poly mailers + tissue paper.
             </div>

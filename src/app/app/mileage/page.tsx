@@ -62,7 +62,7 @@ const purposeColors: Record<Trip['purpose'], string> = {
 }
 
 export default function MileagePage() {
-  const [filterVehicle, setFilterVehicle] = useState('Ford Fiesta')
+  const [filterVehicle] = useState('Ford Fiesta')
 
   const filteredTrips = mockTrips.filter(trip => trip.vehicle === filterVehicle)
   const totalMiles = filteredTrips.reduce((sum, trip) => sum + trip.miles, 0)

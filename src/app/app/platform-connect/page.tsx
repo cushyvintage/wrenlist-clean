@@ -5,64 +5,7 @@ import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
 
-interface PlatformConnection {
-  id: string
-  name: string
-  icon: string
-  status: 'connected' | 'pending' | 'disconnected'
-  account?: string
-  email?: string
-  listings?: number
-  lastSync?: string
-  salesDetection?: boolean
-}
-
-const mockPlatforms: PlatformConnection[] = [
-  {
-    id: 'extension',
-    name: 'Wrenlist Extension',
-    icon: '📦',
-    status: 'connected',
-    lastSync: '2 minutes ago',
-  },
-  {
-    id: 'ebay',
-    name: 'eBay UK',
-    icon: '🛒',
-    status: 'connected',
-    account: 'jordan_thrifts',
-    email: 'jordan@example.com',
-    listings: 147,
-    lastSync: '2 minutes ago',
-    salesDetection: true,
-  },
-  {
-    id: 'vinted',
-    name: 'Vinted',
-    icon: '👚',
-    status: 'connected',
-    account: '@jordanthrifts',
-    email: 'jordan@example.com',
-    listings: 83,
-    lastSync: '5 minutes ago',
-    salesDetection: true,
-  },
-  {
-    id: 'etsy',
-    name: 'Etsy',
-    icon: '🎨',
-    status: 'pending',
-  },
-  {
-    id: 'shopify',
-    name: 'Shopify',
-    icon: '🏪',
-    status: 'disconnected',
-  },
-]
-
 export default function PlatformConnectPage() {
-  const [platforms, setPlatforms] = useState(mockPlatforms)
   const [salesDetection, setSalesDetection] = useState<Record<string, boolean>>({
     ebay: true,
     vinted: true,
@@ -108,7 +51,7 @@ export default function PlatformConnectPage() {
             <div className="font-medium text-sm text-ink">eBay UK</div>
             <div className="text-xs text-ink-lt">147 active listings synced</div>
           </div>
-          <Badge status="listed">connected</Badge>
+          <Badge status="listed" label="connected" />
         </div>
 
         <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
@@ -165,7 +108,7 @@ export default function PlatformConnectPage() {
             <div className="font-medium text-sm text-ink">Vinted</div>
             <div className="text-xs text-ink-lt">83 active listings synced</div>
           </div>
-          <Badge status="listed">connected</Badge>
+          <Badge status="listed" label="connected" />
         </div>
 
         <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
@@ -255,7 +198,7 @@ export default function PlatformConnectPage() {
             <div className="font-medium text-sm text-ink">Shopify</div>
             <div className="text-xs text-ink-lt">Crosslist to your Shopify store. Requires Wrenlist extension.</div>
           </div>
-          <Badge status="hold">not connected</Badge>
+          <Badge status="draft" label="not connected" />
         </div>
 
         <div className="flex items-center gap-3 p-3 bg-cream-md rounded mb-4">
@@ -272,7 +215,6 @@ export default function PlatformConnectPage() {
 
       {/* Tip */}
       <InsightCard
-        title="tip"
         text="Connect Etsy to reach buyers looking specifically for vintage — your Laura Ashley and Pendleton pieces would perform significantly better there."
       />
     </div>

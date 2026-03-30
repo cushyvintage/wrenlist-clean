@@ -98,7 +98,7 @@ export default function TaxPage() {
       </Panel>
 
       {/* VAT Tracker */}
-      <Panel title="VAT tracker" subtitle="threshold £90,000">
+      <Panel title="VAT tracker">
         <div className="p-4 space-y-4">
           <div>
             <div className="flex justify-between mb-2">

@@ -168,7 +168,7 @@ export default function PriceResearchPage() {
                   <tr key={idx} className="border-b border-border hover:bg-cream-md transition">
                     <td className="px-4 py-3 text-ink text-sm">{listing.title}</td>
                     <td className="px-4 py-3">
-                      <Badge status="listed">{listing.platform}</Badge>
+                      <Badge status="listed" label={listing.platform} />
                     </td>
                     <td className="px-4 py-3 text-ink text-sm">{listing.condition}</td>
                     <td className="px-4 py-3 font-mono text-ink text-sm">£{listing.price}</td>
@@ -203,7 +203,6 @@ export default function PriceResearchPage() {
 
           {/* Recommendation */}
           <InsightCard
-            title="wren recommendation"
             text="List on eBay UK at £145–£155 for excellent condition. Vinted at £110 as secondary. Expect to sell within 7–8 days."
           />
 

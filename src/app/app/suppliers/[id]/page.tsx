@@ -3,8 +3,6 @@
 import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
 import { InsightCard } from '@/components/wren/InsightCard'
-import { Badge } from '@/components/wren/Badge'
-import { Button } from '@/components/wren/Button'
 
 interface SupplierVisit {
   date: string
@@ -173,7 +171,6 @@ export default function SupplierDetailPage() {
 
           {/* Insight */}
           <InsightCard
-            title="wren insight"
             text="Smith House Clearances is your highest-performing source by margin and sell-through speed. Worth prioritising every available visit."
           />
 

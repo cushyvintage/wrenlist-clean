@@ -193,7 +193,7 @@ export default function SoldHistoryPage() {
                   <td className="px-4 py-3 font-mono text-ink text-sm">£{item.soldFor}</td>
                   <td className="px-4 py-3 text-green-600 text-sm font-mono">{item.margin}%</td>
                   <td className="px-4 py-3">
-                    <Badge status="listed">{item.platform}</Badge>
+                    <Badge status="listed" label={item.platform} />
                   </td>
                   <td className="px-4 py-3 font-mono text-ink text-sm">{item.daysListed}</td>
                   <td className="px-4 py-3 text-ink-lt text-sm">{item.soldDate}</td>
