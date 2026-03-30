@@ -16,7 +16,7 @@ export default function PlatformConnectPage() {
       {/* Topbar */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <h1 className="text-lg font-serif text-ink">platform connections</h1>
-        <a href="/app/settings" className="text-sm text-sage hover:text-sage-dk transition">
+        <a href="/settings" className="text-sm text-sage hover:text-sage-dk transition">
           ← back to settings
         </a>
       </div>

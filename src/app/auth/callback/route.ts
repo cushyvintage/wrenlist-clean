@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
 
     // Redirect to dashboard after successful auth — use app subdomain in production
     const dashboardUrl = process.env.NODE_ENV === 'production'
-      ? new URL('https://app.wrenlist.com/app/dashboard')
-      : new URL('/app/dashboard', request.url)
+      ? new URL('https://app.wrenlist.com/dashboard')
+      : new URL('/dashboard', request.url)
     return NextResponse.redirect(dashboardUrl)
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'

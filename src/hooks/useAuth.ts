@@ -33,7 +33,7 @@ export function useAuth(): AuthState & {
     try {
       const result = await loginUser(email, password)
       if (result) {
-        router.push('/app/dashboard')
+        router.push('/dashboard')
       }
     } catch (error) {
       throw error

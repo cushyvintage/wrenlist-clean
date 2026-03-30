@@ -351,7 +351,7 @@ export default function InventoryPage() {
             select
           </button>
           <button
-            onClick={() => router.push('/app/add-find')}
+            onClick={() => router.push('/add-find')}
             className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
             style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}
@@ -398,7 +398,7 @@ export default function InventoryPage() {
               return (
                 <tr
                   key={find.id}
-                  onClick={() => router.push(`/app/inventory/${find.id}`)}
+                  onClick={() => router.push(`/inventory/${find.id}`)}
                   className="cursor-pointer transition-colors"
                   style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
@@ -459,7 +459,7 @@ export default function InventoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            router.push('/app/add-find')
+                            router.push('/add-find')
                           }}
                           className="text-[11px] underline underline-offset-2 transition-colors text-left"
                           style={{ color: '#5A7A57' }}
@@ -484,7 +484,7 @@ export default function InventoryPage() {
         <div className="py-12 text-center">
           <p className="text-sm text-ink-lt mb-4">No items in your inventory yet</p>
           <button
-            onClick={() => router.push('/app/add-find')}
+            onClick={() => router.push('/add-find')}
             className="text-sm text-sage underline underline-offset-2 hover:text-sage-dk transition"
           >
             Add your first find →

@@ -122,7 +122,7 @@ export default function CreateListingPage() {
         setSuccess(true)
         // Redirect after success
         setTimeout(() => {
-          window.location.href = '/app/listings'
+          window.location.href = '/listings'
         }, 1500)
       }
 
@@ -141,7 +141,7 @@ export default function CreateListingPage() {
       {/* Header */}
       <div className="border-b border-sage/14 pb-6">
         <div className="flex items-center gap-3 mb-4">
-          <a href={`/app/finds/${mockFind.id}`} className="text-sm text-ink-lt hover:text-ink">
+          <a href={`/finds/${mockFind.id}`} className="text-sm text-ink-lt hover:text-ink">
             ← find
           </a>
           <span className="text-sage/22">/</span>
@@ -418,7 +418,7 @@ export default function CreateListingPage() {
         {/* Actions */}
         <div className="flex gap-3 justify-end">
           <a
-            href={`/app/finds/${mockFind.id}`}
+            href={`/finds/${mockFind.id}`}
             className="px-4 py-2 text-sm font-medium text-ink border border-sage/22 rounded hover:bg-cream transition"
           >
             cancel

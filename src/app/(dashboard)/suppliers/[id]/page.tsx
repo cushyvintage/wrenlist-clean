@@ -55,7 +55,7 @@ export default function SupplierDetailPage() {
       {/* Topbar */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <a href="/app/suppliers" className="text-sm text-sage-lt hover:text-sage transition">
+          <a href="/suppliers" className="text-sm text-sage-lt hover:text-sage transition">
             ← suppliers
           </a>
           <span className="text-border-md">/</span>

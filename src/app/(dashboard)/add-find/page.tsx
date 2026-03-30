@@ -143,7 +143,7 @@ export default function AddFindPage() {
       console.log('Find saved:', result.data)
 
       // Redirect to inventory
-      router.push('/app/inventory')
+      router.push('/inventory')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
       setError(message)
@@ -540,7 +540,7 @@ export default function AddFindPage() {
 
           {/* CANCEL BUTTON */}
           <button
-            onClick={() => router.push('/app/inventory')}
+            onClick={() => router.push('/inventory')}
             disabled={isLoading}
             className="w-full py-2.5 border border-sage/14 rounded text-sm font-medium hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

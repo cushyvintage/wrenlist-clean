@@ -16,23 +16,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     // WORKSPACE
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
-    { id: 'inventory', label: 'Inventory', icon: '📦', path: '/app/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
-    { id: 'add-find', label: 'Add find', icon: '➕', path: '/app/add-find', section: 'WORKSPACE', pageTitle: 'Add Find' },
-    { id: 'listings', label: 'Listings', icon: '📋', path: '/app/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
+    { id: 'inventory', label: 'Inventory', icon: '📦', path: '/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
+    { id: 'add-find', label: 'Add find', icon: '➕', path: '/add-find', section: 'WORKSPACE', pageTitle: 'Add Find' },
+    { id: 'listings', label: 'Listings', icon: '📋', path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
     // INSIGHTS
-    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/app/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
-    { id: 'price-research', label: 'Price Research', icon: '🔍', path: '/app/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
-    { id: 'sold', label: 'Sold', icon: '✓', path: '/app/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
+    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
+    { id: 'price-research', label: 'Price Research', icon: '🔍', path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
+    { id: 'sold', label: 'Sold', icon: '✓', path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
     // OPERATIONS
-    { id: 'sourcing', label: 'Sourcing', icon: '🛍', path: '/app/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
-    { id: 'suppliers', label: 'Suppliers', icon: '🏪', path: '/app/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
-    { id: 'expenses', label: 'Expenses', icon: '💰', path: '/app/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
-    { id: 'mileage', label: 'Mileage', icon: '🚗', path: '/app/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
-    { id: 'tax', label: 'Tax', icon: '📄', path: '/app/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
+    { id: 'sourcing', label: 'Sourcing', icon: '🛍', path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
+    { id: 'suppliers', label: 'Suppliers', icon: '🏪', path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
+    { id: 'expenses', label: 'Expenses', icon: '💰', path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
+    { id: 'mileage', label: 'Mileage', icon: '🚗', path: '/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
+    { id: 'tax', label: 'Tax', icon: '📄', path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
     // SETTINGS
-    { id: 'platform-connect', label: 'Platform Connect', icon: '🔗', path: '/app/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
-    { id: 'settings', label: 'Settings', icon: '⚙', path: '/app/settings', section: 'SETTINGS', pageTitle: 'Settings' },
+    { id: 'platform-connect', label: 'Platform Connect', icon: '🔗', path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
+    { id: 'settings', label: 'Settings', icon: '⚙', path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
   ]
 
   const currentPage = navItems.find((item) => activeNav === item.id)
@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (pathname === item.path) return true
       // Check if pathname starts with the item's path (for nested routes)
       if (pathname.startsWith(item.path + '/')) {
-        // Special case: /app/inventory/[id] should highlight inventory
+        // Special case: /inventory/[id] should highlight inventory
         return item.id === 'inventory'
       }
       return false
@@ -61,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const handleAddFind = () => {
-    router.push('/app/add-find')
+    router.push('/add-find')
   }
 
   const handleLogout = async () => {
@@ -166,7 +166,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </p>
                   </div>
                   <button
-                    onClick={() => router.push('/app/settings')}
+                    onClick={() => router.push('/settings')}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
                     style={{ color: '#1E2E1C' }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}

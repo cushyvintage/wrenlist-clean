@@ -398,7 +398,7 @@ export default function ListingsPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-serif text-2xl italic text-ink">listings</h1>
           <Link
-            href="/app/listings/create"
+            href="/listings/create"
             className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
           >
             + new listing
@@ -443,7 +443,7 @@ export default function ListingsPage() {
             </div>
             {listings.length === 0 && (
               <Link
-                href="/app/listings/create"
+                href="/listings/create"
                 className="text-sm font-medium text-sage hover:text-sage-dk"
               >
                 create your first listing →
@@ -506,7 +506,7 @@ export default function ListingsPage() {
                   )}
                   {listing.status === 'sold' ? (
                     <Link
-                      href={`/app/listings/create?findId=${listing.find_id}`}
+                      href={`/listings/create?findId=${listing.find_id}`}
                       className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
                     >
                       relist

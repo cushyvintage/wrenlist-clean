@@ -138,7 +138,7 @@ export default function DashboardPage() {
               <div className="py-8 text-center">
                 <p className="text-ink-lt mb-4">No items in your inventory yet</p>
                 <button
-                  onClick={() => router.push('/app/add-find')}
+                  onClick={() => router.push('/add-find')}
                   className="text-sage hover:text-sage-dk font-medium transition-colors"
                 >
                   Add your first find →
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                     <InventoryRow
                       key={find.id}
                       find={find}
-                      onClick={() => router.push(`/app/inventory/${find.id}`)}
+                      onClick={() => router.push(`/inventory/${find.id}`)}
                     />
                   ))}
                 </tbody>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
               : 'Your estate sale finds have 3x higher margins than charity shop finds.'}
             link={{
               text: finds.length === 0 ? 'Add first item' : 'see sourcing analysis',
-              onClick: () => router.push(finds.length === 0 ? '/app/add-find' : '/app/analytics'),
+              onClick: () => router.push(finds.length === 0 ? '/add-find' : '/analytics'),
             }}
           />
 
@@ -211,7 +211,7 @@ export default function DashboardPage() {
 
           {/* CTA */}
           <button
-            onClick={() => router.push('/app/add-find')}
+            onClick={() => router.push('/add-find')}
             className="w-full px-4 py-3 bg-sage text-white hover:bg-sage-dk rounded font-medium transition-colors"
           >
             ➕ Add new find

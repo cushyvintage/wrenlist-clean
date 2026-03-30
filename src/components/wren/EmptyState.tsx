@@ -7,7 +7,7 @@
  *   icon="📦"
  *   title="No items yet"
  *   description="Add your first find to get started"
- *   action={{ label: 'Add find', href: '/app/add-find' }}
+ *   action={{ label: 'Add find', href: '/add-find' }}
  * />
  */
 

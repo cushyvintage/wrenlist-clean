@@ -238,7 +238,7 @@ export default function ExpensesPage() {
       {/* Insight card */}
       <InsightCard
         text="Keep detailed records of all business expenses for tax purposes. VAT-registered sellers can reclaim VAT on eligible expenses."
-        link={{ text: 'see analytics →', onClick: () => router.push('/app/analytics') }}
+        link={{ text: 'see analytics →', onClick: () => router.push('/analytics') }}
       />
     </div>
   )

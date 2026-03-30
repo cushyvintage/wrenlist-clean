@@ -113,7 +113,7 @@ export default function FindDetailPage() {
       {/* Topbar */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <a href="/app/inventory" className="text-sm text-ink-lt hover:text-ink transition">
+          <a href="/inventory" className="text-sm text-ink-lt hover:text-ink transition">
             ← inventory
           </a>
           <span className="text-border-md">/</span>

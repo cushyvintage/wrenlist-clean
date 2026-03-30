@@ -11,7 +11,7 @@
  *   icon={DashboardIcon}
  *   label="dashboard"
  *   active={true}
- *   onClick={() => router.push('/app/dashboard')}
+ *   onClick={() => router.push('/dashboard')}
  * />
  */
 

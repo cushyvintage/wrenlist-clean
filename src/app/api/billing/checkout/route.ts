@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/app/settings?upgraded=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?upgraded=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
       metadata: {
         user_id: user.id,

@@ -108,7 +108,7 @@ export default function VerifyEmailPage() {
 
           {/* Main CTA */}
           <button
-            onClick={() => router.push('/app/dashboard')}
+            onClick={() => router.push('/dashboard')}
             className="w-full px-6 py-3 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition mb-4"
           >
             I've verified — continue →

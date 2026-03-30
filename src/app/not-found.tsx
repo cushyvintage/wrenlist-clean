@@ -14,7 +14,7 @@ export default function NotFound() {
           The page you&rsquo;re looking for doesn&rsquo;t exist or has been moved.
         </p>
         <Link
-          href="/app/dashboard"
+          href="/dashboard"
           className="inline-block px-6 py-2 bg-sage text-cream rounded font-medium hover:bg-sage-dk transition-colors"
         >
           Back to dashboard
