@@ -1,0 +1,86 @@
+import { NextRequest } from 'next/server'
+import { stripe } from '@/lib/stripe'
+import { getServerUser, createSupabaseServerClient } from '@/lib/supabase-server'
+import { ApiResponseHelper } from '@/lib/api-response'
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getServerUser()
+    if (!user) {
+      return ApiResponseHelper.unauthorized()
+    }
+
+    const body = await request.json()
+    const { planId, interval } = body // interval: "monthly" | "annual"
+
+    // Validate inputs
+    if (!planId || !interval) {
+      return ApiResponseHelper.badRequest('Missing planId or interval')
+    }
+
+    if (!['monthly', 'annual'].includes(interval)) {
+      return ApiResponseHelper.badRequest('interval must be "monthly" or "annual"')
+    }
+
+    // Get user profile to check for existing Stripe customer
+    const supabase = await createSupabaseServerClient()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!profile) {
+      return ApiResponseHelper.notFound('User profile not found')
+    }
+
+    // Map plan to price ID
+    const priceMap: Record<string, Record<string, string>> = {
+      nester: {
+        monthly: process.env.STRIPE_PRICE_NESTER_MONTHLY!,
+        annual: process.env.STRIPE_PRICE_NESTER_ANNUAL!,
+      },
+      forager: {
+        monthly: process.env.STRIPE_PRICE_FORAGER_MONTHLY!,
+        annual: process.env.STRIPE_PRICE_FORAGER_ANNUAL!,
+      },
+      flock: {
+        monthly: process.env.STRIPE_PRICE_FLOCK_MONTHLY!,
+        annual: process.env.STRIPE_PRICE_FLOCK_ANNUAL!,
+      },
+    }
+
+    const priceId = priceMap[planId]?.[interval]
+    if (!priceId || priceId === 'price_placeholder') {
+      return ApiResponseHelper.error('Stripe not configured yet', 503)
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: profile?.stripe_customer_id || undefined,
+      customer_email: profile?.stripe_customer_id ? undefined : user.email,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/app/settings?upgraded=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+      metadata: {
+        user_id: user.id,
+        plan_id: planId,
+      },
+    })
+
+    if (!session.url) {
+      return ApiResponseHelper.internalError('Failed to create checkout session')
+    }
+
+    return ApiResponseHelper.success({ url: session.url })
+  } catch (error) {
+    console.error('POST /api/billing/checkout error:', error)
+    return ApiResponseHelper.internalError()
+  }
+}

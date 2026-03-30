@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { Platform } from '@/types'
 
@@ -123,6 +123,10 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState<SortField>('soldAt')
   const [sortDesc, setSortDesc] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Orders | Wrenlist'
+  }, [])
 
   // Calculate totals
   const filteredOrders = orders.filter((o) =>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
 import { Badge } from '@/components/wren/Badge'
@@ -88,6 +88,10 @@ const mockSoldItems: SoldItem[] = [
 
 export default function SoldHistoryPage() {
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'all'>('month')
+
+  useEffect(() => {
+    document.title = 'Sold Items | Wrenlist'
+  }, [])
 
   const itemsSold = mockSoldItems.length
   const totalRevenue = mockSoldItems.reduce((sum, item) => sum + item.soldFor, 0)

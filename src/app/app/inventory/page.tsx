@@ -210,6 +210,13 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null)
 
   /**
+   * Set page title on mount
+   */
+  useEffect(() => {
+    document.title = 'Inventory | Wrenlist'
+  }, [])
+
+  /**
    * Fetch finds from API on mount
    */
   useEffect(() => {

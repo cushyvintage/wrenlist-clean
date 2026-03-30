@@ -25,6 +25,10 @@ export default function ExpensesPage() {
   const [activeCategory, setActiveCategory] = useState<ExpenseCategory | null>(null)
   const [showForm, setShowForm] = useState(false)
 
+  useEffect(() => {
+    document.title = 'Expenses | Wrenlist'
+  }, [])
+
   const categories: (ExpenseCategory | 'all')[] = ['all', 'packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other']
 
   // Fetch expenses

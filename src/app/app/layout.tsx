@@ -3,13 +3,14 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AppTopbar } from '@/components/layout/AppTopbar'
 import { SidebarItem } from '@/components/wren/SidebarItem'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { logoutUser } from '@/services/auth.service'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user } = useAuthContext()
   const [activeNav, setActiveNav] = useState('dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -22,8 +23,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { id: 'analytics', label: 'Analytics', icon: '📈', path: '/app/analytics' },
   ]
 
+  // Set active nav based on current pathname
+  useEffect(() => {
+    const currentItem = navItems.find((item) => {
+      // Exact match first
+      if (pathname === item.path) return true
+      // Check if pathname starts with the item's path (for nested routes)
+      if (pathname.startsWith(item.path + '/')) {
+        // Special case: /app/inventory/[id] should highlight inventory
+        return item.id === 'inventory'
+      }
+      return false
+    })
+
+    if (currentItem) {
+      setActiveNav(currentItem.id)
+    }
+  }, [pathname])
+
   const handleNavClick = (id: string, path: string) => {
-    setActiveNav(id)
     router.push(path)
   }
 
