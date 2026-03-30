@@ -323,6 +323,11 @@ export default function ListingsPage() {
   const [listings, setListings] = useState(mockListings)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Listings | Wrenlist'
+  }, [])
+
   // Load listings on mount
   useEffect(() => {
     const loadListings = async () => {

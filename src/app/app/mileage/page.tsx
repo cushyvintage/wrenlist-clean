@@ -25,6 +25,11 @@ export default function MileagePage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filterVehicle, setFilterVehicle] = useState<string | null>(null)
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Mileage | Wrenlist'
+  }, [])
+
   // Fetch mileage entries
   useEffect(() => {
     const fetchMileage = async () => {

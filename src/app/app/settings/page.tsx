@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 type SettingsTab = 'account' | 'workspace' | 'integrations' | 'billing' | 'legal'
 
@@ -25,6 +25,10 @@ interface PlatformConnection {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+
+  useEffect(() => {
+    document.title = 'Settings | Wrenlist'
+  }, [])
 
   const [accountData, setAccountData] = useState<AccountData>({
     email: 'cushyvintage@example.com',

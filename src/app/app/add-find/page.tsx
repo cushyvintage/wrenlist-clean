@@ -39,6 +39,10 @@ export default function AddFindPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    document.title = 'Add Find | Wrenlist'
+  }, [])
   const [formData, setFormData] = useState<FormData>({
     itemName: '',
     category: 'clothing',

@@ -19,6 +19,11 @@ export default function FindDetailPage() {
   const [showSoldPriceInput, setShowSoldPriceInput] = useState(false)
   const [soldPrice, setSoldPrice] = useState<string>('')
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Find Details | Wrenlist'
+  }, [])
+
   // Fetch find on mount
   useEffect(() => {
     const fetchFind = async () => {
