@@ -152,13 +152,13 @@ export default function DashboardPage() {
               </div>
             ) : (
               <table className="w-full">
-                <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
-                  <tr>
-                    <th className="text-left py-3 px-0">Item</th>
-                    <th className="text-right py-3 px-0">Cost</th>
-                    <th className="text-right py-3 px-0">Price</th>
-                    <th className="text-right py-3 px-0">Margin</th>
-                    <th className="text-right py-3 px-0">Status</th>
+                <thead style={{ color: '#8A9E88' }}>
+                  <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                    <th className="text-left py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Item</th>
+                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Cost</th>
+                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Price</th>
+                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Margin</th>
+                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -292,18 +292,27 @@ export default function InventoryPage() {
       )}
 
       {/* Controls row */}
-      <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-sage/14">
+      <div
+        className="flex flex-wrap items-center gap-3 pb-4"
+        style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
+      >
         {/* Status filter pills */}
         <div className="flex gap-2 flex-wrap">
           {(['all', 'listed', 'draft', 'on_hold', 'sold'] as StatusFilter[]).map((status) => (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors capitalize whitespace-nowrap ${
+              className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
+              style={
                 selectedStatus === status
-                  ? 'bg-sage-pale border border-sage text-sage'
-                  : 'bg-white border border-sage/14 text-ink-lt hover:bg-cream-md'
-              }`}
+                  ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
+                  : {
+                      backgroundColor: 'transparent',
+                      borderColor: 'rgba(61,92,58,.22)',
+                      borderWidth: '1px',
+                      color: '#6B7D6A',
+                    }
+              }
             >
               {status === 'on_hold' ? 'on hold' : status}
             </button>
@@ -316,17 +325,37 @@ export default function InventoryPage() {
           placeholder="search inventory..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-[200px] px-3 py-1.5 text-xs bg-cream-md border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
+          className="flex-1 min-w-[200px] px-[14px] py-[7px] text-[13px] rounded bg-[#EDE8DE] text-[#1E2E1C]"
+          style={{
+            borderWidth: '1px',
+            borderColor: 'rgba(61,92,58,.22)',
+            outline: 'none',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = '#3D5C3A')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(61,92,58,.22)')}
         />
 
         {/* Action buttons */}
         <div className="flex gap-2 whitespace-nowrap">
-          <button className="px-4 py-1.5 text-xs font-medium border border-sage/14 rounded hover:bg-cream-md transition-colors">
+          <button
+            className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(61,92,58,.22)',
+              backgroundColor: 'transparent',
+              color: '#6B7D6A',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
             select
           </button>
           <button
             onClick={() => router.push('/app/add-find')}
-            className="px-4 py-1.5 text-xs font-medium bg-sage text-white rounded hover:bg-sage-dk transition-colors"
+            className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
+            style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
           >
             + add find
           </button>
@@ -344,9 +373,9 @@ export default function InventoryPage() {
       {!isLoading && (
         <Panel className="overflow-x-auto">
           <table className="w-full text-sm min-w-max">
-            <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
-              <tr>
-                <th className="text-left py-4 px-4 w-8">
+            <thead style={{ color: '#8A9E88' }}>
+              <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                <th className="text-left py-[10px] px-[18px] w-8">
                   <input
                     type="checkbox"
                     checked={selectedItems.size === filteredFinds.length && filteredFinds.length > 0}
@@ -354,13 +383,13 @@ export default function InventoryPage() {
                     className="cursor-pointer"
                   />
                 </th>
-                <th className="text-left py-4 px-4 min-w-[240px]">item</th>
-                <th className="text-left py-4 px-4 min-w-[140px]">source</th>
-                <th className="text-right py-4 px-4 w-16">cost</th>
-                <th className="text-right py-4 px-4 w-16">asking</th>
-                <th className="text-right py-4 px-4 w-20">margin</th>
-                <th className="text-left py-4 px-4 min-w-[140px]">platform</th>
-                <th className="text-left py-4 px-4 min-w-[120px]">status</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[240px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[140px] text-[10px] uppercase tracking-[.08em] font-medium">source</th>
+                <th className="text-right py-[10px] px-[18px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
+                <th className="text-right py-[10px] px-[18px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
+                <th className="text-right py-[10px] px-[18px] w-20 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[140px] text-[10px] uppercase tracking-[.08em] font-medium">platform</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[120px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
               </tr>
             </thead>
             <tbody>
@@ -370,9 +399,12 @@ export default function InventoryPage() {
                 <tr
                   key={find.id}
                   onClick={() => router.push(`/app/inventory/${find.id}`)}
-                  className="border-b border-sage/14 hover:bg-cream-md/40 cursor-pointer transition-colors"
+                  className="cursor-pointer transition-colors"
+                  style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  <td className="py-4 px-4">
+                  <td className="py-[12px] px-[18px]">
                     <input
                       type="checkbox"
                       checked={selectedItems.has(find.id)}
@@ -381,26 +413,36 @@ export default function InventoryPage() {
                       className="cursor-pointer"
                     />
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-[12px] px-[18px]">
                     <div className="flex items-center gap-3">
                       <span className="text-lg">{getEmoji(find.category)}</span>
                       <div className="flex-1">
-                        <div className="font-medium text-ink">{find.name}</div>
-                        <div className="text-xs text-ink-lt capitalize">{find.category}</div>
+                        <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
+                          {find.name}
+                        </div>
+                        <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
+                          {find.category}
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-xs text-ink-lt">{find.source_name}</td>
-                  <td className="py-4 px-4 font-mono text-ink-md">£{find.cost_gbp}</td>
-                  <td className="py-4 px-4 font-mono text-ink-md">
+                  <td className="py-[12px] px-[18px] text-[11px]" style={{ color: '#6B7D6A' }}>
+                    {find.source_name}
+                  </td>
+                  <td className="py-[12px] px-[18px] font-mono text-[12px]" style={{ color: '#4A5E48' }}>
+                    £{find.cost_gbp}
+                  </td>
+                  <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
                     {find.asking_price_gbp ? `£${find.asking_price_gbp}` : '—'}
                   </td>
-                  <td className="py-4 px-4 font-mono text-ink-md text-right">
+                  <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
                     {margin !== null ? `${margin}%` : '—'}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-[12px] px-[18px]">
                     {find.status === 'draft' ? (
-                      <span className="text-xs text-ink-lt italic">none yet</span>
+                      <span className="text-[11px] italic" style={{ color: '#6B7D6A' }}>
+                        none yet
+                      </span>
                     ) : (
                       <div className="flex gap-1.5 flex-wrap">
                         <PlatformTag platform="vinted" live={true} />
@@ -410,7 +452,7 @@ export default function InventoryPage() {
                       </div>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-[12px] px-[18px]">
                     {find.status === 'draft' ? (
                       <div className="flex flex-col gap-2">
                         <Badge status="draft" />
@@ -419,7 +461,8 @@ export default function InventoryPage() {
                             e.stopPropagation()
                             router.push('/app/add-find')
                           }}
-                          className="text-xs text-sage-lt underline underline-offset-2 hover:text-sage transition-colors text-left"
+                          className="text-[11px] underline underline-offset-2 transition-colors text-left"
+                          style={{ color: '#5A7A57' }}
                         >
                           complete & list →
                         </button>
