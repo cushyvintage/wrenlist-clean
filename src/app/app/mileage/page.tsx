@@ -50,6 +50,7 @@ export default function MileagePage() {
     }
 
     fetchMileage()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleFormSuccess = () => {

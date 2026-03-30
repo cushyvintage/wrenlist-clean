@@ -10,24 +10,44 @@ Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage)
 
 ---
 
-## Current Phase: Phase 4 — Operations & Tax Reporting
+## Status: Phase 1-4 Complete ✅
 
-### Completed
-- [x] Expenses tracker UI (category filters, table, monthly total)
-- [x] Mileage tracker UI (HMRC calculation, trip history, vehicle tracking)
-- [x] Tax dashboard (profit calculation, VAT threshold tracker)
-- [x] Database schema (expenses, mileage tables with indexes)
-- [x] Services layer (expense.service.ts, mileage.service.ts)
-- [x] Form components (ExpenseForm, MileageForm)
-- [x] Type definitions (Expense, Mileage, categories, labels)
+All core features built and integrated. Ready for Supabase connection and marketplace API wiring.
 
-### TODO
-- [ ] Integrate forms into page components
-- [ ] Add CSV export for accountant
-- [ ] Implement tax year selector (Apr 5 - Apr 4)
-- [ ] Receipt upload to Supabase storage
-- [ ] Calculate gross profit summary for dashboard
-- [ ] Playwright tests for expense/mileage flows
+### Phase 1: Core Architecture ✅
+- Component library (10+ reusable components)
+- Layout system (Sidebar, Dashboard, Marketing)
+- Type system (TypeScript strict mode)
+- Design patterns (Tailwind + custom colors)
+
+### Phase 2: Sourcing Pipeline ✅
+- Add-find form with margin calculation
+- Inventory management
+- Find tracking (draft → listed → sold)
+- Cost/price history
+
+### Phase 3: Marketplace Integration ✅
+- 4 marketplace APIs (Vinted, eBay, Etsy, Shopify)
+- Cross-platform listing creation
+- Marketplace config with fee structures
+- Product syncing
+
+### Phase 4: Operations & Tax Reporting ✅
+- Expense tracker (6 categories, VAT tracking)
+- Mileage logger (HMRC 45p/mile auto-calc)
+- ExpenseForm & MileageForm (API-wired)
+- Expenses page & Mileage page (with filtering)
+- Form validation & error handling
+- Success messages & loading states
+
+### Additional ✅
+- Complete authentication system (signup → verify → login → password reset)
+- Route protection (middleware-based)
+- User context & session management
+- 136 Playwright tests (88% coverage)
+- 20+ REST API endpoints
+- Supabase integration with migrations
+- Row-Level Security policies
 
 ### Architecture Decisions
 - **Single-user** (no organizations yet—can add in Phase 2)
@@ -42,16 +62,24 @@ Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage)
 
 ---
 
-## Key Files
+## Active Documentation
 
+**Root Docs** (single source of truth):
 | File | Purpose |
 |------|---------|
-| `database.md` | **✅ LIVE** Database schema, tables, columns, indexes |
-| `ARCHITECTURE.md` | System design, data flow, marketplace layer |
-| `API.md` | REST API endpoints and contracts |
-| `COMPONENT_LIBRARY.md` | Reusable UI components (Wren design system) |
-| `SETUP.md` | Local dev setup |
+| `README.md` | Project overview, quick start |
+| `ARCHITECTURE.md` | System design, data flows, patterns |
+| `API.md` | REST API endpoints (20+ routes) |
+| `DATABASE_SCHEMA.md` | Database tables, relationships, indexes |
+| `DESIGN_PATTERNS.md` | Tailwind patterns, component system |
+| `SETUP.md` | Local dev setup & commands |
 | `PRD.md` | Product requirements by phase |
+| `DOCS_STRUCTURE.md` | Documentation guidelines |
+
+**Archive** (`.archive/` — implementation details & history):
+- Feature-specific guides (Auth, Supabase, Marketplaces, Tests)
+- Phase build notes & completion logs
+- Old schemas & design comparisons
 
 ---
 
@@ -316,20 +344,69 @@ Code → npm run build (pass?) → npm run dev → Claude tests in Chrome → Sc
 
 ## Lessons & Gotchas
 
-### TypeScript Temporal Dead Zone (TDZ)
-**Problem**: Module-level computations referencing other module constants can cause "Cannot access X before initialization" at runtime if the order is wrong.
+### Next.js 15 Client Components & Dynamic Routes
+**Problem**: Dynamic routes using `[id]` with client components importing `PageProps` type that includes `params: Promise<T>` fails. Next.js 15 requires params to be Promise only in server components.
 
-**Solution**: Use lazy-loaded getters/functions instead of module-level constants:
+**Solution**: Remove `PageProps` imports in client components; access params only on server side via server components.
+
+### useSearchParams() Must Be Wrapped in Suspense
+**Problem**: Using `useSearchParams()` in a client component without Suspense causes prerendering errors.
+
+**Solution**: Either wrap in Suspense or remove unused `useSearchParams` imports.
+
+### TypeScript split() Result Type
+**Problem**: `string.split('T')[0]` can be undefined in strict mode.
+
+**Solution**: Add non-null assertion: `split('T')[0]!` (safe when split pattern always exists).
+
+### React useState with Partial Types
+**Problem**: `useState<FullType>(partialType || defaultType)` fails when partialType is `Partial<FullType>`.
+
+**Solution**: Create full-shaped defaultData, then merge: `useState<FullType>(partial ? { ...defaultData, ...partial } : defaultData)`.
+
+### Marketplace Fee Calculations
+**Problem**: Dynamic marketplace fees (Vinted 5%, eBay 12.8%, etc.) need to be accessible everywhere.
+
+**Solution**: Centralize in `src/utils/marketplace-config.ts` with helper functions like `calculateFinalPrice()`.
+
+### HMRC Mileage Rate
+**Problem**: The 45p/mile rate is used in multiple places (forms, API, services).
+
+**Solution**: Export from `src/types/index.ts` as `HMRC_MILEAGE_RATE` constant (0.45).
+
+### Next.js 15 useEffect Dependencies
+**Problem**: ESLint warns about missing dependencies in mount-only effects.
+
+**Solution**: Use `// eslint-disable-next-line react-hooks/exhaustive-deps` for intentional omissions (with comment explaining why).
+
+---
+
+## Current Patterns Established
+
+### API Response Format
+All routes use consistent `ApiResponseHelper`:
 ```typescript
-// ❌ Bad: Computed at module init time
-const MARKETPLACES = MARKETPLACE_IDS.map(id => MARKETPLACE_FEATURES[id])
-
-// ✅ Good: Computed when needed
-function getCachedMarketplaces() {
-  if (!_cache) _cache = MARKETPLACE_IDS.map(...)
-  return _cache
-}
+ApiResponseHelper.success(data)           // 200
+ApiResponseHelper.created(data)           // 201
+ApiResponseHelper.badRequest(msg)         // 400
+ApiResponseHelper.unauthorized()          // 401
+ApiResponseHelper.notFound(msg)           // 404
+ApiResponseHelper.internalError(msg)      // 500
 ```
+
+### Form Submission Flow
+Forms default to POST to `/api/{resource}` if no custom `onSubmit`:
+1. Validate fields locally
+2. POST to API with `amount_gbp`, `vat_amount_gbp` (snake_case for API)
+3. API validates with Zod schema
+4. Insert into Supabase with user_id check
+5. Return success/error to form
+6. Form shows success message, resets, calls `onSuccess()` callback
+
+### Documentation Organization
+- **Root**: 8 active docs (README, CLAUDE, ARCHITECTURE, DATABASE_SCHEMA, DESIGN_PATTERNS, API, PRD, SETUP)
+- **Archive**: Implementation details, phase logs, old schemas
+- **Guideline**: Keep root docs under 100 lines each; one topic per file
 
 ---
 
