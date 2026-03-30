@@ -6,7 +6,6 @@ import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { logoutUser } from '@/services/auth.service'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -67,7 +66,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     try {
-      await logoutUser()
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
       router.push('/login')
     } catch (error) {
       console.error('Logout failed:', error)

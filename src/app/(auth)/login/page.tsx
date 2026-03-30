@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginUser } from '@/services/auth.service'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,7 +28,19 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await loginUser(email, password)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to log in')
+      }
+
       router.push('/app/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to log in')
