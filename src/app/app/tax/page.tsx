@@ -1,0 +1,191 @@
+'use client'
+
+import { Panel } from '@/components/wren/Panel'
+import { InsightCard } from '@/components/wren/InsightCard'
+import { useState } from 'react'
+
+export default function TaxPage() {
+  const [taxYear, setTaxYear] = useState('2025-26')
+
+  // Summary values
+  const revenue = 38840
+  const costOfGoods = 4210
+  const operatingExpenses = 1847
+  const mileageDeduction = 1458
+  const taxableProfit = revenue - costOfGoods - operatingExpenses - mileageDeduction
+
+  // VAT threshold
+  const vatThreshold = 90000
+  const vatPercentage = (revenue / vatThreshold) * 100
+  const vatRemaining = vatThreshold - revenue
+
+  return (
+    <div className="space-y-6">
+      {/* Disclaimer */}
+      <div className="bg-blue-lt border border-blue-dk/20 rounded-md p-4 text-sm text-blue-dk">
+        <strong>This summary is a guide to help you prepare your self-assessment.</strong> Wrenlist tracks your numbers — you are responsible for your own tax filings. For VAT, HMRC registration, or complex situations always consult a qualified accountant.
+      </div>
+
+      {/* Tax Year selector and export */}
+      <div className="flex items-center justify-between">
+        <select
+          value={taxYear}
+          onChange={(e) => setTaxYear(e.target.value)}
+          className="px-4 py-2 bg-cream-md border border-sage/14 rounded text-sm text-ink font-medium focus:outline-none focus:ring-1 focus:ring-sage"
+        >
+          <option value="2025-26">Tax year 2025–26</option>
+          <option value="2024-25">Tax year 2024–25</option>
+          <option value="2023-24">Tax year 2023–24</option>
+        </select>
+        <button className="text-sm font-medium text-ink-lt hover:text-ink px-3 py-2 border border-sage/14 rounded hover:bg-cream-md transition">
+          ↓ download CSV
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-cream border border-sage/14 rounded-lg p-4">
+          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">total revenue</div>
+          <div className="font-serif text-2xl text-ink mb-1">£{revenue.toLocaleString()}</div>
+          <div className="text-xs text-ink-lt">all platforms · Apr 25 – Mar 26</div>
+        </div>
+
+        <div className="bg-cream border border-sage/14 rounded-lg p-4">
+          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">cost of goods (finds)</div>
+          <div className="font-serif text-2xl text-ink mb-1">£{costOfGoods.toLocaleString()}</div>
+          <div className="text-xs text-ink-lt">total sourcing spend</div>
+        </div>
+
+        <div className="bg-cream border border-sage/14 rounded-lg p-4">
+          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">operating expenses</div>
+          <div className="font-serif text-2xl text-ink mb-1">£{operatingExpenses.toLocaleString()}</div>
+          <div className="text-xs text-ink-lt">fees, postage, packaging</div>
+        </div>
+
+        <div className="bg-cream border border-sage/14 rounded-lg p-4">
+          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">mileage deduction</div>
+          <div className="font-serif text-2xl text-ink mb-1">£{mileageDeduction.toLocaleString()}</div>
+          <div className="text-xs text-ink-lt">3,240 mi @ 45p</div>
+        </div>
+      </div>
+
+      {/* Profit breakdown */}
+      <Panel title="profit calculation">
+        <table className="w-full text-sm">
+          <tbody className="divide-y divide-sage/14">
+            <tr className="border-b border-sage/14">
+              <td className="py-4 px-4 text-ink font-medium">Total revenue</td>
+              <td className="py-4 px-4 text-right font-mono text-ink">£{revenue.toLocaleString()}</td>
+            </tr>
+            <tr className="bg-cream-md border-b border-sage/14">
+              <td className="py-4 px-4 text-ink-lt">− Cost of goods sold</td>
+              <td className="py-4 px-4 text-right font-mono text-sage">− £{costOfGoods.toLocaleString()}</td>
+            </tr>
+            <tr className="bg-cream-md border-b border-sage/14">
+              <td className="py-4 px-4 text-ink-lt">− Operating expenses</td>
+              <td className="py-4 px-4 text-right font-mono text-sage">− £{operatingExpenses.toLocaleString()}</td>
+            </tr>
+            <tr className="bg-cream-md">
+              <td className="py-4 px-4 text-ink-lt">− Mileage deduction</td>
+              <td className="py-4 px-4 text-right font-mono text-sage">− £{mileageDeduction.toLocaleString()}</td>
+            </tr>
+            <tr className="bg-cream-dk border-t-2 border-sage/22">
+              <td className="py-4 px-4 text-ink font-medium">Estimated taxable profit</td>
+              <td className="py-4 px-4 text-right font-mono font-medium text-ink text-lg">£{taxableProfit.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
+
+      {/* VAT Tracker */}
+      <Panel title="VAT tracker" subtitle="threshold £90,000">
+        <div className="p-4 space-y-4">
+          <div>
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-ink-lt">Your taxable turnover this year</span>
+              <span className="font-mono text-sm font-medium text-ink">
+                £{revenue.toLocaleString()}
+                <span className="text-sage font-normal"> ({vatPercentage.toFixed(0)}% of threshold)</span>
+              </span>
+            </div>
+            <div className="w-full h-2 bg-sage/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-sage transition-all"
+                style={{ width: `${vatPercentage}%` }}
+              />
+            </div>
+            <div className="text-xs text-ink-lt mt-2">
+              You are <strong className="text-ink">£{vatRemaining.toLocaleString()} below</strong> the VAT registration threshold. No action required.
+            </div>
+          </div>
+
+          <div className="border-t border-sage/14 pt-4 text-sm text-ink-lt">
+            Already VAT registered?{' '}
+            <span className="text-sage-lt cursor-pointer hover:text-sage transition underline">
+              Switch to VAT-registered view →
+            </span>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Insight card */}
+      <InsightCard
+        text="At current growth (+18%/mo) you could reach the VAT threshold in approximately 14 months. Worth planning ahead with your accountant."
+        link={{ text: 'see revenue trend →', onClick: () => {} }}
+      />
+
+      {/* Summary breakdown */}
+      <div className="grid grid-cols-2 gap-6">
+        <Panel title="income summary">
+          <div className="p-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Vinted</span>
+              <span className="font-mono font-medium text-ink">£8,420</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">eBay UK</span>
+              <span className="font-mono font-medium text-ink">£18,640</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Depop</span>
+              <span className="font-mono font-medium text-ink">£6,280</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Other</span>
+              <span className="font-mono font-medium text-ink">£5,500</span>
+            </div>
+            <div className="flex justify-between border-t border-sage/14 pt-3 font-medium text-ink">
+              <span>Total income</span>
+              <span className="font-mono">£{revenue.toLocaleString()}</span>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel title="expense summary">
+          <div className="p-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Packaging & postage</span>
+              <span className="font-mono font-medium text-ink">£892</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Platform fees</span>
+              <span className="font-mono font-medium text-ink">£1,240</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Tools & software</span>
+              <span className="font-mono font-medium text-ink">£348</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-lt">Other</span>
+              <span className="font-mono font-medium text-ink">£367</span>
+            </div>
+            <div className="flex justify-between border-t border-sage/14 pt-3 font-medium text-ink">
+              <span>Total expenses</span>
+              <span className="font-mono">£{operatingExpenses.toLocaleString()}</span>
+            </div>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  )
+}
