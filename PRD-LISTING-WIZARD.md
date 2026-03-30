@@ -328,6 +328,81 @@ src/
 
 ---
 
+## eBay Form Fields (from Vendoo observation 2026-03-30)
+
+**Connection**: OAuth via Vendoo account (cushyvintage — ACTIVE, connected 23 Sep 2026)  
+**All fields are separate from Vendoo Form** (Step 2 tab)
+
+| Field | Required | Type | Notes |
+|-------|----------|------|-------|
+| Photos | Yes | Upload | Max 24 photos, 20MB per |
+| Title | Yes | Text | 80 char max |
+| Description | Yes | Rich text | 500 char min shown |
+| Brand | Yes | Text/select | Write your own |
+| Colour | Yes | Dropdown | "Colour" (UK) |
+| SKU | No | Text | |
+| Quantity | Yes | Number | Default 1 |
+| Category | Yes | Hierarchical dropdown | "Click To Select A Category" → Category Specifics load after |
+| Shipping Policy | Yes | Dropdown | Must pre-configure in eBay |
+| Payment Policy | Yes | Dropdown | Must pre-configure in eBay |
+| Return Policy | Yes | Dropdown | Must pre-configure in eBay |
+| Ship From Country | No | Dropdown | |
+| Location Description | No | Text | e.g. "Today" or "Ships from Tokyo" |
+| Shipping Location (Post Code) | Yes | Text | |
+| Package Weight | No | Number (kg + g) | |
+| Package Dimensions | No | Number (cm × cm × cm) | |
+| Pricing Format | Yes | Dropdown | "Fixed Price" (default) |
+| Duration | Yes | Dropdown | "Good 'Til Cancelled" (default, auto-renews 30 days) |
+| Buy It Now Price | Yes | Number (£) | |
+| Allow Best Offer | No | Toggle | |
+
+**Required pre-config in eBay**: Shipping policy, Payment policy, Return policy — seller must set these up in eBay dashboard before Vendoo can list. Wrenlist should surface this in onboarding.
+
+**Category Specifics**: Load after category selection (same pattern as Vinted). Not observable without selecting a category.
+
+**Validation errors shown**: Brand, Colour, Shipping Policy, Payment Policy, Return Policy, Shipping Location, Buy It Now Price — all required before "List on eBay" enables.
+
+---
+
+## Etsy Form Fields (from Vendoo observation 2026-03-30)
+
+**Connection**: Not connected in cushyvintage account. Fields visible but "List on Etsy" disabled.
+
+| Field | Required | Type | Notes |
+|-------|----------|------|-------|
+| Photos | Yes | Upload | Max 10 photos |
+| Title | Yes | Text | 140 char max |
+| Description | Yes | Text | 5 char min |
+| Primary Colour | No | Dropdown | |
+| Secondary Colour | No | Dropdown | |
+| SKU | No | Text | |
+| Who Made It | Yes | Dropdown | "Another company or person" / "I did" etc |
+| What Is It | Yes | Radio | "A finished product" (required) |
+| When Was It Made | Yes | Dropdown | "Made To Order (Not Yet Made)" / vintage date ranges |
+| Tags | No | Multi-text | Up to 13 tags, influences search |
+| Materials | No | Multi-text | Up to 13 materials |
+| Listing Type | Yes | Dropdown | |
+| Quantity | Yes | Number | Default 1 |
+| Category | Yes | Hierarchical search | Searchable: Accessories, Art & Collectibles, Bags & Purses, Bath & Beauty, Books Movies & Music, Clothing, Craft Supplies & Tools, Electronics & Accessories, Home & Living, Jewellery, Paper & Party Supplies |
+| Category Specifics | Yes | Dynamic | Loads after category |
+| Delivery Profile | Yes | Dropdown | Must create at least one flat rate delivery profile |
+| Package Weight | No | Number | |
+| Package Dimensions | No | Number | |
+| Policies | Yes | Dropdown | Must create return policy on Etsy |
+| Price | Yes | Number (£) | |
+| Renewal Options | Yes | Dropdown | |
+| Listing State | No | Dropdown | |
+
+**Key Etsy requirements**:
+- "When Was It Made" → for vintage items: select date range (1920s-2000s options). This is critical for vintage sellers — Etsy defines vintage as 20+ years old
+- Must have delivery profile set up in Etsy account before can list
+- Must have return policy set up in Etsy account
+- Tags: up to 13, comma-separated, influences Etsy search ranking
+
+**Etsy category top level** (from Vendoo): Accessories, Art & Collectibles, Bags & Purses, Bath & Beauty, Books Movies & Music, Clothing, Craft Supplies & Tools, Electronics & Accessories, Home & Living, Jewellery, Paper & Party Supplies
+
+---
+
 ## Notes from Research
 
 - Vendoo's category specifics are 100% client-side — no API call on category select. Wrenlist should do the same (bundled JSON).

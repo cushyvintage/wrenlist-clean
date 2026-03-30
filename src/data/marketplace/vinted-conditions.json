@@ -1,0 +1,6 @@
+[
+  {"id":6,"name":"New with tags","code":"new_with_tags","description":"Brand new, unused, with original tags"},
+  {"id":1,"name":"Like new","code":"very_good","description":"Worn once or twice, no visible defects"},
+  {"id":2,"name":"Good","code":"good","description":"A few light marks but overall in good condition"},
+  {"id":3,"name":"Satisfactory","code":"satisfactory","description":"Some signs of wear, reflected in the price"}
+]

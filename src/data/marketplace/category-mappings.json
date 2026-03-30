@@ -1,0 +1,260 @@
+{
+  "_meta": {
+    "description": "Wrenlist canonical categories mapped to platform-specific category IDs",
+    "last_updated": "2026-03-30",
+    "vinted_source": "vinted_categories_tree.json from live API (vinted.co.uk)",
+    "ebay_source": "manual mapping from eBay UK category browser",
+    "etsy_source": "manual mapping from Etsy taxonomy"
+  },
+  "categories": [
+    {
+      "id": "ceramics",
+      "label": "Ceramics",
+      "emoji": "🍽️",
+      "vinted": {
+        "path": "Home > Tableware",
+        "parent_id": 1920,
+        "leaf_options": [
+          {"id": 1958, "label": "Dinner sets"},
+          {"id": 1959, "label": "Bowls"},
+          {"id": 1960, "label": "Plates"},
+          {"id": 3856, "label": "Coffee pots & teapots"},
+          {"id": 3857, "label": "Jugs"},
+          {"id": 3861, "label": "Sugar bowls & milk jugs"},
+          {"id": 3860, "label": "Serving dishes"},
+          {"id": 3865, "label": "Speciality serveware"}
+        ],
+        "default_leaf_id": 1960
+      },
+      "ebay": {
+        "category_id": 57902,
+        "label": "Pottery & China",
+        "parent_label": "Pottery, Porcelain & Glass"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Ceramics & Pottery",
+        "note": "Fetch from Etsy taxonomy API"
+      }
+    },
+    {
+      "id": "glassware",
+      "label": "Glassware",
+      "emoji": "🪟",
+      "vinted": {
+        "path": "Home > Tableware > Drinkware",
+        "parent_id": 2005,
+        "leaf_options": [
+          {"id": 2009, "label": "Stemmed glasses"},
+          {"id": 2010, "label": "Tumblers"},
+          {"id": 2011, "label": "Drinkware sets"},
+          {"id": 2006, "label": "Cups & mugs"}
+        ],
+        "default_leaf_id": 2009
+      },
+      "ebay": {
+        "category_id": 897,
+        "label": "Glass",
+        "parent_label": "Pottery, Porcelain & Glass"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Glass"
+      }
+    },
+    {
+      "id": "books",
+      "label": "Books",
+      "emoji": "📚",
+      "vinted": {
+        "path": "Entertainment > Books",
+        "parent_id": null,
+        "leaf_options": [],
+        "default_leaf_id": null,
+        "note": "Check Entertainment subtree for Books leaf ID"
+      },
+      "ebay": {
+        "category_id": 267,
+        "label": "Books, Comics & Magazines",
+        "parent_label": "Books, Comics & Magazines"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Books, Movies & Music > Books"
+      }
+    },
+    {
+      "id": "collectibles",
+      "label": "Collectibles & Medals",
+      "emoji": "🏅",
+      "vinted": {
+        "path": "Hobbies & collectables > Memorabilia",
+        "parent_id": 4901,
+        "leaf_options": [
+          {"id": 4902, "label": "Sports memorabilia"},
+          {"id": 4903, "label": "Music memorabilia"},
+          {"id": 4904, "label": "Film & TV memorabilia"},
+          {"id": 4905, "label": "Other memorabilia"}
+        ],
+        "default_leaf_id": 4905
+      },
+      "ebay": {
+        "category_id": 11116,
+        "label": "Militaria",
+        "parent_label": "Collectables",
+        "note": "Also consider 232 (Medals) or 2456 (Badges)"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Collectibles & Memorabilia"
+      }
+    },
+    {
+      "id": "homeware",
+      "label": "Homeware",
+      "emoji": "🏠",
+      "vinted": {
+        "path": "Home > Home accessories",
+        "parent_id": 1934,
+        "leaf_options": [
+          {"id": 1935, "label": "Candles & home fragrance"},
+          {"id": 1936, "label": "Clocks"},
+          {"id": 3822, "label": "Sculptures & figurines"}
+        ],
+        "default_leaf_id": 3822
+      },
+      "ebay": {
+        "category_id": 605,
+        "label": "Home, Furniture & DIY",
+        "parent_label": "Home, Furniture & DIY"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Home & Living"
+      }
+    },
+    {
+      "id": "jewellery",
+      "label": "Jewellery",
+      "emoji": "💎",
+      "vinted": {
+        "path": "Women > Accessories > Jewellery",
+        "parent_id": null,
+        "leaf_options": [],
+        "default_leaf_id": null,
+        "note": "Check Women > Accessories subtree"
+      },
+      "ebay": {
+        "category_id": 281,
+        "label": "Jewellery & Watches",
+        "parent_label": "Jewellery & Watches"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Jewelry"
+      }
+    },
+    {
+      "id": "clothing",
+      "label": "Clothing",
+      "emoji": "👗",
+      "vinted": {
+        "path": "Women > Clothing or Men > Clothing",
+        "parent_id": null,
+        "leaf_options": [],
+        "default_leaf_id": null,
+        "note": "Gender-split — prompt user for Women/Men/Kids"
+      },
+      "ebay": {
+        "category_id": 11450,
+        "label": "Clothes, Shoes & Accessories",
+        "parent_label": "Clothes, Shoes & Accessories"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Clothing"
+      }
+    },
+    {
+      "id": "furniture",
+      "label": "Furniture",
+      "emoji": "🪑",
+      "vinted": {
+        "path": "Home > Furniture",
+        "parent_id": 3154,
+        "leaf_options": [
+          {"id": 3155, "label": "Beds"},
+          {"id": 3157, "label": "Chests of drawers & wardrobes"},
+          {"id": 3204, "label": "Outdoor furniture"}
+        ],
+        "default_leaf_id": null
+      },
+      "ebay": {
+        "category_id": 3197,
+        "label": "Furniture",
+        "parent_label": "Home, Furniture & DIY"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Furniture"
+      }
+    },
+    {
+      "id": "toys",
+      "label": "Toys",
+      "emoji": "🧸",
+      "vinted": {
+        "path": "Kids > Toys",
+        "parent_id": null,
+        "default_leaf_id": null,
+        "note": "Check Kids subtree"
+      },
+      "ebay": {
+        "category_id": 220,
+        "label": "Toys & Games",
+        "parent_label": "Toys & Games"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Toys & Games"
+      }
+    },
+    {
+      "id": "electricals",
+      "label": "Electricals",
+      "emoji": "⚡",
+      "vinted": {
+        "path": "Electronics",
+        "parent_id": 2994,
+        "default_leaf_id": null,
+        "note": "Check Electronics subtree"
+      },
+      "ebay": {
+        "category_id": 293,
+        "label": "Consumer Electronics",
+        "parent_label": "Consumer Electronics"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "label": "Electronics & Accessories"
+      }
+    },
+    {
+      "id": "other",
+      "label": "Other",
+      "emoji": "📦",
+      "vinted": {
+        "default_leaf_id": null,
+        "note": "User must select manually"
+      },
+      "ebay": {
+        "category_id": null,
+        "note": "User must select manually"
+      },
+      "etsy": {
+        "taxonomy_id": null,
+        "note": "User must select manually"
+      }
+    }
+  ]
+}
