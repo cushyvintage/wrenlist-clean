@@ -164,26 +164,30 @@ export async function getMileageSummary(fromDate: string, toDate: string) {
     by_purpose: {} as Record<MileagePurpose, { miles: number; trips: number; value: number }>,
   }
 
-  ;(data || []).forEach((record: any) => {
+  ;(data || []).forEach((record) => {
     summary.total_miles += record.miles
     summary.total_deductible_value += record.deductible_value_gbp
     summary.trip_count += 1
 
     // By vehicle
-    if (!summary.by_vehicle[record.vehicle]) {
-      summary.by_vehicle[record.vehicle] = { miles: 0, trips: 0, value: 0 }
+    const vehicle = record.vehicle as string
+    if (!summary.by_vehicle[vehicle]) {
+      summary.by_vehicle[vehicle] = { miles: 0, trips: 0, value: 0 }
     }
-    summary.by_vehicle[record.vehicle].miles += record.miles
-    summary.by_vehicle[record.vehicle].trips += 1
-    summary.by_vehicle[record.vehicle].value += record.deductible_value_gbp
+    const vehicleRecord = summary.by_vehicle[vehicle]!
+    vehicleRecord.miles += record.miles
+    vehicleRecord.trips += 1
+    vehicleRecord.value += record.deductible_value_gbp
 
     // By purpose
-    if (!summary.by_purpose[record.purpose]) {
-      summary.by_purpose[record.purpose] = { miles: 0, trips: 0, value: 0 }
+    const purpose = record.purpose as MileagePurpose
+    if (!summary.by_purpose[purpose]) {
+      summary.by_purpose[purpose] = { miles: 0, trips: 0, value: 0 }
     }
-    summary.by_purpose[record.purpose].miles += record.miles
-    summary.by_purpose[record.purpose].trips += 1
-    summary.by_purpose[record.purpose].value += record.deductible_value_gbp
+    const purposeRecord = summary.by_purpose[purpose]!
+    purposeRecord.miles += record.miles
+    purposeRecord.trips += 1
+    purposeRecord.value += record.deductible_value_gbp
   })
 
   return summary

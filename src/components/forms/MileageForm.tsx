@@ -30,15 +30,17 @@ export function MileageForm({
   defaultValues,
   submitLabel = 'Log trip',
 }: MileageFormProps) {
+  const defaultData: MileageFormData = {
+    date: new Date().toISOString().split('T')[0]!,
+    miles: 0,
+    purpose: 'sourcing',
+    vehicle: vehicles[0] || '',
+    fromLocation: '',
+    toLocation: '',
+  }
+
   const [formData, setFormData] = useState<MileageFormData>(
-    defaultValues || {
-      date: new Date().toISOString().split('T')[0],
-      miles: 0,
-      purpose: 'sourcing',
-      vehicle: vehicles[0] || '',
-      fromLocation: '',
-      toLocation: '',
-    }
+    defaultValues ? { ...defaultData, ...defaultValues } : defaultData
   )
   const [error, setError] = useState<string | null>(null)
   const [deductible, setDeductible] = useState(0)
@@ -69,7 +71,7 @@ export function MileageForm({
 
       // Reset form
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split('T')[0]!,
         miles: 0,
         purpose: 'sourcing',
         vehicle: formData.vehicle,

@@ -22,20 +22,24 @@ export interface ExpenseFormData {
 
 const categories: ExpenseCategory[] = ['packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other']
 
+const getTodayDate = (): string => new Date().toISOString().split('T')[0]!
+
 export function ExpenseForm({
   onSubmit,
   isLoading = false,
   defaultValues,
   submitLabel = 'Add expense',
 }: ExpenseFormProps) {
+  const defaultData: ExpenseFormData = {
+    date: new Date().toISOString().split('T')[0]!,
+    category: 'supplies',
+    description: '',
+    amount: 0,
+    vat: null,
+  }
+
   const [formData, setFormData] = useState<ExpenseFormData>(
-    defaultValues || {
-      date: new Date().toISOString().split('T')[0],
-      category: 'supplies',
-      description: '',
-      amount: 0,
-      vat: null,
-    }
+    defaultValues ? { ...defaultData, ...defaultValues } : defaultData
   )
   const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +65,7 @@ export function ExpenseForm({
 
       // Reset form
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split('T')[0]!,
         category: 'supplies',
         description: '',
         amount: 0,

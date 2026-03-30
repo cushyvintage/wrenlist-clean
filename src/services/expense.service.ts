@@ -151,17 +151,18 @@ export async function getExpenseSummary(fromDate: string, toDate: string) {
     by_category: {} as Record<ExpenseCategory, { count: number; total: number; vat: number }>,
   }
 
-  ;(data || []).forEach((expense: any) => {
+  ;(data || []).forEach((expense) => {
     summary.total_amount += expense.amount_gbp
     if (expense.vat_amount_gbp) summary.total_vat += expense.vat_amount_gbp
 
-    if (!summary.by_category[expense.category]) {
-      summary.by_category[expense.category] = { count: 0, total: 0, vat: 0 }
+    const category = expense.category as ExpenseCategory
+    if (!summary.by_category[category]) {
+      summary.by_category[category] = { count: 0, total: 0, vat: 0 }
     }
-    summary.by_category[expense.category].count += 1
-    summary.by_category[expense.category].total += expense.amount_gbp
+    summary.by_category[category].count += 1
+    summary.by_category[category].total += expense.amount_gbp
     if (expense.vat_amount_gbp) {
-      summary.by_category[expense.category].vat += expense.vat_amount_gbp
+      summary.by_category[category].vat += expense.vat_amount_gbp
     }
   })
 
