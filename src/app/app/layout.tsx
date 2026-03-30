@@ -16,11 +16,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const navItems = [
+    // WORKSPACE
     { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
     { id: 'inventory', label: 'Inventory', icon: '📦', path: '/app/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
     { id: 'add-find', label: 'Add find', icon: '➕', path: '/app/add-find', section: 'WORKSPACE', pageTitle: 'Add Find' },
     { id: 'listings', label: 'Listings', icon: '📋', path: '/app/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+    // INSIGHTS
     { id: 'analytics', label: 'Analytics', icon: '📈', path: '/app/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
+    { id: 'price-research', label: 'Price Research', icon: '🔍', path: '/app/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
+    { id: 'sold', label: 'Sold', icon: '✓', path: '/app/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
+    // OPERATIONS
+    { id: 'sourcing', label: 'Sourcing', icon: '🛍', path: '/app/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
+    { id: 'suppliers', label: 'Suppliers', icon: '🏪', path: '/app/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
+    { id: 'expenses', label: 'Expenses', icon: '💰', path: '/app/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
+    { id: 'mileage', label: 'Mileage', icon: '🚗', path: '/app/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
+    { id: 'tax', label: 'Tax', icon: '📄', path: '/app/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
+    // SETTINGS
+    { id: 'platform-connect', label: 'Platform Connect', icon: '🔗', path: '/app/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
+    { id: 'settings', label: 'Settings', icon: '⚙', path: '/app/settings', section: 'SETTINGS', pageTitle: 'Settings' },
   ]
 
   const currentPage = navItems.find((item) => activeNav === item.id)
@@ -71,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* Group nav items by section */}
-        {['WORKSPACE', 'INSIGHTS'].map((section) => (
+        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS'].map((section) => (
           <div key={section}>
             {navItems.some((item) => item.section === section) && (
               <>
@@ -92,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={() => handleNavClick(item.id, item.path)}
                     />
                   ))}
-                {section !== 'INSIGHTS' && (
+                {section !== 'SETTINGS' && (
                   <div
                     className="h-px mx-3 my-1"
                     style={{ backgroundColor: 'rgba(255,255,255,.06)' }}
