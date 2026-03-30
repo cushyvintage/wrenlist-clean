@@ -229,7 +229,7 @@ export default function InventoryPage() {
           throw new Error('Failed to fetch finds')
         }
         const result = await response.json()
-        setFinds(result.data as Find[])
+        setFinds((result.data?.data || result.data || []) as Find[])
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)

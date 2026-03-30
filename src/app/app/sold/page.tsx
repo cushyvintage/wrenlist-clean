@@ -25,7 +25,7 @@ export default function SoldHistoryPage() {
         const response = await fetch('/api/finds?status=sold')
         if (!response.ok) throw new Error('Failed to fetch sold items')
         const result = await response.json()
-        setSoldFinds(result.data || [])
+        setSoldFinds(result.data?.data || result.data || [])
       } catch (err) {
         console.error('Error fetching sold items:', err)
         setError(err instanceof Error ? err.message : 'Failed to load sold items')

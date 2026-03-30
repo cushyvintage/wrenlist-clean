@@ -27,10 +27,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }
     }
 
-    if (open) {
-      document.addEventListener('keydown', handleEscape)
-      return () => document.removeEventListener('keydown', handleEscape)
-    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
   }, [open, onClose])
 
   if (!open) return null

@@ -46,11 +46,7 @@ export async function GET(request: NextRequest) {
 
     return ApiResponseHelper.success({
       data: data as Find[],
-      pagination: {
-        limit,
-        offset,
-        total: count || 0,
-      },
+      pagination: { limit, offset, total: count || 0 },
     })
   } catch (error) {
     console.error('GET /api/finds error:', error)
