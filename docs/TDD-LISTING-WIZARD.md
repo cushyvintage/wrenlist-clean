@@ -615,3 +615,114 @@ interface BatchListingPayload {
 17. eBay config + category picker
 18. Etsy config + category picker + Etsy-specific fields (who made, when made, tags)
 19. eBay publish flow (different from Vinted)
+
+---
+
+## 11. Crosslist Analysis (2026-03-30)
+
+### Architecture
+Crosslist uses a **canonical internal category tree** (own UUIDs, not platform IDs). Platform mapping happens server-side. This is a cleaner architecture than maintaining per-platform trees client-side.
+
+**API calls observed:**
+| Endpoint | When | Returns |
+|----------|------|---------|
+| `GET /api/Product/GetCategories?parentId={id}` | On category drill-down | Child categories with `isEndNode` flag |
+| `GET /api/Product/GetSizes?categoryId={id}` | On leaf category select | Size options (empty for non-clothing) |
+| `GET /api/Product/GetDynamicProperties?categoryId={id}` | On leaf category select | Per-category extra fields |
+| `GET /api/Settings/GetShippingProfiles` | On page load | User's configured shipping profiles |
+
+**Category node shape:**
+```json
+{
+  "id": "06ebcee1-837b-9ddf-3ae1-074a930c3992",
+  "parentId": "618ec604-2c87-4187-50b9-b231a8821774",
+  "title": "Antique garden decor",
+  "fullName": "Antiques > Antique decor",
+  "sortOrder": 0,
+  "isEndNode": true
+}
+```
+
+**Dynamic properties shape:**
+```json
+{
+  "dynamicProperties": [{
+    "name": "Antique",
+    "label": "Antique",
+    "fieldType": "SelectList",
+    "isRequired": false,
+    "isStrictlyRequired": false,
+    "isAdditional": true,
+    "hidden": false,
+    "maxSelections": null,
+    "marketplaces": ["ebay"],   // ← which platforms need this field
+    "options": [{"value": "Yes", "label": "Yes"}, ...]
+  }]
+}
+```
+
+**Key insight: `marketplaces` array on each dynamic property** — a field knows which platforms it applies to. This is how Crosslist shows a field only when that marketplace is selected.
+
+### UX patterns (better than Vendoo)
+- **Marketplace checkboxes in left sidebar** — always visible, easy to toggle
+- **Single unified category tree** — one selection maps to all platforms
+- **"Adjust prices per marketplace"** link — price override available but hidden by default
+- **"Generate with AI"** — generates listing from photos (we have this in legacy)
+- **Category search box** — type to filter within tree (Vendoo doesn't have this)
+- **Breadcrumb trail** in category picker (Antiques > Antique decor)
+- **Additional properties** section — expandable, shows platform-specific extras
+
+### Wrenlist design update based on Crosslist
+
+**Adopt from Crosslist:**
+1. **Canonical category tree** — maintain Wrenlist-owned tree, map to platforms server-side (not client-side per-platform trees)
+2. **Dynamic properties API** — `marketplaces` array on each field so UI knows when to show it
+3. **Category search** — text filter on the tree picker
+4. **Breadcrumb navigation** in picker
+
+**Keep Wrenlist-specific:**
+- Wrenlist categories (Ceramics, Books, Collectibles etc.) as the top-level canonical set, not a generic Antiques/Art tree
+- Show platform category mappings to user (Crosslist hides them — Wrenlist sellers should know what category their item is in on each platform)
+- Cost of goods tracking tighter (Wrenlist is the P&L system, not just a lister)
+
+### Revised architecture for category-mappings.json
+
+Replace the current hand-rolled JSON with a proper canonical tree stored in Supabase:
+
+```sql
+categories (
+  id          uuid PRIMARY KEY,
+  parent_id   uuid REFERENCES categories(id),
+  title       text NOT NULL,          -- "Plates"
+  full_path   text,                   -- "Ceramics > Plates"
+  sort_order  integer,
+  is_leaf     boolean DEFAULT false
+)
+
+category_platform_mappings (
+  category_id       uuid REFERENCES categories(id),
+  marketplace       text,             -- 'vinted' | 'ebay' | 'etsy'
+  platform_id       text,             -- Vinted: '1960', eBay: '57902'
+  platform_path     text,             -- "Home > Tableware > Plates"
+  verified          boolean DEFAULT false,
+  PRIMARY KEY (category_id, marketplace)
+)
+
+category_dynamic_fields (
+  id            uuid PRIMARY KEY,
+  category_id   uuid REFERENCES categories(id),
+  field_name    text,
+  label         text,
+  field_type    text,    -- 'SelectList' | 'Text' | 'MultiSelect' | 'Toggle'
+  required      boolean DEFAULT false,
+  max_selections integer,
+  marketplaces  text[],  -- which platforms need this field
+  options       jsonb    -- [{value, label}]
+)
+```
+
+This means:
+- Category tree is DB-driven, updatable without code deploy
+- Platform mappings can be verified and corrected over time
+- Dynamic fields know their marketplace scope
+- Refresh script populates from Vinted API and Crosslist observations
