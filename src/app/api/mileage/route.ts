@@ -76,11 +76,17 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest(validation.error)
     }
 
-    // Create mileage entry
+    // Create mileage entry with calculated deductible
+    const HMRC_MILEAGE_RATE = 0.45
     const mileage = {
       user_id: user.id,
-      ...validation.data,
       date: validation.data.date || new Date().toISOString().split('T')[0],
+      miles: validation.data.miles,
+      purpose: validation.data.purpose || 'sourcing',
+      from_location: validation.data.from_location || null,
+      to_location: validation.data.to_location || null,
+      vehicle: validation.data.vehicle,
+      deductible_value_gbp: validation.data.miles * HMRC_MILEAGE_RATE,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

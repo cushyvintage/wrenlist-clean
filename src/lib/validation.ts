@@ -61,13 +61,14 @@ export type UpdateListingInput = z.infer<typeof UpdateListingSchema>
 // EXPENSES
 // ============================================================================
 
-export const ExpenseCategoryEnum = z.enum(['transport', 'supplies', 'storage', 'marketplace_fees', 'other'])
+export const ExpenseCategoryEnum = z.enum(['packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other'])
 
 export const CreateExpenseSchema = z.object({
   category: ExpenseCategoryEnum,
   amount_gbp: z.number().positive('Amount must be positive'),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   date: z.string().date().optional(),
+  vat_amount_gbp: z.number().nonnegative().optional().nullable(),
   find_id: z.string().uuid().optional().nullable(),
 })
 
@@ -80,12 +81,15 @@ export type UpdateExpenseInput = z.infer<typeof UpdateExpenseSchema>
 // MILEAGE
 // ============================================================================
 
+export const MileagePurposeEnum = z.enum(['car_boot', 'charity_shop', 'house_clearance', 'sourcing', 'delivery', 'other'])
+
 export const CreateMileageSchema = z.object({
   date: z.string().date().optional(),
   miles: z.number().positive('Miles must be positive'),
-  purpose: z.string().optional(),
+  purpose: MileagePurposeEnum.optional().default('sourcing'),
   from_location: z.string().optional().nullable(),
   to_location: z.string().optional().nullable(),
+  vehicle: z.string().min(1, 'Vehicle is required'),
 })
 
 export const UpdateMileageSchema = CreateMileageSchema.partial()

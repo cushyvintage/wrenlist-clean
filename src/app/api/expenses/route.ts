@@ -98,8 +98,12 @@ export async function POST(request: NextRequest) {
     // Create expense
     const expense = {
       user_id: user.id,
-      ...validation.data,
+      category: validation.data.category,
+      amount_gbp: validation.data.amount_gbp,
+      vat_amount_gbp: validation.data.vat_amount_gbp || null,
+      description: validation.data.description || null,
       date: validation.data.date || new Date().toISOString().split('T')[0],
+      find_id: validation.data.find_id || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

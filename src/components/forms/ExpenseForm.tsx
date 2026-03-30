@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { ExpenseCategory } from '@/types'
 import { EXPENSE_LABELS } from '@/types'
 
 interface ExpenseFormProps {
-  onSubmit: (data: ExpenseFormData) => Promise<void>
+  onSubmit?: (data: ExpenseFormData) => Promise<void>
   isLoading?: boolean
   defaultValues?: Partial<ExpenseFormData>
   submitLabel?: string
+  onSuccess?: () => void
 }
 
 export interface ExpenseFormData {
@@ -26,10 +28,12 @@ const getTodayDate = (): string => new Date().toISOString().split('T')[0]!
 
 export function ExpenseForm({
   onSubmit,
-  isLoading = false,
+  isLoading: externalIsLoading = false,
   defaultValues,
   submitLabel = 'Add expense',
+  onSuccess,
 }: ExpenseFormProps) {
+  const router = useRouter()
   const defaultData: ExpenseFormData = {
     date: new Date().toISOString().split('T')[0]!,
     category: 'supplies',
@@ -42,10 +46,13 @@ export function ExpenseForm({
     defaultValues ? { ...defaultData, ...defaultValues } : defaultData
   )
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccessMessage(null)
 
     try {
       if (!formData.date) {
@@ -61,9 +68,35 @@ export function ExpenseForm({
         return
       }
 
-      await onSubmit(formData)
+      setIsLoading(true)
 
-      // Reset form
+      if (onSubmit) {
+        // Custom submission handler
+        await onSubmit(formData)
+      } else {
+        // Default: POST to API
+        const payload = {
+          date: formData.date,
+          category: formData.category,
+          description: formData.description,
+          amount_gbp: formData.amount,
+          vat_amount_gbp: formData.vat || null,
+        }
+
+        const response = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to save expense')
+        }
+      }
+
+      // Show success and reset
+      setSuccessMessage('Expense added successfully!')
       setFormData({
         date: new Date().toISOString().split('T')[0]!,
         category: 'supplies',
@@ -71,14 +104,25 @@ export function ExpenseForm({
         amount: 0,
         vat: null,
       })
+
+      // Call callback if provided
+      if (onSuccess) {
+        onSuccess()
+      }
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save expense')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-6 bg-cream-md rounded-lg border border-sage/14">
       {error && <div className="p-3 bg-red-lt text-red-dk rounded text-sm">{error}</div>}
+      {successMessage && <div className="p-3 bg-green-lt text-green-dk rounded text-sm">{successMessage}</div>}
 
       <div className="grid grid-cols-2 gap-4">
         {/* Date */}
@@ -153,10 +197,10 @@ export function ExpenseForm({
       {/* Submit */}
       <button
         type="submit"
-        disabled={isLoading}
+        disabled={isLoading || externalIsLoading}
         className="w-full px-4 py-2 bg-sage text-cream rounded font-medium text-sm hover:bg-sage-dk transition disabled:opacity-50"
       >
-        {isLoading ? 'Adding...' : submitLabel}
+        {isLoading || externalIsLoading ? 'Adding...' : submitLabel}
       </button>
     </form>
   )
