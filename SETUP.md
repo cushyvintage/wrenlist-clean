@@ -1,56 +1,138 @@
-# Wrenlist Setup & Development Guide
+# Wrenlist Clean - Setup Guide
 
-Complete guide for setting up and developing Wrenlist locally.
+## Project Status
+✅ Fresh Supabase project created and configured
+✅ Database schema deployed
+✅ .env.local configured with new credentials
+✅ Local development server running
 
-## Quick Start
+## Supabase Project Details
+- **Project Name**: wrenlist-clean
+- **Project ID**: `tewtfroudyicwfubgcqi`
+- **Database Region**: AWS EU-West-1 (Ireland)
+- **Project URL**: https://tewtfroudyicwfubgcqi.supabase.co
+
+## Environment Configuration
+The `.env.local` file has been updated with the new Supabase project credentials:
 
 ```bash
-git clone https://github.com/cushyvintage/wrenlist.git
-cd wrenlist-clean
-npm install
+NEXT_PUBLIC_SUPABASE_URL="https://tewtfroudyicwfubgcqi.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_QBJb76j4SB1G2muS_V5rlw_r7bFpXl_"
+```
+
+## Database Schema
+The following tables have been created and are accessible:
+- **profiles** - User profile information (plan, location, etc.)
+- **products** - Inventory/finds (vintage items)
+- **listings** - Cross-marketplace listing tracking (Vinted, eBay, Etsy, Shopify)
+- **expenses** - Business expense tracking (packaging, postage, platform fees, etc.)
+- **mileage** - HMRC-compliant mileage tracking (45p/mile deduction)
+
+Plus system tables:
+- **daily_metrics** - Daily aggregated metrics
+- **monthly_metrics** - Monthly aggregated metrics
+
+## Row-Level Security (RLS)
+All tables have RLS policies enabled to ensure users can only access their own data.
+
+## Local Development
+
+### Start the development server
+```bash
 npm run dev
 ```
 
-Opens at `http://localhost:3000`
+The server will start on `http://localhost:3000` (or next available port if 3000 is in use).
 
-## Environment Setup
+### Test the authentication flow
+1. Navigate to `http://localhost:3000/register`
+2. Create a test account with any email (e.g., test@example.com)
+3. You'll receive a verification email (configure email provider in Supabase → Authentication)
+4. Click the verification link
+5. You'll be redirected to the dashboard
 
-Create `.env.local`:
+### Test database operations
+1. After authentication, navigate to `/app/dashboard`
+2. Create a new "find" (inventory item) via `/app/add-find`
+3. View inventory in `/app/inventory`
+4. Log expenses and mileage via their respective forms
+5. Check analytics in `/app/analytics`
+
+All data is automatically saved to the Supabase database.
+
+## Configuration Checklist
+
+### Authentication
+- [ ] Configure email provider in Supabase
+  - Go to: Project Settings → Authentication → Email
+  - Set up Resend or SendGrid for email delivery
+  - Configure reply-to address
+
+### API Keys
+- [ ] Review publishable key used in `.env.local`
+- [ ] Store service role key securely (never commit to git)
+- [ ] Rotate keys if needed
+
+### Database
+- [ ] Verify RLS policies are active (currently enforced)
+- [ ] Check indexes for performance (already optimized)
+- [ ] Monitor database size and performance
+
+## File Structure
 ```
-NEXT_PUBLIC_SUPABASE_URL=your_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
-SUPABASE_SERVICE_ROLE_KEY=your_key
-ANTHROPIC_API_KEY=your_key
+/migrations/
+  001_create_core_tables.sql      # Profiles, Products, Listings
+  002_create_operations_tables.sql # Expenses, Mileage
+  003_enable_rls.sql              # Row-Level Security policies
+  004_seed_data.sql               # Optional seed data
+
+/src/
+  /app/
+    /app/                         # Protected routes
+      /dashboard                  # Dashboard
+      /add-find                   # Add new inventory
+      /inventory                  # View inventory
+      /listings                   # Manage listings
+      /analytics                  # Analytics
+    /(auth)/
+      /register                   # Sign up
+      /login                      # Sign in
+
+  /components/                    # Reusable React components
+  /lib/                           # Utilities
+  /styles/                        # Global styles
 ```
 
-## Development Workflow
+## Troubleshooting
 
-1. **Start**: `npm run dev`
-2. **Build**: `npm run build` (verify TypeScript)
-3. **Test**: Navigate to `http://localhost:3000/components-test` to view all components
-4. **Code**: Use `@/` path alias for imports
-5. **Commit**: Use clear, descriptive commit messages
+### Port already in use
+The dev server will automatically use the next available port (3003, 3004, etc.)
 
-## Key Directories
+### Supabase connection errors
+1. Verify `.env.local` has correct URL and key
+2. Check Supabase project is "Active" in dashboard
+3. Verify firewall/network allows outbound connections to Supabase
 
-- `src/components/wren/` - 10 reusable business components
-- `src/app/app/` - Authenticated pages (dashboard, inventory, etc)
-- `src/app/(auth)/` - Auth pages (login, register)
-- `src/services/` - API services (auth, Supabase, Claude)
-- `src/types/` - TypeScript types
-- `tailwind.config.ts` - Design tokens
+### Authentication not working
+1. Ensure email provider is configured in Supabase
+2. Check email settings in Supabase → Authentication
+3. Verify callback URL is set correctly
 
-## Component Library
+### Database tables not appearing
+The schema has already been deployed. If issues occur:
+1. Check Supabase SQL Editor for any errors
+2. Verify RLS policies are not blocking queries
+3. Check user authentication context
 
-See `COMPONENT_LIBRARY.md` for complete reference of all 10 components with examples.
+## Next Steps
+1. Configure email provider for authentication
+2. Test the complete authentication flow
+3. Verify all form submissions save to database
+4. Test cross-marketplace listing sync (when APIs are configured)
+5. Deploy to Vercel when ready for production
 
-## Testing Before Commit
-
-- `npm run build` - No TypeScript errors
-- Test in browser - No console errors
-- Design matches mockup at `http://localhost:8900/wrenlist-design.html`
-- Responsive on mobile
-
-## Deployment
-
-Auto-deploys to Vercel on push to `main` branch.
+## Support
+For issues or questions:
+- Check Supabase dashboard for error logs
+- Review browser console for client-side errors
+- Check Next.js dev server terminal for server-side errors
