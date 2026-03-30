@@ -37,17 +37,18 @@ export function SidebarItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded transition-colors ${
-        active
-          ? 'bg-white/7 border-l-2 border-sage-lt text-cream-pale'
-          : 'text-sage-dim hover:text-cream-pale border-l-2 border-transparent'
-      }`}
+      style={active ? { backgroundColor: 'rgba(255,255,255,.07)', color: '#C8DEC6', borderLeftColor: '#5A7A57' } : { borderLeftColor: 'transparent', color: '#7A9A78' }}
+      className="w-full flex items-center gap-[9px] px-[18px] py-[9px] text-sm transition-all border-l-[2px]"
+      onMouseEnter={(e) => !active && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,.04)')}
+      onMouseLeave={(e) => !active && (e.currentTarget.style.backgroundColor = '')}
     >
       {/* Icon: 14px, 70% opacity */}
-      <div className="w-4 h-4 flex-shrink-0 opacity-70">{icon}</div>
+      <div className="w-[14px] h-[14px] flex-shrink-0" style={{ opacity: 0.7 }}>
+        {icon}
+      </div>
 
       {/* Label: 13px */}
-      <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+      <span className="text-[13px] font-normal">{label}</span>
     </button>
   )
 }

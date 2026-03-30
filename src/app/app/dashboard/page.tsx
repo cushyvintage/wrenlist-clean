@@ -6,10 +6,12 @@ import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { InventoryRow } from '@/components/wren/InventoryRow'
 import { useRouter } from 'next/navigation'
+import { useAuthContext } from '@/contexts/AuthContext'
 import type { Find } from '@/types'
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { user } = useAuthContext()
   const [finds, setFinds] = useState<Find[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -77,12 +79,25 @@ export default function DashboardPage() {
   const recentFinds = finds.slice(0, 3)
   const findsList = isLoading ? 'skeleton' : finds.length === 0 ? 'empty' : 'loaded'
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    const firstName = user?.email?.split('@')[0]?.toUpperCase() || 'there'
+
+    if (hour < 12) return `Good morning, ${firstName}`
+    if (hour < 18) return `Good afternoon, ${firstName}`
+    return `Good evening, ${firstName}`
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome section */}
       <div>
-        <h1 className="font-serif text-4xl text-ink mb-2">Welcome back</h1>
-        <p className="text-ink-lt">You have {activeFinds} finds listed across all platforms</p>
+        <h1 className="font-serif text-4xl italic font-normal mb-2" style={{ color: '#1E2E1C' }}>
+          {getGreeting()}
+        </h1>
+        <p style={{ color: '#6B7D6A' }}>
+          You have {activeFinds} finds listed across all platforms
+        </p>
       </div>
 
       {/* Stat cards */}

@@ -21,7 +21,7 @@ interface BadgeProps {
 
 const statusConfig: Record<
   BadgeStatus,
-  { bg: string; text: string; label: string }
+  { bg: string; text: string; label: string; bgStyle?: string; textStyle?: string }
 > = {
   listed: {
     bg: 'bg-sage-pale',
@@ -39,9 +39,11 @@ const statusConfig: Record<
     label: 'on hold',
   },
   sold: {
-    bg: 'bg-green-100',
-    text: 'text-green-700',
+    bg: '',
+    text: '',
     label: 'sold',
+    bgStyle: '#D4E2D2',
+    textStyle: '#3D5C3A',
   },
 }
 
@@ -52,6 +54,7 @@ export function Badge({ status, label }: BadgeProps) {
   return (
     <span
       className={`inline-block px-3 py-1 rounded text-xs font-medium ${config.bg} ${config.text}`}
+      style={config.bgStyle ? { backgroundColor: config.bgStyle, color: config.textStyle } : undefined}
     >
       {displayLabel}
     </span>

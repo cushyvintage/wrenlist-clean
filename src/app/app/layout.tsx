@@ -16,12 +16,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app/dashboard' },
-    { id: 'inventory', label: 'Inventory', icon: '📦', path: '/app/inventory' },
-    { id: 'add-find', label: 'Add find', icon: '➕', path: '/app/add-find' },
-    { id: 'listings', label: 'Listings', icon: '📋', path: '/app/listings' },
-    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/app/analytics' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/app/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
+    { id: 'inventory', label: 'Inventory', icon: '📦', path: '/app/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
+    { id: 'add-find', label: 'Add find', icon: '➕', path: '/app/add-find', section: 'WORKSPACE', pageTitle: 'Add Find' },
+    { id: 'listings', label: 'Listings', icon: '📋', path: '/app/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/app/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
   ]
+
+  const currentPage = navItems.find((item) => activeNav === item.id)
+  const pageTitle = currentPage?.pageTitle
 
   // Set active nav based on current pathname
   useEffect(() => {
@@ -59,56 +62,109 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F0E8' }}>
       {/* Sidebar */}
-      <Sidebar>
-        {navItems.map((item) => (
-          <SidebarItem
-            key={item.id}
-            icon={item.icon}
-            label={item.label}
-            active={activeNav === item.id}
-            onClick={() => handleNavClick(item.id, item.path)}
-          />
+      <Sidebar
+        userInfo={{
+          name: user?.email?.split('@')[0] || 'User',
+          plan: 'Nester',
+        }}
+      >
+        {/* Group nav items by section */}
+        {['WORKSPACE', 'INSIGHTS'].map((section) => (
+          <div key={section}>
+            {navItems.some((item) => item.section === section) && (
+              <>
+                <div
+                  className="text-[9px] uppercase tracking-[.12em] px-[18px] py-5 font-semibold"
+                  style={{ color: '#3D5C3A' }}
+                >
+                  {section}
+                </div>
+                {navItems
+                  .filter((item) => item.section === section)
+                  .map((item) => (
+                    <SidebarItem
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      active={activeNav === item.id}
+                      onClick={() => handleNavClick(item.id, item.path)}
+                    />
+                  ))}
+                {section !== 'INSIGHTS' && (
+                  <div
+                    className="h-px mx-3 my-1"
+                    style={{ backgroundColor: 'rgba(255,255,255,.06)' }}
+                  />
+                )}
+              </>
+            )}
+          </div>
         ))}
       </Sidebar>
 
       {/* Main content area */}
-      <div className="ml-52 flex flex-col min-h-screen">
+      <div className="ml-[210px] flex flex-col min-h-screen">
         {/* Top bar with user menu */}
         <AppTopbar
+          title={pageTitle}
           actions={[{ label: '+ Add find', onClick: handleAddFind, variant: 'primary' }]}
           rightSlot={
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 rounded hover:bg-cream-md transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded transition-colors"
+                style={{ backgroundColor: 'transparent' }}
               >
-                <div className="w-8 h-8 bg-sage rounded-full flex items-center justify-center text-white text-sm font-medium">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                  style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+                >
                   {user && user.email[0]?.toUpperCase() || 'U'}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-xs">
-                  <span className="font-medium text-ink">{user ? user.email.split('@')[0] : 'User'}</span>
-                  <span className="text-ink-lt text-xs">{user?.email || 'Not logged in'}</span>
+                  <span className="font-medium" style={{ color: '#1E2E1C' }}>
+                    {user ? user.email.split('@')[0] : 'User'}
+                  </span>
+                  <span className="text-xs" style={{ color: '#6B7D6A' }}>
+                    {user?.email || 'Not logged in'}
+                  </span>
                 </div>
               </button>
 
               {/* User menu dropdown */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-sage/14 rounded-lg shadow-lg z-50">
-                  <div className="px-4 py-3 border-b border-sage/14">
-                    <p className="text-sm font-medium text-ink">{user?.email?.split('@')[0]}</p>
-                    <p className="text-xs text-ink-lt">{user?.email}</p>
+                <div
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50"
+                  style={{ borderColor: 'rgba(61,92,58,.14)', borderWidth: '1px' }}
+                >
+                  <div
+                    className="px-4 py-3"
+                    style={{ borderBottomColor: 'rgba(61,92,58,.14)', borderBottomWidth: '1px' }}
+                  >
+                    <p className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                      {user?.email?.split('@')[0]}
+                    </p>
+                    <p className="text-xs" style={{ color: '#6B7D6A' }}>
+                      {user?.email}
+                    </p>
                   </div>
                   <button
                     onClick={() => router.push('/app/settings')}
-                    className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-cream-md transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: '#1E2E1C' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     Settings
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-sage/14"
+                    className="w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: '#C0392B', borderTopColor: 'rgba(61,92,58,.14)', borderTopWidth: '1px' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FAE5E3')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     Sign out
                   </button>
@@ -119,7 +175,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
 
         {/* Page content */}
-        <main className="flex-1 mt-16 p-8">{children}</main>
+        <main className="flex-1 mt-[60px] p-7" style={{ backgroundColor: '#F5F0E8' }}>
+          {children}
+        </main>
       </div>
     </div>
   )

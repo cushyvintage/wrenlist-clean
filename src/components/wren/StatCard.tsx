@@ -34,22 +34,22 @@ export function StatCard({
   suffix = '',
 }: StatCardProps) {
   return (
-    <div className="bg-cream-md rounded-md p-5 border border-sage/14">
+    <div className="bg-cream-md rounded-md p-5">
       {/* Label: 10px uppercase sage-dim */}
-      <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
+      <div className="text-[10px] uppercase tracking-[.09em] text-sage-dim font-medium mb-2">
         {label}
       </div>
 
-      {/* Value: Cormorant Garamond 30px (using serif) */}
-      <div className="font-serif text-3xl font-normal text-ink mb-2">
-        <span className="font-mono text-2xl">{prefix}</span>
+      {/* Value: Serif 30px */}
+      <div className="font-serif text-[30px] font-medium text-ink mb-1" style={{ lineHeight: '1' }}>
+        {prefix && <span className="font-mono text-base">{prefix}</span>}
         {value}
-        <span className="font-mono text-2xl">{suffix}</span>
+        {suffix && <span className="font-mono text-base">{suffix}</span>}
       </div>
 
       {/* Delta: 11px, green for positive */}
       {delta && (
-        <div className="text-xs text-green-600 font-medium">
+        <div className="text-[11px] font-medium" style={{ color: '#4A7A45' }}>
           {delta}
         </div>
       )}

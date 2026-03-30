@@ -49,42 +49,51 @@ export function AppTopbar({
 }: AppTopbarProps) {
   return (
     <header
-      className={`fixed top-0 left-52 right-0 bg-white border-b border-sage/14 h-16 flex items-center justify-between px-6 ${className}`}
+      className={`fixed top-0 left-[210px] right-0 h-[60px] flex items-center justify-between px-7 ${className}`}
+      style={{ backgroundColor: '#F5F0E8', borderBottomColor: 'rgba(61,92,58,.14)', borderBottomWidth: '1px' }}
     >
       {/* Left side: title + breadcrumb */}
       <div className="flex-1">
         {breadcrumb && (
-          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-1">
+          <div className="text-[10px] uppercase tracking-[.09em] font-medium mb-1" style={{ color: '#8A9E88' }}>
             {breadcrumb}
           </div>
         )}
-        {title && <h1 className="font-serif text-2xl text-ink">{title}</h1>}
+        {title && (
+          <h1 className="font-serif text-2xl italic font-normal" style={{ color: '#1E2E1C' }}>
+            {title}
+          </h1>
+        )}
       </div>
 
-      {/* Center: search or other content */}
-      {/* Placeholder for search/filter */}
-
       {/* Right side: actions + notifications */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
         {/* Action buttons */}
-        <div className="flex gap-2">
-          {actions.map((action, idx) => (
-            <button
-              key={idx}
-              onClick={action.onClick}
-              className={
-                action.variant === 'secondary'
-                  ? 'px-4 py-2 text-sm bg-cream-md text-ink hover:bg-cream-dk rounded transition-colors'
-                  : 'px-4 py-2 text-sm bg-sage text-white hover:bg-sage-dk rounded transition-colors font-medium'
-              }
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
+        {actions.length > 0 && (
+          <div className="flex gap-2">
+            {actions.map((action, idx) => (
+              <button
+                key={idx}
+                onClick={action.onClick}
+                className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
+                style={
+                  action.variant === 'secondary'
+                    ? { backgroundColor: '#EDE8DE', color: '#1E2E1C' }
+                    : { backgroundColor: '#3D5C3A', color: '#F5F0E8' }
+                }
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Right slot (notifications, avatar, etc) */}
-        {rightSlot && <div className="flex items-center gap-3 pl-4 border-l border-sage/14">{rightSlot}</div>}
+        {rightSlot && (
+          <div className="flex items-center gap-3 pl-4" style={{ borderLeftColor: 'rgba(61,92,58,.14)', borderLeftWidth: '1px' }}>
+            {rightSlot}
+          </div>
+        )}
       </div>
     </header>
   )

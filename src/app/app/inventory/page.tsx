@@ -282,8 +282,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page title */}
-      <h1 className="font-serif text-2xl italic text-ink">inventory</h1>
+      {/* Page title is in topbar - no need to repeat */}
 
       {/* Error state */}
       {error && (
