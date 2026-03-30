@@ -36,6 +36,10 @@ export default function AnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    document.title = 'Analytics | Wrenlist'
+  }, [])
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const [findsRes, listingsRes] = await Promise.all([
