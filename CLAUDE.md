@@ -1,506 +1,139 @@
-# Wrenlist Clean Build
+# Wrenlist Clean Build — Agent Guide
 
-## Overview
+## Project
+Vintage resale management SaaS. Clean rebuild. Single-user (no orgs). UK-first.
 
-Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage). Zero users = zero migration constraints. Clean architecture, comprehensive documentation, Skylark extension integration.
-
-**Stack**: Next.js 15, TypeScript strict, Supabase, Tailwind, Skylark extension
-**Deployed**: https://wrenlist.com (will switch to clean build after Phase 3)
-**Timeline**: 5 weeks (Phases 1-4 + testing/launch)
-
----
-
-## Status: Phase 1-4 Complete ✅
-
-All core features built and integrated. Ready for Supabase connection and marketplace API wiring.
-
-### Phase 1: Core Architecture ✅
-- Component library (10+ reusable components)
-- Layout system (Sidebar, Dashboard, Marketing)
-- Type system (TypeScript strict mode)
-- Design patterns (Tailwind + custom colors)
-
-### Phase 2: Sourcing Pipeline ✅
-- Add-find form with margin calculation
-- Inventory management
-- Find tracking (draft → listed → sold)
-- Cost/price history
-
-### Phase 3: Marketplace Integration ✅
-- 4 marketplace APIs (Vinted, eBay, Etsy, Shopify)
-- Cross-platform listing creation
-- Marketplace config with fee structures
-- Product syncing
-
-### Phase 4: Operations & Tax Reporting ✅
-- Expense tracker (6 categories, VAT tracking)
-- Mileage logger (HMRC 45p/mile auto-calc)
-- ExpenseForm & MileageForm (API-wired)
-- Expenses page & Mileage page (with filtering)
-- Form validation & error handling
-- Success messages & loading states
-
-### Additional ✅
-- Complete authentication system (signup → verify → login → password reset)
-- Route protection (middleware-based)
-- User context & session management
-- 136 Playwright tests (88% coverage)
-- 20+ REST API endpoints
-- Supabase integration with migrations
-- Row-Level Security policies
-
-### Architecture Decisions
-- **Single-user** (no organizations yet—can add in Phase 2)
-- **Auth**: Supabase Auth (email/password, optional OAuth later)
-- **Database**: Single Supabase project, 30-table schema
-- **Marketplace Detection**: Skylark extension + extension-sync API
-- **Styling**: Tailwind + custom component library
-- **API**: RESTful routes in `/api`
-
-### Known Gotchas
-- (Will update as discovered)
+**Repo**: `/Volumes/ExternalAI/github/wrenlist-clean`
+**Stack**: Next.js 15, TypeScript strict, Supabase, Tailwind CSS
+**Dev server**: http://localhost:3004
+**Production**: https://wrenlist.com (switch after all epics complete)
+**Supabase project**: `tewtfroudyicwfubgcqi` (wrenlist-clean)
+**Old repo for reference**: `/Volumes/ExternalAI/github/wrenlist`
 
 ---
 
-## Active Documentation
+## Database (tewtfroudyicwfubgcqi)
 
-**Root Docs** (single source of truth):
-| File | Purpose |
-|------|---------|
-| `README.md` | Project overview, quick start |
-| `ARCHITECTURE.md` | System design, data flows, patterns |
-| `API.md` | REST API endpoints (20+ routes) |
-| `DATABASE_SCHEMA.md` | Database tables, relationships, indexes |
-| `DESIGN_PATTERNS.md` | Tailwind patterns, component system |
-| `SETUP.md` | Local dev setup & commands |
-| `PRD.md` | Product requirements by phase |
-| `DOCS_STRUCTURE.md` | Documentation guidelines |
-
-**Archive** (`.archive/` — implementation details & history):
-- Feature-specific guides (Auth, Supabase, Marketplaces, Tests)
-- Phase build notes & completion logs
-- Old schemas & design comparisons
+9 tables deployed:
+- `profiles` — user plan, name, stripe_customer_id, finds_this_month
+- `finds` — core inventory (name, cost, price, status, photos, condition)
+- `listings` — marketplace listings per find (platform, status, platform_listing_id)
+- `expenses` — business expenses (category, amount, VAT)
+- `mileage` — HMRC mileage logs (45p/mile)
+- `products` — (TBD — may merge with finds)
+- `users` — Supabase auth mirror
+- `daily_metrics` / `monthly_metrics` — analytics aggregates
 
 ---
 
-## Code Organization
-
-```
-src/
-├── app/                    # Next.js App Router
-│   ├── (auth)/             # Auth pages (login, register)
-│   ├── dashboard/          # Protected dashboard
-│   │   ├── layout.tsx      # Dashboard wrapper
-│   │   ├── page.tsx        # Dashboard home
-│   │   ├── products/       # Product inventory
-│   │   ├── listings/       # Marketplace listings
-│   │   ├── settings/       # User settings
-│   │   └── [slug]/...      # Dynamic routes
-│   └── api/                # REST API routes
-├── components/             # Reusable UI components
-│   ├── dashboard/          # Dashboard-specific components
-│   ├── forms/              # Form components
-│   ├── marketplace/        # Marketplace UI
-│   └── ui/                 # Core UI (Button, Card, etc.)
-├── hooks/                  # React hooks
-│   ├── useAuth.ts          # Auth state management
-│   ├── useOrganization.ts  # Org/user context (single user for now)
-│   └── useMarketplace.ts   # Marketplace operations
-├── services/               # Business logic layer
-│   ├── auth.service.ts     # Auth operations
-│   ├── product.service.ts  # Product CRUD + sync
-│   ├── marketplace.ts      # Marketplace integration (Skylark, etc.)
-│   └── supabase.ts         # Supabase client
-├── types/                  # TypeScript types/interfaces
-│   ├── index.ts            # Shared types
-│   ├── database.ts         # Database row types
-│   └── marketplace.ts      # Marketplace types
-├── utils/                  # Utility functions
-│   ├── constants.ts        # Global constants
-│   └── helpers.ts          # Helper functions
-└── styles/                 # Global styles
-    └── globals.css         # Tailwind + globals
-```
+## Plans (src/config/plans.ts)
+- **Free**: 10 finds/month, 1 marketplace, £0
+- **Nester**: 100 finds/month, 3 marketplaces, £14/mo (£117/yr)
+- **Forager**: 500 finds/month, 5 marketplaces, £29/mo (£242/yr) ⭐ featured
+- **Flock**: Unlimited, 5 marketplaces + team seats, £59/mo (£492/yr)
 
 ---
 
-## Development Workflow
+## What's Actually Built vs Status
 
-### Before Coding a Feature
-1. Update this file: describe what you're building in "Current Phase"
-2. Add to ARCHITECTURE.md if it's a new service/layer
-3. Sketch component/hook names
+### ✅ Built and working
+- Auth pages (register, login, forgot/reset password, verify email)
+- Registration with plan selection + Google OAuth
+- Profile creation on signup (full_name, plan stored)
+- Middleware route protection
+- Expenses API + UI (CRUD, needs wiring to real data)
+- Mileage API + UI (CRUD, HMRC 45p/mile calc)
+- Finds API + UI (add-find form, inventory list)
+- Listings API (create, delist, sync endpoints)
+- Plans config with Stripe price ID placeholders
+- 136 Playwright tests (88% coverage on built pages)
+- TypeScript strict, zero errors
 
-### While Coding
-```typescript
-/**
- * Fetches products for current user with optional filters
- * @param filters - { status?: 'active'|'archived', marketplace?: string }
- * @returns Promise<Product[]>
- */
-export async function getProducts(filters?: ProductFilters): Promise<Product[]> {
-  // implementation
-}
-```
+### ⚠️ Exists but stub/not wired
+- `src/lib/marketplaces/` — vinted.ts, ebay.ts, etsy.ts, shopify.ts exist but are placeholder code, no real API calls
+- `platform-connect` page — UI exists, no OAuth flows built
+- `analytics` page — page exists, no real data queries
+- `ai-listing` page — stub
+- `price-research` page — stub
+- `orders` page — no API route
+- `tax` page — no API route
+- Stripe — plans.ts has price ID placeholders, no Stripe SDK wired
 
-### After Feature Complete
-1. **Update database.md** if creating/modifying tables (include schema changes)
-2. Add endpoint to API.md (if it's a new route)
-3. Update COMPONENT_LIBRARY.md if adding new components
-4. Commit: `feat: [Phase X] Brief description`
-5. Run `npm run clean` before pushing
-
----
-
-## Pre-Commit Checklist
-
-**Before pushing to origin/main:**
-
-```bash
-# 1. Build verification
-npm run build
-
-# 2. Type check
-npm run type-check
-
-# 3. Lint & format
-npm run lint
-npm run format
-
-# 4. Automated tests (REQUIRED)
-npm test
-
-# 5. Browser test (manual spot-check - see Browser Testing Pattern)
-# → Open https://wrenlist.com in Chrome
-# → Quick smoke test of changed feature
-# → Verify no console errors, responsive layout
-
-# 6. Git check
-git status
-git diff
-```
-
-**If any step fails:** Fix the issue, don't commit broken code.
-
-**No exceptions: All tests must pass before push.**
+### ❌ Not built yet
+- OAuth flows (eBay, Etsy, Shopify)
+- Skylark extension integration (postMessage → marketplace_accounts)
+- Stripe checkout, webhook, billing portal
+- Photo upload (Supabase Storage)
+- Auto-delist on sale logic
+- AI features (description gen, price suggestion, BG removal)
+- Sourcing pipeline beyond add-find
 
 ---
 
-## Browser Testing Pattern
+## Epic Plan (priority order)
 
-### Automated Tests (Playwright)
+### Epic 1: Auth & Onboarding ← START HERE
+- Fix deprecated `createMiddlewareClient` → new SSR helpers
+- Verify registration → profile → email confirm flow end-to-end
+- Post-signup redirect to dashboard
 
-**All tests validate against production (https://wrenlist.com)**
+### Epic 2: Core Inventory
+- Wire add-find form to API (may already work, needs testing)
+- Inventory list with real data + filtering
+- Find detail page (edit, status change, photos)
+- Photo upload via Supabase Storage
 
-**Setup:**
-```bash
-npm install -D @playwright/test
-npm test                    # Run all tests against wrenlist.com
-npm run test:ui            # Interactive UI mode
-npm run test:debug         # Debugger
-npm run test:headed        # Show browser window
-npm run test:report        # View HTML report
-```
+### Epic 3: Marketplace Connect & Listing
+- Platform connect: Vinted (via Skylark extension), eBay OAuth
+- Create listing from find → extension sends to Vinted/eBay
+- Delist endpoint actually calls marketplace API
+- Sync listing status back
 
-**Test Suite:**
-```
-tests/
-├── auth.spec.ts           # Login, register, access control
-├── add-find.spec.ts       # Form validation, pricing calculations
-├── listing.spec.ts        # Listing CRUD, platform-specific fields
-├── operations.spec.ts     # Expenses (categories), mileage (HMRC rates)
-└── dashboard.spec.ts      # Metrics display, responsive design (375px)
-```
+### Epic 4: Operations (Expenses + Mileage)
+- Wire expenses UI → API (test CRUD flows)
+- Wire mileage UI → API
+- Tax summary page (aggregate expenses + mileage for HMRC)
 
-**Running specific tests:**
-```bash
-npx playwright test tests/auth.spec.ts              # Single file
-npx playwright test -g "should display login form"  # Match pattern
-CI=true npm test                                    # CI mode (sequential)
-```
+### Epic 5: Analytics
+- Dashboard: real GMV, profit, listing counts from DB
+- Monthly breakdown from monthly_metrics
+- Populate metrics tables from finds/listings events
 
-**Critical paths tested:**
-- Auth flow (login, register, logout, redirect)
-- Add-find form (submission, validation, calculations)
-- Listings (creation, filtering, platform fields)
-- Expenses (category filtering, totals, VAT)
-- Mileage (vehicles, trips, HMRC 45p/mile)
-- Dashboard (metrics, inventory, activity, responsive)
+### Epic 6: Stripe & Billing
+- Create Stripe account + products (Free/Nester/Forager/Flock)
+- Checkout session API `/api/billing/checkout`
+- Webhook `/api/billing/webhook` → update profiles.plan
+- Plan enforcement: block find creation when limit hit
+- Billing portal `/api/billing/portal`
 
-### Claude-in-Chrome Interactive Testing
-
-**After every feature, have Claude test it on production:**
-
-1. **Deploy to Vercel** (automatically on push to main)
-   ```bash
-   git push origin main
-   # → Vercel deploys to https://wrenlist.com
-   ```
-
-2. **Open Chrome** (will use MCP tools to interact)
-
-3. **Ask Claude to test on wrenlist.com**
-   ```
-   "Test the add-product form on https://wrenlist.com/dashboard/products:
-   - Fill form with valid data → submit → verify success message
-   - Try invalid input → verify error message
-   - Check form is responsive on mobile (375px)"
-   ```
-
-4. **Claude will:**
-   - Take screenshots
-   - Click buttons/inputs
-   - Fill forms
-   - Verify UI state
-   - Document results
-
-5. **Document in PR**
-   - Claude's screenshots/GIFs
-   - What paths tested
-   - Any issues found
-
-**Workflow:**
-```
-Code → npm run build (pass?) → git push → Vercel deploys → Claude tests on wrenlist.com → Screenshots/GIFs → Verify
-```
-
-### Quick Manual Checklist (if not using Claude)
-
-- [ ] No console errors
-- [ ] No broken layouts
-- [ ] Form validation works
-- [ ] Loading states appear
-- [ ] Error messages appear
-- [ ] Mobile responsive (dev tools → 375px)
+### Epic 7: AI Features
+- AI description from find data (OpenAI)
+- Price suggestion (eBay/Vinted price research)
+- Background removal
 
 ---
 
-## Documentation Lifecycle
+## Key Patterns
 
-### Create
-- New file when introducing new service/component pattern
-- Place in root (`README.md`, `ARCHITECTURE.md`, etc.)
-- Link from CLAUDE.md table
+### API routes
+All in `src/app/api/`. Use Zod validation, return `ApiResponse` helper.
+Always check auth: `const { data: { user } } = await supabase.auth.getUser()`
 
-### Update
-- During development: Add API endpoints, database changes
-- After feature complete: Update corresponding doc file
-- Weekly: Review CLAUDE.md "Current Phase" section
+### Supabase client
+- Server: `import { createClient } from '@/lib/supabase-server'`
+- Client: `import { createClient } from '@/lib/supabase'`
 
-### Archive
-- Move to `.archive/` when >30 days old and no longer referenced
-- Keep active docs under 100 lines each
-- Create `.archive/README.md` to explain what's archived
-- Reference via DOCS_STRUCTURE.md
+### Auth (middleware)
+Currently uses deprecated `createMiddlewareClient` — migrate to `@supabase/ssr` `createServerClient`.
 
-**Active docs stay in root. Anything else → archive.**
+### Tests
+`npx playwright test` — tests run against https://wrenlist.com
+Keep tests updated when pages change.
 
 ---
 
-## Build Verification Pattern
-
-**After each commit:**
-
-1. **Local build must pass**
-   ```bash
-   npm run build
-   ```
-
-2. **Check Vercel deployment**
-   - Wait for build to complete
-   - Verify no TypeScript errors
-   - Check live site: https://wrenlist.com
-   - Quick smoke test of changed page
-
-3. **ALL TESTING HAPPENS ON PRODUCTION (https://wrenlist.com)**
-   - Browser tests: Always test against wrenlist.com
-   - Playwright tests: Configure to run against https://wrenlist.com
-   - User flows: Validate signup, login, feature workflows on live site
-   - **Never test against localhost—always validate on production**
-
-4. **If build fails**
-   - Check error message
-   - Fix locally
-   - New commit (don't amend unless trivial)
-   - Push again
-
-**Never force-push to main. Always fix forward with new commits.**
-
----
-
-## Quality Standards
-
-### TypeScript
-- Strict mode enabled globally
-- No `any` types
-- Interfaces in `/types`
-- Re-export from services
-
-### Code Style
-- Components: `PascalCase` (e.g., `ProductCard.tsx`)
-- Hooks/Utils: `camelCase` (e.g., `formatPrice.ts`)
-- Constants: `UPPER_SNAKE_CASE`
-- One component/hook per file
-
-### Documentation
-- JSDoc on all public functions
-- README.md in `/services` and `/components`
-- CLAUDE.md stays fresh (update each phase)
-
----
-
-## Lessons & Gotchas
-
-### Next.js 15 Client Components & Dynamic Routes
-**Problem**: Dynamic routes using `[id]` with client components importing `PageProps` type that includes `params: Promise<T>` fails. Next.js 15 requires params to be Promise only in server components.
-
-**Solution**: Remove `PageProps` imports in client components; access params only on server side via server components.
-
-### useSearchParams() Must Be Wrapped in Suspense
-**Problem**: Using `useSearchParams()` in a client component without Suspense causes prerendering errors.
-
-**Solution**: Either wrap in Suspense or remove unused `useSearchParams` imports.
-
-### TypeScript split() Result Type
-**Problem**: `string.split('T')[0]` can be undefined in strict mode.
-
-**Solution**: Add non-null assertion: `split('T')[0]!` (safe when split pattern always exists).
-
-### React useState with Partial Types
-**Problem**: `useState<FullType>(partialType || defaultType)` fails when partialType is `Partial<FullType>`.
-
-**Solution**: Create full-shaped defaultData, then merge: `useState<FullType>(partial ? { ...defaultData, ...partial } : defaultData)`.
-
-### Marketplace Fee Calculations
-**Problem**: Dynamic marketplace fees (Vinted 5%, eBay 12.8%, etc.) need to be accessible everywhere.
-
-**Solution**: Centralize in `src/utils/marketplace-config.ts` with helper functions like `calculateFinalPrice()`.
-
-### HMRC Mileage Rate
-**Problem**: The 45p/mile rate is used in multiple places (forms, API, services).
-
-**Solution**: Export from `src/types/index.ts` as `HMRC_MILEAGE_RATE` constant (0.45).
-
-### Next.js 15 useEffect Dependencies
-**Problem**: ESLint warns about missing dependencies in mount-only effects.
-
-**Solution**: Use `// eslint-disable-next-line react-hooks/exhaustive-deps` for intentional omissions (with comment explaining why).
-
----
-
-## Current Patterns Established
-
-### API Response Format
-All routes use consistent `ApiResponseHelper`:
-```typescript
-ApiResponseHelper.success(data)           // 200
-ApiResponseHelper.created(data)           // 201
-ApiResponseHelper.badRequest(msg)         // 400
-ApiResponseHelper.unauthorized()          // 401
-ApiResponseHelper.notFound(msg)           // 404
-ApiResponseHelper.internalError(msg)      // 500
-```
-
-### Form Submission Flow
-Forms default to POST to `/api/{resource}` if no custom `onSubmit`:
-1. Validate fields locally
-2. POST to API with `amount_gbp`, `vat_amount_gbp` (snake_case for API)
-3. API validates with Zod schema
-4. Insert into Supabase with user_id check
-5. Return success/error to form
-6. Form shows success message, resets, calls `onSuccess()` callback
-
-### Documentation Organization
-- **Root**: 8 active docs (README, CLAUDE, ARCHITECTURE, DATABASE_SCHEMA, DESIGN_PATTERNS, API, PRD, SETUP)
-- **Archive**: Implementation details, phase logs, old schemas
-- **Guideline**: Keep root docs under 100 lines each; one topic per file
-
----
-
-## Setting Up Playwright Tests
-
-**Initial setup (one-time):**
-
-```bash
-npm install -D @playwright/test
-
-# Create test file
-mkdir tests
-touch tests/auth.spec.ts
-```
-
-**Example test file (`tests/auth.spec.ts`):**
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('login flow', async ({ page }) => {
-  // Navigate to login on production
-  await page.goto('https://wrenlist.com/login');
-
-  // Fill form
-  await page.fill('input[name="email"]', 'test@example.com');
-  await page.fill('input[name="password"]', 'password123');
-
-  // Submit
-  await page.click('button[type="submit"]');
-
-  // Verify redirect to dashboard
-  await expect(page).toHaveURL('https://wrenlist.com/dashboard');
-});
-
-test('form validation - empty email', async ({ page }) => {
-  await page.goto('https://wrenlist.com/login');
-  await page.click('button[type="submit"]');
-
-  // Verify error message
-  const error = await page.locator('text=Email is required');
-  await expect(error).toBeVisible();
-});
-```
-
-**Run tests:**
-```bash
-npx playwright test              # Run all
-npx playwright test --ui         # Watch mode
-npx playwright test tests/auth   # Single file
-```
-
-**Keep tests updated:** When you change a form/route, update the test.
-
----
-
-## Maintenance Schedule
-
-**Weekly (Friday before end of week):**
-- Review CLAUDE.md "Current Phase" — accurate?
-- Check root docs — any outdated references?
-- Archive any .md files >30 days old to `.archive/`
-- Run `npm run clean` to catch lint/type issues early
-
-**After Each Phase:**
-- Archive Phase-specific build docs (e.g., PAGES_BUILT.md)
-- Update ARCHITECTURE.md with new patterns learned
-- Review CLAUDE.md lessons — add gotchas discovered
-
-**Monthly:**
-- Audit .archive/ — remove truly obsolete files
-- Update DOCS_STRUCTURE.md if patterns change
-- Refresh README.md if tech stack changed
-
-**This keeps docs fresh, prevents clutter, and makes future work faster.**
-
----
-
-## Next Steps (Post Phase 1)
-
-1. **Phase 2**: Sourcing pipeline (add-find flow, sourcing log)
-2. **Phase 3**: Selling & listings (multi-marketplace sync, delisting)
-3. **Phase 4**: Operations (expenses, mileage, tax)
-4. **Phase 5**: Polish + launch (testing, docs, public roadmap)
-
----
-
-## Contact & Questions
-
-Dom (@dom) — Questions? Check ARCHITECTURE.md or ask in #wrenlist Slack channel.
+## Gotchas
+- Old repo `/Volumes/ExternalAI/github/wrenlist` has working eBay sync, Vinted extension, Resend email — reference for porting
+- `finds` = inventory items (not "products" — that naming was the old build)
+- Plans are named Free/Nester/Forager/Flock (not Starter/Growth/Pro)
+- Supabase project is `tewtfroudyicwfubgcqi` (NOT the old `updcyyvkauqenhztmbay`)
