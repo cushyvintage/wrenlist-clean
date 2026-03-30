@@ -1,112 +1,110 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/wren/Badge'
+import type { Find } from '@/types'
 
-interface Haul {
-  id: string
+interface HaulGroup {
   date: string
-  supplier_name: string
-  location: string
-  items_found: number
-  total_spend: number
-  avg_margin_pct: number
-  status: 'pending' | 'completed'
+  sourceType: string
+  sourceName: string
+  items: Find[]
+  totalSpend: number
+  avgMarginPct: number
 }
 
-const mockHauls: Haul[] = [
-  {
-    id: 'h1',
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'Oxfam High Street',
-    location: 'Manchester',
-    items_found: 14,
-    total_spend: 28.5,
-    avg_margin_pct: 182,
-    status: 'completed',
-  },
-  {
-    id: 'h2',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'Car Boot Sale - Stockport',
-    location: 'Stockport',
-    items_found: 22,
-    total_spend: 45.0,
-    avg_margin_pct: 156,
-    status: 'completed',
-  },
-  {
-    id: 'h3',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'House Clearance - Wilmslow',
-    location: 'Wilmslow',
-    items_found: 38,
-    total_spend: 120.0,
-    avg_margin_pct: 198,
-    status: 'completed',
-  },
-  {
-    id: 'h4',
-    date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'British Heart Foundation',
-    location: 'City Centre',
-    items_found: 9,
-    total_spend: 18.75,
-    avg_margin_pct: 224,
-    status: 'completed',
-  },
-  {
-    id: 'h5',
-    date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'Flea Market - Castlefield',
-    location: 'Castlefield',
-    items_found: 31,
-    total_spend: 85.0,
-    avg_margin_pct: 167,
-    status: 'completed',
-  },
-  {
-    id: 'h6',
-    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'Charity Shop Haul - TK Maxx',
-    location: 'Manchester',
-    items_found: 19,
-    total_spend: 52.3,
-    avg_margin_pct: 189,
-    status: 'completed',
-  },
-  {
-    id: 'h7',
-    date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-    supplier_name: 'Vintage Fair - Macclesfield',
-    location: 'Macclesfield',
-    items_found: 26,
-    total_spend: 95.5,
-    avg_margin_pct: 175,
-    status: 'completed',
-  },
-]
-
-type FilterType = 'all' | 'this_week' | 'this_month' | 'completed' | 'pending'
+type FilterType = 'all' | 'this_week' | 'this_month' | 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 
 export default function SourcingPage() {
   const [filter, setFilter] = useState<FilterType>('all')
+  const [hauls, setHauls] = useState<HaulGroup[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  /**
+   * Fetch finds from API and group by sourcing haul
+   */
+  useEffect(() => {
+    async function fetchFinds() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const response = await fetch('/api/finds')
+        if (!response.ok) {
+          throw new Error('Failed to fetch finds')
+        }
+        const result = await response.json()
+        const finds = result.data as Find[]
+
+        // Group finds by sourced_at date + source combo
+        const grouped = new Map<string, Find[]>()
+        finds.forEach((find) => {
+          const date = find.sourced_at?.substring(0, 10) || new Date().toISOString().substring(0, 10)
+          const key = `${date}|${find.source_type}|${find.source_name}`
+          if (!grouped.has(key)) {
+            grouped.set(key, [])
+          }
+          grouped.get(key)!.push(find)
+        })
+
+        // Convert to HaulGroup array
+        const haulGroups: HaulGroup[] = Array.from(grouped.entries()).map(
+          ([key, items]) => {
+            const [date = '', sourceType, sourceName] = key.split('|')
+            const totalSpend = items.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
+            const validMargins = items
+              .map((item) => {
+                if (!item.cost_gbp || !item.asking_price_gbp) return null
+                return ((item.asking_price_gbp - item.cost_gbp) / item.asking_price_gbp) * 100
+              })
+              .filter((m) => m !== null) as number[]
+
+            const avgMarginPct =
+              validMargins.length > 0
+                ? Math.round(validMargins.reduce((a, b) => a + b, 0) / validMargins.length)
+                : 0
+
+            return {
+              date,
+              sourceType: sourceType || 'other',
+              sourceName: sourceName || 'Unknown',
+              items,
+              totalSpend,
+              avgMarginPct,
+            }
+          }
+        )
+
+        // Sort by date descending
+        haulGroups.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+        setHauls(haulGroups)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'An error occurred'
+        setError(message)
+        console.error('Error fetching finds:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFinds()
+  }, [])
+
   const now = Date.now()
   const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000
   const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000
 
   // Filter hauls
-  const filtered = mockHauls.filter((haul) => {
+  const filtered = hauls.filter((haul) => {
     const haulDate = new Date(haul.date).getTime()
 
-    const matchesFilter =
-      filter === 'all' ||
-      (filter === 'this_week' && haulDate >= oneWeekAgo) ||
-      (filter === 'this_month' && haulDate >= oneMonthAgo) ||
-      (filter === 'completed' && haul.status === 'completed') ||
-      (filter === 'pending' && haul.status === 'pending')
-
-    return matchesFilter
+    if (filter === 'all') return true
+    if (filter === 'this_week') return haulDate >= oneWeekAgo
+    if (filter === 'this_month') return haulDate >= oneMonthAgo
+    // Otherwise filter is a source type
+    return haul.sourceType === (filter as unknown as string)
   })
 
   const formatDate = (dateString: string) => {
@@ -118,6 +116,15 @@ export default function SourcingPage() {
     })
   }
 
+  const sourceTypeLabels: Record<string, string> = {
+    house_clearance: 'House clearance',
+    charity_shop: 'Charity shop',
+    car_boot: 'Car boot',
+    online_haul: 'Online haul',
+    flea_market: 'Flea market',
+    other: 'Other',
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
@@ -126,7 +133,7 @@ export default function SourcingPage() {
 
         {/* Filter Pills */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'this_week', 'this_month', 'completed', 'pending'] as const).map(
+          {(['all', 'this_week', 'this_month', 'house_clearance', 'charity_shop', 'car_boot', 'online_haul', 'flea_market'] as const).map(
             (f) => (
               <button
                 key={f}
@@ -143,7 +150,7 @@ export default function SourcingPage() {
                     ? 'this week'
                     : f === 'this_month'
                       ? 'this month'
-                      : f}
+                      : sourceTypeLabels[f]}
               </button>
             )
           )}
@@ -157,82 +164,87 @@ export default function SourcingPage() {
         </button>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center text-ink-lt py-8">
+          Loading hauls...
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">
+          {error}
+        </div>
+      )}
+
       {/* Table */}
-      <div className="bg-white border border-sage/14 rounded-md overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-cream border-b border-sage/14">
-              <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Supplier
-              </th>
-              <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Location
-              </th>
-              <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Items Found
-              </th>
-              <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Total Spend
-              </th>
-              <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Avg Margin
-              </th>
-              <th className="px-6 py-3 text-center text-xs uppercase tracking-wider font-medium text-sage-dim">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-ink-lt">
-                  No hauls found
-                </td>
+      {!isLoading && (
+        <div className="bg-white border border-sage/14 rounded-md overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-cream border-b border-sage/14">
+                <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Source Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Source Name
+                </th>
+                <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Items Found
+                </th>
+                <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Total Spend
+                </th>
+                <th className="px-6 py-3 text-right text-xs uppercase tracking-wider font-medium text-sage-dim">
+                  Avg Margin
+                </th>
               </tr>
-            ) : (
-              filtered.map((haul) => (
-                <tr
-                  key={haul.id}
-                  className="border-b border-sage/14 hover:bg-cream transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm text-ink font-medium">
-                    {formatDate(haul.date)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-ink">
-                    {haul.supplier_name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-ink-lt">
-                    {haul.location}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right font-mono text-ink">
-                    {haul.items_found}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right font-mono text-ink">
-                    £{haul.total_spend.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right font-mono text-sage font-medium">
-                    {haul.avg_margin_pct}%
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Badge
-                      status={
-                        haul.status === 'completed' ? 'listed' : 'on_hold'
-                      }
-                      label={haul.status}
-                    />
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-ink-lt">
+                    No hauls found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                filtered.map((haul) => (
+                  <tr
+                    key={`${haul.date}|${haul.sourceType}|${haul.sourceName}`}
+                    className="border-b border-sage/14 hover:bg-cream transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm text-ink font-medium">
+                      {formatDate(haul.date)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-ink">
+                      {sourceTypeLabels[haul.sourceType] || haul.sourceType}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-ink-lt">
+                      {haul.sourceName}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right font-mono text-ink">
+                      {haul.items.length}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right font-mono text-ink">
+                      £{haul.totalSpend.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right font-mono text-sage font-medium">
+                      {haul.avgMarginPct}%
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Summary Stats */}
-      {filtered.length > 0 && (
+      {!isLoading && filtered.length > 0 && (
         <div className="grid grid-cols-4 gap-4 mt-4">
           <div className="bg-cream-md rounded-md p-4">
             <div className="text-xs uppercase tracking-wider text-sage-dim font-medium mb-2">
@@ -247,7 +259,7 @@ export default function SourcingPage() {
               Items Found
             </div>
             <div className="font-serif text-2xl font-medium text-ink">
-              {filtered.reduce((sum, h) => sum + h.items_found, 0)}
+              {filtered.reduce((sum, h) => sum + h.items.length, 0)}
             </div>
           </div>
           <div className="bg-cream-md rounded-md p-4">
@@ -255,7 +267,7 @@ export default function SourcingPage() {
               Total Spend
             </div>
             <div className="font-serif text-2xl font-medium text-ink">
-              £{filtered.reduce((sum, h) => sum + h.total_spend, 0).toFixed(2)}
+              £{filtered.reduce((sum, h) => sum + h.totalSpend, 0).toFixed(2)}
             </div>
           </div>
           <div className="bg-cream-md rounded-md p-4">
@@ -263,10 +275,12 @@ export default function SourcingPage() {
               Avg Margin
             </div>
             <div className="font-serif text-2xl font-medium text-sage">
-              {Math.round(
-                filtered.reduce((sum, h) => sum + h.avg_margin_pct, 0) /
-                  filtered.length
-              )}
+              {filtered.length > 0
+                ? Math.round(
+                    filtered.reduce((sum, h) => sum + h.avgMarginPct, 0) /
+                      filtered.length
+                  )
+                : 0}
               %
             </div>
           </div>

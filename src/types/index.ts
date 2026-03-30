@@ -95,6 +95,62 @@ export interface FindWithListings extends FindWithMargin {
   listings: Listing[]
 }
 
+// ============================================================================
+// EXPENSES & MILEAGE (Phase 4 - Operations & Tax)
+// ============================================================================
+
+export type ExpenseCategory = 'packaging' | 'postage' | 'platform_fees' | 'supplies' | 'vehicle' | 'other'
+
+export interface Expense {
+  id: string
+  user_id: string
+  category: ExpenseCategory
+  amount_gbp: number
+  vat_amount_gbp: number | null
+  description: string | null
+  receipt_url: string | null
+  date: string
+  find_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type MileagePurpose = 'car_boot' | 'charity_shop' | 'house_clearance' | 'sourcing' | 'delivery' | 'other'
+
+export interface Mileage {
+  id: string
+  user_id: string
+  date: string
+  miles: number
+  purpose: MileagePurpose
+  from_location: string | null
+  to_location: string | null
+  vehicle: string
+  deductible_value_gbp: number // Calculated as miles * HMRC_RATE
+  created_at: string
+  updated_at: string
+}
+
+export const HMRC_MILEAGE_RATE = 0.45 // £0.45 per mile
+
+export const EXPENSE_LABELS: Record<ExpenseCategory, string> = {
+  packaging: 'Packaging',
+  postage: 'Postage',
+  platform_fees: 'Platform fees',
+  supplies: 'Supplies',
+  vehicle: 'Vehicle',
+  other: 'Other',
+}
+
+export const MILEAGE_PURPOSE_LABELS: Record<MileagePurpose, string> = {
+  car_boot: 'Car boot',
+  charity_shop: 'Charity shop',
+  house_clearance: 'House clearance',
+  sourcing: 'Sourcing',
+  delivery: 'Delivery',
+  other: 'Other',
+}
+
 // Display labels
 export const SOURCE_LABELS: Record<SourceType, string> = {
   house_clearance: 'House clearance',

@@ -261,8 +261,79 @@ window.addEventListener('message', (event) => {
 
 ---
 
+## Phase 3: Marketplace Integration & Listings
+
+### Listing Management System
+
+**Pages:**
+- `/app/listings` — View all active listings across platforms with filtering and search
+- `/app/listings/create` — Create listing on selected platforms with marketplace-specific configuration
+- `/app/orders` — Track sales, manage shipments, view revenue and margins
+
+**Key Features:**
+1. **Platform-Specific Configuration** (`src/utils/marketplace-config.ts`)
+   - Central config with marketplace features, fees, required fields
+   - Category mappings (custom → platform-specific)
+   - Shipping method definitions per platform
+   - Dynamic form field generation based on platform
+
+2. **Listing Service** (`src/services/listing.service.ts`)
+   - Create single or cross-platform listings
+   - Update listing details, prices
+   - Delist from single platform or all platforms
+   - Sync with marketplace APIs
+   - Calculate profit after fees
+
+3. **API Endpoints**
+   - `POST /api/listings/create` — Create new listing
+   - `PATCH /api/listings/[id]` — Update listing
+   - `DELETE /api/listings/[id]` — Delist from platform
+   - `POST /api/listings/[id]/delist` — Mark delisted
+   - `POST /api/listings/[id]/sync` — Sync with marketplace
+   - `POST /api/listings/delist-all` — Delist from all platforms when item sells
+   - `GET /api/listings/stats` — Aggregated listing statistics
+
+### Data Flow: Creating Cross-Platform Listings
+
+```
+User selects platforms → Form validates platform-specific fields
+  ↓
+Frontend calls createListingsAcrossMarketplaces()
+  ↓
+For each platform:
+  - POST /api/listings/create with marketplace config
+  - Supabase creates marketplace_listing record
+  - (Future) Calls marketplace API (Vinted, eBay, Etsy)
+  - Returns listing_id + external listing URL
+  ↓
+User sees success message → Redirects to /app/listings
+```
+
+### Marketplace Config Structure
+
+Each platform (vinted, ebay, etsy, shopify) has:
+- **platformFeePercent** — Marketplace fee (5% Vinted, 12.8% eBay)
+- **requiredFields** — Title, description, price, etc.
+- **platformSpecificFields** — Shipping method, condition, category, tags
+- **shippingMethods** — Platform-specific options with cost calculations
+- **categoryMapping** — Custom category → platform category conversion
+
+### Listing Status Flow
+
+```
+draft → live (when posted to marketplace)
+  ↓
+  ├─ live → sold (when order placed)
+  │   └─ Auto-delist from other platforms
+  │
+  └─ live → delisted (user manually deists)
+      └─ Marked as delisted, not deleted
+```
+
 ## File References
 
-- `SCHEMA.md` — Full database schema with relationships
-- `API.md` — Detailed REST API contracts
-- `MARKETPLACE_SERVICES.md` — Service implementations + Skylark extension protocol
+- `DATABASE_SCHEMA.md` — Full database schema with relationships
+- `src/utils/marketplace-config.ts` — Platform features, categories, fees
+- `src/services/listing.service.ts` — Listing business logic
+- `src/app/app/listings/` — Listing UI pages
+- `src/app/api/listings/` — Listing API endpoints

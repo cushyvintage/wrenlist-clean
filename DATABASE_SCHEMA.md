@@ -158,6 +158,66 @@ CREATE TABLE monthly_metrics (
 CREATE INDEX idx_monthly_metrics_user ON monthly_metrics(user_id);
 ```
 
+## Operations & Tax Tables
+
+### `expenses`
+Business expenses for tax deductions.
+```sql
+CREATE TABLE expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Expense details
+  category TEXT NOT NULL CHECK (category IN ('packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other')),
+  amount_gbp DECIMAL(10, 2) NOT NULL,
+  vat_amount_gbp DECIMAL(10, 2),
+  description TEXT,
+  receipt_url TEXT,
+
+  -- Date
+  date DATE NOT NULL,
+
+  -- Link to find (optional)
+  find_id UUID REFERENCES finds(id) ON DELETE SET NULL,
+
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_expenses_user_date ON expenses(user_id, date DESC);
+CREATE INDEX idx_expenses_category ON expenses(category);
+```
+
+### `mileage`
+Mileage tracking for tax deductions (HMRC 45p/mile rate).
+```sql
+CREATE TABLE mileage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Trip details
+  date DATE NOT NULL,
+  miles DECIMAL(5, 2) NOT NULL,
+  purpose TEXT NOT NULL CHECK (purpose IN ('car_boot', 'charity_shop', 'house_clearance', 'sourcing', 'delivery', 'other')),
+
+  -- Location
+  from_location TEXT,
+  to_location TEXT,
+
+  -- Vehicle
+  vehicle TEXT NOT NULL,
+
+  -- Calculated HMRC deductible value (45p per mile)
+  deductible_value_gbp DECIMAL(10, 2) GENERATED ALWAYS AS (miles * 0.45) STORED,
+
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_mileage_user_date ON mileage(user_id, date DESC);
+CREATE INDEX idx_mileage_vehicle ON mileage(vehicle);
+```
+
 ## Key Design Decisions
 
 1. **Simple, flat structure** - No complex relationships, easy to query
@@ -166,6 +226,8 @@ CREATE INDEX idx_monthly_metrics_user ON monthly_metrics(user_id);
 4. **Array fields** - Photos stored as TEXT[] for simplicity
 5. **Enums as TEXT** - Using TEXT CHECK constraints instead of PG enums for flexibility
 6. **Soft deletes not used** - Hard deletes only, with CASCADE for safety
+7. **HMRC Mileage Rate** - Auto-calculated (45p/mile) for tax deductions
+8. **Expense VAT** - Optional tracking for detailed tax records
 
 ## Row-Level Security (RLS)
 

@@ -37,6 +37,8 @@ const conditions = ['excellent', 'good', 'fair', 'poor']
 
 export default function AddFindPage() {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>({
     itemName: '',
     category: 'clothing',
@@ -61,10 +63,57 @@ export default function AddFindPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = () => {
-    // TODO: Save to Supabase
-    console.log('Saving find:', formData)
-    router.push('/app/inventory')
+  /**
+   * Save find to Supabase via API
+   */
+  const handleSave = async () => {
+    try {
+      setError(null)
+      setIsLoading(true)
+
+      // Validate required fields
+      if (!formData.itemName.trim()) {
+        setError('Item name is required')
+        return
+      }
+
+      const response = await fetch('/api/finds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.itemName,
+          category: formData.category,
+          condition: formData.condition,
+          size: formData.size,
+          colour: formData.colour,
+          brand: formData.brand,
+          description: formData.description,
+          source_type: formData.sourceType,
+          source_name: formData.sourceName,
+          sourced_at: new Date(formData.dateSourced).toISOString(),
+          cost_gbp: formData.costPaid,
+          asking_price_gbp: formData.askingPrice,
+          status: 'draft',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save find')
+      }
+
+      const result = await response.json()
+      console.log('Find saved:', result.data)
+
+      // Redirect to inventory
+      router.push('/app/inventory')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      setError(message)
+      console.error('Error saving find:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const calculateMargin = (): number | null => {
@@ -364,18 +413,27 @@ export default function AddFindPage() {
             </div>
           </Panel>
 
+          {/* ERROR MESSAGE */}
+          {error && (
+            <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">
+              {error}
+            </div>
+          )}
+
           {/* SAVE BUTTON */}
           <button
             onClick={handleSave}
-            className="w-full py-3 bg-sage text-white rounded font-medium hover:bg-sage-dk transition-colors"
+            disabled={isLoading}
+            className="w-full py-3 bg-sage text-white rounded font-medium hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            save find & crosslist
+            {isLoading ? 'saving...' : 'save find & crosslist'}
           </button>
 
           {/* CANCEL BUTTON */}
           <button
             onClick={() => router.push('/app/inventory')}
-            className="w-full py-2.5 border border-sage/14 rounded text-sm font-medium hover:bg-cream-md transition-colors"
+            disabled={isLoading}
+            className="w-full py-2.5 border border-sage/14 rounded text-sm font-medium hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             cancel
           </button>

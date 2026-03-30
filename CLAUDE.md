@@ -10,7 +10,7 @@ Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage)
 
 ---
 
-## Current Phase: Phase 1 — Foundation (Weeks 1-2)
+## Current Phase: Phase 2 — Sourcing Pipeline (In Progress)
 
 ### This Week's Tasks
 - [ ] GitHub repo + Supabase project setup

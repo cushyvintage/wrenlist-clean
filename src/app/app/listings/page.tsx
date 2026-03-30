@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { Find, Listing } from '@/types'
+import { getAllListings } from '@/services/listing.service'
 
 // Mock data for listings
 const mockListings: (Listing & { find?: Find })[] = [
@@ -318,9 +320,32 @@ type FilterType = 'all' | 'live' | 'hold' | 'sold' | 'delisted'
 export default function ListingsPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
+  const [listings, setListings] = useState(mockListings)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load listings on mount
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        // In production, get userId from auth context
+        const userId = 'user_1'
+        const data = await getAllListings(userId)
+        if (data.length > 0) {
+          setListings(data as any)
+        }
+      } catch (error) {
+        console.error('Failed to load listings:', error)
+        // Keep mock data on error
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadListings()
+  }, [])
 
   // Filter listings
-  const filtered = mockListings.filter((listing) => {
+  const filtered = listings.filter((listing) => {
     const matchesFilter =
       filter === 'all' ||
       (filter === 'live' && listing.status === 'live') ||
@@ -365,7 +390,15 @@ export default function ListingsPage() {
     <div className="flex flex-col gap-6">
       {/* Page Header */}
       <div className="border-b border-sage/14 pb-6">
-        <h1 className="font-serif text-2xl italic text-ink mb-4">listings</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="font-serif text-2xl italic text-ink">listings</h1>
+          <Link
+            href="/app/listings/create"
+            className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
+          >
+            + new listing
+          </Link>
+        </div>
 
         {/* Filter Pills */}
         <div className="flex gap-2 flex-wrap">
@@ -396,9 +429,21 @@ export default function ListingsPage() {
 
       {/* Listings Grid */}
       <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12 text-ink-lt">
-            No listings found
+        {isLoading ? (
+          <div className="text-center py-12 text-ink-lt">loading listings...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-ink-lt mb-4">
+              {listings.length === 0 ? 'No listings yet' : 'No listings match your filters'}
+            </div>
+            {listings.length === 0 && (
+              <Link
+                href="/app/listings/create"
+                className="text-sm font-medium text-sage hover:text-sage-dk"
+              >
+                create your first listing →
+              </Link>
+            )}
           </div>
         ) : (
           filtered.map((listing) => (
@@ -442,18 +487,25 @@ export default function ListingsPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 mt-2">
-                  <button className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium">
+                  <Link
+                    href={listing.platform === 'ebay' ? '#' : listing.platform === 'vinted' ? '#' : '#'}
+                    target="_blank"
+                    className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
+                  >
                     view
-                  </button>
+                  </Link>
                   {listing.status === 'live' && (
                     <button className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium">
                       edit
                     </button>
                   )}
                   {listing.status === 'sold' ? (
-                    <button className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium">
+                    <Link
+                      href={`/app/listings/create?findId=${listing.find_id}`}
+                      className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
+                    >
                       relist
-                    </button>
+                    </Link>
                   ) : listing.status !== 'delisted' ? (
                     <button className="px-2 py-1 text-xs bg-transparent border border-red/22 text-red hover:bg-red-50 rounded transition-colors font-medium">
                       delist

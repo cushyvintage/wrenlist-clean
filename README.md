@@ -15,9 +15,12 @@ Visit http://localhost:3000
 
 - **[CLAUDE.md](CLAUDE.md)** — Development instructions, architecture decisions, gotchas
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design, data flows, service layer
-- **[SCHEMA.md](SCHEMA.md)** — Database schema (30 tables)
+- **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)** — Database schema and tables
+- **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — UI design system, Tailwind patterns
 - **[PRD.md](PRD.md)** — Product requirements by phase
 - **[SETUP.md](SETUP.md)** — Local development setup guide
+
+**Historical**: See [.archive/](.archive/) for Phase 1 build logs and archived documentation
 
 ## Tech Stack
 

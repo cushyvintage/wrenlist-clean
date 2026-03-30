@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { Find } from '@/types'
 
-// Mock data for demo
+// Fallback mock data for when API is unavailable
 const mockFinds: Find[] = [
   {
     id: '1',
@@ -205,9 +205,40 @@ export default function InventoryPage() {
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [finds, setFinds] = useState<Find[]>(mockFinds)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  /**
+   * Fetch finds from API on mount
+   */
+  useEffect(() => {
+    async function fetchFinds() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const response = await fetch('/api/finds')
+        if (!response.ok) {
+          throw new Error('Failed to fetch finds')
+        }
+        const result = await response.json()
+        setFinds(result.data as Find[])
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'An error occurred'
+        setError(message)
+        console.error('Error fetching finds:', err)
+        // Fall back to mock data
+        setFinds(mockFinds)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFinds()
+  }, [])
 
   // Filter finds by status and search
-  const filteredFinds = mockFinds.filter((find) => {
+  const filteredFinds = finds.filter((find) => {
     const statusMatch = selectedStatus === 'all' || find.status === selectedStatus
     const searchMatch =
       searchQuery === '' ||
@@ -246,6 +277,13 @@ export default function InventoryPage() {
     <div className="space-y-6">
       {/* Page title */}
       <h1 className="font-serif text-2xl italic text-ink">inventory</h1>
+
+      {/* Error state */}
+      {error && (
+        <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">
+          {error}
+        </div>
+      )}
 
       {/* Controls row */}
       <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-sage/14">
@@ -289,29 +327,37 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Loading state */}
+      {isLoading && (
+        <div className="text-center text-ink-lt py-8">
+          Loading inventory...
+        </div>
+      )}
+
       {/* Inventory table */}
-      <Panel className="overflow-x-auto">
-        <table className="w-full text-sm min-w-max">
-          <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
-            <tr>
-              <th className="text-left py-4 px-4 w-8">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.size === filteredFinds.length && filteredFinds.length > 0}
-                  onChange={toggleAllSelection}
-                  className="cursor-pointer"
-                />
-              </th>
-              <th className="text-left py-4 px-4 min-w-[240px]">item</th>
-              <th className="text-left py-4 px-4 min-w-[140px]">source</th>
-              <th className="text-right py-4 px-4 w-16">cost</th>
-              <th className="text-right py-4 px-4 w-16">asking</th>
-              <th className="text-right py-4 px-4 w-20">margin</th>
-              <th className="text-left py-4 px-4 min-w-[140px]">platform</th>
-              <th className="text-left py-4 px-4 min-w-[120px]">status</th>
-            </tr>
-          </thead>
-          <tbody>
+      {!isLoading && (
+        <Panel className="overflow-x-auto">
+          <table className="w-full text-sm min-w-max">
+            <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
+              <tr>
+                <th className="text-left py-4 px-4 w-8">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.size === filteredFinds.length && filteredFinds.length > 0}
+                    onChange={toggleAllSelection}
+                    className="cursor-pointer"
+                  />
+                </th>
+                <th className="text-left py-4 px-4 min-w-[240px]">item</th>
+                <th className="text-left py-4 px-4 min-w-[140px]">source</th>
+                <th className="text-right py-4 px-4 w-16">cost</th>
+                <th className="text-right py-4 px-4 w-16">asking</th>
+                <th className="text-right py-4 px-4 w-20">margin</th>
+                <th className="text-left py-4 px-4 min-w-[140px]">platform</th>
+                <th className="text-left py-4 px-4 min-w-[120px]">status</th>
+              </tr>
+            </thead>
+            <tbody>
             {filteredFinds.map((find) => {
               const margin = calculateMargin(find.cost_gbp, find.asking_price_gbp)
               return (
@@ -379,12 +425,13 @@ export default function InventoryPage() {
                 </tr>
               )
             })}
-          </tbody>
-        </table>
-      </Panel>
+            </tbody>
+          </table>
+        </Panel>
+      )}
 
       {/* Empty state */}
-      {filteredFinds.length === 0 && (
+      {!isLoading && filteredFinds.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-sm text-ink-lt">No items found matching your search</p>
         </div>
