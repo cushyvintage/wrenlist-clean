@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { registerUser } from '@/services/auth.service'
 import { supabase } from '@/services/supabase'
 
 type PlanType = 'free' | 'nester' | 'forager' | 'flock'
@@ -47,8 +46,25 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await registerUser(email, password)
-      // TODO: Save firstName, lastName, selectedPlan to profile after registration
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (signUpError) throw signUpError
+      if (!data.user) throw new Error('User creation failed')
+
+      // Save profile with name and plan
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: data.user.id,
+          full_name: `${firstName} ${lastName}`,
+          plan: selectedPlan,
+        })
+
+      if (profileError) throw profileError
+
       router.push('/verify-email')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
