@@ -431,7 +431,20 @@ export default function InventoryPage() {
       )}
 
       {/* Empty state */}
-      {!isLoading && filteredFinds.length === 0 && (
+      {!isLoading && filteredFinds.length === 0 && finds.length === 0 && (
+        <div className="py-12 text-center">
+          <p className="text-sm text-ink-lt mb-4">No items in your inventory yet</p>
+          <button
+            onClick={() => router.push('/app/add-find')}
+            className="text-sm text-sage underline underline-offset-2 hover:text-sage-dk transition"
+          >
+            Add your first find →
+          </button>
+        </div>
+      )}
+
+      {/* No search results state */}
+      {!isLoading && filteredFinds.length === 0 && finds.length > 0 && (
         <div className="py-12 text-center">
           <p className="text-sm text-ink-lt">No items found matching your search</p>
         </div>
