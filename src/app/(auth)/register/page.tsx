@@ -3,14 +3,24 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { registerUser } from '@/services/auth.service'
+import { supabase } from '@/services/supabase'
+
+type PlanType = 'free' | 'nester' | 'forager' | 'flock'
+
+const PLANS: Record<PlanType, { name: string; price: number; finds: string; popular?: boolean }> = {
+  free: { name: 'Free', price: 0, finds: '10 finds/mo' },
+  nester: { name: 'Nester', price: 14, finds: '100 finds/mo' },
+  forager: { name: 'Forager', price: 29, finds: '500 finds/mo', popular: true },
+  flock: { name: 'Flock', price: 59, finds: 'Unlimited' },
+}
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('free')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -19,13 +29,8 @@ export default function RegisterPage() {
     setError(null)
 
     // Validation
-    if (!fullName.trim() || !email || !password || !confirmPassword) {
+    if (!firstName.trim() || !lastName.trim() || !email || !password) {
       setError('Please fill in all fields')
-      return
-    }
-
-    if (fullName.trim().length < 2) {
-      setError('Full name must be at least 2 characters')
       return
     }
 
@@ -39,21 +44,11 @@ export default function RegisterPage() {
       return
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    if (!agreedToTerms) {
-      setError('You must agree to the Terms of Service')
-      return
-    }
-
     setIsLoading(true)
 
     try {
       await registerUser(email, password)
-      // TODO: Save fullName to profile after registration
+      // TODO: Save firstName, lastName, selectedPlan to profile after registration
       router.push('/verify-email')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
@@ -62,9 +57,27 @@ export default function RegisterPage() {
     }
   }
 
+  const handleGoogleSignUp = async () => {
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign up with Google')
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
@@ -73,7 +86,8 @@ export default function RegisterPage() {
 
         {/* Register card */}
         <div className="bg-white border border-sage/14 rounded-lg p-8">
-          <h2 className="text-xl font-medium text-ink mb-6">Create your account</h2>
+          <h2 className="text-2xl font-serif text-ink mb-2">Create your <span className="italic">account</span></h2>
+          <p className="text-ink-lt text-sm mb-6">Free forever on the Starter plan. No card needed.</p>
 
           {/* Error message */}
           {error && (
@@ -82,22 +96,61 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* Google Sign-up Button */}
+          <button
+            type="button"
+            onClick={handleGoogleSignUp}
+            disabled={isLoading}
+            className="w-full mb-4 px-4 py-2.5 border border-sage/14 rounded font-medium text-ink hover:bg-cream transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#4285F4" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign up with Google
+          </button>
+
+          {/* Divider */}
+          <div className="my-4 flex items-center gap-4">
+            <div className="flex-1 h-px bg-sage/14" />
+            <div className="text-xs text-ink-lt">or sign up with email</div>
+            <div className="flex-1 h-px bg-sage/14" />
+          </div>
+
           {/* Register form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name input */}
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
-                Full name
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
-                required
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
-              />
+            {/* Name inputs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
+                  First name
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Jordan"
+                  required
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
+                  Last name
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Kirk"
+                  required
+                  disabled={isLoading}
+                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
+                />
+              </div>
             </div>
 
             {/* Email input */}
@@ -125,51 +178,42 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Min 8 characters"
                 required
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
               />
-              <p className="text-xs text-ink-lt mt-1">At least 8 characters</p>
             </div>
 
-            {/* Confirm password input */}
+            {/* Plan selection */}
             <div>
-              <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
-                Confirm password
+              <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
+                Choose your plan
               </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
-              />
-            </div>
-
-            {/* Terms checkbox */}
-            <div className="pt-2">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  disabled={isLoading}
-                  className="mt-1 cursor-pointer disabled:opacity-50"
-                />
-                <span className="text-sm text-ink-lt">
-                  I agree to the{' '}
-                  <a href="#" className="text-sage-lt hover:text-sage font-medium">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="text-sage-lt hover:text-sage font-medium">
-                    Privacy Policy
-                  </a>
-                </span>
-              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {Object.entries(PLANS).map(([key, plan]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedPlan(key as PlanType)}
+                    disabled={isLoading}
+                    className={`relative p-3 border rounded text-center transition-all disabled:opacity-50 ${
+                      selectedPlan === key
+                        ? 'border-sage bg-sage/5'
+                        : 'border-sage/14 hover:border-sage/30'
+                    }`}
+                  >
+                    {plan.popular && (
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
+                        POPULAR
+                      </div>
+                    )}
+                    <div className="font-medium text-ink">{plan.name}</div>
+                    <div className="text-lg font-semibold text-sage mt-1">£{plan.price}</div>
+                    <div className="text-xs text-ink-lt mt-1">{plan.finds}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Submit button */}
@@ -178,22 +222,27 @@ export default function RegisterPage() {
               disabled={isLoading}
               className="w-full mt-6 px-4 py-2.5 bg-sage text-white hover:bg-sage-dk rounded font-medium transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? 'Creating account...' : 'Create account — start free'}
             </button>
+
+            {/* Terms */}
+            <p className="text-center text-xs text-ink-lt mt-4">
+              By signing up you agree to our{' '}
+              <a href="#" className="text-sage-lt hover:text-sage font-medium">
+                Terms
+              </a>
+              {' '}and{' '}
+              <a href="#" className="text-sage-lt hover:text-sage font-medium">
+                Privacy Policy
+              </a>
+            </p>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-sage/14" />
-            <div className="text-xs text-ink-lt">OR</div>
-            <div className="flex-1 h-px bg-sage/14" />
-          </div>
-
           {/* Login link */}
-          <p className="text-center text-sm text-ink-lt">
+          <p className="text-center text-sm text-ink-lt mt-6">
             Already have an account?{' '}
             <a href="/login" className="text-sage-lt hover:text-sage font-medium transition-colors">
-              Log in
+              Sign in →
             </a>
           </p>
         </div>
