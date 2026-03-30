@@ -1,8 +1,14 @@
 {
   "_meta": {
     "source": "app.crosslist.com",
-    "extracted": "2026-03-30T23:11:51.736Z",
-    "leafCount": 1484
+    "extracted": "2026-03-30",
+    "note": "Partial extraction (2 levels deep = 2,337 nodes, 1,484 leaves). Full tree has 10,389 nodes / 9,234 leaves across 4+ levels. Re-run extraction to get full depth.",
+    "totalRootCats": 16,
+    "extractedNodes": 2337,
+    "extractedLeaves": 1484,
+    "fullTreeNodes": 10389,
+    "fullTreeLeaves": 9234,
+    "refreshInstructions": "Log in at app.crosslist.com, open browser console, run the extraction script in scripts/extract-crosslist-categories.js"
   },
   "tree": [
     {
@@ -3036,7 +3042,7 @@
             },
             {
               "id": "f3412350-046e-18aa-7698-c77432d3179b",
-              "title": "Macramé",
+              "title": "Macram\u00e9",
               "fullName": "Craft supplies > Needlecrafts & yarn",
               "isLeaf": false,
               "children": []
@@ -13684,7 +13690,7 @@
             },
             {
               "id": "ec059d20-78f7-5145-6e5e-0d48222b8c2e",
-              "title": "Longboards – complete",
+              "title": "Longboards \u2013 complete",
               "fullName": "Sports & outdoors > Skateboarding & longboarding",
               "isLeaf": true,
               "children": []
@@ -13719,7 +13725,7 @@
             },
             {
               "id": "a07644c6-6f04-2ce0-7f7b-84e39e487006",
-              "title": "Skateboards – complete",
+              "title": "Skateboards \u2013 complete",
               "fullName": "Sports & outdoors > Skateboarding & longboarding",
               "isLeaf": true,
               "children": []
