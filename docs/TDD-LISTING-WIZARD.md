@@ -726,3 +726,144 @@ This means:
 - Platform mappings can be verified and corrected over time
 - Dynamic fields know their marketplace scope
 - Refresh script populates from Vinted API and Crosslist observations
+
+---
+
+## 12. Dynamic Field Options — Runtime Architecture
+
+### What's bundled (static JSON in repo)
+| File | Contents | Size |
+|------|----------|------|
+| `vinted-categories.json` | Full Vinted category tree with IDs | 1.4MB |
+| `vinted-colors.json` | 31 colours with hex + Vinted IDs | 2KB |
+| `vinted-conditions.json` | 4 conditions with Vinted IDs | 1KB |
+| `crosslist-categories-full.json` | Full eBay-derived tree (10,389 nodes) | 3.4MB |
+| `crosslist-field-schemas.json` | 3,599 unique field sets for 9,234 categories | 7.3MB |
+| `category-mappings.json` | Wrenlist canonical → platform category IDs | 7KB |
+
+### What's fetched at runtime (on-demand via extension proxy)
+
+| Need | Endpoint | When |
+|------|----------|------|
+| Vinted brand search | `/api/v2/item_upload/brands?search={q}&category_id={id}` | User types brand name |
+| Vinted material options | `/api/v2/item_upload/catalog_attributes?catalog_id={id}` | Category selected |
+| Vinted size options | `/api/v2/size_groups?catalog_ids={id}` | Category selected (clothing) |
+| eBay item specifics with options | Crosslist `/api/Product/GetDynamicProperties?marketplaces=ebay&categoryId={id}` | Category selected |
+| Etsy taxonomy | Etsy API (needs ETSY_API_KEY) | Category selected |
+
+### Extension proxy pattern
+
+The form **never calls marketplace APIs directly**. All dynamic calls route through:
+
+```
+Form
+  → POST /api/marketplace/proxy
+  → Wrenlist API route
+  → Sends {action: 'fetch_vinted_api', url: '...'} to extension
+  → Extension makes authenticated request (uses user's session cookie)
+  → Returns data to form
+```
+
+**Required new extension action:** `fetch_vinted_api` — generic authenticated proxy.
+Currently missing from Skylark. **Sprint 0 task: add this to the extension before building the form.**
+
+### Extension message contract
+
+```typescript
+// New action needed in extension background/index.ts
+interface FetchVintedApiMessage {
+  action: 'fetch_vinted_api'
+  url: string          // Full Vinted URL
+  method?: 'GET'       // Read-only only — no mutations via proxy
+}
+
+// Response
+interface FetchVintedApiResponse {
+  success: boolean
+  data?: unknown       // Parsed JSON from Vinted
+  error?: string
+  status?: number      // HTTP status from Vinted
+}
+```
+
+### API proxy route (Wrenlist backend)
+
+```typescript
+// src/app/api/marketplace/proxy/route.ts
+// POST { marketplace: 'vinted', path: '/api/v2/item_upload/brands', params: {search, category_id} }
+// Sends to extension, returns result
+// Rate limit: 30 req/min per user
+// Cache: 5 min TTL for brand/size/material lists (they rarely change)
+```
+
+### Caching strategy
+
+- Brand search: no cache (live search)
+- Material options per category: cache 24h in localStorage
+- Size options per category: cache 24h in localStorage
+- eBay item specifics: cache 24h in localStorage
+- Cache keyed by: `${marketplace}:${categoryId}:${fieldType}`
+
+---
+
+## 13. Shopify Field Model
+
+### Architecture
+Shopify has **no category taxonomy** and **no required item specifics**. It accepts any product and the seller organises into collections.
+
+Crosslist confirmed: selecting Shopify adds zero extra fields — the unified form is sufficient.
+
+### Shopify payload
+
+```typescript
+interface ShopifyListingPayload {
+  title: string                    // Required
+  body_html: string                // Description (supports HTML)
+  vendor: string                   // Brand
+  tags: string                     // Comma-separated
+  status: 'active' | 'draft'
+  images: { src: string }[]        // Photo URLs
+  variants: [{
+    price: string                  // e.g. "18.00"
+    compare_at_price?: string      // RRP if showing sale price
+    inventory_quantity: number
+    inventory_management: 'shopify'
+    sku?: string
+    option1?: string               // e.g. colour
+  }]
+  options?: [{                     // Only if product has variants
+    name: string                   // e.g. "Colour"
+    values: string[]
+  }]
+  // Optional metafields
+  metafields?: [{
+    namespace: string              // e.g. "custom"
+    key: string                    // e.g. "condition"
+    value: string
+    type: 'single_line_text_field'
+  }]
+}
+```
+
+### Shopify-specific form fields (shown when Shopify selected)
+
+| Field | When to show | Notes |
+|-------|-------------|-------|
+| Shopify collection | Always | Dropdown of seller's existing collections (fetched via extension) |
+| Product type | Optional | Free text — seller's own taxonomy |
+| Compare at price | Optional | Shows strikethrough RRP on Shopify |
+| Variants | Optional | If item has size/colour variants — renders variant editor |
+
+### Fetching seller's collections (via extension)
+```
+GET https://{shop}.myshopify.com/admin/api/2024-01/custom_collections.json
+Authorization: Bearer {access_token}
+```
+Cached per session. Seller selects which collection(s) to assign product to.
+
+### Why Shopify is simpler
+- No category mapping needed (collections are seller-defined)
+- No required item specifics
+- Just map title/description/price/photos/vendor/tags from the universal form
+- Optional: collection assignment, variants, metafields
+- Extension posts to Shopify Admin API (already implemented in legacy Skylark extension)
