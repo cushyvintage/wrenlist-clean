@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 
 /**
@@ -8,11 +8,12 @@ import { ApiResponseHelper } from '@/lib/api-response'
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const body = await request.json()
     const { findId } = body
 

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateListingSchema, validateBody } from '@/lib/validation'
 import type { Listing } from '@/types'
@@ -11,11 +11,12 @@ import type { Listing } from '@/types'
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const { searchParams } = new URL(request.url)
     const findId = searchParams.get('find_id')
     const platform = searchParams.get('platform')
@@ -68,11 +69,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const body = await request.json()
 
     // Validate request body

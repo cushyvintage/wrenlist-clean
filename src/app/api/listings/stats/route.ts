@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 
 interface ListingStats {
@@ -19,11 +19,12 @@ interface ListingStats {
  */
 export async function GET(_request: NextRequest) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     // Get all listings for user
     const { data: listings, error } = await supabase
       .from('listings')

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateFindSchema, validateBody } from '@/lib/validation'
 import type { Find } from '@/types'
@@ -13,11 +13,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const { id } = await params
 
     const { data, error } = await supabase
@@ -51,11 +52,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const { id } = await params
     const body = await request.json()
 
@@ -108,11 +110,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const { id } = await params
 
     // Ensure user owns this find

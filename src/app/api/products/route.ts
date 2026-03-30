@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, validateSupabaseConfig } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { getProducts, createProduct, getProductStats } from '@/services/products.service'
 
 /**
@@ -16,10 +16,8 @@ import { getProducts, createProduct, getProductStats } from '@/services/products
  */
 export async function GET(request: NextRequest) {
   try {
-    validateSupabaseConfig()
-
-    const user = await supabase.auth.getUser()
-    if (!user.data?.user) {
+    const user = await getServerUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -58,10 +56,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    validateSupabaseConfig()
-
-    const user = await supabase.auth.getUser()
-    if (!user.data?.user) {
+    const user = await getServerUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -78,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Create product with user_id from auth
     const product = await createProduct({
       ...body,
-      user_id: user.data.user.id,
+      user_id: user.id,
     })
 
     return NextResponse.json({ product }, { status: 201 })

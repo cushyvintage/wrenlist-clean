@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, validateSupabaseConfig } from '@/services/supabase'
+import { getServerUser } from '@/lib/supabase-server'
 import { getProduct, updateProduct, deleteProduct } from '@/services/products.service'
 
 type RouteParams = Promise<{ id: string }>
@@ -16,10 +16,8 @@ type RouteParams = Promise<{ id: string }>
 export async function GET(request: NextRequest, { params }: { params: RouteParams }) {
   const { id } = await params
   try {
-    validateSupabaseConfig()
-
-    const user = await supabase.auth.getUser()
-    if (!user.data?.user) {
+    const user = await getServerUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -33,7 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
     }
 
     // Verify ownership
-    if (product.user_id !== user.data.user.id) {
+    if (product.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -56,10 +54,8 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
 export async function PUT(request: NextRequest, { params }: { params: RouteParams }) {
   const { id } = await params
   try {
-    validateSupabaseConfig()
-
-    const user = await supabase.auth.getUser()
-    if (!user.data?.user) {
+    const user = await getServerUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -72,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
       )
     }
 
-    if (product.user_id !== user.data.user.id) {
+    if (product.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -98,10 +94,8 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
 export async function DELETE(request: NextRequest, { params }: { params: RouteParams }) {
   const { id } = await params
   try {
-    validateSupabaseConfig()
-
-    const user = await supabase.auth.getUser()
-    if (!user.data?.user) {
+    const user = await getServerUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -114,7 +108,7 @@ export async function DELETE(request: NextRequest, { params }: { params: RoutePa
       )
     }
 
-    if (product.user_id !== user.data.user.id) {
+    if (product.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

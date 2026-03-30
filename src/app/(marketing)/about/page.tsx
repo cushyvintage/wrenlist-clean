@@ -19,8 +19,8 @@ export default function AboutPage() {
           <div className="text-xs font-medium text-ink">why wrenlist</div>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</button>
-          <button className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</button>
+          <Link href="/login" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</Link>
+          <Link href="/register" className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</Link>
         </div>
       </nav>
 

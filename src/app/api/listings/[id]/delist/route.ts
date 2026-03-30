@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import type { Listing } from '@/types'
 
@@ -10,11 +10,12 @@ import type { Listing } from '@/types'
 export async function POST(__request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     // Verify listing belongs to user
     const { data: listing, error: checkError } = await supabase
       .from('listings')

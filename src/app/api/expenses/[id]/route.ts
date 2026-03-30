@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase, getAuthUser } from '@/services/supabase'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateExpenseSchema, validateBody } from '@/lib/validation'
 import type { Expense } from '@/types'
@@ -11,11 +11,12 @@ import type { Expense } from '@/types'
 export async function GET(__request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const { data, error } = await supabase
       .from('expenses')
       .select('*')
@@ -45,11 +46,12 @@ export async function GET(__request: NextRequest, { params }: { params: Promise<
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     const body = await request.json()
 
     // Validate request body
@@ -100,11 +102,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(__request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await getAuthUser()
+    const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
+    const supabase = await createSupabaseServerClient()
     // Ensure user owns this expense
     const { data: existing, error: checkError } = await supabase
       .from('expenses')
