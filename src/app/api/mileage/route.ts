@@ -2,18 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabase, getAuthUser } from '@/services/supabase'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateMileageSchema, validateBody } from '@/lib/validation'
-
-export interface Mileage {
-  id: string
-  user_id: string
-  date: string
-  miles: number
-  purpose: string | null
-  from_location: string | null
-  to_location: string | null
-  created_at: string
-  updated_at: string
-}
+import type { Mileage } from '@/types'
 
 /**
  * GET /api/mileage

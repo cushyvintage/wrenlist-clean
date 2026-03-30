@@ -2,18 +2,7 @@ import { NextRequest } from 'next/server'
 import { supabase, getAuthUser } from '@/services/supabase'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateExpenseSchema, validateBody } from '@/lib/validation'
-
-export interface Expense {
-  id: string
-  user_id: string
-  category: string
-  amount_gbp: number
-  description: string | null
-  date: string
-  find_id: string | null
-  created_at: string
-  updated_at: string
-}
+import type { Expense } from '@/types'
 
 /**
  * GET /api/expenses
