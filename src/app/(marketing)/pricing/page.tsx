@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-const PricingCard = ({ tier, price, monthlyPrice, description, limit, features, featured = false }: any) => (
+const PricingCard = ({ tier, price, description, limit, features, featured = false }: any) => (
   <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-sage bg-opacity-5 bg-sage relative' : 'border-[rgba(61,92,58,0.14)] bg-cream'}`}>
     {featured && <div className="absolute top-3 right-3 text-10px font-semibold uppercase bg-sage-pale text-sage px-2 py-1 rounded">most popular</div>}
     <div className="text-sm font-medium text-ink mb-4">{tier}</div>

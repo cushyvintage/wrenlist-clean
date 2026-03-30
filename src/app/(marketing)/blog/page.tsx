@@ -112,18 +112,20 @@ export default function BlogPage() {
         </div>
 
         {/* FEATURED POST */}
-        <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-8 mb-12">
-          <div className="text-10px font-semibold uppercase tracking-widest text-sage mb-3">{posts[0].category}</div>
-          <h2 className="font-serif text-2xl font-light text-ink mb-4 leading-tight">
-            {posts[0].title}
-          </h2>
-          <p className="text-sm font-light text-ink-lt mb-4 leading-relaxed">
-            {posts[0].excerpt}
-          </p>
-          <div className="text-10px text-sage-dim font-light">
-            {posts[0].author} · {posts[0].date} · {posts[0].readTime}
+        {posts[0] && (
+          <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-8 mb-12">
+            <div className="text-10px font-semibold uppercase tracking-widest text-sage mb-3">{posts[0].category}</div>
+            <h2 className="font-serif text-2xl font-light text-ink mb-4 leading-tight">
+              {posts[0].title}
+            </h2>
+            <p className="text-sm font-light text-ink-lt mb-4 leading-relaxed">
+              {posts[0].excerpt}
+            </p>
+            <div className="text-10px text-sage-dim font-light">
+              {posts[0].author} · {posts[0].date} · {posts[0].readTime}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* GRID */}
         <div className="grid grid-cols-2 gap-6">
