@@ -21,16 +21,16 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
   useEffect(() => {
-    if (!open) return
-
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && open) {
         onClose()
       }
     }
 
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    if (open) {
+      document.addEventListener('keydown', handleEscape)
+      return () => document.removeEventListener('keydown', handleEscape)
+    }
   }, [open, onClose])
 
   if (!open) return null
