@@ -78,9 +78,30 @@ export default function ExpensesPage() {
   const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount_gbp, 0)
   const totalVat = expenses.reduce((sum, exp) => sum + (exp.vat_amount_gbp || 0), 0)
 
+  // Calculate this month and YTD
+  const now = new Date()
+  const thisMonth = expenses.filter((exp) => {
+    const expDate = new Date(exp.date)
+    return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear()
+  })
+  const thisMonthTotal = thisMonth.reduce((sum, exp) => sum + exp.amount_gbp, 0)
+
+  // Tax year: 6 Apr to 5 Apr
+  const taxYearStart = now.getFullYear() - (now.getMonth() < 3 ? 1 : 0)
+  const taxYearBegin = new Date(taxYearStart, 3, 6) // 6 Apr
+  const ytdExpenses = expenses.filter((exp) => new Date(exp.date) >= taxYearBegin)
+  const ytdTotal = ytdExpenses.reduce((sum, exp) => sum + exp.amount_gbp, 0)
+
+  // Tax deductible (all expenses that are not personal spend)
+  const taxDeductibleTotal = expenses.reduce((sum, exp) => sum + exp.amount_gbp + (exp.vat_amount_gbp || 0), 0)
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const formatGBP = (amount: number): string => {
+    return `£${amount.toFixed(2)}`
   }
 
   return (
@@ -89,6 +110,29 @@ export default function ExpensesPage() {
       <div className="bg-blue-lt border border-blue-dk/20 rounded-md p-4 text-sm text-blue-dk">
         <strong>Disclaimer:</strong> Wrenlist helps you track your business expenses — you are responsible for your own tax filings. Always consult an accountant for advice.
       </div>
+
+      {/* Summary stats */}
+      {!isLoading && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">this month</div>
+            <div className="font-serif text-2xl text-ink font-medium">{formatGBP(thisMonthTotal)}</div>
+            <div className="text-xs text-ink-lt mt-1">{thisMonth.length} expenses</div>
+          </div>
+
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">year to date</div>
+            <div className="font-serif text-2xl text-ink font-medium">{formatGBP(ytdTotal)}</div>
+            <div className="text-xs text-ink-lt mt-1">Apr 6 – today</div>
+          </div>
+
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">tax deductible</div>
+            <div className="font-serif text-2xl text-sage font-medium">{formatGBP(taxDeductibleTotal)}</div>
+            <div className="text-xs text-ink-lt mt-1">incl. VAT</div>
+          </div>
+        </div>
+      )}
 
       {/* Form toggle */}
       <div className="flex justify-between items-center">

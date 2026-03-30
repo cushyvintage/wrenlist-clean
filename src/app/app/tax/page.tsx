@@ -2,22 +2,91 @@
 
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import type { Find, Expense, Mileage } from '@/types'
 
 export default function TaxPage() {
   const [taxYear, setTaxYear] = useState('2025-26')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Summary values
-  const revenue = 38840
-  const costOfGoods = 4210
-  const operatingExpenses = 1847
-  const mileageDeduction = 1458
+  // Data from APIs
+  const [sells, setSells] = useState<Find[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [mileages, setMileages] = useState<Mileage[]>([])
+
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Get tax year dates (6 Apr to 5 Apr)
+        const currentYear = new Date().getFullYear()
+        const startDate = taxYear === '2025-26' ? '2025-04-06' : taxYear === '2024-25' ? '2024-04-06' : '2023-04-06'
+        const endDate = taxYear === '2025-26' ? '2026-04-05' : taxYear === '2024-25' ? '2025-04-05' : '2024-04-05'
+
+        // Fetch sold finds
+        const sellsRes = await fetch('/api/finds?status=sold')
+        if (sellsRes.ok) {
+          const sellsData = await sellsRes.json()
+          setSells(sellsData.data || [])
+        }
+
+        // Fetch expenses
+        const expensesRes = await fetch(`/api/expenses?start_date=${startDate}&end_date=${endDate}`)
+        if (expensesRes.ok) {
+          const expensesData = await expensesRes.json()
+          setExpenses(expensesData.data || [])
+        }
+
+        // Fetch mileage
+        const mileageRes = await fetch(`/api/mileage?start_date=${startDate}&end_date=${endDate}`)
+        if (mileageRes.ok) {
+          const mileageData = await mileageRes.json()
+          setMileages(mileageData.data || [])
+        }
+      } catch (err) {
+        console.error('Error fetching tax data:', err)
+        setError('Failed to load tax data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [taxYear])
+
+  // Calculate summary values
+  const revenue = sells.reduce((sum, find) => sum + (find.sold_price_gbp || 0), 0)
+  const costOfGoods = sells.reduce((sum, find) => sum + (find.cost_gbp || 0), 0)
+  const operatingExpenses = expenses.reduce((sum, exp) => sum + exp.amount_gbp, 0)
+  const mileageDeduction = mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0)
   const taxableProfit = revenue - costOfGoods - operatingExpenses - mileageDeduction
 
   // VAT threshold
   const vatThreshold = 90000
   const vatPercentage = (revenue / vatThreshold) * 100
   const vatRemaining = vatThreshold - revenue
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-lt border border-red-dk/20 rounded-md p-4 text-sm text-red-dk">
+          {error}
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8 text-ink-lt">Loading tax summary...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

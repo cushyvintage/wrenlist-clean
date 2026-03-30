@@ -44,9 +44,9 @@ export default function FindDetailPage() {
     fetchFind()
   }, [id])
 
-  const calculateMargin = (cost: number | null, asking: number | null) => {
-    if (!cost || !asking || asking === 0) return null
-    return Math.round(((asking - cost) / cost) * 100)
+  const calculateMargin = (cost: number | null, price: number | null) => {
+    if (!cost || !price || price === 0) return null
+    return Math.round(((price - cost) / price) * 100)
   }
 
   const handleStatusChange = async (newStatus: string) => {
@@ -118,7 +118,7 @@ export default function FindDetailPage() {
           </a>
           <span className="text-border-md">/</span>
           <h1 className="text-lg font-serif text-ink">{find.name}</h1>
-          <Badge status={find.status as any} />
+          <Badge status={find.status as 'listed' | 'draft' | 'sold' | 'on_hold'} />
         </div>
         <div className="flex gap-3">
           <select
