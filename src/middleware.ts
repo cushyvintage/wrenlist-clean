@@ -1,7 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
+const APP_SUBDOMAIN = 'app.wrenlist.com'
+const MARKETING_DOMAIN = 'wrenlist.com'
+
 export async function middleware(req: NextRequest) {
+  const hostname = req.headers.get('host') || ''
+  const pathname = req.nextUrl.pathname
+  const isAppSubdomain = hostname === APP_SUBDOMAIN
+  const isMarketingDomain = hostname === MARKETING_DOMAIN || hostname === `www.${MARKETING_DOMAIN}`
+
+  // On marketing domain: redirect /app/* to app subdomain
+  if (isMarketingDomain && pathname.startsWith('/app')) {
+    const url = new URL(req.url)
+    url.hostname = APP_SUBDOMAIN
+    url.port = ''
+    return NextResponse.redirect(url, 308)
+  }
+
   let res = NextResponse.next({ request: { headers: req.headers } })
 
   const supabase = createServerClient(
@@ -44,19 +60,21 @@ export async function middleware(req: NextRequest) {
     '/roadmap',
   ]
 
-  const pathname = req.nextUrl.pathname
-
-  // Check if the current route is public
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
-
   // If user is not authenticated and trying to access protected routes
   if (!session && pathname.startsWith('/app')) {
-    return NextResponse.redirect(new URL('/login', req.url))
+    const loginUrl = new URL('/login', req.url)
+    return NextResponse.redirect(loginUrl)
   }
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (session && ['/login', '/register', '/forgot-password', '/reset-password'].some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/app/dashboard', req.url))
+    const dashUrl = new URL('/app/dashboard', req.url)
+    // If on marketing domain, redirect to app subdomain
+    if (isMarketingDomain) {
+      dashUrl.hostname = APP_SUBDOMAIN
+      dashUrl.port = ''
+    }
+    return NextResponse.redirect(dashUrl)
   }
 
   return res
