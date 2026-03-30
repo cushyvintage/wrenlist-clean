@@ -10,15 +10,24 @@ Complete rebuild of Wrenlist platform for vintage resale business (cushyvintage)
 
 ---
 
-## Current Phase: Phase 2 — Sourcing Pipeline (In Progress)
+## Current Phase: Phase 4 — Operations & Tax Reporting
 
-### This Week's Tasks
-- [ ] GitHub repo + Supabase project setup
-- [ ] Auth system (Supabase Auth)
-- [ ] Dashboard layout + navigation
-- [ ] Product inventory (CRUD)
-- [ ] Marketplace account detection (Skylark extension)
-- [ ] Database schema migrations
+### Completed
+- [x] Expenses tracker UI (category filters, table, monthly total)
+- [x] Mileage tracker UI (HMRC calculation, trip history, vehicle tracking)
+- [x] Tax dashboard (profit calculation, VAT threshold tracker)
+- [x] Database schema (expenses, mileage tables with indexes)
+- [x] Services layer (expense.service.ts, mileage.service.ts)
+- [x] Form components (ExpenseForm, MileageForm)
+- [x] Type definitions (Expense, Mileage, categories, labels)
+
+### TODO
+- [ ] Integrate forms into page components
+- [ ] Add CSV export for accountant
+- [ ] Implement tax year selector (Apr 5 - Apr 4)
+- [ ] Receipt upload to Supabase storage
+- [ ] Calculate gross profit summary for dashboard
+- [ ] Playwright tests for expense/mileage flows
 
 ### Architecture Decisions
 - **Single-user** (no organizations yet—can add in Phase 2)
