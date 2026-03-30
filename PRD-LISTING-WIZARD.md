@@ -410,3 +410,80 @@ src/
 - Vendoo warns about Vinted ToS violation — our extension approach avoids this.
 - Legacy wrenlist repo has working `CategoryStep`, `VintedCategorySelector`, `VintedAttributeFields` — port these but clean up.
 - The extension contract (what payload the extension receives) must be agreed before building the form — don't design the form without knowing what the extension expects.
+
+---
+
+## Shopify
+
+**No category taxonomy. No required item specifics.**
+
+Crosslist confirmed: selecting Shopify adds zero marketplace-specific fields. The unified form is sufficient.
+
+**Fields from universal form:**
+- Title → `title`
+- Description → `body_html`
+- Price → `variants[0].price`
+- Brand → `vendor`
+- Photos → `images`
+- Tags → `tags` (comma-separated, drives Shopify collections)
+- Quantity → `variants[0].inventory_quantity`
+- SKU → `variants[0].sku`
+
+**Shopify-only additions (optional):**
+- Collection → Dropdown of seller's existing Shopify collections (fetched from their store via extension)
+- Compare at price → Shows strikethrough RRP
+- Variants → If item has size/colour options (rare for vintage)
+
+**Why it's simple:** Shopify is a blank canvas — the seller organises products themselves. Wrenlist just needs to push the data; no taxonomy mapping required.
+
+---
+
+## Dynamic Field Architecture
+
+### How field options are loaded
+
+The listing form uses a two-layer approach:
+
+**Layer 1 — Bundled (instant, no network):**
+- Category trees: Vinted + Crosslist/eBay (`src/data/marketplace/`)
+- Field schemas per category: which fields exist, type, required, marketplace scope (`crosslist-field-schemas.json`)
+- Static option lists: Vinted colours (31), Vinted conditions (4)
+
+**Layer 2 — Runtime (fetched on-demand via extension proxy):**
+| Need | API | When |
+|------|-----|------|
+| Brand search | `vinted.co.uk/api/v2/item_upload/brands?search={q}&category_id={id}` | User types |
+| Vinted material options | `vinted.co.uk/api/v2/item_upload/catalog_attributes?catalog_id={id}` | Category selected |
+| Vinted size options | `vinted.co.uk/api/v2/size_groups?catalog_ids={id}` | Clothing category |
+| eBay item specifics with options | `crosslist.com/api/Product/GetDynamicProperties?marketplaces=ebay&categoryId={id}` | Category selected |
+| Shopify collections | `{shop}.myshopify.com/admin/api/custom_collections.json` | Shopify selected |
+
+**Critical requirement:** The `fetch_vinted_api` extension action must be added to Skylark **before** building the form. This is Sprint 0.
+
+### Why marketplace context matters for field options
+
+Crosslist's `GetDynamicProperties` endpoint requires `?marketplaces=vinted,ebay` to return real data. Without it, returns empty. This was discovered in live testing — confirmed 9,234 categories all return fields when marketplace context is passed.
+
+---
+
+## Marketplace Summary
+
+| Marketplace | Category required? | Item specifics? | How fields load |
+|-------------|-------------------|-----------------|-----------------|
+| **Vinted** | Yes — leaf node from Vinted tree | Yes (colour, condition, brand, material, size) | Via extension proxy → Vinted API |
+| **eBay** | Yes — eBay category ID | Yes (40+ fields, category-dependent) | Crosslist DP API with `?marketplaces=ebay` |
+| **Etsy** | Yes — Etsy taxonomy | Yes (who made, when made, tags, processing time) | Etsy API (needs ETSY_API_KEY) |
+| **Shopify** | No | None | N/A — universal form fields only |
+
+---
+
+## Sprint 0 (Before any form work)
+
+1. Add `fetch_vinted_api` action to Skylark extension
+2. Build `/api/marketplace/proxy` route in Wrenlist
+3. Verify Vinted catalog_id mappings for Dom's 11 categories against live API
+4. Get `ETSY_API_KEY` configured for taxonomy fetch
+
+## Sprint 1 — Foundation (form build starts here)
+
+See `TDD-LISTING-WIZARD.md` for full implementation order.
