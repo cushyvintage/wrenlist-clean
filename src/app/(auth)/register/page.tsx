@@ -49,22 +49,18 @@ export default function RegisterPage() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: `${firstName} ${lastName}`,
+            plan: selectedPlan,
+          },
+        },
       })
 
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('User creation failed')
 
-      // Save profile with name and plan
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: data.user.id,
-          full_name: `${firstName} ${lastName}`,
-          plan: selectedPlan,
-        })
-
-      if (profileError) throw profileError
-
+      // Profile is created by DB trigger from auth metadata
       router.push('/verify-email')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
@@ -103,7 +99,7 @@ export default function RegisterPage() {
         {/* Register card */}
         <div className="bg-white border border-sage/14 rounded-lg p-8">
           <h2 className="text-2xl font-serif text-ink mb-2">Create your <span className="italic">account</span></h2>
-          <p className="text-ink-lt text-sm mb-6">Free forever on the Starter plan. No card needed.</p>
+          <p className="text-ink-lt text-sm mb-6">Free forever on the Free plan. No card needed.</p>
 
           {/* Error message */}
           {error && (
