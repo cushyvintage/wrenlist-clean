@@ -171,8 +171,7 @@ npm run format
 npm test
 
 # 5. Browser test (manual spot-check - see Browser Testing Pattern)
-npm run dev
-# → Open http://localhost:3000 in Chrome
+# → Open https://wrenlist.com in Chrome
 # → Quick smoke test of changed feature
 # → Verify no console errors, responsive layout
 
@@ -191,10 +190,12 @@ git diff
 
 ### Automated Tests (Playwright)
 
+**All tests validate against production (https://wrenlist.com)**
+
 **Setup:**
 ```bash
 npm install -D @playwright/test
-npm test                    # Run all tests
+npm test                    # Run all tests against wrenlist.com
 npm run test:ui            # Interactive UI mode
 npm run test:debug         # Debugger
 npm run test:headed        # Show browser window
@@ -228,19 +229,19 @@ CI=true npm test                                    # CI mode (sequential)
 
 ### Claude-in-Chrome Interactive Testing
 
-**After every feature, have Claude test it:**
+**After every feature, have Claude test it on production:**
 
-1. **Start dev server**
+1. **Deploy to Vercel** (automatically on push to main)
    ```bash
-   npm run dev
-   # → http://localhost:3000
+   git push origin main
+   # → Vercel deploys to https://wrenlist.com
    ```
 
 2. **Open Chrome** (will use MCP tools to interact)
 
-3. **Ask Claude to test**
+3. **Ask Claude to test on wrenlist.com**
    ```
-   "Test the add-product form on http://localhost:3000/dashboard/products:
+   "Test the add-product form on https://wrenlist.com/dashboard/products:
    - Fill form with valid data → submit → verify success message
    - Try invalid input → verify error message
    - Check form is responsive on mobile (375px)"
@@ -260,7 +261,7 @@ CI=true npm test                                    # CI mode (sequential)
 
 **Workflow:**
 ```
-Code → npm run build (pass?) → npm run dev → Claude tests in Chrome → Screenshots/GIFs → Commit
+Code → npm run build (pass?) → git push → Vercel deploys → Claude tests on wrenlist.com → Screenshots/GIFs → Verify
 ```
 
 ### Quick Manual Checklist (if not using Claude)
@@ -311,7 +312,13 @@ Code → npm run build (pass?) → npm run dev → Claude tests in Chrome → Sc
    - Check live site: https://wrenlist.com
    - Quick smoke test of changed page
 
-3. **If build fails**
+3. **ALL TESTING HAPPENS ON PRODUCTION (https://wrenlist.com)**
+   - Browser tests: Always test against wrenlist.com
+   - Playwright tests: Configure to run against https://wrenlist.com
+   - User flows: Validate signup, login, feature workflows on live site
+   - **Never test against localhost—always validate on production**
+
+4. **If build fails**
    - Check error message
    - Fix locally
    - New commit (don't amend unless trivial)
@@ -428,8 +435,8 @@ touch tests/auth.spec.ts
 import { test, expect } from '@playwright/test';
 
 test('login flow', async ({ page }) => {
-  // Navigate to login
-  await page.goto('http://localhost:3000/login');
+  // Navigate to login on production
+  await page.goto('https://wrenlist.com/login');
 
   // Fill form
   await page.fill('input[name="email"]', 'test@example.com');
@@ -439,11 +446,11 @@ test('login flow', async ({ page }) => {
   await page.click('button[type="submit"]');
 
   // Verify redirect to dashboard
-  await expect(page).toHaveURL('http://localhost:3000/dashboard');
+  await expect(page).toHaveURL('https://wrenlist.com/dashboard');
 });
 
 test('form validation - empty email', async ({ page }) => {
-  await page.goto('http://localhost:3000/login');
+  await page.goto('https://wrenlist.com/login');
   await page.click('button[type="submit"]');
 
   // Verify error message
