@@ -65,11 +65,7 @@ const mockFind: Find & { listings: Listing[] } = {
 
 const margin = Math.round(((mockFind.asking_price_gbp! - mockFind.cost_gbp!) / mockFind.cost_gbp!) * 100)
 
-interface FindDetailPageProps {
-  params: { id: string }
-}
-
-export default function FindDetailPage({ params }: FindDetailPageProps) {
+export default function FindDetailPage() {
   const [find, setFind] = useState(mockFind)
 
   return (
