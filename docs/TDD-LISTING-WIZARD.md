@@ -867,3 +867,111 @@ Cached per session. Seller selects which collection(s) to assign product to.
 - Just map title/description/price/photos/vendor/tags from the universal form
 - Optional: collection assignment, variants, metafields
 - Extension posts to Shopify Admin API (already implemented in legacy Skylark extension)
+
+---
+
+## 14. Crosslist CreateProduct Payload (observed 2026-03-30)
+
+The exact data shape sent to `/api/Product/CreateProduct`:
+
+```json
+{
+  "id": null,
+  "title": "Test Victorian Ceramic Plate",
+  "brandId": null,
+  "brand": null,
+  "description": "...",
+  "color": null,
+  "color2": null,
+  "price": 18,
+  "originalPrice": null,
+  "pricePerMarketplace": {},
+  "quantity": 1,
+  "marketPlaces": ["vinted", "shopify"],
+  "mediaIds": [],
+  "media": [],
+  "postedToMarketplaces": [],
+  "sizeId": null,
+  "categoryId": "9ae61039-2b0f-22f9-0f68-7f496888094c",
+  "category": {
+    "id": "...",
+    "parentId": "...",
+    "title": "Antique mirrors",
+    "fullName": "Antiques > Antique decor",
+    "isEndNode": true
+  },
+  "availability": "ForSale",
+  "condition": null,
+  "dynamicProperties": {
+    "MaterialVinted": "",
+    "Condition Description": "",
+    "Country of Origin": "",
+    "Item Height": "",
+    "Item Length": "",
+    "Item Width": ""
+    // ...all fields for the category, keyed by field name, values empty/filled
+  },
+  "shippingProfiles": {},
+  "shippingHeight": null,
+  "shippingLength": null,
+  "shippingWeight": null,
+  "shippingWidth": null,
+  "acceptOffers": false,
+  "isAuction": false,
+  "smartPricing": false,
+  "internalTags": [],
+  "styleTags": [],
+  "tags": [],
+  "isTemplate": false,
+  "whenMade": null,
+  "whoMade": null,
+  "costOfGoods": null,
+  "internalNote": null,
+  "sku": null,
+  "valid": false
+}
+```
+
+**Key observations:**
+- `dynamicProperties` is a flat key-value map — field name → value string. All fields included even if empty.
+- `categoryId` is Crosslist's own UUID (not platform-specific)
+- `marketPlaces` array drives which platforms will be posted to
+- `pricePerMarketplace` is empty object when using base price; populated when overrides set (e.g. `{"ebay": 23.40}`)
+- `MPN` defaults to `"NA"` not empty — Crosslist sets this automatically for eBay
+
+---
+
+## 15. Per-Marketplace Price Override (observed)
+
+"Adjust price per marketplace" modal shows all marketplaces with editable price fields.
+
+**Smart behaviour:**
+- Base price pre-fills all
+- User can configure **price markups** (e.g. +30% on eBay to cover fees)
+- When markup active, badge shows "Price markup active ↑"
+- Saved in `pricePerMarketplace` object: `{"ebay": 23.40, "etsy": 23.40}`
+- Empty object = use base price for all
+
+**Wrenlist implementation:**
+- Add "Adjust prices" expandable section below main price
+- Per-marketplace price fields, collapsed by default
+- Optional: markup % presets (e.g. "Add 25% for eBay fees")
+
+---
+
+## 16. Depop Fields (observed)
+
+Depop adds **one extra field** only:
+
+| Field | Type | Required | Options |
+|-------|------|----------|---------|
+| Source | SelectList | No | Custom, Deadstock, Designer, Handmade, Preloved, Repaired |
+
+Everything else uses the universal form fields. No category taxonomy required beyond the shared Crosslist tree.
+
+**Depop payload additions:**
+```json
+"dynamicProperties": {
+  "Source": "Preloved"
+}
+```
