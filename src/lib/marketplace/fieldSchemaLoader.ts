@@ -1,6 +1,3 @@
-import fieldSchemasData from '@/data/marketplace/crosslist-field-schemas.json'
-import categoryMappingsData from '@/data/marketplace/category-mappings.json'
-
 // Types based on schema structure
 export interface FieldDefinition {
   n: string // Name
@@ -49,16 +46,20 @@ export function transformFieldType(
 
 /**
  * Get field set for a category (by category UUID)
+ * NOTE: This expects the schemas to be pre-loaded by the client component
+ * Use the fieldSchemaLoaderClient module to load the JSON
  */
-export function getFieldSetForCategory(categoryUuid: string): FieldSet | null {
-  const catToFieldSet = (fieldSchemasData as any).catToFieldSet || {}
+export function getFieldSetForCategory(categoryUuid: string, schemas: any): FieldSet | null {
+  if (!schemas) return null
+
+  const catToFieldSet = schemas.catToFieldSet || {}
   const fieldSetId = catToFieldSet[categoryUuid]
 
   if (fieldSetId === undefined) {
     return null
   }
 
-  const fieldSets = (fieldSchemasData as any).fieldSets || []
+  const fieldSets = schemas.fieldSets || []
   return fieldSets[fieldSetId] || null
 }
 
@@ -78,9 +79,11 @@ export function getFieldsForMarketplaces(
 
 /**
  * Get all category mappings
+ * NOTE: This expects the mappings to be pre-loaded by the client component
  */
-export function getAllCategories(): CategoryMapping[] {
-  const categories = (categoryMappingsData as any).categories || []
+export function getAllCategories(mappings: any): CategoryMapping[] {
+  if (!mappings) return []
+  const categories = mappings.categories || []
   return categories
 }
 

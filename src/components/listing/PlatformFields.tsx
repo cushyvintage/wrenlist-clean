@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   getFieldSetForCategory,
   getFieldsForMarketplaces,
@@ -8,6 +8,7 @@ import {
   type ComponentField,
   type FieldDefinition,
 } from '@/lib/marketplace/fieldSchemaLoader'
+import { loadFieldSchemas, getFieldSchemasSync } from '@/lib/marketplace/fieldSchemaLoaderClient'
 
 interface PlatformFieldsProps {
   wrenlistCategory?: string // e.g., 'clothing'
@@ -22,12 +23,31 @@ export default function PlatformFields({
   dynamicFields = {},
   onFieldChange,
 }: PlatformFieldsProps) {
+  const [schemasLoaded, setSchemasLoaded] = useState(false)
+
+  // Lazy-load schemas on mount (client-side only)
+  useEffect(() => {
+    async function initSchemas() {
+      try {
+        await loadFieldSchemas()
+        setSchemasLoaded(true)
+      } catch (e) {
+        console.error('Failed to load field schemas:', e)
+        setSchemasLoaded(true) // Set to true anyway to show empty state
+      }
+    }
+    initSchemas()
+  }, [])
+
   // For now, use hardcoded category UUID for demo
   // In production, this would map wrenlistCategory to the real UUID
   const categoryUuid = '66e20dc3-8277-50f1-235f-61189e750a90' // Ceramics example
 
   const fields = useMemo(() => {
-    const fieldSet = getFieldSetForCategory(categoryUuid)
+    if (!schemasLoaded) return []
+
+    const schemas = getFieldSchemasSync()
+    const fieldSet = getFieldSetForCategory(categoryUuid, schemas)
     if (!fieldSet) return []
 
     const fieldsForMarkets = getFieldsForMarketplaces(fieldSet, selectedMarketplaces)
@@ -36,7 +56,7 @@ export default function PlatformFields({
       ...transformField(f, dynamicFields[f.n] || ''),
       schemaField: f, // Keep original for reference
     }))
-  }, [selectedMarketplaces])
+  }, [selectedMarketplaces, schemasLoaded])
 
   const filledCount = fields.filter((f) => f.value.trim()).length
   const totalCount = fields.length
