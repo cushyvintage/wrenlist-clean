@@ -25,7 +25,8 @@ export default function DashboardPage() {
         const res = await fetch('/api/finds')
         if (!res.ok) throw new Error('Failed to fetch finds')
         const json = await res.json()
-        setFinds(json.data || [])
+        // API returns { data: { data: [...] } }
+        setFinds(json.data?.data || json.data || [])
       } catch (error) {
         console.error('Error fetching finds:', error)
         setFinds([])
