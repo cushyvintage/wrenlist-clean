@@ -61,6 +61,12 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/finds
  * Create a new find for the authenticated user
+ *
+ * Plan enforcement:
+ * - Checks profile.plan and profile.finds_this_month before creating
+ * - Returns 400 if user has hit their monthly find limit
+ * - Increments finds_this_month after successful insert
+ * - Handles missing profile gracefully (fails open)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +82,28 @@ export async function POST(request: NextRequest) {
     const validation = validateBody(CreateFindSchema, body)
     if (!validation.success) {
       return ApiResponseHelper.badRequest(validation.error)
+    }
+
+    // Check plan limits
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, finds_this_month')
+      .eq('id', user.id)
+      .single()
+
+    if (profile) {
+      const planLimits: Record<string, number | null> = {
+        free: 10,
+        nester: 100,
+        forager: 500,
+        flock: null,
+      }
+
+      const limit = planLimits[profile.plan] ?? null
+
+      if (limit !== null && profile.finds_this_month >= limit) {
+        return ApiResponseHelper.badRequest('Monthly find limit reached. Upgrade your plan to add more finds.')
+      }
     }
 
     const find = {
@@ -97,6 +125,14 @@ export async function POST(request: NextRequest) {
         console.error('Supabase error:', error)
       }
       return ApiResponseHelper.internalError()
+    }
+
+    // Increment finds_this_month on profile
+    if (profile) {
+      await supabase
+        .from('profiles')
+        .update({ finds_this_month: profile.finds_this_month + 1 })
+        .eq('id', user.id)
     }
 
     return ApiResponseHelper.created(data as Find)
