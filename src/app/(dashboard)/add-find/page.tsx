@@ -7,6 +7,9 @@ import PlatformFields from '@/components/listing/PlatformFields'
 import TemplateSelector from '@/components/listing/TemplateSelector'
 import WrenAI from '@/components/listing/WrenAI'
 import ListOnSection from '@/components/listing/ListOnSection'
+import { MarketplaceSelector } from '@/components/listing/MarketplaceSelector'
+import { useListingForm } from '@/hooks/useListingForm'
+import type { MarketplaceId } from '@/lib/marketplace/registry'
 
 interface FormData {
   itemName: string
@@ -49,6 +52,9 @@ export default function AddFindPage() {
   const [error, setError] = useState<string | null>(null)
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
   const [skuEditMode, setSkuEditMode] = useState(false)
+
+  // Initialize useListingForm hook for centralized state management
+  const { state: listingFormState, actions: listingFormActions } = useListingForm()
 
   useEffect(() => {
     document.title = 'Add Find | Wrenlist'
@@ -563,13 +569,25 @@ export default function AddFindPage() {
             </div>
 
             {/* LIST ON */}
-            <ListOnSection
-              listOnEbay={formData.listOnEbay}
-              listOnVinted={formData.listOnVinted}
-              listOnEtsy={formData.listOnEtsy}
-              listOnShopify={formData.listOnShopify}
-              onToggle={(platform, checked) => handleInputChange(`listOn${platform}` as keyof FormData, checked)}
-            />
+            {/* MARKETPLACE SELECTOR - Uses new useListingForm hook */}
+            <div className="bg-white border border-sage/14 rounded overflow-hidden">
+              <div className="border-b border-sage/14 px-6 py-4">
+                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">select marketplaces</h2>
+              </div>
+              <div className="p-6">
+                <MarketplaceSelector
+                  selectedIds={listingFormState.marketplaceSelection.selectedMarketplaces}
+                  onChange={(selectedIds) => {
+                    listingFormActions.setMarketplaces(selectedIds)
+                    // Also update legacy formData for backward compatibility
+                    handleInputChange('listOnEbay', selectedIds.includes('ebay'))
+                    handleInputChange('listOnVinted', selectedIds.includes('vinted'))
+                    handleInputChange('listOnEtsy', selectedIds.includes('etsy'))
+                    handleInputChange('listOnShopify', selectedIds.includes('shopify'))
+                  }}
+                />
+              </div>
+            </div>
 
             {/* ERROR MESSAGE */}
             {error && (
