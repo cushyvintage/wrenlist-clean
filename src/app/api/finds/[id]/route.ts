@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateFindSchema, validateBody } from '@/lib/validation'
-import type { Find } from '@/types'
+import type { Find, Listing } from '@/types'
 
 /**
  * GET /api/finds/[id]
- * Fetch a single find by ID
+ * Fetch a single find by ID with related listings
  */
 export async function GET(
   _request: NextRequest,
@@ -21,22 +21,43 @@ export async function GET(
     const supabase = await createSupabaseServerClient()
     const { id } = await params
 
-    const { data, error } = await supabase
+    // Fetch the find
+    const { data: find, error: findError } = await supabase
       .from('finds')
       .select('*')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+    if (findError) {
+      if (findError.code === 'PGRST116') {
         return ApiResponseHelper.notFound()
       }
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      console.error('Supabase error:', findError)
+      return ApiResponseHelper.internalError(findError.message)
     }
 
-    return ApiResponseHelper.success(data as Find)
+    // Fetch related listings
+    const { data: listingsData, error: listingsError } = await supabase
+      .from('listings')
+      .select('*')
+      .eq('product_id', id)
+      .eq('user_id', user.id)
+
+    if (listingsError) {
+      console.error('Supabase listings error:', listingsError)
+    }
+
+    // Transform product_id to find_id for the frontend
+    const listings = (listingsData || []).map((listing: any) => ({
+      ...listing,
+      find_id: listing.product_id,
+    })) as Listing[]
+
+    return ApiResponseHelper.success({
+      ...find,
+      listings,
+    } as Find & { listings: Listing[] })
   } catch (error) {
     console.error('GET /api/finds/[id] error:', error)
     return ApiResponseHelper.internalError()
