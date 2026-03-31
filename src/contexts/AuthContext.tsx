@@ -23,27 +23,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         // Check for existing session
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (session?.user) {
-          setState((prev) => ({
-            ...prev,
-            user: {
-              id: session.user.id,
-              email: session.user.email || '',
-              createdAt: session.user.created_at || new Date().toISOString(),
-            },
-            isLoading: false,
-          }))
-        } else {
-          setState((prev) => ({
-            ...prev,
-            user: null,
-            isLoading: false,
-          }))
+        // Use server-side /api/auth/me to get user (reads httpOnly session cookie)
+        const res = await fetch('/api/auth/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.user) {
+            setState((prev) => ({
+              ...prev,
+              user: {
+                id: data.user.id,
+                email: data.user.email || '',
+                createdAt: data.user.created_at || new Date().toISOString(),
+              },
+              isLoading: false,
+            }))
+            return
+          }
         }
+        setState((prev) => ({ ...prev, user: null, isLoading: false }))
       } catch (error) {
         setState((prev) => ({
           ...prev,
