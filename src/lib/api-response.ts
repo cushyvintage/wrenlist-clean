@@ -34,6 +34,10 @@ export class ApiResponseHelper {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  static forbidden(): NextResponse<{ error: string }> {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   static internalError(message: string = 'Internal server error'): NextResponse<{ error: string }> {
     return NextResponse.json({ error: message }, { status: 500 })
   }

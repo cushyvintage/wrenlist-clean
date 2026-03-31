@@ -12,6 +12,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    buildTraceDisabled: true,
+  },
 }
 
 module.exports = nextConfig

@@ -29,6 +29,7 @@ interface FormData {
   listOnShopify: boolean
   photos: File[]
   appliedTemplate: string | null
+  platformFields: Record<string, string>
 }
 
 const sourceTypes = [
@@ -51,6 +52,7 @@ export default function AddFindPage() {
 
   useEffect(() => {
     document.title = 'Add Find | Wrenlist'
+    generateAndSetSku()
   }, [])
 
   const [formData, setFormData] = useState<FormData>({
@@ -73,7 +75,8 @@ export default function AddFindPage() {
     listOnEtsy: false,
     listOnShopify: false,
     photos: [],
-    appliedTemplate: 'carhartt-workwear',
+    appliedTemplate: null,
+    platformFields: {},
   })
 
   function generateSku(): string {
@@ -82,8 +85,83 @@ export default function AddFindPage() {
     return `WR-CLO-${date}-${num}`
   }
 
+  async function generateAndSetSku() {
+    try {
+      // Fetch count of user's finds
+      const response = await fetch('/api/finds')
+      const { data } = await response.json()
+      const counter = (data?.length || 0) + 1
+
+      // Get category code (first 3 letters uppercase)
+      const catCode = formData.category.substring(0, 3).toUpperCase()
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const sku = `WR-${catCode}-${date}-${String(counter).padStart(3, '0')}`
+
+      setFormData((prev) => ({ ...prev, sku }))
+    } catch {
+      // Fallback to default generation
+      setFormData((prev) => ({ ...prev, sku: generateSku() }))
+    }
+  }
+
   const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleApplyTemplate = (template: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      appliedTemplate: template.id,
+      category: template.category || prev.category,
+      condition: template.condition || prev.condition,
+      brand: template.brand || prev.brand,
+      platformFields: template.platform_fields || {},
+      listOnEbay: template.marketplaces?.includes('ebay') ?? prev.listOnEbay,
+      listOnVinted: template.marketplaces?.includes('vinted') ?? prev.listOnVinted,
+      listOnEtsy: template.marketplaces?.includes('etsy') ?? prev.listOnEtsy,
+      listOnShopify: template.marketplaces?.includes('shopify') ?? prev.listOnShopify,
+      askingPrice: template.default_price ?? prev.askingPrice,
+    }))
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!formData.itemName.trim()) {
+      setError('Please enter an item name before saving template')
+      return
+    }
+
+    const templateName = prompt('Template name:', '')
+    if (!templateName) return
+
+    try {
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: templateName,
+          category: formData.category,
+          condition: formData.condition,
+          brand: formData.brand,
+          platform_fields: formData.platformFields,
+          marketplaces: [
+            formData.listOnEbay && 'ebay',
+            formData.listOnVinted && 'vinted',
+            formData.listOnEtsy && 'etsy',
+            formData.listOnShopify && 'shopify',
+          ].filter(Boolean),
+          default_price: formData.askingPrice,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save template')
+      }
+
+      setError(null)
+      // Show success message (could add toast here)
+    } catch (err) {
+      setError('Failed to save template')
+    }
   }
 
   const handlePhotoUpload = (files: File[]) => {
@@ -139,6 +217,8 @@ export default function AddFindPage() {
           cost_gbp: formData.costPaid,
           asking_price_gbp: formData.askingPrice,
           status: 'draft',
+          sku: formData.sku,
+          platform_fields: formData.platformFields,
         }),
       })
 
@@ -311,7 +391,22 @@ export default function AddFindPage() {
             </div>
 
             {/* PLATFORM FIELDS */}
-            <PlatformFields categoryPath="Clothing › Workwear › Jackets" />
+            <PlatformFields
+              wrenlistCategory={formData.category}
+              selectedMarketplaces={[
+                formData.listOnEbay && 'ebay',
+                formData.listOnVinted && 'vinted',
+                formData.listOnEtsy && 'etsy',
+                formData.listOnShopify && 'shopify',
+              ].filter(Boolean) as string[]}
+              dynamicFields={formData.platformFields}
+              onFieldChange={(fieldName, value) =>
+                handleInputChange('platformFields', {
+                  ...formData.platformFields,
+                  [fieldName]: value,
+                })
+              }
+            />
 
             {/* SOURCING */}
             <div className="bg-white border border-sage/14 rounded overflow-hidden">
@@ -391,16 +486,23 @@ export default function AddFindPage() {
                       value={formData.sku}
                       readOnly={!skuEditMode}
                       onChange={(e) => handleInputChange('sku', e.target.value)}
-                      className="flex-1 px-3 py-2.5 border border-sage/14 rounded text-sm font-mono text-sage-dk bg-cream-md focus:outline-none focus:border-sage/30"
+                      className={`flex-1 px-3 py-2.5 border rounded text-sm font-mono text-sage-dk focus:outline-none focus:border-sage/30 ${
+                        skuEditMode ? 'bg-white border-sage/30' : 'bg-cream-md border-sage/14'
+                      }`}
                     />
                     <button
-                      onClick={() => setSkuEditMode(!skuEditMode)}
-                      className="px-3 py-2.5 border border-sage/14 rounded text-xs font-medium hover:bg-cream-md transition-colors"
+                      onClick={() => {
+                        if (!skuEditMode && !skuEditMode) {
+                          generateAndSetSku()
+                        }
+                        setSkuEditMode(!skuEditMode)
+                      }}
+                      className="px-3 py-2.5 border border-sage/14 rounded text-xs font-medium hover:bg-cream-md transition-colors whitespace-nowrap"
                     >
-                      {skuEditMode ? 'save' : 'override'}
+                      {skuEditMode ? 'save' : skuEditMode ? 'regenerate' : 'edit'}
                     </button>
                   </div>
-                  <p className="text-xs text-sage-dim mt-2">Auto-assigned from your SKU pattern. Click override to edit manually.</p>
+                  <p className="text-xs text-sage-dim mt-2">Format: WR-[CATEGORY]-[YYYYMMDD]-[counter]. Click edit to manually change or regenerate.</p>
                 </div>
               </div>
             </div>
@@ -409,7 +511,11 @@ export default function AddFindPage() {
           {/* RIGHT COLUMN - Sidebar (1 column) */}
           <div className="space-y-6">
             {/* TEMPLATES */}
-            <TemplateSelector appliedTemplate={formData.appliedTemplate} onApply={(id) => handleInputChange('appliedTemplate', id)} />
+            <TemplateSelector
+              appliedTemplate={formData.appliedTemplate}
+              onApply={handleApplyTemplate}
+              onSaveTemplate={handleSaveTemplate}
+            />
 
             {/* WREN AI */}
             <WrenAI onUseSuggestedPrice={(price) => handleInputChange('askingPrice', price)} />

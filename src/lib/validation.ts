@@ -28,7 +28,11 @@ export const CreateFindSchema = z.object({
   cost_gbp: z.number().nonnegative().optional().nullable(),
   asking_price_gbp: z.number().nonnegative().optional().nullable(),
   status: FindStatusEnum.optional().default('draft'),
+  sold_price_gbp: z.number().nonnegative().optional().nullable(),
+  sold_at: z.string().datetime().optional().nullable(),
   photos: z.array(z.string()).optional().default([]),
+  sku: z.string().optional().nullable(),
+  platform_fields: z.record(z.string()).optional().default({}),
 })
 
 export const UpdateFindSchema = CreateFindSchema.partial()
@@ -96,6 +100,25 @@ export const UpdateMileageSchema = CreateMileageSchema.partial()
 
 export type CreateMileageInput = z.infer<typeof CreateMileageSchema>
 export type UpdateMileageInput = z.infer<typeof UpdateMileageSchema>
+
+// ============================================================================
+// LISTING TEMPLATES
+// ============================================================================
+
+export const CreateListingTemplateSchema = z.object({
+  name: z.string().min(1, 'Template name is required'),
+  category: z.string().optional().nullable(),
+  condition: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  platform_fields: z.record(z.string()).optional().default({}),
+  marketplaces: z.array(z.string()).optional().default([]),
+  default_price: z.number().nonnegative().optional().nullable(),
+})
+
+export const UpdateListingTemplateSchema = CreateListingTemplateSchema.partial()
+
+export type CreateListingTemplateInput = z.infer<typeof CreateListingTemplateSchema>
+export type UpdateListingTemplateInput = z.infer<typeof UpdateListingTemplateSchema>
 
 // ============================================================================
 // HELPER FUNCTIONS
