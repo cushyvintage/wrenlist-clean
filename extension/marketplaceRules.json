@@ -1,0 +1,493 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*depop.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.depop.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.depop.com/products/create/"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*facebook.com/api/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "accept",
+          "operation": "set",
+          "value": "*/*"
+        },
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.facebook.com/marketplace/create/item"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        }
+      ]
+    }
+  },
+  {
+    "id": 100,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://upload.facebook.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "accept",
+          "operation": "set",
+          "value": "*/*"
+        },
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.facebook.com/marketplace/create/item"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        }
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*grailed.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.grailed.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.grailed.com/sell"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*filepicker.io/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.grailed.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.grailed.com/sell"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*mercari.com/*",
+      "domains": [
+        "knfhdmkccnbhbgpahakkcmoddgikegjl"
+      ]
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.mercari.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.mercari.com/sell/"
+        },
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "mercari_b/crosslist"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 7,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*poshmark.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://poshmark.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://poshmark.com/create-listing"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 71,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*poshmark.co.uk/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://poshmark.co.uk"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://poshmark.co.uk/create-listing"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 72,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*poshmark.com.au/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://poshmark.com.au"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://poshmark.com.au/create-listing"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 73,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*poshmark.ca/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://poshmark.ca"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://poshmark.ca/create-listing"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 9,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*shopify.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://myshopify.com"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 10,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*myshopify.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://app.shopify.com"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 14,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*s3-accelerate.amazonaws.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://web.depop.com/"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 15,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://admin.shopify.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://admin.shopify.com"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 16,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://www.whatnot.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.whatnot.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.whatnot.com/dashboard/inventory"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 17,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://whatnot-images.s3.amazonaws.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.whatnot.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.whatnot.com/"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  },
+  {
+    "id": 18,
+    "priority": 1,
+    "condition": {
+      "urlFilter": "*://*etsy.com/*"
+    },
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "origin",
+          "operation": "set",
+          "value": "https://www.etsy.com"
+        },
+        {
+          "header": "referer",
+          "operation": "set",
+          "value": "https://www.etsy.com/your/shops/me/tools/listings/create"
+        }
+      ],
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        }
+      ]
+    }
+  }
+]

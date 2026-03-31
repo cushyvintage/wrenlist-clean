@@ -15,7 +15,8 @@
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
     "test:supabase": "ts-node scripts/test-supabase-connection.ts",
-    "clean": "npm run format && npm run lint && npm run type-check"
+    "clean": "npm run format && npm run lint && npm run type-check",
+    "build:extension": "tsc -p extension/tsconfig.json"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@types/chrome": "^0.0.269",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

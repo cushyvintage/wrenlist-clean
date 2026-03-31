@@ -1,0 +1,1670 @@
+/**
+ * Wrenlist Skylark - Content Script
+ * Button injection for marketplace product pages
+ * Based on Crosslist's proven architecture
+ */
+
+(function() {
+  'use strict';
+
+  // Wrenlist configuration
+  const WRENLIST_DOMAIN = 'https://wrenlist.com';
+  const WRENLIST_BRAND_COLORS = {
+    primary: '#7a8471',      // wren-sage
+    primaryDark: '#5d6355',   // wren-sage-dark
+    cream: '#f5f3f0',         // wren-cream
+    text: '#2d3025'           // wren-text-primary
+  };
+
+  // Marketplace configurations (from Crosslist)
+  const MARKETPLACES = [
+    {
+      site: 'vinted',
+      regex: /.*:\/\/.*\.vinted\.(com|co\.uk|ca|nl|fr|de|es|it|pl|lt|be|cz).*/,
+      productIdRegex: /.*:\/\/.*\.vinted\..+?\/([0-9]+)/,
+      targetSelector: 'div[class*="details-list--details"]',
+      buttonStyle: { margin: "20px 10px 20px 0", float: "none", insertIndex: -1 },
+      waitTime: 2000
+    },
+    {
+      site: 'ebay',
+      regex: /.*:\/\/www\.ebay\.(com|co\.uk|ca|com\.au|ie).*/,
+      productIdRegex: /.*:\/\/www\.ebay\..+?\/itm\/([0-9]+)/,
+      targetSelector: 'div[id="mainContent"][class*="x-atf-center-river"], div[id="SRPSection"], div[id="mainContent"] div[class*="d-vi-evo-region"]',
+      buttonStyle: { margin: "20px 10px 20px 10px", float: "none", insertIndex: 2 },
+      waitTime: 0
+    },
+    {
+      site: 'depop',
+      regex: /.*:\/\/www\.depop\.com.*/,
+      productIdRegex: /https:\/\/www\.depop\.com\/products\/(?!.*create)(.*?)\//,
+      targetSelector: 'div[data-testid="productPrimaryAttributes"], div[data-testid="secondary-product-details"]',
+      buttonStyle: { margin: "10px 10px 10px 0", float: "none", insertIndex: -1 },
+      waitTime: 2000
+    },
+    {
+      site: 'poshmark',
+      regex: /.*:\/\/poshmark\.(com|ca|com\.au).*/,
+      productIdRegex: /https:\/\/poshmark\..+?\/listing\/[A-Za-z0-9\-]+-([A-Za-z0-9\-]+).*\/?$/,
+      targetSelector: 'div[class="listing__info-details"]',
+      buttonStyle: { margin: "20px 10px 20px 0", float: "none", insertIndex: -1 },
+      waitTime: 0
+    },
+    {
+      site: 'mercari',
+      regex: /.*:\/\/www\.mercari\.com.*/,
+      productIdRegex: /https:\/\/www\.mercari\.com\/us\/item\/(.*?)\//,
+      targetSelector: 'div[data-testid="ItemInfo"]',
+      buttonStyle: { margin: "20px 0 20px 0", float: "left", insertIndex: -1 },
+      waitTime: 0
+    },
+    {
+      site: 'grailed',
+      regex: /.*:\/\/www\.grailed\.com.*/,
+      productIdRegex: /https:\/\/www\.grailed\.com\/listings\/([0-9]+)-[\/a-z0-9\-]+\/?/,
+      targetSelector: 'div[class*="Sidebar_actions"]',
+      buttonStyle: { margin: "20px 10px 20px 10px", float: "none", insertIndex: 0 },
+      waitTime: 0
+    },
+    {
+      site: 'facebook',
+      regex: /.*:\/\/www\.facebook\.com.*/,
+      productIdRegex: /https:\/\/.*\.facebook\.com\/marketplace\/(?:np\/)*item\/([0-9]+)*/,
+      targetSelector: 'h1[dir="auto"], h1 span[dir="auto"]',
+      buttonStyle: { margin: "10px 5px 20px 0", float: "none", insertIndex: -1 },
+      waitTime: 0
+    },
+    {
+      site: 'etsy',
+      regex: /.*:\/\/www\.etsy\.com.*/,
+      productIdRegex: /https:\/\/www\.etsy\.com.*\/listing\/([0-9]+)\/?/,
+      targetSelector: 'div[data-selector="listing-page-variations"]',
+      buttonStyle: { margin: "20px 10px 20px 0", float: "none", insertIndex: -1 },
+      waitTime: 0
+    }
+  ];
+
+  // Helper functions
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function awaitNode(selector, timeout = 20, root = document.body) {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      const endTime = startTime + (timeout * 1000);
+      
+      const checkInterval = setInterval(() => {
+        const element = root.querySelector(selector);
+        if (element) {
+          clearInterval(checkInterval);
+          resolve(element);
+        } else if (Date.now() >= endTime) {
+          clearInterval(checkInterval);
+          resolve(null);
+        }
+      }, 50);
+    });
+  }
+
+  function awaitNodes(selector, timeout = 20, root = document.body) {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      const endTime = startTime + (timeout * 1000);
+      
+      const checkInterval = setInterval(() => {
+        const elements = root.querySelectorAll(selector);
+        if (elements && elements.length > 0) {
+          clearInterval(checkInterval);
+          resolve(Array.from(elements));
+        } else if (Date.now() >= endTime) {
+          clearInterval(checkInterval);
+          resolve(null);
+        }
+      }, 50);
+    });
+  }
+
+  function detectMarketplace() {
+    return MARKETPLACES.find(mp => mp.regex.test(location.href));
+  }
+
+  function extractProductId(url, marketplace) {
+    const match = url.match(marketplace.productIdRegex);
+    return match ? match[1] : null;
+  }
+
+  // Extract Vinted product data from the page
+  function extractVintedProductData() {
+    // Try to find product data in various places on Vinted pages
+    // 1. Check for window.__INITIAL_STATE__ or similar
+    // 2. Check for JSON-LD structured data
+    // 3. Check for embedded JSON in script tags
+    // 4. Extract from DOM elements
+    
+    let itemData = null;
+    
+    // Try window.__INITIAL_STATE__ or window.__APOLLO_STATE__
+    if (window.__INITIAL_STATE__) {
+      const state = window.__INITIAL_STATE__;
+      // Look for item data in various possible locations
+      if (state.items && state.items.items) {
+        itemData = state.items.items[0] || Object.values(state.items.items)[0];
+      } else if (state.item) {
+        itemData = state.item;
+      } else if (state.catalog && state.catalog.items) {
+        itemData = state.catalog.items[0];
+      }
+    }
+    
+    // Try __APOLLO_STATE__
+    if (!itemData && window.__APOLLO_STATE__) {
+      const apolloState = window.__APOLLO_STATE__;
+      // Apollo state is keyed by type:id, look for Item type
+      for (const key in apolloState) {
+        if (key.includes('Item:') || key.includes('item:')) {
+          itemData = apolloState[key];
+          break;
+        }
+      }
+    }
+    
+    // Try extracting from JSON-LD
+    if (!itemData) {
+      const jsonLd = document.querySelector('script[type="application/ld+json"]');
+      if (jsonLd) {
+        try {
+          const ld = JSON.parse(jsonLd.textContent);
+          if (ld['@type'] === 'Product' || ld['@type'] === 'Item') {
+            itemData = ld;
+            
+            // Enhance with additional images from the page if only one image in JSON-LD
+            if (itemData.image && typeof itemData.image === 'string') {
+              // Try to find all product images on the page
+              const imageElements = document.querySelectorAll('[class*="photo"] img, [class*="image"] img, [class*="gallery"] img, [data-testid*="image"] img');
+              const pageImages = Array.from(imageElements)
+                .map(img => img.src || img.getAttribute('data-src') || img.getAttribute('srcset')?.split(',')[0]?.trim().split(' ')[0])
+                .filter(src => src && src.includes('vinted.net') && !src.includes('avatar'))
+                .slice(0, 10); // Limit to first 10 images
+              
+              if (pageImages.length > 1) {
+                itemData.image = pageImages; // Use array if multiple images found
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+    
+    // Try extracting from meta tags or data attributes
+    if (!itemData) {
+      // Look for product data in meta tags
+      const titleMeta = document.querySelector('meta[property="og:title"]');
+      const priceMeta = document.querySelector('meta[property="product:price:amount"]');
+      const imageMeta = document.querySelector('meta[property="og:image"]');
+      const descMeta = document.querySelector('meta[property="og:description"]');
+      
+      if (titleMeta) {
+        itemData = {
+          title: titleMeta.content,
+          description: descMeta?.content || '',
+          price: priceMeta ? parseFloat(priceMeta.content) : null,
+          images: imageMeta ? [imageMeta.content] : []
+        };
+      }
+    }
+    
+    // Try extracting from DOM
+    if (!itemData) {
+      // Look for common Vinted page structures
+      const titleEl = document.querySelector('h1[class*="title"]') || 
+                      document.querySelector('h1[class*="name"]') ||
+                      document.querySelector('.details-list__item-title');
+      const priceEl = document.querySelector('[class*="price"]') ||
+                      document.querySelector('[data-testid="price"]');
+      const descEl = document.querySelector('[class*="description"]') ||
+                     document.querySelector('[itemprop="description"]');
+      // Find all product images (exclude avatars and thumbnails)
+      const imagesEls = document.querySelectorAll('[class*="photo"] img, [class*="image"] img, [class*="gallery"] img, [data-testid*="image"] img');
+      const pageImages = Array.from(imagesEls)
+        .map(img => img.src || img.getAttribute('data-src') || img.getAttribute('srcset')?.split(',')[0]?.trim().split(' ')[0])
+        .filter(src => {
+          if (!src) return false;
+          // Only include Vinted image URLs, exclude avatars and very small images
+          return src.includes('vinted.net') && 
+                 !src.includes('avatar') && 
+                 !src.includes('thumb') &&
+                 !src.match(/\/\d+x\d+\//); // Exclude small thumbnail URLs
+        })
+        .slice(0, 10); // Limit to first 10 unique images
+      
+      // Remove duplicates
+      const uniqueImages = [...new Set(pageImages)];
+      
+      if (titleEl) {
+        itemData = {
+          title: titleEl.textContent?.trim() || '',
+          description: descEl?.textContent?.trim() || '',
+          price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+          image: uniqueImages.length > 0 ? (uniqueImages.length === 1 ? uniqueImages[0] : uniqueImages) : null
+        };
+      }
+    }
+    
+    return itemData;
+  }
+
+  // Extract eBay product data
+  function extractEbayProductData() {
+    // Try JSON-LD first
+    const jsonLd = document.querySelector('script[type="application/ld+json"]');
+    if (jsonLd) {
+      try {
+        const ld = JSON.parse(jsonLd.textContent);
+        if (ld['@type'] === 'Product') {
+          return {
+            name: ld.name,
+            description: ld.description,
+            image: ld.image,
+            offers: ld.offers,
+            brand: ld.brand,
+            category: ld.category
+          };
+        }
+      } catch (e) {}
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('#x-item-title-label') || 
+                    document.querySelector('h1[id*="title"]') ||
+                    document.querySelector('.u-flL.condText');
+    const priceEl = document.querySelector('#prcIsum') || 
+                    document.querySelector('.notranslate');
+    const descEl = document.querySelector('#desc_wrapper_ctr') || 
+                   document.querySelector('[itemprop="description"]');
+    const images = Array.from(document.querySelectorAll('#vi_main_img_fs img, #mainImgHldr img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(src => src && !src.includes('pixel'));
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Depop product data
+  function extractDepopProductData() {
+    // Try window.__INITIAL_STATE__ or similar
+    if (window.__INITIAL_STATE__) {
+      const state = window.__INITIAL_STATE__;
+      if (state.product || state.item) {
+        const product = state.product || state.item;
+        return {
+          title: product.title || product.name,
+          description: product.description,
+          price: product.price,
+          images: product.photos || product.images || [],
+          brand: product.brand?.name || product.brand,
+          condition: product.condition
+        };
+      }
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('[data-testid="product-title"]') ||
+                    document.querySelector('h1');
+    const priceEl = document.querySelector('[data-testid="product-price"]') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-testid="product-description"]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Poshmark product data
+  function extractPoshmarkProductData() {
+    // Try window.__INITIAL_STATE__ or window.__APOLLO_STATE__
+    if (window.__INITIAL_STATE__) {
+      const state = window.__INITIAL_STATE__;
+      if (state.listing || state.product) {
+        const listing = state.listing || state.product;
+        return {
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          images: listing.cover_shot ? [listing.cover_shot] : (listing.pictures || []),
+          brand: listing.brand,
+          size: listing.size,
+          condition: listing.condition
+        };
+      }
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('[data-testid="listing-title"]') ||
+                    document.querySelector('h1[class*="title"]');
+    const priceEl = document.querySelector('[data-testid="listing-price"]') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-testid="listing-description"]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Mercari product data
+  function extractMercariProductData() {
+    // Mercari uses React state, try to find data in script tags
+    const scripts = Array.from(document.querySelectorAll('script'));
+    for (const script of scripts) {
+      if (script.textContent && script.textContent.includes('item')) {
+        try {
+          const match = script.textContent.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/);
+          if (match) {
+            const state = JSON.parse(match[1]);
+            if (state.item) {
+              return {
+                title: state.item.name,
+                description: state.item.description,
+                price: state.item.price / 100, // Mercari prices in cents
+                images: state.item.photos?.map(p => p.imageUrl) || [],
+                brand: state.item.brand?.brandName,
+                condition: state.item.itemCondition
+              };
+            }
+          }
+        } catch (e) {}
+      }
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('[data-testid="item-name"]') ||
+                    document.querySelector('h1');
+    const priceEl = document.querySelector('[data-testid="item-price"]') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-testid="item-description"]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Grailed product data
+  function extractGrailedProductData() {
+    // Grailed uses GraphQL, try to find data in window.__APOLLO_STATE__
+    if (window.__APOLLO_STATE__) {
+      const state = window.__APOLLO_STATE__;
+      for (const key in state) {
+        if (key.includes('Listing') && state[key].title) {
+          const listing = state[key];
+          return {
+            title: listing.title,
+            description: listing.description,
+            price: listing.price,
+            images: listing.photos || [],
+            brand: listing.brand?.name,
+            size: listing.size,
+            condition: listing.condition
+          };
+        }
+      }
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('[data-cy="listing-title"]') ||
+                    document.querySelector('h1');
+    const priceEl = document.querySelector('[data-cy="listing-price"]') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-cy="listing-description"]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Facebook Marketplace product data
+  function extractFacebookProductData() {
+    // Facebook uses React, try to find data in script tags or meta tags
+    const jsonLd = document.querySelector('script[type="application/ld+json"]');
+    if (jsonLd) {
+      try {
+        const ld = JSON.parse(jsonLd.textContent);
+        if (ld['@type'] === 'Product') {
+          return {
+            name: ld.name,
+            description: ld.description,
+            image: ld.image,
+            offers: ld.offers,
+            brand: ld.brand
+          };
+        }
+      } catch (e) {}
+    }
+    
+    // Extract from DOM (Facebook uses specific selectors)
+    const titleEl = document.querySelector('h1[dir="auto"]') ||
+                    document.querySelector('[data-testid="marketplace-pdp-title"]');
+    const priceEl = document.querySelector('[data-testid="marketplace-pdp-price"]') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-testid="marketplace-pdp-description"]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Extract Etsy product data
+  function extractEtsyProductData() {
+    // Etsy uses JSON-LD and window.__INITIAL_STATE__
+    const jsonLd = document.querySelector('script[type="application/ld+json"]');
+    if (jsonLd) {
+      try {
+        const ld = JSON.parse(jsonLd.textContent);
+        if (ld['@type'] === 'Product') {
+          return {
+            name: ld.name,
+            description: ld.description,
+            image: ld.image,
+            offers: ld.offers,
+            brand: ld.brand
+          };
+        }
+      } catch (e) {}
+    }
+    
+    // Try window.__INITIAL_STATE__
+    if (window.__INITIAL_STATE__) {
+      const state = window.__INITIAL_STATE__;
+      if (state.listing || state.product) {
+        const listing = state.listing || state.product;
+        return {
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          images: listing.images || [],
+          shop: listing.shop?.shop_name
+        };
+      }
+    }
+    
+    // Extract from DOM
+    const titleEl = document.querySelector('h1[data-buy-box-region="title"]') ||
+                    document.querySelector('h1');
+    const priceEl = document.querySelector('.wt-text-title-03.wt-mr-xs-2') ||
+                    document.querySelector('[class*="price"]');
+    const descEl = document.querySelector('[data-product-details-description-text-content]') ||
+                   document.querySelector('[class*="description"]');
+    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
+      .map(img => img.src || img.getAttribute('data-src'))
+      .filter(Boolean);
+    
+    if (titleEl) {
+      return {
+        title: titleEl.textContent?.trim(),
+        description: descEl?.textContent?.trim() || '',
+        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
+        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
+      };
+    }
+    
+    return null;
+  }
+
+  // Generic product data extraction (fallback)
+  function extractGenericProductData() {
+    // Try JSON-LD first
+    const jsonLd = document.querySelector('script[type="application/ld+json"]');
+    if (jsonLd) {
+      try {
+        const ld = JSON.parse(jsonLd.textContent);
+        if (ld['@type'] === 'Product') {
+          return ld;
+        }
+      } catch (e) {}
+    }
+    
+    // Extract from meta tags
+    const titleMeta = document.querySelector('meta[property="og:title"]');
+    const priceMeta = document.querySelector('meta[property="product:price:amount"]');
+    const imageMeta = document.querySelector('meta[property="og:image"]');
+    const descMeta = document.querySelector('meta[property="og:description"]');
+    
+    if (titleMeta) {
+      return {
+        title: titleMeta.content,
+        description: descMeta?.content || '',
+        price: priceMeta ? parseFloat(priceMeta.content) : null,
+        image: imageMeta ? [imageMeta.content] : null
+      };
+    }
+    
+    return null;
+  }
+
+  function isProductPage(marketplace) {
+    return extractProductId(location.href, marketplace) !== null;
+  }
+
+  // Bulk import state
+  const bulkImportState = {
+    selected: new Set(),
+    isBulkMode: false
+  };
+  
+  function createWrenlistButton(marketplace, productId) {
+    const button = document.createElement('button');
+    button.id = 'wrenlist-skylark-import';
+    button.type = 'button';
+    button.innerText = 'Import to Wrenlist';
+    button.dataset.productId = productId;
+    button.dataset.marketplace = marketplace.site;
+    
+    // Apply Wrenlist brand styling
+    button.style.position = 'relative';
+    button.style.border = 'none';
+    button.style.borderRadius = '999px';
+    button.style.boxShadow = `${WRENLIST_BRAND_COLORS.primary} 0 6px 15px -5px`;
+    button.style.padding = '8px 18px 8px 33px';
+    button.style.backgroundColor = 'white';
+    button.style.fontWeight = 'bold';
+    button.style.color = WRENLIST_BRAND_COLORS.primary;
+    button.style.textAlign = 'left';
+    button.style.cursor = 'pointer';
+    button.style.fontSize = '14px';
+    button.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    button.style.lineHeight = 'normal';
+    button.style.height = '31px';
+    button.style.maxWidth = '189px';
+    button.style.transitionProperty = 'all';
+    button.style.transitionDuration = '0.25s';
+    button.style.transitionTimingFunction = 'ease';
+    
+    // Apply marketplace-specific positioning
+    const style = marketplace.buttonStyle;
+    if (style.margin) {
+      const margins = style.margin.split(' ');
+      button.style.marginTop = margins[0];
+      button.style.marginRight = margins[1] || margins[0];
+      button.style.marginBottom = margins[2] || margins[0];
+      button.style.marginLeft = margins[3] || margins[1] || margins[0];
+    }
+    if (style.float) {
+      button.style.float = style.float;
+    }
+
+    // Hover effects
+    button.onmouseenter = function() {
+      button.style.boxShadow = `${WRENLIST_BRAND_COLORS.primary} 0 6px 10px 0px`;
+    };
+    button.onmouseleave = function() {
+      button.style.boxShadow = `${WRENLIST_BRAND_COLORS.primary} 0 6px 15px -5px`;
+    };
+
+    // Click handler - send message to background script
+    button.onclick = async function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log('Wrenlist Skylark: Import button clicked', { marketplace: marketplace.site, productId });
+      
+      // Set loading state
+      const originalText = button.innerText;
+      const originalBg = button.style.backgroundColor;
+      button.innerText = '⏳ Importing...';
+      button.style.backgroundColor = '#9ba088';
+      button.disabled = true;
+      button.style.cursor = 'wait';
+      
+      // Extract product data from the page based on marketplace
+      let productData = null;
+      try {
+        switch (marketplace.site) {
+          case 'vinted':
+            productData = extractVintedProductData();
+            break;
+          case 'ebay':
+            productData = extractEbayProductData();
+            break;
+          case 'depop':
+            productData = extractDepopProductData();
+            break;
+          case 'poshmark':
+            productData = extractPoshmarkProductData();
+            break;
+          case 'mercari':
+            productData = extractMercariProductData();
+            break;
+          case 'grailed':
+            productData = extractGrailedProductData();
+            break;
+          case 'facebook':
+            productData = extractFacebookProductData();
+            break;
+          case 'etsy':
+            productData = extractEtsyProductData();
+            break;
+          default:
+            // Try generic extraction
+            productData = extractGenericProductData();
+        }
+        if (productData) {
+          console.log('Wrenlist Skylark: Extracted product data from page', productData);
+        }
+      } catch (error) {
+        console.error('Wrenlist Skylark: Error extracting product data', error);
+        // Reset button state on extraction error
+        button.innerText = originalText;
+        button.style.backgroundColor = originalBg;
+        button.disabled = false;
+        button.style.cursor = 'pointer';
+        alert('Error extracting product data. Please try again.');
+        return;
+      }
+      
+      // Send message to background script
+      chrome.runtime.sendMessage({
+        type: 'IMPORT_TO_WRENLIST',
+        marketplace: marketplace.site,
+        productId: productId,
+        url: location.href,
+        productData: productData // Include extracted data if available
+      }, (response) => {
+        // Always reset button state
+        button.disabled = false;
+        button.style.cursor = 'pointer';
+        
+        if (chrome.runtime.lastError) {
+          console.error('Wrenlist Skylark: Error sending message:', chrome.runtime.lastError);
+          button.innerText = originalText;
+          button.style.backgroundColor = originalBg;
+          alert('Error: Could not communicate with Wrenlist extension. Please refresh the page and try again.');
+          return;
+        }
+        
+        if (response && response.success) {
+          console.log('Wrenlist Skylark: Import successful', response);
+          // Show success message
+          button.innerText = '✓ Imported!';
+          button.style.backgroundColor = '#10b981'; // green
+          button.style.color = 'white';
+          
+          // Store import history
+          try {
+            chrome.storage.local.get(['importHistory'], (result) => {
+              const history = result.importHistory || [];
+              history.unshift({
+                marketplace: marketplace.site,
+                productId: productId,
+                productTitle: productData?.title || productData?.name || 'Unknown',
+                productId_wrenlist: response.productId,
+                timestamp: new Date().toISOString(),
+                success: true
+              });
+              // Keep only last 50 imports
+              chrome.storage.local.set({ 
+                importHistory: history.slice(0, 50) 
+              });
+            });
+          } catch (e) {
+            console.warn('Failed to store import history', e);
+          }
+          
+          // Send notification to popup if open
+          chrome.runtime.sendMessage({
+            type: 'IMPORT_STATUS',
+            success: true,
+            productId: response.productId,
+            marketplace: marketplace.site
+          }).catch(() => {}); // Ignore if popup not open
+          
+          // Auto-hide success message after configured duration
+          if (chrome && chrome.storage && chrome.storage.sync) {
+            chrome.storage.sync.get(['successMessageDuration'], (result) => {
+              const duration = (result.successMessageDuration || 3) * 1000;
+              setTimeout(() => {
+                button.innerText = originalText;
+                button.style.backgroundColor = originalBg;
+                button.style.color = WRENLIST_BRAND_COLORS.primary;
+              }, duration);
+            });
+          } else {
+            setTimeout(() => {
+              button.innerText = originalText;
+              button.style.backgroundColor = originalBg;
+              button.style.color = WRENLIST_BRAND_COLORS.primary;
+            }, 3000);
+          }
+        } else if (response && !response.success) {
+          console.error('Wrenlist Skylark: Import failed', response);
+          button.innerText = '✗ Failed - Click to retry';
+          button.style.backgroundColor = '#ef4444'; // red
+          button.style.color = 'white';
+          
+          // Store failed import
+          try {
+            chrome.storage.local.get(['importHistory'], (result) => {
+              const history = result.importHistory || [];
+              history.unshift({
+                marketplace: marketplace.site,
+                productId: productId,
+                productTitle: productData?.title || productData?.name || 'Unknown',
+                timestamp: new Date().toISOString(),
+                success: false,
+                error: response.error || 'Unknown error'
+              });
+              chrome.storage.local.set({ 
+                importHistory: history.slice(0, 50) 
+              });
+            });
+          } catch (e) {
+            console.warn('Failed to store import history', e);
+          }
+          
+          // Reset after 5 seconds to allow retry
+          setTimeout(() => {
+            button.innerText = originalText;
+            button.style.backgroundColor = originalBg;
+            button.style.color = WRENLIST_BRAND_COLORS.primary;
+          }, 5000);
+          
+          alert(`Import failed: ${response.error || 'Unknown error'}`);
+        }
+      });
+    };
+
+    return button;
+  }
+
+  function insertButton(parentElement, button, style) {
+    if (!parentElement) return;
+    
+    // Check if button already exists
+    if (parentElement.querySelector('button[id="wrenlist-skylark-import"]')) {
+      return;
+    }
+
+    // Insert button based on style.insertIndex
+    if (style.insertIndex === -1) {
+      parentElement.appendChild(button);
+    } else if (style.insertIndex >= 0 && parentElement.children[style.insertIndex]) {
+      // Special handling for eBay UK
+      if (location.href.includes('https://www.ebay.co.uk') && style.insertIndex === 2) {
+        parentElement.insertBefore(button, parentElement.children[style.insertIndex - 1]);
+      } else {
+        parentElement.insertBefore(button, parentElement.children[style.insertIndex]);
+      }
+    } else {
+      parentElement.appendChild(button);
+    }
+
+    // Add marker to prevent duplicate injection
+    const marker = document.createElement('div');
+    marker.id = 'wrenlist-skylark-overlay-created';
+    marker.style.display = 'none';
+    parentElement.appendChild(marker);
+  }
+
+  async function injectButton() {
+    const marketplace = detectMarketplace();
+    if (!marketplace) {
+      return;
+    }
+
+    // Check if marketplace is enabled in settings
+    try {
+      if (!chrome || !chrome.storage || !chrome.storage.sync) {
+        // Extension context unavailable — skip settings check, use defaults
+      } else {
+        const settings = await chrome.storage.sync.get(['enabledMarketplaces']);
+        const enabledMarketplaces = settings.enabledMarketplaces ||
+          ['vinted', 'ebay', 'depop', 'poshmark', 'mercari', 'grailed', 'facebook', 'etsy'];
+
+        if (!enabledMarketplaces.includes(marketplace.site)) {
+          return; // Marketplace disabled in settings
+        }
+      }
+    } catch (e) {
+      // If settings can't be loaded, continue with default behavior
+    }
+
+    // Check if this is a product page
+    if (!isProductPage(marketplace)) {
+      return;
+    }
+
+    const productId = extractProductId(location.href, marketplace);
+    if (!productId) {
+      console.log('Wrenlist Skylark: Could not extract product ID from URL');
+      return;
+    }
+
+    // Wait for marketplace-specific delay
+    if (marketplace.waitTime > 0) {
+      await wait(marketplace.waitTime);
+    }
+
+    // Wait for target element to appear
+    const targetElements = await awaitNodes(marketplace.targetSelector, 20);
+    if (!targetElements || targetElements.length === 0) {
+      console.log('Wrenlist Skylark: Target element not found:', marketplace.targetSelector);
+      return;
+    }
+
+    // Inject button into each target element (some marketplaces have multiple)
+    for (const targetElement of targetElements) {
+      // Check if button already exists
+      if (targetElement.querySelector('button[id="wrenlist-skylark-import"]')) {
+        continue;
+      }
+
+      // Special handling for Facebook
+      if (marketplace.site === 'facebook') {
+        const collectionViewer = document.querySelector('div[aria-label="Marketplace Listing Viewer"]');
+        const collection = document.querySelector('div[aria-label="Collection of Marketplace items"]');
+        
+        if (collectionViewer && collectionViewer.contains(targetElement) && 
+            !collectionViewer.querySelector('button[id="wrenlist-skylark-import"]')) {
+          const button = createWrenlistButton(marketplace, productId);
+          insertButton(targetElement, button, marketplace.buttonStyle);
+        }
+        if (collection && collection.contains(targetElement) && 
+            !collection.querySelector('button[id="wrenlist-skylark-import"]')) {
+          const button = createWrenlistButton(marketplace, productId);
+          insertButton(targetElement, button, marketplace.buttonStyle);
+        }
+      } else {
+        const button = createWrenlistButton(marketplace, productId);
+        insertButton(targetElement, button, marketplace.buttonStyle);
+      }
+    }
+    
+    // Add bulk import controls if on a listings/search page
+    if (isListingsPage(marketplace)) {
+      injectBulkImportControls(marketplace);
+    }
+  }
+  
+  // Check if we're on a listings/search page (multiple products)
+  function isListingsPage(marketplace) {
+    // Check for common patterns that indicate a listings page
+    const listingsIndicators = [
+      document.querySelector('[class*="listing"]'),
+      document.querySelector('[class*="product-card"]'),
+      document.querySelector('[class*="item-card"]'),
+      document.querySelector('[data-testid*="product"]'),
+      document.querySelector('[data-testid*="listing"]')
+    ];
+    
+    // If we find multiple product cards, it's likely a listings page
+    const productCards = document.querySelectorAll('[class*="product"], [class*="listing"], [class*="item"]');
+    return productCards.length > 3; // More than 3 products suggests a listings page
+  }
+  
+  // Inject bulk import controls (checkbox + bulk action bar)
+  function injectBulkImportControls(marketplace) {
+    // Check if bulk controls already exist
+    if (document.getElementById('wrenlist-bulk-controls')) {
+      return;
+    }
+    
+    // Create bulk import bar
+    const bulkBar = document.createElement('div');
+    bulkBar.id = 'wrenlist-bulk-controls';
+    bulkBar.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      border: 2px solid #7a8471;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 10000;
+      display: none;
+      min-width: 250px;
+    `;
+    
+    bulkBar.innerHTML = `
+      <div style="font-weight: 600; margin-bottom: 8px; color: #2d3025;">
+        Bulk Import (<span id="bulk-count">0</span> selected)
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="bulk-import-btn" style="
+          flex: 1;
+          padding: 8px 16px;
+          background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+        ">Import Selected</button>
+        <button id="bulk-cancel-btn" style="
+          padding: 8px 16px;
+          background: white;
+          color: #7a8471;
+          border: 1px solid #9ba088;
+          border-radius: 6px;
+          cursor: pointer;
+        ">Cancel</button>
+      </div>
+    `;
+    
+    document.body.appendChild(bulkBar);
+    
+    // Update count
+    const updateBulkCount = () => {
+      const count = bulkImportState.selected.size;
+      document.getElementById('bulk-count').textContent = count;
+      bulkBar.style.display = count > 0 ? 'block' : 'none';
+    };
+    
+    // Bulk import handler
+    document.getElementById('bulk-import-btn').addEventListener('click', async () => {
+      if (bulkImportState.selected.size === 0) return;
+      
+      const selectedItems = Array.from(bulkImportState.selected);
+      bulkBar.style.display = 'none';
+      
+      // Show progress
+      const progressBar = createProgressBar(selectedItems.length);
+      document.body.appendChild(progressBar);
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < selectedItems.length; i++) {
+        const item = selectedItems[i];
+        updateProgressBar(progressBar, i + 1, selectedItems.length, item.title || item.productId);
+        
+        try {
+          // Extract product data
+          let productData = null;
+          switch (item.marketplace) {
+            case 'vinted': productData = extractVintedProductData(); break;
+            case 'ebay': productData = extractEbayProductData(); break;
+            case 'depop': productData = extractDepopProductData(); break;
+            case 'poshmark': productData = extractPoshmarkProductData(); break;
+            case 'mercari': productData = extractMercariProductData(); break;
+            case 'grailed': productData = extractGrailedProductData(); break;
+            case 'facebook': productData = extractFacebookProductData(); break;
+            case 'etsy': productData = extractEtsyProductData(); break;
+          }
+          
+          // Send import message
+          const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+              type: 'IMPORT_TO_WRENLIST',
+              marketplace: item.marketplace,
+              productId: item.productId,
+              url: item.url,
+              productData: productData
+            }, resolve);
+          });
+          
+          if (response && response.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+          
+          // Small delay between imports to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          console.error('Bulk import error:', error);
+          failCount++;
+        }
+      }
+      
+      // Remove progress bar
+      progressBar.remove();
+      
+      // Show results
+      alert(`Bulk import complete!\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
+      
+      // Clear selection
+      bulkImportState.selected.clear();
+      updateBulkCount();
+    });
+    
+    // Cancel handler
+    document.getElementById('bulk-cancel-btn').addEventListener('click', () => {
+      bulkImportState.selected.clear();
+      updateBulkCount();
+      // Remove checkboxes
+      document.querySelectorAll('.wrenlist-bulk-checkbox').forEach(cb => cb.remove());
+    });
+    
+    // Add checkboxes to product cards
+    const addBulkCheckboxes = () => {
+      const buttons = document.querySelectorAll('button[id="wrenlist-skylark-import"]');
+      buttons.forEach(button => {
+        if (button.parentElement.querySelector('.wrenlist-bulk-checkbox')) return;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'wrenlist-bulk-checkbox';
+        checkbox.style.cssText = `
+          position: absolute;
+          top: 5px;
+          left: 5px;
+          z-index: 10001;
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+        `;
+        
+        const productId = button.dataset.productId;
+        const marketplace = button.dataset.marketplace;
+        const url = location.href;
+        
+        checkbox.addEventListener('change', (e) => {
+          const key = `${marketplace}-${productId}`;
+          if (e.target.checked) {
+            bulkImportState.selected.add({ marketplace, productId, url, title: 'Product' });
+          } else {
+            bulkImportState.selected.delete(Array.from(bulkImportState.selected).find(item => 
+              item.marketplace === marketplace && item.productId === productId
+            ));
+          }
+          updateBulkCount();
+        });
+        
+        // Position checkbox relative to button
+        const buttonParent = button.parentElement;
+        if (buttonParent) {
+          buttonParent.style.position = 'relative';
+          buttonParent.appendChild(checkbox);
+        }
+      });
+    };
+    
+    // Watch for new buttons and add checkboxes
+    const bulkObserver = new MutationObserver(() => {
+      addBulkCheckboxes();
+    });
+    bulkObserver.observe(document.body, { childList: true, subtree: true });
+    addBulkCheckboxes();
+  }
+  
+  // Create progress bar for bulk operations
+  function createProgressBar(total) {
+    const progressBar = document.createElement('div');
+    progressBar.id = 'wrenlist-bulk-progress';
+    progressBar.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 2px solid #7a8471;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      z-index: 10002;
+      min-width: 300px;
+    `;
+    
+    progressBar.innerHTML = `
+      <div style="font-weight: 600; margin-bottom: 12px; color: #2d3025;">Bulk Import Progress</div>
+      <div style="background: #ede9e4; border-radius: 6px; height: 24px; overflow: hidden; margin-bottom: 8px;">
+        <div id="progress-fill" style="
+          background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
+          height: 100%;
+          width: 0%;
+          transition: width 0.3s;
+        "></div>
+      </div>
+      <div id="progress-text" style="font-size: 12px; color: #6a6b6a; text-align: center;">
+        Starting...
+      </div>
+    `;
+    
+    return progressBar;
+  }
+  
+  function updateProgressBar(progressBar, current, total, itemName) {
+    const percentage = (current / total) * 100;
+    const fill = progressBar.querySelector('#progress-fill');
+    const text = progressBar.querySelector('#progress-text');
+    
+    if (fill) fill.style.width = `${percentage}%`;
+    if (text) text.textContent = `Importing ${current} of ${total}: ${itemName || 'Product'}`;
+  }
+
+  // Main execution
+  function init() {
+    console.log('Wrenlist Skylark: Content script loaded');
+    
+    // Initial injection
+    injectButton();
+
+    // Watch for URL changes (for SPAs like Facebook)
+    if (detectMarketplace()?.site === 'facebook') {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.previousSibling && mutation.previousSibling.id === 'wrenlist-skylark-overlay-created') {
+            return;
+          }
+          
+          const oldValue = mutation.oldValue;
+          const newValue = mutation.target.textContent;
+          if (oldValue !== newValue) {
+            console.log('Wrenlist Skylark: DOM change detected, reinjecting button');
+            injectButton();
+          }
+        });
+      });
+
+      observer.observe(document.body, {
+        characterDataOldValue: true,
+        subtree: true,
+        childList: true,
+        characterData: true
+      });
+    }
+
+    // Also watch for URL changes (for SPAs)
+    let lastUrl = location.href;
+    setInterval(() => {
+      const currentUrl = location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        console.log('Wrenlist Skylark: URL changed, reinjecting button');
+        setTimeout(injectButton, 1000);
+      }
+    }, 1000);
+    
+    // Listen for storage changes (when settings are updated in options page)
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'sync' && changes.enabledMarketplaces) {
+        // Remove existing button
+        const existingButton = document.getElementById('wrenlist-skylark-import');
+        if (existingButton) {
+          existingButton.remove();
+        }
+        // Re-inject based on new settings
+        injectButton();
+      }
+    });
+  }
+
+  // Inject extension marker for detection on Wrenlist pages
+  function injectExtensionMarker() {
+    if (location.hostname.includes('wrenlist.com') || location.hostname.includes('localhost')) {
+      // Remove existing marker if any
+      const existingMarker = document.querySelector('[data-wrenlist-skylark-extension]');
+      if (existingMarker) {
+        existingMarker.remove();
+      }
+      
+      // Inject marker
+      const marker = document.createElement('div');
+      marker.setAttribute('data-wrenlist-skylark-extension', 'true');
+      marker.style.display = 'none';
+      marker.style.position = 'absolute';
+      marker.style.top = '-9999px';
+      document.body.appendChild(marker);
+      
+      // Also set window property for detection
+      window.wrenlistSkylarkExtension = {
+        version: '1.1.0',
+        available: true
+      };
+      
+      console.log('Wrenlist Skylark: Extension marker injected');
+    }
+  }
+
+  // Listen for messages from the page (for sync and other cross-origin requests)
+  function setupPageMessageListener() {
+    window.addEventListener('message', async (event) => {
+      // Only accept messages from same origin
+      if (event.source !== window) return;
+      
+      const { type, data } = event.data || {};
+      
+      // Handle Vinted status sync
+      if (type === 'SYNC_VINTED_STATUS') {
+        console.log('Wrenlist Skylark: Forwarding SYNC_VINTED_STATUS to background', data?.products?.length || 0, 'products');
+        
+        try {
+          chrome.runtime.sendMessage({
+            type: 'sync_vinted_status',
+            data: data
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Wrenlist Skylark: Sync error:', chrome.runtime.lastError.message);
+              window.postMessage({
+                type: 'VINTED_SYNC_RESPONSE',
+                success: false,
+                error: 'Extension context invalidated. Please refresh the page.',
+                needsRefresh: true,
+                stats: { checked: 0, updated: 0, unchanged: 0, failed: 0 }
+              }, '*');
+              return;
+            }
+            
+            console.log('Wrenlist Skylark: Sync response received', response);
+            window.postMessage({
+              type: 'VINTED_SYNC_RESPONSE',
+              ...response
+            }, '*');
+          });
+        } catch (error) {
+          console.error('Wrenlist Skylark: Failed to send sync message:', error);
+          window.postMessage({
+            type: 'VINTED_SYNC_RESPONSE',
+            success: false,
+            error: error.message || 'Failed to communicate with extension',
+            stats: { checked: 0, updated: 0, unchanged: 0, failed: 0 }
+          }, '*');
+        }
+      }
+      
+    // Handle marketplace status check (CHECK_ALL_MARKETPLACES)
+    if (type === 'CHECK_ALL_MARKETPLACES') {
+      console.log('Wrenlist Skylark: Checking all marketplace statuses');
+
+      // Check all active marketplaces in parallel
+      const ALL_ACTIVE_MARKETPLACES = ['vinted', 'etsy', 'facebook'];
+
+      try {
+        if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+          console.warn('Wrenlist Skylark: chrome.runtime unavailable, skipping marketplace check');
+          return;
+        }
+        Promise.all(ALL_ACTIVE_MARKETPLACES.map(function(mp) {
+          return new Promise(function(resolve) {
+            chrome.runtime.sendMessage(
+              chrome.runtime.id,
+              { action: 'check_marketplace_login', marketplace: mp },
+              function(response) {
+                if (!chrome || !chrome.runtime) {
+                  resolve({ name: mp, connected: false, error: 'EXTENSION_RELOADED' });
+                  return;
+                }
+                if (chrome.runtime.lastError) {
+                  var errorMsg = chrome.runtime.lastError.message;
+                  console.warn('Wrenlist Skylark: Check ' + mp + ' error:', errorMsg);
+
+                  // Detect extension context invalidated
+                  if (errorMsg && errorMsg.includes('Extension context invalidated')) {
+                    resolve({ name: mp, connected: false, error: 'EXTENSION_RELOADED' });
+                    return;
+                  }
+
+                  resolve({ name: mp, connected: false });
+                  return;
+                }
+
+                resolve({
+                  name: mp,
+                  connected: response && response.success === true && response.loggedIn === true,
+                  domain: response && response.domain ? response.domain : undefined,
+                  username: response && response.username ? response.username : undefined
+                });
+              }
+            );
+          });
+        })).then(function(results) {
+          var marketplaces = {};
+          var hasReloadError = false;
+
+          results.forEach(function(r) {
+            if (r.error === 'EXTENSION_RELOADED') hasReloadError = true;
+            marketplaces[r.name] = {
+              connected: r.connected,
+              domain: r.domain,
+              userInfo: r.username ? { username: r.username } : undefined
+            };
+          });
+
+          console.log('Wrenlist Skylark: All marketplace statuses:', marketplaces);
+
+          if (hasReloadError) {
+            console.warn('⚠️ Extension was reloaded. Please refresh this page to reconnect.');
+            window.postMessage({
+              type: 'ALL_MARKETPLACES_RESPONSE',
+              marketplaces: marketplaces,
+              error: 'EXTENSION_RELOADED',
+              message: 'Extension was reloaded. Please refresh the page.'
+            }, '*');
+          } else {
+            window.postMessage({
+              type: 'ALL_MARKETPLACES_RESPONSE',
+              marketplaces: marketplaces
+            }, '*');
+          }
+        });
+      } catch (error) {
+        var errorMsg = error && error.message ? error.message : String(error);
+        console.error('Wrenlist Skylark: Failed to check marketplace statuses:', error);
+
+        window.postMessage({
+          type: 'ALL_MARKETPLACES_RESPONSE',
+          marketplaces: {},
+          error: errorMsg.includes('Extension context invalidated') ? 'EXTENSION_RELOADED' : 'EXCEPTION',
+          message: errorMsg
+        }, '*');
+      }
+    }
+    
+    // Handle single marketplace check (CHECK_MARKETPLACE)
+    if (type === 'CHECK_MARKETPLACE') {
+      const marketplace = data?.marketplace || event.data.marketplace;
+      console.log('Wrenlist Skylark: Checking marketplace status:', marketplace);
+      
+      chrome.runtime.sendMessage(
+        chrome.runtime.id,
+        {
+          action: 'check_marketplace_login',
+          marketplace: marketplace
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Wrenlist Skylark: Check marketplace error:', chrome.runtime.lastError.message);
+            window.postMessage({
+              type: 'MARKETPLACE_CHECK_RESPONSE',
+              marketplace: marketplace,
+              status: null
+            }, '*');
+            return;
+          }
+          
+          console.log('Wrenlist Skylark: Marketplace check response:', response);
+          
+          const status = {
+            connected: response?.success === true && response?.loggedIn === true,
+            domain: marketplace === 'vinted' ? 'vinted.co.uk' : undefined
+          };
+          
+          window.postMessage({
+            type: 'MARKETPLACE_CHECK_RESPONSE',
+            marketplace: marketplace,
+            status: status
+          }, '*');
+        }
+      );
+    }
+      
+      // Handle delist product
+      if (type === 'DELIST_PRODUCT') {
+        const { marketplace, listingId, productId, productTitle, requestId } = event.data;
+        console.log('Wrenlist Skylark: Forwarding delist command to background', {
+          marketplace,
+          listingId,
+          productId
+        });
+        
+        try {
+          chrome.runtime.sendMessage(
+            chrome.runtime.id,
+            {
+              action: 'delist_from_marketplace',
+              marketplace: marketplace,
+              listingId: listingId
+            },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                const errorMsg = chrome.runtime.lastError.message;
+                console.error('Wrenlist Skylark: Delist error:', errorMsg);
+                
+                // Detect extension context invalidated error
+                if (errorMsg.includes('Extension context invalidated')) {
+                  window.postMessage({
+                    type: 'DELIST_PRODUCT_RESPONSE',
+                    marketplace: marketplace,
+                    listingId: listingId,
+                    productId: productId,
+                    requestId: requestId,
+                    success: false,
+                    error: 'Extension was reloaded. Please refresh the page.'
+                  }, '*');
+                  return;
+                }
+                
+                window.postMessage({
+                  type: 'DELIST_PRODUCT_RESPONSE',
+                  marketplace: marketplace,
+                  listingId: listingId,
+                  productId: productId,
+                  requestId: requestId,
+                  success: false,
+                  error: errorMsg || 'Unknown error'
+                }, '*');
+                return;
+              }
+              
+              console.log('Wrenlist Skylark: Delist response:', response);
+              
+              // Forward the response back to the web page
+              window.postMessage({
+                type: 'DELIST_PRODUCT_RESPONSE',
+                marketplace: marketplace,
+                listingId: listingId,
+                productId: productId,
+                requestId: requestId,
+                success: response?.success === true,
+                error: response?.message || response?.error
+              }, '*');
+            }
+          );
+        } catch (error) {
+          console.error('Wrenlist Skylark: Failed to send delist message:', error);
+          window.postMessage({
+            type: 'DELIST_PRODUCT_RESPONSE',
+            marketplace: marketplace,
+            listingId: listingId,
+            productId: productId,
+            requestId: requestId,
+            success: false,
+            error: error.message || 'Failed to communicate with extension'
+          }, '*');
+        }
+      }
+      
+      // Handle publish to marketplace
+      if (type === 'PUBLISH_TO_MARKETPLACE' || type === 'POST_LISTING_TO_MARKETPLACE') {
+        console.log('Wrenlist Skylark: Forwarding publish command to background');
+        
+        // Extract internalProductId if provided
+        const internalProductId = data.product?.internalProductId;
+        
+        try {
+          chrome.runtime.sendMessage({
+            type: 'publish_to_marketplace',
+            ...data
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Wrenlist Skylark: Publish error:', chrome.runtime.lastError.message);
+              window.postMessage({
+                type: 'PUBLISH_RESPONSE',
+                success: false,
+                error: chrome.runtime.lastError.message,
+                internalProductId: internalProductId
+              }, '*');
+              return;
+            }
+            
+            window.postMessage({
+              type: 'PUBLISH_RESPONSE',
+              ...response,
+              internalProductId: internalProductId
+            }, '*');
+          });
+        } catch (error) {
+          window.postMessage({
+            type: 'PUBLISH_RESPONSE',
+            success: false,
+            error: error.message,
+            internalProductId: internalProductId
+          }, '*');
+        }
+      }
+    });
+  }
+
+  // Run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      injectExtensionMarker();
+      setupPageMessageListener();
+    });
+  } else {
+    init();
+    injectExtensionMarker();
+    setupPageMessageListener();
+  }
+})();
+
+// Listen for messages from background script (MUST be at top level, outside IIFE)
+// Version: 2025-01-09-23:00 (Cache-bust)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Wrenlist Skylark [v2]: Content script received message:', request.type || request.action);
+  
+  // Handle request to send a message on Vinted via API
+  if (request.type === 'SEND_VINTED_MESSAGE') {
+    console.log('[Content] ✉️ Received SEND_VINTED_MESSAGE request:', request.conversationId);
+
+    (async () => {
+      try {
+        // 1. Extract CSRF token from the page
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
+
+        if (!csrfToken) {
+          throw new Error('CSRF token not found on page. Cannot send message.');
+        }
+
+        // 2. Extract x-anon-id (if needed, from cookies or other meta)
+        const xAnonIdMeta = document.querySelector('meta[name="x-anon-id"]');
+        const xAnonId = xAnonIdMeta ? xAnonIdMeta.getAttribute('content') : null;
+        // Fallback to cookie if not in meta
+        const anonIdCookieMatch = document.cookie.match(/_vinted_anon_id=([^;]+)/);
+        const finalAnonId = xAnonId || (anonIdCookieMatch ? anonIdCookieMatch[1] : null);
+
+        if (!finalAnonId) {
+          console.warn('[Content] x-anon-id not found. Proceeding without it, but may cause issues.');
+        }
+
+        // Determine the current Vinted domain (e.g., co.uk, com, fr, etc.)
+        const currentDomain = window.location.hostname.replace('www.vinted.', '');
+        const conversationUrl = `https://www.vinted.${currentDomain}/inbox/${request.conversationId}`;
+        const apiUrl = `https://www.vinted.${currentDomain}/api/v2/conversations/${request.conversationId}/replies`;
+
+        const headers = {
+          'Accept': 'application/json, text/plain, */*,image/webp',
+          'Accept-Language': 'en-uk-fr',
+          'Content-Type': 'application/json',
+          'Origin': `https://www.vinted.${currentDomain}`,
+          'Referer': conversationUrl,
+          'X-CSRF-Token': csrfToken,
+        };
+
+        if (finalAnonId) {
+          headers['X-Anon-Id'] = finalAnonId;
+        }
+
+        const payload = {
+          reply: {
+            body: request.message,
+            photo_temp_uuids: null, // No photo support for now
+            is_personal_data_sharing_check_skipped: false,
+          },
+        };
+
+        console.log('[Content] Sending message via Vinted API:', apiUrl, 'Payload:', payload);
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          credentials: 'include', // CRITICAL: Sends Vinted cookies
+          headers: headers,
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('[Content] ✅ Message sent successfully via API:', data);
+        sendResponse({ success: true, data: data });
+
+      } catch (error) {
+        console.error('[Content] ❌ Error sending message via Vinted API:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+
+    return true; // Keep the message channel open for async response
+  }
+  
+  return false;
+});

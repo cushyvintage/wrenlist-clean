@@ -1,0 +1,126 @@
+{
+  "manifest_version": 3,
+  "name": "Wrenlist \u2014 Marketplace Sync",
+  "version": "1.2.0",
+  "description": "List your vintage & resale items on Vinted, eBay, Etsy and Shopify. The extension for UK thrifters. Requires a Wrenlist account at wrenlist.com",
+  "background": {
+    "service_worker": "dist/background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "content-scripts/content.js"
+      ],
+      "matches": [
+        "*://*.depop.com/*",
+        "*://*.ebay.ca/*",
+        "*://*.ebay.co.uk/*",
+        "*://*.ebay.com.au/*",
+        "*://*.ebay.com/*",
+        "*://*.ebay.ie/*",
+        "*://*.facebook.com/*",
+        "*://*.vinted.co.uk/*",
+        "*://*.vinted.com/*",
+        "*://*.vinted.ca/*",
+        "*://*.vinted.nl/*",
+        "*://*.vinted.fr/*",
+        "*://*.vinted.de/*",
+        "*://*.vinted.es/*",
+        "*://*.vinted.it/*",
+        "*://*.vinted.pl/*",
+        "*://*.vinted.lt/*",
+        "*://*.vinted.be/*",
+        "*://*.vinted.cz/*",
+        "*://poshmark.ca/*",
+        "*://poshmark.com.au/*",
+        "*://poshmark.com/*",
+        "*://www.etsy.com/*",
+        "*://www.grailed.com/*",
+        "*://www.mercari.com/*",
+        "*://*.shopify.com/*",
+        "*://*.whatnot.com/*",
+        "*://*.wrenlist.com/*",
+        "*://localhost/*"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "enabled": true,
+        "id": "rules",
+        "path": "marketplaceRules.json"
+      }
+    ]
+  },
+  "externally_connectable": {
+    "matches": [
+      "*://*.wrenlist.com/*",
+      "*://localhost/*"
+    ]
+  },
+  "host_permissions": [
+    "*://poshmark.com/*",
+    "*://poshmark.ca/*",
+    "*://poshmark.com.au/*",
+    "*://poshmark.co.uk/*",
+    "*://www.mercari.com/*",
+    "*://www.facebook.com/*",
+    "*://www.upload.facebook.com/*",
+    "*://upload.facebook.com/*",
+    "*://*.depop.com/*",
+    "*://www.grailed.com/*",
+    "*://*.ebay.com/*",
+    "*://*.ebay.co.uk/*",
+    "*://*.ebay.ca/*",
+    "*://*.ebay.com.au/*",
+    "*://*.ebay.ie/*",
+    "*://www.etsy.com/*",
+    "*://www.bonanza.com/*",
+    "*://*.vinted.com/*",
+    "*://*.vinted.co.uk/*",
+    "*://*.vinted.ca/*",
+    "*://*.vinted.nl/*",
+    "*://*.vinted.fr/*",
+    "*://*.vinted.de/*",
+    "*://*.vinted.es/*",
+    "*://*.vinted.it/*",
+    "*://*.vinted.pl/*",
+    "*://*.vinted.lt/*",
+    "*://*.vinted.be/*",
+    "*://*.vinted.cz/*",
+    "*://instagram.com/*",
+    "*://*.instagram.com/*",
+    "*://*.vestiairecollective.com/*",
+    "https://*.s3.amazonaws.com/*",
+    "https://*.amazonaws.com/*",
+    "*://*.shopify.com/*",
+    "*://*.whatnot.com/*",
+    "*://*.wrenlist.com/*",
+    "*://localhost/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "alarms",
+    "cookies",
+    "storage",
+    "tabs",
+    "notifications",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Wrenlist Skylark"
+  },
+  "options_page": "options.html",
+  "web_accessible_resources": []
+}

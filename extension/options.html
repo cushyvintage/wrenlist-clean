@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wrenlist Skylark - Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f3f0;
+      color: #2d3025;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
+      color: #f5f3f0;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #ede9e4;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #2d3025;
+    }
+    
+    .setting-item {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #ede9e4;
+    }
+    
+    .setting-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .setting-label {
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #2d3025;
+    }
+    
+    .setting-description {
+      font-size: 13px;
+      color: #6a6b6a;
+      margin-bottom: 10px;
+    }
+    
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 26px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #7a8471;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+    
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #9ba088;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .button:hover {
+      background: #5d6355;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(122, 132, 113, 0.3);
+    }
+    
+    .button.secondary {
+      background: white;
+      color: #7a8471;
+      border: 1px solid #9ba088;
+    }
+    
+    .button.secondary:hover {
+      background: #f5f3f0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .status-message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 16px;
+      display: none;
+    }
+    
+    .status-message.success {
+      background: #efe;
+      border: 1px solid #cfc;
+      color: #3c3;
+      display: block;
+    }
+    
+    .status-message.error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      display: block;
+    }
+    
+    .marketplace-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .marketplace-item {
+      padding: 12px;
+      background: #f9f9f8;
+      border: 1px solid #ede9e4;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .marketplace-item input[type="checkbox"] {
+      width: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Wrenlist Skylark Settings</h1>
+    <p>Configure your extension preferences</p>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">General Settings</div>
+    
+    <div class="setting-item">
+      <div class="setting-label">Auto-open Wrenlist after import</div>
+      <div class="setting-description">Automatically open the imported product page in Wrenlist after successful import</div>
+      <label class="toggle">
+        <input type="checkbox" id="autoOpenWrenlist">
+        <span class="slider"></span>
+      </label>
+    </div>
+    
+    <div class="setting-item">
+      <div class="setting-label">Show browser notifications</div>
+      <div class="setting-description">Display browser notifications for successful imports</div>
+      <label class="toggle">
+        <input type="checkbox" id="showNotifications">
+        <span class="slider"></span>
+      </label>
+    </div>
+    
+    <div class="setting-item">
+      <div class="setting-label">Show success message duration (seconds)</div>
+      <div class="setting-description">How long to show the success message on the import button</div>
+      <input type="number" id="successMessageDuration" min="1" max="10" value="3">
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Marketplace Settings</div>
+    <div class="setting-item">
+      <div class="setting-label">Enabled Marketplaces</div>
+      <div class="setting-description">Select which marketplaces to show the import button on</div>
+      <div class="marketplace-list" id="marketplaceList">
+        <!-- Will be populated by JS -->
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Import History</div>
+    <div class="setting-item">
+      <div class="setting-label">History Settings</div>
+      <div class="setting-description">Manage your import history</div>
+      <div class="button-group">
+        <button class="button secondary" id="exportHistory">Export History</button>
+        <button class="button secondary" id="clearHistory">Clear History</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">About</div>
+    <div class="setting-item">
+      <div class="setting-label">Version</div>
+      <div class="setting-description" id="version">1.1.0</div>
+    </div>
+    <div class="setting-item">
+      <div class="setting-label">Support</div>
+      <div class="setting-description">
+        Wrenlist Skylark Version 1.1.0 | <a href="https://wrenlist.com/support" target="_blank">Support</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="button-group" style="margin-top: 24px;">
+    <button class="button" id="saveSettings">Save Settings</button>
+    <button class="button secondary" id="resetSettings">Reset to Defaults</button>
+  </div>
+  
+  <div class="status-message" id="statusMessage"></div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
+

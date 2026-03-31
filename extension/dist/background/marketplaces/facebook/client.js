@@ -1,0 +1,540 @@
+import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/crosslistApi.js";
+import { FACEBOOK_BASE_URL, FACEBOOK_CATEGORY_CACHE_KEY, FACEBOOK_CATEGORY_PAGE_URL, FACEBOOK_CREATE_MUTATION_NAME, FACEBOOK_CREATE_URL, FACEBOOK_DOC_IDS, FACEBOOK_GRAPHQL_URL, FACEBOOK_IMAGE_UPLOAD_URL, FACEBOOK_SELLING_QUERY_NAME, FACEBOOK_SELLING_URL, } from "./constants.js";
+import { FacebookMapper } from "./mapper.js";
+export class FacebookClient {
+    tld;
+    user = "";
+    aParam = "";
+    cometReq = "";
+    fbDtsg = "";
+    targetId = "";
+    mapper = new FacebookMapper({
+        uploadImage: this.uploadImage.bind(this),
+        fetchCarriers: this.fetchCarriers.bind(this),
+    });
+    mapProduct(product) {
+        return this.mapper.map(product);
+    }
+    constructor(tld) {
+        this.tld = tld;
+    }
+    async bootstrap(force = false) {
+        await this.ensureSession(force);
+    }
+    async ensureSession(force = false) {
+        if (!force && (await this.areParametersCached())) {
+            this.user = (await this.getCachedParam("crosslist_facebook_actorid")) ?? "";
+            this.aParam = (await this.getCachedParam("crosslist_facebook_a")) ?? "";
+            this.cometReq =
+                (await this.getCachedParam("crosslist_facebook_cometreq")) ?? "";
+            this.fbDtsg =
+                (await this.getCachedParam("crosslist_facebook_dtsg")) ?? "";
+            this.targetId =
+                (await this.getCachedParam("crosslist_facebook_targetid")) ?? "";
+            return;
+        }
+        const html = await this.getHtml();
+        this.user = await this.extractAndCache("crosslist_facebook_actorid", /"actorId"\s*:\s*"([0-9]*)"/, html);
+        this.aParam = await this.extractAndCache("crosslist_facebook_a", /__a=([0-9]*)/, html);
+        this.cometReq = await this.extractAndCache("crosslist_facebook_cometreq", /comet_req=([0-9]*)/, html);
+        this.fbDtsg = await this.extractAndCache("crosslist_facebook_dtsg", /"DTSGInitialData",\s*\[\s*\]\s*,\s*{\s*"token":\s*"(.*?)"/, html);
+        this.targetId = await this.extractAndCache("crosslist_facebook_targetid", /__typename":.*?"Marketplace",.*?"id":.*?"([0-9]+)"/, html);
+    }
+    async postListing(product) {
+        await this.ensureSession();
+        await this.storeCategories();
+        const payload = await this.mapper.map(product);
+        try {
+            return await this.postOrUpdate(payload);
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: "An unexpected error occurred while posting to Facebook.",
+                internalErrors: JSON.stringify(error),
+            };
+        }
+    }
+    async updateListing(product) {
+        await this.ensureSession();
+        const payload = await this.mapper.map(product);
+        const listingId = product.marketplaceId ?? product.marketPlaceId;
+        if (!listingId) {
+            throw new Error("Missing Facebook listing id");
+        }
+        return this.postOrUpdate(payload, listingId);
+    }
+    async postOrUpdate(payload, listingId) {
+        const input = {
+            input: {
+                client_mutation_id: "1",
+                actor_id: this.user,
+                audience: {
+                    marketplace: { marketplace_id: this.targetId },
+                },
+                data: {
+                    common: payload,
+                },
+            },
+        };
+        if (listingId) {
+            input.input.listing_id = listingId;
+        }
+        const mutationName = listingId
+            ? "useCometMarketplaceListingEditMutation"
+            : FACEBOOK_CREATE_MUTATION_NAME;
+        const params = new URLSearchParams();
+        params.append("fb_dtsg", this.fbDtsg);
+        params.append("fb_api_req_friendly_name", mutationName);
+        params.append("variables", JSON.stringify(input));
+        params.append("__a", this.aParam);
+        params.append("doc_id", listingId ? FACEBOOK_DOC_IDS.editListing : FACEBOOK_DOC_IDS.createListing);
+        params.append("__comet_req", this.cometReq);
+        const response = await fetch(FACEBOOK_GRAPHQL_URL, {
+            method: "POST",
+            body: params,
+            credentials: "include",
+            headers: {
+                accept: "application/json, text/plain, */*",
+                "x-fb-friendly-name": mutationName,
+                "content-type": "application/x-www-form-urlencoded",
+            },
+        });
+        const json = await response.json();
+        const created = json?.data?.marketplace_listing_create?.listing ??
+            json?.data?.marketplace_listing_edit?.listing;
+        if (created?.id) {
+            const storyUrl = created.story?.url;
+            return {
+                success: true,
+                product: {
+                    id: created.id,
+                    url: storyUrl ??
+                        `${FACEBOOK_BASE_URL}/marketplace/item/${created.id}/`,
+                },
+            };
+        }
+        const errors = json?.errors;
+        if (Array.isArray(errors) && errors.length) {
+            const first = errors[0];
+            if (first.api_error_code === 200) {
+                return {
+                    success: false,
+                    message: "Only local shipping is supported.",
+                    internalErrors: JSON.stringify(json),
+                };
+            }
+            return {
+                success: false,
+                message: first.description ?? first.message,
+                internalErrors: JSON.stringify(json),
+            };
+        }
+        return {
+            success: false,
+            message: "Facebook did not return a valid response.",
+            internalErrors: JSON.stringify(json),
+        };
+    }
+    async uploadImage(file, index) {
+        await this.ensureSession();
+        const form = new FormData();
+        form.append("fb_dtsg", this.fbDtsg);
+        form.append("qn", "comet_marketplace_composer");
+        form.append("target_id", this.targetId);
+        form.append("source", "8");
+        form.append("profile_id", this.user);
+        form.append("waterfallxapp", "comet");
+        form.append("upload_id", `1024${index}`);
+        await fetch(`${FACEBOOK_IMAGE_UPLOAD_URL}?fb_dtsg=${this.fbDtsg}&__a=${this.aParam}`, {
+            method: "OPTIONS",
+            body: form,
+            credentials: "include",
+        });
+        form.append("farr", file, "blob");
+        const response = await fetch(`${FACEBOOK_IMAGE_UPLOAD_URL}?fb_dtsg=${this.fbDtsg}&__a=${this.aParam}`, {
+            method: "POST",
+            body: form,
+            credentials: "include",
+            headers: {
+                accept: "application/json, text/plain, */*",
+            },
+        });
+        const text = await response.text();
+        const trimmed = text.replace("for (;;);", "");
+        return JSON.parse(trimmed);
+    }
+    async fetchCarriers(categoryId, weight, price) {
+        await this.ensureSession();
+        const variables = {
+            params: {
+                eligibility_params: {
+                    category_id: categoryId,
+                    item_price: {
+                        currency: "USD",
+                        price: `${Math.round(price * 1000)}`,
+                    },
+                },
+                label_rate_type: "CALCULATED_ON_PACKAGE_DETAILS",
+                shipping_package_weight: {
+                    big_weight: {
+                        unit: "POUND",
+                        value: 0,
+                    },
+                    small_weight: {
+                        unit: "OUNCE",
+                        value: weight?.inOunces ?? 0,
+                    },
+                },
+            },
+        };
+        const form = new FormData();
+        form.append("fb_dtsg", this.fbDtsg);
+        form.append("fb_api_req_friendly_name", "useMarketplaceComposerCalculatedShippingOptionsQuery");
+        form.append("variables", JSON.stringify(variables));
+        form.append("__a", this.aParam);
+        form.append("doc_id", FACEBOOK_DOC_IDS.shippingOptions);
+        form.append("__comet_req", this.cometReq);
+        const response = await fetch(FACEBOOK_GRAPHQL_URL, {
+            method: "POST",
+            body: form,
+            credentials: "include",
+            headers: {
+                accept: "application/json, text/plain, */*",
+            },
+        });
+        const json = (await response.json());
+        return json.data?.shippingOptionsData ?? [];
+    }
+    async delistListing(id) {
+        await this.ensureSession();
+        const input = {
+            input: {
+                client_mutation_id: "1",
+                actor_id: this.user,
+                batch_delete_variants: true,
+                referral_surface: "PRODUCT_DETAILS",
+                surface: "MARKETPLACE_PAGE_SELLING",
+                for_sale_item_id: id,
+            },
+        };
+        const form = new FormData();
+        form.append("fb_dtsg", this.fbDtsg);
+        form.append("server_timestamps", "true");
+        form.append("fb_api_caller_class", "RelayModern");
+        form.append("fb_api_req_friendly_name", "useCometMarketplaceForSaleItemDeleteMutation");
+        form.append("variables", JSON.stringify(input));
+        form.append("__a", this.aParam);
+        form.append("doc_id", FACEBOOK_DOC_IDS.deleteListing);
+        form.append("__comet_req", this.cometReq);
+        const response = await fetch(FACEBOOK_GRAPHQL_URL, {
+            method: "POST",
+            body: form,
+            credentials: "include",
+            headers: {
+                accept: "application/json, text/plain, */*",
+            },
+        });
+        const json = await response.json();
+        if (json?.errors?.length) {
+            return {
+                success: false,
+                message: json.errors[0].description ?? json.errors[0].message,
+                internalErrors: JSON.stringify(json),
+            };
+        }
+        return { success: true };
+    }
+    async getListings(cursor, limit = 50, token) {
+        if (!token) {
+            const html = await fetch(FACEBOOK_SELLING_URL, {
+                credentials: "include",
+            }).then((res) => res.text());
+            const match = html.match(/"DTSGInitialData",\[\],{"token":"(.*?)"/);
+            if (!match?.[1]) {
+                throw new Error("Unable to find Facebook DTSG token.");
+            }
+            token = match[1];
+        }
+        const headers = new Headers();
+        headers.append("content-type", "application/x-www-form-urlencoded");
+        headers.append("x-fb-friendly-name", FACEBOOK_SELLING_QUERY_NAME);
+        let nextCursor = cursor ?? null;
+        const products = [];
+        const loops = Math.ceil(limit / 10);
+        for (let i = 0; i < loops; i += 1) {
+            const params = new URLSearchParams();
+            params.append("variables", JSON.stringify({
+                count: 10,
+                state: "LIVE",
+                status: ["IN_STOCK"],
+                cursor: nextCursor,
+                order: "CREATION_TIMESTAMP_DESC",
+                isBusinessOnMarketplaceEnabled: false,
+                scale: 1,
+                title_search: null,
+            }));
+            params.append("doc_id", FACEBOOK_DOC_IDS.sellingFeed);
+            params.append("fb_api_req_friendly_name", FACEBOOK_SELLING_QUERY_NAME);
+            params.append("fb_dtsg", token);
+            const response = await fetch(FACEBOOK_GRAPHQL_URL, {
+                method: "POST",
+                headers,
+                body: params,
+                credentials: "include",
+            });
+            const text = await response.text();
+            const roots = this.extractJsonRoots(text);
+            if (!roots.length) {
+                break;
+            }
+            const parsed = JSON.parse(roots[0]);
+            const edges = parsed?.data?.viewer?.marketplace_listing_sets?.edges ?? [];
+            products.push(...edges.map((edge) => ({
+                marketplaceId: edge.node.first_listing.id,
+                title: edge.node.first_listing.base_marketplace_listing_title ?? null,
+                price: edge.node.first_listing.listing_price
+                    ? parseFloat(edge.node.first_listing.listing_price.formatted_amount?.replace(/[^\d.]/g, "") ?? "0")
+                    : null,
+                coverImage: edge.node.first_listing.primary_listing_photo?.image?.uri ?? null,
+                created: edge.node.first_listing.creation_time
+                    ? new Date(edge.node.first_listing.creation_time * 1000).toJSON()
+                    : null,
+                marketplaceUrl: this.getProductUrl(edge.node.first_listing.id),
+            })));
+            const pageInfo = parsed?.data?.viewer?.marketplace_listing_sets?.page_info;
+            if (!pageInfo?.has_next_page) {
+                nextCursor = null;
+                break;
+            }
+            nextCursor = pageInfo.end_cursor;
+        }
+        return {
+            products,
+            nextPage: nextCursor,
+            username: token,
+        };
+    }
+    async getListing(id) {
+        await this.ensureSession();
+        const params = new URLSearchParams();
+        params.append("variables", JSON.stringify({
+            category_id: "0",
+            composer_mode: "EDIT_LISTING",
+            delivery_types: ["in_person"],
+            has_prefetched_category: false,
+            is_edit: true,
+            listingId: id,
+            scale: 1,
+        }));
+        params.append("doc_id", FACEBOOK_DOC_IDS.composerQuery);
+        params.append("fb_api_req_friendly_name", "CometMarketplaceComposerRootComponentQuery");
+        params.append("fb_dtsg", this.fbDtsg);
+        params.append("server_timestamps", "true");
+        params.append("fb_api_caller_class", "RelayModern");
+        params.append("__a", this.aParam);
+        params.append("__comet_req", this.cometReq);
+        const response = await fetch(FACEBOOK_GRAPHQL_URL, {
+            method: "POST",
+            body: params,
+            credentials: "include",
+        });
+        const text = await response.text();
+        const roots = this.extractJsonRoots(text);
+        if (!roots.length) {
+            return null;
+        }
+        const listing = JSON.parse(roots[0])?.data?.listing;
+        if (!listing) {
+            return null;
+        }
+        const html = await fetch(`${FACEBOOK_BASE_URL}/marketplace/item/${id}`, {
+            credentials: "include",
+        }).then((res) => res.text());
+        const photosMatch = html.match(/"listing_photos":(\[.+?\])/);
+        const photos = photosMatch && photosMatch.length === 2
+            ? JSON.parse(photosMatch[1])
+            : [];
+        const attributes = listing.attribute_data ?? [];
+        const findAttribute = (label) => {
+            const keys = Array.isArray(label) ? label : [label];
+            return attributes.find((attr) => keys.includes(attr.attribute_name));
+        };
+        const conditionAttr = findAttribute("Condition");
+        const colorAttr = findAttribute(["Color", "Colour"]);
+        const sizeAttr = findAttribute([
+            "Men's Shoe Size",
+            "Women's Shoe Size",
+            "Standard Size",
+            "Size",
+        ]);
+        const condition = (() => {
+            switch (conditionAttr?.value) {
+                case "new":
+                    return "NewWithoutTags";
+                case "used_like_new":
+                    return "VeryGood";
+                case "used_good":
+                    return "Good";
+                case "used_fair":
+                    return "Fair";
+                default:
+                    return "Good";
+            }
+        })();
+        const color = colorAttr?.value?.trim();
+        const size = sizeAttr?.value?.trim();
+        const price = listing.listing_price?.formatted_amount
+            ? parseFloat(listing.listing_price.formatted_amount.replace(/[^\d.]/g, ""))
+            : 0;
+        return {
+            id,
+            marketPlaceId: id,
+            title: listing.name ?? "",
+            description: listing.description ?? "",
+            category: [listing.category_id ?? ""],
+            brand: findAttribute("Brand")?.value ?? undefined,
+            condition,
+            size: size ? [size] : undefined,
+            color: color ?? undefined,
+            price,
+            quantity: listing.quantity ?? 1,
+            images: photos.slice(1).map((photo) => photo.image_uri),
+            cover: photos[0]?.image_uri,
+            coverSmall: photos[0]?.image_uri,
+            marketplaceUrl: this.getProductUrl(id),
+            dynamicProperties: {},
+            shipping: {},
+            tags: "",
+            acceptOffers: true,
+            smartPricing: false,
+            smartPricingPrice: undefined,
+        };
+    }
+    async checkLogin() {
+        try {
+            const response = await fetch(FACEBOOK_CREATE_URL, {
+                method: "GET",
+                credentials: "include",
+            });
+            return response.status === 200;
+        }
+        catch {
+            return false;
+        }
+    }
+    async storeCategories() {
+        try {
+            await checkAlreadyExecuted(FACEBOOK_CATEGORY_CACHE_KEY, async () => {
+                const info = (await getLoggingInfo("Category", "facebook", this.tld));
+                if (info?.isLogged) {
+                    return;
+                }
+                const html = await this.getHtml(`${FACEBOOK_CATEGORY_PAGE_URL}`);
+                const json = this.extractJsonFromHtml('{"categories_virtual_taxonomy":', html);
+                if (json?.categories_virtual_taxonomy) {
+                    await log("Category", JSON.stringify(json.categories_virtual_taxonomy), null, "facebook", this.tld);
+                }
+            }, 10);
+        }
+        catch (error) {
+            console.warn("[Facebook] storeCategories failed", error);
+        }
+    }
+    extractJsonFromHtml(startToken, html) {
+        const sanitized = html.replace(/\r?\n/g, "\\n");
+        const startIndex = sanitized.indexOf(startToken);
+        if (startIndex === -1) {
+            return null;
+        }
+        let braceCount = 0;
+        let inString = false;
+        let escaped = false;
+        for (let i = startIndex; i < sanitized.length; i += 1) {
+            const char = sanitized[i];
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (char === "\\") {
+                escaped = true;
+                continue;
+            }
+            if (char === '"') {
+                inString = !inString;
+            }
+            if (!inString) {
+                if (char === "{")
+                    braceCount += 1;
+                if (char === "}") {
+                    braceCount -= 1;
+                    if (braceCount === 0) {
+                        const slice = sanitized.slice(startIndex, i + 1);
+                        return JSON.parse(slice);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    extractJsonRoots(payload) {
+        const results = [];
+        let depth = 0;
+        let start = 0;
+        let collecting = false;
+        for (let i = 0; i < payload.length; i += 1) {
+            if (payload[i] === "{") {
+                depth += 1;
+                collecting = true;
+            }
+            else if (payload[i] === "}") {
+                depth -= 1;
+            }
+            if (!collecting) {
+                start = i + 1;
+            }
+            if (depth === 0 && collecting) {
+                results.push(payload.substring(start, i + 1));
+                collecting = false;
+                start = i + 1;
+            }
+        }
+        return results;
+    }
+    async getHtml(url = FACEBOOK_CREATE_URL) {
+        const response = await fetch(url, {
+            credentials: "include",
+            headers: {
+                accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            },
+        });
+        return response.text();
+    }
+    async getCachedParam(key) {
+        const result = await chrome.storage.local.get([key]);
+        return result[key];
+    }
+    async areParametersCached() {
+        const keys = [
+            "crosslist_facebook_actorid",
+            "crosslist_facebook_a",
+            "crosslist_facebook_cometreq",
+            "crosslist_facebook_dtsg",
+            "crosslist_facebook_targetid",
+        ];
+        const values = await chrome.storage.local.get(keys);
+        return keys.every((key) => Boolean(values[key]));
+    }
+    async extractAndCache(key, regex, html) {
+        const match = html.match(regex);
+        if (!match?.[1]) {
+            await log("FacebookParameterNotFound", html, null, "facebook", this.tld);
+            throw new Error(`${key} not found`);
+        }
+        await chrome.storage.local.set({ [key]: match[1] });
+        return match[1];
+    }
+    getProductUrl(id) {
+        return `${FACEBOOK_BASE_URL}/marketplace/item/${id}`;
+    }
+}
