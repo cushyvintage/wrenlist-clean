@@ -14,7 +14,8 @@ export async function GET() {
         created_at: user.created_at,
       },
     })
-  } catch {
-    return NextResponse.json({ user: null }, { status: 401 })
+  } catch (error) {
+    const err = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ user: null, error: err }, { status: 401 })
   }
 }

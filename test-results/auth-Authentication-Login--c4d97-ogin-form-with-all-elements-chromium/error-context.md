@@ -1,23 +1,38 @@
 # Page snapshot
 
 ```yaml
-- generic [active] [ref=e1]:
-  - generic [ref=e3]:
-    - generic [ref=e4]:
-      - heading "404" [level=1] [ref=e5]
-      - heading "Page Not Found" [level=2] [ref=e6]
-      - paragraph [ref=e7]: The page you're looking for doesn't exist or has been moved.
-    - generic [ref=e8]:
-      - link "Go Home" [ref=e9] [cursor=pointer]:
-        - /url: /
-        - img [ref=e10]
-        - text: Go Home
-      - link "Go to Dashboard" [ref=e13] [cursor=pointer]:
-        - /url: /dashboard
-        - img [ref=e14]
-        - text: Go to Dashboard
-  - region "Notifications alt+T"
-  - button "Open Next.js Dev Tools" [ref=e22] [cursor=pointer]:
-    - img [ref=e23]
-  - alert [ref=e26]
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - heading "Wrenlist" [level=1] [ref=e7]
+    - paragraph [ref=e8]: The operating system for thrifters
+  - generic [ref=e9]:
+    - heading "Log in to your account" [level=2] [ref=e10]
+    - button "Sign in with Google" [ref=e11] [cursor=pointer]:
+      - img [ref=e12]
+      - text: Sign in with Google
+    - generic [ref=e19]: or sign in with email
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: Email
+        - textbox "you@example.com" [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: Password
+          - link "Forgot?" [ref=e28] [cursor=pointer]:
+            - /url: /forgot-password
+        - textbox "••••••••" [ref=e29]
+      - button "Log in" [ref=e30] [cursor=pointer]
+    - generic [ref=e33]: OR
+    - paragraph [ref=e35]:
+      - text: Don't have an account?
+      - link "Sign up" [ref=e36] [cursor=pointer]:
+        - /url: /register
+  - generic [ref=e37]:
+    - paragraph [ref=e38]: Wrenlist is a SaaS for UK resellers
+    - paragraph [ref=e39]:
+      - link "Terms of Service" [ref=e40] [cursor=pointer]:
+        - /url: "#"
+      - text: ·
+      - link "Privacy Policy" [ref=e41] [cursor=pointer]:
+        - /url: "#"
 ```

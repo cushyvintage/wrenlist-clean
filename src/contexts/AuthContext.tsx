@@ -23,7 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // Check for existing session
         // Use server-side /api/auth/me to get user (reads httpOnly session cookie)
-        const res = await fetch('/api/auth/me')
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
         if (res.ok) {
           const data = await res.json()
           if (data.user) {
