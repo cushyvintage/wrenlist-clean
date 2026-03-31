@@ -398,7 +398,7 @@ export default function InventoryPage() {
               return (
                 <tr
                   key={find.id}
-                  onClick={() => router.push(`/inventory/${find.id}`)}
+                  onClick={() => router.push(`/finds/${find.id}`)}
                   className="cursor-pointer transition-colors"
                   style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}

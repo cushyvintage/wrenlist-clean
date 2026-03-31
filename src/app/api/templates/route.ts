@@ -26,9 +26,7 @@ export async function GET() {
       return ApiResponseHelper.internalError(error.message)
     }
 
-    return ApiResponseHelper.success({
-      data: data || [],
-    })
+    return ApiResponseHelper.success(data || [])
   } catch (error) {
     return ApiResponseHelper.internalError()
   }
