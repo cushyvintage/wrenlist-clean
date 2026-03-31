@@ -5,6 +5,10 @@ import { ApiResponseHelper } from '@/lib/api-response'
 /**
  * GET /api/profile
  * Fetch the authenticated user's profile (singular endpoint)
+ *
+ * Response includes:
+ * - All profile fields (id, plan, finds_this_month, etc.)
+ * - finds_limit: derived from plan (free: 10, nester: 100, forager: 500, flock: null)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +32,20 @@ export async function GET(request: NextRequest) {
       return ApiResponseHelper.notFound('Profile not found')
     }
 
-    return ApiResponseHelper.success({ data })
+    // Add finds_limit based on plan
+    const planLimits: Record<string, number | null> = {
+      free: 10,
+      nester: 100,
+      forager: 500,
+      flock: null,
+    }
+
+    const enrichedData = {
+      ...data,
+      finds_limit: planLimits[data.plan] ?? null,
+    }
+
+    return ApiResponseHelper.success({ data: enrichedData })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/profile error:', error)

@@ -466,7 +466,7 @@ export default function AddFindPage() {
                     <input
                       type="number"
                       step="0.01"
-                      value={formData.costPaid ?? ''}
+                      value={formData.costPaid !== null ? formData.costPaid.toString() : ''}
                       onChange={(e) => handleInputChange('costPaid', e.target.value ? parseFloat(e.target.value) : null)}
                       placeholder="0.00"
                       className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
@@ -545,7 +545,7 @@ export default function AddFindPage() {
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.askingPrice ?? ''}
+                    value={formData.askingPrice !== null ? formData.askingPrice.toString() : ''}
                     onChange={(e) => handleInputChange('askingPrice', e.target.value ? parseFloat(e.target.value) : null)}
                     placeholder="0.00"
                     className="w-full px-3 py-2 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"

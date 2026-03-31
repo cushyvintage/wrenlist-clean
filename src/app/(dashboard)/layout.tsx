@@ -143,7 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     {user?.email?.split('@')[0] || 'User'}
                   </span>
                   <span className="text-xs" style={{ color: '#6B7D6A' }}>
-                    {user?.email || 'Not logged in'}
+                    {user?.email}
                   </span>
                 </div>
               </button>
