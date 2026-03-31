@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/services/supabase'
 import { User } from '@/types'
 
 interface AuthContextType {
@@ -51,31 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     initAuth()
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        setState((prev) => ({
-          ...prev,
-          user: {
-            id: session.user.id,
-            email: session.user.email || '',
-            createdAt: session.user.created_at || new Date().toISOString(),
-          },
-        }))
-      } else {
-        setState((prev) => ({
-          ...prev,
-          user: null,
-        }))
-      }
-    })
-
-    return () => {
-      subscription?.unsubscribe()
-    }
+    // Note: onAuthStateChange removed — plain supabase client cannot read
+    // httpOnly session cookies set by the SSR login route. Auth state is
+    // managed exclusively via /api/auth/me which reads cookies server-side.
   }, [])
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
