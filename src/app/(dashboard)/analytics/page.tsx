@@ -46,8 +46,14 @@ export default function AnalyticsPage() {
           fetch('/api/finds'),
           fetch('/api/listings'),
         ])
-        if (findsRes.ok) setFinds(findsRes.ok ? (await findsRes.json()).data : [])
-        if (listingsRes.ok) setListings(listingsRes.ok ? (await listingsRes.json()).data : [])
+        if (findsRes.ok) {
+          const findsJson = await findsRes.json()
+          setFinds(findsJson.data?.data || [])
+        }
+        if (listingsRes.ok) {
+          const listingsJson = await listingsRes.json()
+          setListings(listingsJson.data?.data || [])
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
