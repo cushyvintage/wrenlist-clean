@@ -16,10 +16,10 @@ export default function ListOnSection({
   onToggle,
 }: ListOnSectionProps) {
   const platforms = [
-    { key: 'Ebay', label: 'eBay UK', value: listOnEbay, status: 'connected', disabled: false },
-    { key: 'Vinted', label: 'Vinted', value: listOnVinted, status: 'via extension', disabled: false },
-    { key: 'Etsy', label: 'Etsy', value: listOnEtsy, status: 'api_pending', disabled: true },
-    { key: 'Shopify', label: 'Shopify', value: listOnShopify, status: 'not_connected', disabled: false },
+    { key: 'Ebay', label: 'eBay UK', value: listOnEbay, status: 'connected' as const, disabled: false },
+    { key: 'Vinted', label: 'Vinted', value: listOnVinted, status: 'via_extension' as const, disabled: false },
+    { key: 'Etsy', label: 'Etsy', value: listOnEtsy, status: 'api_pending' as const, disabled: true },
+    { key: 'Shopify', label: 'Shopify', value: listOnShopify, status: 'not_connected' as const, disabled: false },
   ]
 
   return (
@@ -41,7 +41,7 @@ export default function ListOnSection({
             <input
               type="checkbox"
               checked={platform.value}
-              onChange={(e) => onToggle(platform.key as any, e.target.checked)}
+              onChange={(e) => onToggle(platform.key as 'Ebay' | 'Vinted' | 'Etsy' | 'Shopify', e.target.checked)}
               disabled={platform.disabled}
               className="w-4 h-4 accent-sage"
             />

@@ -132,8 +132,115 @@ Keep tests updated when pages change.
 
 ---
 
+## Listing Wizard Patterns (Sprint 1)
+
+### Adding a New Marketplace
+1. Define marketplace in `src/lib/marketplace/registry.ts`:
+   ```typescript
+   export const MARKETPLACES = {
+     vinted: { name: 'Vinted', apiBase: 'https://www.vinted.co.uk/api/v2' },
+     ebay: { name: 'eBay UK', apiBase: 'https://api.ebay.com' },
+     // Add new marketplace here
+   }
+   ```
+
+2. Create API proxy in `src/lib/marketplace/extensionProxy.ts`:
+   ```typescript
+   export async function fetchNewMarketplaceData(params) {
+     return fetchViaExtension({
+       url: `https://marketplace.api/endpoint`,
+       method: 'GET',
+       cacheKey: `marketplace:key`,
+     })
+   }
+   ```
+
+3. Add fields to `src/components/listing/PlatformFields.tsx`:
+   ```typescript
+   const mockFields: Field[] = [
+     { name: 'newField', label: 'New Field', type: 'text', platforms: ['newmp'] },
+   ]
+   ```
+
+4. Test via extensionProxy — calls are SSR-safe (guarded against server execution).
+
+### Form State Shape
+Located in `src/app/(dashboard)/add-find/page.tsx`:
+```typescript
+interface FormData {
+  itemName: string           // User's description
+  category: string           // Category ID
+  categoryPath: string       // Breadcrumb (e.g., "Clothing › Workwear › Jackets")
+  condition: string          // excellent | good | fair | poor
+  size: string              // M, 32, 10...
+  colour: string            // Brown, Blue...
+  brand: string             // Brand name
+  description: string       // Long-form description
+  sourceType: string        // charity_shop, car_boot, etc.
+  sourceName: string        // Location or shop name
+  costPaid: number | null   // Purchase price in £
+  dateSourced: string       // ISO date when sourced
+  sku: string              // Auto-generated (WR-CLO-20260331-001)
+  askingPrice: number | null // Asking price in £
+  listOnEbay: boolean       // Post to eBay?
+  listOnVinted: boolean     // Post to Vinted (via extension)?
+  listOnEtsy: boolean       // Post to Etsy? (not connected yet)
+  listOnShopify: boolean    // Post to Shopify? (not connected yet)
+  photos: File[]           // Image files (max 10)
+  appliedTemplate: string | null  // Template ID or null
+}
+```
+
+### Component Breakdown
+- **PhotoUpload.tsx**: Drag-drop photo upload, 10-image max, preview grid, remove button
+- **PlatformFields.tsx**: Dynamic fields per marketplace, Wren-suggested highlighting, field count tracking
+- **TemplateSelector.tsx**: Browse saved templates, show field count + platforms, apply button
+- **WrenAI.tsx**: Show AI-suggested price range, sell time, best platform, projected margin
+- **ListOnSection.tsx**: Toggle platforms, show connection status, auto-delist indicator
+
+### Extension Proxy (SSR-Safe)
+`src/lib/marketplace/extensionProxy.ts`:
+- Guards against server-side execution: `typeof window !== "undefined"`
+- Sends messages to Skylark extension via `chrome.runtime.sendMessage`
+- Caches responses in localStorage (24h default)
+- Actions: `fetch_vinted_api`, `fetch_crosslist_api` (extensible)
+- Error messages are helpful (e.g., missing extension ID shows setup instructions)
+
+### Adding a New Component to Add-Find
+1. Create file in `src/components/listing/NewComponent.tsx`
+2. Accept FormData field(s) + handler callback as props
+3. Export from component file
+4. Import in `add-find/page.tsx`
+5. Add to form section (photos, details, platform fields, sourcing, pricing, sidebar)
+6. Wire handler to `handleInputChange(field, value)`
+
+### API Integration (When Ready)
+POST `/api/finds` with FormData (minus photos/photos are uploaded separately):
+```json
+{
+  "name": "itemName",
+  "category": "category",
+  "condition": "condition",
+  "size": "size",
+  "colour": "colour",
+  "brand": "brand",
+  "description": "description",
+  "source_type": "sourceType",
+  "source_name": "sourceName",
+  "sourced_at": "dateSourced as ISO",
+  "cost_gbp": costPaid,
+  "asking_price_gbp": askingPrice,
+  "status": "draft"
+}
+```
+
+---
+
 ## Gotchas
 - Old repo `/Volumes/ExternalAI/github/wrenlist` has working eBay sync, Vinted extension, Resend email — reference for porting
 - `finds` = inventory items (not "products" — that naming was the old build)
 - Plans are named Free/Nester/Forager/Flock (not Starter/Growth/Pro)
 - Supabase project is `tewtfroudyicwfubgcqi` (NOT the old `updcyyvkauqenhztmbay`)
+- **SSR**: Extension proxy is NOT safe to call server-side. Always guard with `typeof window !== "undefined"`
+- **Console logs**: Removed from production code — use proper error handling instead
+- **Type assertions**: Never use `as any` — use proper union types instead

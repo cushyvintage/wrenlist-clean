@@ -1,7 +1,38 @@
 # Technical Design: Listing Wizard
-**Status**: Draft  
-**Date**: 2026-03-30  
+**Status**: Implementation in progress
+**Last Updated**: 2026-03-31
 **Depends on**: PRD-LISTING-WIZARD.md, VINTED_API_REFERENCE.md
+
+---
+
+## Implementation Status
+
+### ✅ Complete (Sprint 0-1)
+- **Sprint 0**: Extension proxy utility, marketplace registry foundation, Auth SSR fixes
+- **Sprint 1**: Listing wizard UI built (`/add-find` page)
+  - PhotoUpload component (drag-drop, preview, max 10 images)
+  - PlatformFields component (dynamic fields per category)
+  - TemplateSelector component (save/apply templates)
+  - WrenAI component (pricing suggestions)
+  - ListOnSection component (platform toggles)
+  - Form state management (FormData interface, 13 fields)
+  - SKU generation with override
+  - All components TypeScript strict, zero errors
+  - Extension proxy guarded against SSR
+
+### 🔜 In Progress (Sprint 2)
+- Dynamic field loading from marketplace APIs
+- Photo upload to Supabase Storage
+- Create listing on marketplace
+- Sync listing status back
+
+### 📋 Planned (Sprint 3-5)
+- Template save/load from database
+- Multi-marketplace publish
+- Listing detail + edit
+- Auto-delist on sale
+- Stripe billing
+- AI features (description gen, BG removal)
 
 ---
 

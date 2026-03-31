@@ -9,7 +9,7 @@ export default function WrenAI({ onUseSuggestedPrice }: WrenAIProps) {
   const suggestedPriceMax = 155
 
   return (
-    <div className="bg-white border border-sage/14 rounded overflow-hidden" style={{ backgroundColor: '#f0f4f0' }}>
+    <div className="bg-white border border-sage/14 rounded overflow-hidden bg-[#f0f4f0]">
       {/* Header with badge */}
       <div className="border-b border-sage/14 px-5 py-3">
         <div className="flex items-center gap-2 mb-3">

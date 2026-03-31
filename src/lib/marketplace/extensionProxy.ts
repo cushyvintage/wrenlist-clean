@@ -59,14 +59,17 @@ export async function fetchViaExtension<T = unknown>(
     if (cached) return { success: true, data: cached as T, fromCache: true }
   }
 
-  // Check extension available
-  if (typeof chrome === "undefined" || !chrome.runtime) {
-    return { success: false, error: "Extension not available" }
+  // Guard against SSR: chrome is only available in browser
+  if (typeof window === "undefined" || typeof chrome === "undefined" || !chrome.runtime) {
+    return { success: false, error: "Extension not available (browser context required)" }
   }
 
   const extensionId = EXTENSION_IDS.skylark
   if (!extensionId) {
-    return { success: false, error: "Extension ID not configured" }
+    return {
+      success: false,
+      error: "Extension ID not configured. Set NEXT_PUBLIC_SKYLARK_EXTENSION_ID in .env.local. See README for how to find your extension ID."
+    }
   }
 
   return new Promise((resolve) => {

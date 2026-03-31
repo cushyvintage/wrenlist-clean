@@ -148,13 +148,11 @@ export default function AddFindPage() {
       }
 
       const result = await response.json()
-      console.log('Find saved:', result.data)
 
       router.push('/inventory')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
       setError(message)
-      console.error('Error saving find:', err)
     } finally {
       setIsLoading(false)
     }
