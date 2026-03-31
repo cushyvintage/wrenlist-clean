@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // WORKSPACE
     { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
     { id: 'inventory', label: 'Inventory', icon: '📦', path: '/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
-    { id: 'add-find', label: 'Add find', icon: '➕', path: '/add-find', section: 'WORKSPACE', pageTitle: 'Add Find' },
+    { id: 'add-find', label: 'Add find', icon: '➕', path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
     { id: 'listings', label: 'Listings', icon: '📋', path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
     // INSIGHTS
     { id: 'analytics', label: 'Analytics', icon: '📈', path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
@@ -124,7 +124,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Top bar with user menu */}
         <AppTopbar
           title={pageTitle}
-          actions={[{ label: '+ Add find', onClick: handleAddFind, variant: 'primary' }]}
+          actions={activeNav === 'add-find' ? [] : [{ label: '+ Add find', onClick: handleAddFind, variant: 'primary' }]}
           rightSlot={
             <div className="relative">
               <button
@@ -136,11 +136,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                   style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
                 >
-                  {user && user.email[0]?.toUpperCase() || 'U'}
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-xs">
                   <span className="font-medium" style={{ color: '#1E2E1C' }}>
-                    {user ? user.email.split('@')[0] : 'User'}
+                    {user?.email?.split('@')[0] || 'User'}
                   </span>
                   <span className="text-xs" style={{ color: '#6B7D6A' }}>
                     {user?.email || 'Not logged in'}

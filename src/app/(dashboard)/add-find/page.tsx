@@ -196,9 +196,8 @@ export default function AddFindPage() {
           <div className="lg:col-span-3 space-y-6">
             {/* PHOTOS */}
             <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4 flex justify-between items-center">
+              <div className="border-b border-sage/14 px-6 py-4">
                 <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">photos</h2>
-                <button className="text-xs text-sage-lt hover:text-sage">remove background (AI) →</button>
               </div>
               <div className="p-6">
                 <PhotoUpload
@@ -474,13 +473,15 @@ export default function AddFindPage() {
             )}
 
             {/* SAVE BUTTON */}
-            <button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="w-full py-3 bg-sage text-white rounded font-medium text-sm hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'saving...' : 'save find & crosslist'}
-            </button>
+            <div className="border-t border-sage/14 pt-4 mt-4">
+              <button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="w-full py-3 bg-green-900 text-white rounded font-medium text-sm hover:bg-green-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'saving...' : 'save find & crosslist'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

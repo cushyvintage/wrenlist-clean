@@ -116,15 +116,15 @@ export default function PhotoUpload({
               </button>
             )}
           </div>
+          <div className="flex justify-end">
+            <button className="text-xs text-sage-lt hover:text-sage cursor-pointer underline underline-offset-2">Remove background (AI) →</button>
+          </div>
           <div className="flex items-start gap-2 text-xs text-sage-dim">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 mt-0.5">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
               <path d="M6 5v4M6 3.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            <span>
-              First photo is your main listing image. Drag to reorder.{' '}
-              <button className="text-sage-lt hover:text-sage cursor-pointer">Remove background →</button>
-            </span>
+            <span>First photo is your main listing image. Drag to reorder.</span>
           </div>
         </div>
       )}

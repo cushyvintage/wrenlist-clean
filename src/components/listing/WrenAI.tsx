@@ -9,12 +9,12 @@ export default function WrenAI({ onUseSuggestedPrice }: WrenAIProps) {
   const suggestedPriceMax = 155
 
   return (
-    <div className="bg-white border border-sage/14 rounded overflow-hidden">
+    <div className="bg-white border border-sage/14 rounded overflow-hidden" style={{ backgroundColor: '#f0f4f0' }}>
       {/* Header with badge */}
       <div className="border-b border-sage/14 px-5 py-3">
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-sage"></span>
+            <span className="text-green-600">●</span>
             <span className="text-xs uppercase tracking-widest text-sage-dim font-medium">wren AI</span>
           </span>
         </div>
@@ -22,7 +22,7 @@ export default function WrenAI({ onUseSuggestedPrice }: WrenAIProps) {
       </div>
 
       {/* AI suggestions */}
-      <div className="p-5 space-y-3 bg-sage-pale/20">
+      <div className="p-5 space-y-3">
         <div className="flex justify-between items-center text-xs">
           <span className="text-ink-lt">suggested price</span>
           <span className="font-semibold text-ink font-mono">£{suggestedPriceMin}–£{suggestedPriceMax}</span>
