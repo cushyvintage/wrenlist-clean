@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan, finds_this_month')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profile) {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('profiles')
         .update({ finds_this_month: profile.finds_this_month + 1 })
-        .eq('id', user.id)
+        .eq('user_id', user.id)
     }
 
     return ApiResponseHelper.created(data as Find)

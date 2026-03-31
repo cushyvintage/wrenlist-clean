@@ -22,7 +22,7 @@ export const CreateFindSchema = z.object({
   colour: z.string().optional().nullable(),
   condition: ConditionEnum.optional().nullable(),
   description: z.string().optional().nullable(),
-  source_type: SourceTypeEnum,
+  source_type: SourceTypeEnum.optional().default('other'),
   source_name: z.string().optional().nullable(),
   sourced_at: z.string().optional().nullable(),
   cost_gbp: z.number().nonnegative().optional().nullable(),
