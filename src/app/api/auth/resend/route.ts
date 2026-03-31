@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('Resend error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Resend error:', error)
       return NextResponse.json(
         { error: error.message || 'Failed to resend verification email' },
         { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('API error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

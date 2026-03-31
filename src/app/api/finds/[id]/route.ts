@@ -33,19 +33,23 @@ export async function GET(
       if (findError.code === 'PGRST116') {
         return ApiResponseHelper.notFound()
       }
-      console.error('Supabase error:', findError)
-      return ApiResponseHelper.internalError(findError.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', findError)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     // Fetch related listings
     const { data: listingsData, error: listingsError } = await supabase
       .from('listings')
       .select('*')
-      .eq('product_id', id)
+      .eq('find_id', id)
       .eq('user_id', user.id)
 
     if (listingsError) {
-      console.error('Supabase listings error:', listingsError)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase listings error:', listingsError)
+      }
     }
 
     // Transform product_id to find_id for the frontend
@@ -111,13 +115,17 @@ export async function PUT(
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.success(data as Find)
   } catch (error) {
-    console.error('PUT /api/finds/[id] error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('PUT /api/finds/[id] error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }
@@ -157,13 +165,17 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.success({ success: true })
   } catch (error) {
-    console.error('DELETE /api/finds/[id] error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('DELETE /api/finds/[id] error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }

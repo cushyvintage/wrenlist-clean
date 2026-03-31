@@ -54,13 +54,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (listingError) {
-      console.error('Supabase error creating listing:', listingError)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error creating listing:', listingError }
       return ApiResponseHelper.internalError(listingError.message)
     }
 
     return ApiResponseHelper.created(listing as Listing)
   } catch (error) {
-    console.error('POST /api/listings/create error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('POST /api/listings/create error:', error)
     return ApiResponseHelper.internalError()
   }
 }

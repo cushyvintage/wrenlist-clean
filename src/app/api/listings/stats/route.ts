@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest) {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Supabase error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
       return ApiResponseHelper.internalError(error.message)
     }
 
@@ -63,7 +63,7 @@ export async function GET(_request: NextRequest) {
 
     return ApiResponseHelper.success(stats)
   } catch (error) {
-    console.error('GET /api/listings/stats error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/listings/stats error:', error)
     return ApiResponseHelper.internalError()
   }
 }

@@ -1,11 +1,11 @@
 /**
- * GET /api/products - List all products for current user
- * POST /api/products - Create a new product
+ * GET /api/products - List all finds for current user (legacy endpoint, use /api/finds)
+ * POST /api/products - Create a new find (legacy endpoint, use /api/finds)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
-import { getProducts, createProduct, getProductStats } from '@/services/products.service'
+import { getFinds, createFind, getFindStats } from '@/services/products.service'
 
 /**
  * GET /api/products
@@ -26,25 +26,27 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const includeStats = searchParams.get('stats') === 'true'
 
-    // Get products
-    const products = await getProducts({
+    // Get finds
+    const finds = await getFinds({
       status,
       search: search || undefined,
     })
 
-    const response: any = { products }
+    const response: any = { finds }
 
     // Include stats if requested
     if (includeStats) {
-      const stats = await getProductStats()
+      const stats = await getFindStats()
       response.stats = stats
     }
 
     return NextResponse.json(response)
   } catch (error: any) {
-    console.error('GET /api/products error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('GET /api/products error:', error)
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/products
- * Create a new product
+ * Create a new find (legacy endpoint, use /api/finds)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -66,22 +68,24 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!body.name) {
       return NextResponse.json(
-        { error: 'Product name is required' },
+        { error: 'Find name is required' },
         { status: 400 }
       )
     }
 
-    // Create product with user_id from auth
-    const product = await createProduct({
+    // Create find with user_id from auth
+    const find = await createFind({
       ...body,
       user_id: user.id,
     })
 
-    return NextResponse.json({ product }, { status: 201 })
+    return NextResponse.json({ find }, { status: 201 })
   } catch (error: any) {
-    console.error('POST /api/products error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('POST /api/products error:', error)
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

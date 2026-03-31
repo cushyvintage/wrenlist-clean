@@ -1,24 +1,24 @@
 /**
- * Products (Finds) Service
- * Handles all product/find operations: create, read, update, delete
+ * Finds Service
+ * Handles all find operations: create, read, update, delete
  */
 
 import { supabase, validateSupabaseConfig } from './supabase'
-import { Product, FindStatus } from '@/types'
+import { Find, FindStatus } from '@/types'
 
 /**
- * Get all products for the current user
+ * Get all finds for the current user
  */
-export async function getProducts(
+export async function getFinds(
   filters?: {
     status?: FindStatus | 'all'
     search?: string
   }
-): Promise<Product[]> {
+): Promise<Find[]> {
   validateSupabaseConfig()
 
   let query = supabase
-    .from('products')
+    .from('finds')
     .select('*')
     .order('created_at', { ascending: false })
 
@@ -38,13 +38,13 @@ export async function getProducts(
 }
 
 /**
- * Get a single product by ID
+ * Get a single find by ID
  */
-export async function getProduct(id: string): Promise<Product | null> {
+export async function getFind(id: string): Promise<Find | null> {
   validateSupabaseConfig()
 
   const { data, error } = await supabase
-    .from('products')
+    .from('finds')
     .select('*')
     .eq('id', id)
     .single()
@@ -54,34 +54,34 @@ export async function getProduct(id: string): Promise<Product | null> {
 }
 
 /**
- * Create a new product
+ * Create a new find
  */
-export async function createProduct(
-  data: Omit<Product, 'id' | 'created_at' | 'updated_at'>
-): Promise<Product> {
+export async function createFind(
+  data: Omit<Find, 'id' | 'created_at' | 'updated_at'>
+): Promise<Find> {
   validateSupabaseConfig()
 
-  const { data: newProduct, error } = await supabase
-    .from('products')
+  const { data: newFind, error } = await supabase
+    .from('finds')
     .insert([data])
     .select()
     .single()
 
   if (error) throw error
-  return newProduct
+  return newFind
 }
 
 /**
- * Update a product
+ * Update a find
  */
-export async function updateProduct(
+export async function updateFind(
   id: string,
-  updates: Partial<Omit<Product, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
-): Promise<Product> {
+  updates: Partial<Omit<Find, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+): Promise<Find> {
   validateSupabaseConfig()
 
   const { data, error } = await supabase
-    .from('products')
+    .from('finds')
     .update(updates)
     .eq('id', id)
     .select()
@@ -92,13 +92,13 @@ export async function updateProduct(
 }
 
 /**
- * Delete a product
+ * Delete a find
  */
-export async function deleteProduct(id: string): Promise<void> {
+export async function deleteFind(id: string): Promise<void> {
   validateSupabaseConfig()
 
   const { error } = await supabase
-    .from('products')
+    .from('finds')
     .delete()
     .eq('id', id)
 
@@ -106,9 +106,9 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 /**
- * Get product statistics for dashboard
+ * Get find statistics for dashboard
  */
-export async function getProductStats(): Promise<{
+export async function getFindStats(): Promise<{
   total: number
   draft: number
   listed: number
@@ -120,7 +120,7 @@ export async function getProductStats(): Promise<{
   validateSupabaseConfig()
 
   const { data, error } = await supabase
-    .from('products')
+    .from('finds')
     .select('status, cost_gbp, asking_price_gbp')
 
   if (error) throw error
@@ -138,18 +138,18 @@ export async function getProductStats(): Promise<{
 
   const stats = {
     total: data.length,
-    draft: data.filter((p) => p.status === 'draft').length,
-    listed: data.filter((p) => p.status === 'listed').length,
-    onHold: data.filter((p) => p.status === 'on_hold').length,
-    sold: data.filter((p) => p.status === 'sold').length,
-    totalValue: data.reduce((sum, p) => sum + (p.asking_price_gbp || 0), 0),
+    draft: data.filter((f) => f.status === 'draft').length,
+    listed: data.filter((f) => f.status === 'listed').length,
+    onHold: data.filter((f) => f.status === 'on_hold').length,
+    sold: data.filter((f) => f.status === 'sold').length,
+    totalValue: data.reduce((sum, f) => sum + (f.asking_price_gbp || 0), 0),
     avgMargin: null as number | null,
   }
 
   // Calculate average margin
-  const withMargin = data.filter((p) => p.cost_gbp && p.asking_price_gbp && p.asking_price_gbp > 0)
+  const withMargin = data.filter((f) => f.cost_gbp && f.asking_price_gbp && f.asking_price_gbp > 0)
   if (withMargin.length > 0) {
-    const margins = withMargin.map((p) => ((p.asking_price_gbp! - p.cost_gbp!) / p.asking_price_gbp!) * 100)
+    const margins = withMargin.map((f) => ((f.asking_price_gbp! - f.cost_gbp!) / f.asking_price_gbp!) * 100)
     stats.avgMargin = Math.round(margins.reduce((sum, m) => sum + m, 0) / margins.length)
   }
 
@@ -157,13 +157,13 @@ export async function getProductStats(): Promise<{
 }
 
 /**
- * Get products by status
+ * Get finds by status
  */
-export async function getProductsByStatus(status: FindStatus): Promise<Product[]> {
+export async function getFindsByStatus(status: FindStatus): Promise<Find[]> {
   validateSupabaseConfig()
 
   const { data, error } = await supabase
-    .from('products')
+    .from('finds')
     .select('*')
     .eq('status', status)
     .order('created_at', { ascending: false })
@@ -171,3 +171,12 @@ export async function getProductsByStatus(status: FindStatus): Promise<Product[]
   if (error) throw error
   return data || []
 }
+
+// Legacy aliases for backward compatibility
+export const getProducts = getFinds
+export const getProduct = getFind
+export const createProduct = createFind
+export const updateProduct = updateFind
+export const deleteProduct = deleteFind
+export const getProductStats = getFindStats
+export const getProductsByStatus = getFindsByStatus

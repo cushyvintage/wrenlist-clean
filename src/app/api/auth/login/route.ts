@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Login error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Login error:', error)
+    }
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }

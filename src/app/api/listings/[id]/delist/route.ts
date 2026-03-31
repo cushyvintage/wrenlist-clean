@@ -41,8 +41,10 @@ export async function POST(__request: NextRequest, { params }: { params: Promise
       .single()
 
     if (error) {
-      console.error('Supabase error delisting:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error delisting:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     // In production, would call marketplace API to delist
@@ -50,7 +52,9 @@ export async function POST(__request: NextRequest, { params }: { params: Promise
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    console.error('POST /api/listings/[id]/delist error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('POST /api/listings/[id]/delist error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }

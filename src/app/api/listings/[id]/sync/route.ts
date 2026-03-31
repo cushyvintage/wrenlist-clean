@@ -40,8 +40,10 @@ export async function POST(__request: NextRequest, { params }: { params: Promise
       .single()
 
     if (error) {
-      console.error('Supabase error syncing:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error syncing:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     // In production would be:
@@ -52,7 +54,9 @@ export async function POST(__request: NextRequest, { params }: { params: Promise
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    console.error('POST /api/listings/[id]/sync error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('POST /api/listings/[id]/sync error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }

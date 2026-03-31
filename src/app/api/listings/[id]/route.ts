@@ -28,13 +28,13 @@ export async function GET(__request: NextRequest, { params }: { params: Promise<
       if (error.code === 'PGRST116') {
         return ApiResponseHelper.notFound()
       }
-      console.error('Supabase error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
       return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    console.error('GET /api/listings/[id] error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/listings/[id] error:', error)
     return ApiResponseHelper.internalError()
   }
 }
@@ -84,13 +84,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
       return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    console.error('PATCH /api/listings/[id] error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('PATCH /api/listings/[id] error:', error)
     return ApiResponseHelper.internalError()
   }
 }
@@ -124,13 +124,13 @@ export async function DELETE(__request: NextRequest, { params }: { params: Promi
     const { error } = await supabase.from('listings').delete().eq('id', id)
 
     if (error) {
-      console.error('Supabase error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
       return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success({ success: true })
   } catch (error) {
-    console.error('DELETE /api/listings/[id] error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('DELETE /api/listings/[id] error:', error)
     return ApiResponseHelper.internalError()
   }
 }

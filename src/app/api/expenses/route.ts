@@ -45,8 +45,10 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.success({
@@ -58,7 +60,9 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('GET /api/expenses error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('GET /api/expenses error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }
@@ -117,13 +121,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.created(data as Expense)
   } catch (error) {
-    console.error('POST /api/expenses error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('POST /api/expenses error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }

@@ -1,12 +1,12 @@
 /**
- * GET /api/products/[id] - Get a single product
- * PUT /api/products/[id] - Update a product
- * DELETE /api/products/[id] - Delete a product
+ * GET /api/products/[id] - Get a single find (legacy endpoint, use /api/finds/[id])
+ * PUT /api/products/[id] - Update a find (legacy endpoint, use /api/finds/[id])
+ * DELETE /api/products/[id] - Delete a find (legacy endpoint, use /api/finds/[id])
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
-import { getProduct, updateProduct, deleteProduct } from '@/services/products.service'
+import { getFind, updateFind, deleteFind } from '@/services/products.service'
 
 type RouteParams = Promise<{ id: string }>
 
@@ -21,28 +21,30 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const product = await getProduct(id)
+    const find = await getFind(id)
 
-    if (!product) {
+    if (!find) {
       return NextResponse.json(
-        { error: 'Product not found' },
+        { error: 'Find not found' },
         { status: 404 }
       )
     }
 
     // Verify ownership
-    if (product.user_id !== user.id) {
+    if (find.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
       )
     }
 
-    return NextResponse.json({ product })
+    return NextResponse.json({ find })
   } catch (error: any) {
-    console.error(`GET /api/products/${id} error:`, error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`GET /api/products/${id} error:`, error)
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -60,15 +62,15 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
     }
 
     // Verify ownership first
-    const product = await getProduct(id)
-    if (!product) {
+    const find = await getFind(id)
+    if (!find) {
       return NextResponse.json(
-        { error: 'Product not found' },
+        { error: 'Find not found' },
         { status: 404 }
       )
     }
 
-    if (product.user_id !== user.id) {
+    if (find.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -76,13 +78,15 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
     }
 
     const body = await request.json()
-    const updated = await updateProduct(id, body)
+    const updated = await updateFind(id, body)
 
-    return NextResponse.json({ product: updated })
+    return NextResponse.json({ find: updated })
   } catch (error: any) {
-    console.error(`PUT /api/products/${id} error:`, error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`PUT /api/products/${id} error:`, error)
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -100,28 +104,30 @@ export async function DELETE(request: NextRequest, { params }: { params: RoutePa
     }
 
     // Verify ownership first
-    const product = await getProduct(id)
-    if (!product) {
+    const find = await getFind(id)
+    if (!find) {
       return NextResponse.json(
-        { error: 'Product not found' },
+        { error: 'Find not found' },
         { status: 404 }
       )
     }
 
-    if (product.user_id !== user.id) {
+    if (find.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
       )
     }
 
-    await deleteProduct(id)
+    await deleteFind(id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error(`DELETE /api/products/${id} error:`, error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`DELETE /api/products/${id} error:`, error)
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

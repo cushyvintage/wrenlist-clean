@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.success({
@@ -49,7 +51,9 @@ export async function GET(request: NextRequest) {
       pagination: { limit, offset, total: count || 0 },
     })
   } catch (error) {
-    console.error('GET /api/finds error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('GET /api/finds error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }
@@ -89,13 +93,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
     }
 
     return ApiResponseHelper.created(data as Find)
   } catch (error) {
-    console.error('POST /api/finds error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('POST /api/finds error:', error)
+    }
     return ApiResponseHelper.internalError()
   }
 }

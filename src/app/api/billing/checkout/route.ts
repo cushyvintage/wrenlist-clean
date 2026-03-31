@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return ApiResponseHelper.success({ url: session.url })
   } catch (error) {
-    console.error('POST /api/billing/checkout error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('POST /api/billing/checkout error:', error)
     return ApiResponseHelper.internalError()
   }
 }

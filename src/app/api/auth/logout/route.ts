@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Logout error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Logout error:', error)
+    }
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }

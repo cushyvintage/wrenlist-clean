@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       message: 'Orders will sync from marketplace platforms',
     })
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('Error fetching orders:', error)
     return ApiResponseHelper.internalError('Failed to fetch orders')
   }
 }

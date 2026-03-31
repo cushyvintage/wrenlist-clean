@@ -22,13 +22,13 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
       return ApiResponseHelper.notFound('Profile not found')
     }
 
     return ApiResponseHelper.success({ data })
   } catch (error) {
-    console.error('GET /api/profiles error:', error)
+    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/profiles error:', error)
     return ApiResponseHelper.internalError()
   }
 }
