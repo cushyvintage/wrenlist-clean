@@ -230,7 +230,15 @@ export default function AddFindPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save find')
+        const errorMessage = errorData.error || 'Failed to save find'
+
+        // Check if this is a plan limit error
+        if (response.status === 400 && errorMessage.includes('Monthly find limit')) {
+          setError(errorMessage)
+          return
+        }
+
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
@@ -591,7 +599,19 @@ export default function AddFindPage() {
 
             {/* ERROR MESSAGE */}
             {error && (
-              <div className="bg-red-lt/60 border border-red/30 rounded p-3 text-xs text-red">{error}</div>
+              <div className="space-y-3">
+                <div className="bg-red-lt/60 border border-red/30 rounded p-3 text-xs text-red">
+                  {error}
+                </div>
+                {error.includes('Monthly find limit') && (
+                  <button
+                    onClick={() => router.push('/pricing')}
+                    className="w-full py-2 px-3 bg-sage-pale text-sage-dk rounded text-xs font-medium hover:bg-sage/10 transition-colors"
+                  >
+                    Upgrade plan →
+                  </button>
+                )}
+              </div>
             )}
 
             {/* SAVE BUTTON */}

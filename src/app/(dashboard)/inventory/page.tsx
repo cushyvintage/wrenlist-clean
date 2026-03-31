@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
-import type { Find } from '@/types'
+import { PLAN_LIMITS } from '@/config/plans'
+import type { Find, Profile, PlanId } from '@/types'
 
 // Fallback mock data for when API is unavailable
 const mockFinds: Find[] = [
@@ -28,6 +29,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-WOR-20260325-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -53,6 +56,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-FOO-20260326-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -78,6 +83,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-DEN-20260327-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -103,6 +110,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-BAG-20260328-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -128,6 +137,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-ACC-20260329-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -153,6 +164,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: 85,
     sold_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     photos: [],
+    sku: 'WR-TOP-20260323-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -178,6 +191,8 @@ const mockFinds: Find[] = [
     sold_price_gbp: null,
     sold_at: null,
     photos: [],
+    sku: 'WR-WOM-20260322-001',
+    platform_fields: {},
     ai_generated_description: null,
     ai_suggested_price_low: null,
     ai_suggested_price_high: null,
@@ -208,6 +223,8 @@ export default function InventoryPage() {
   const [finds, setFinds] = useState<Find[]>(mockFinds)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [planLimitError, setPlanLimitError] = useState<string | null>(null)
 
   /**
    * Set page title on mount
@@ -217,23 +234,32 @@ export default function InventoryPage() {
   }, [])
 
   /**
-   * Fetch finds from API on mount
+   * Fetch profile and finds from API on mount
    */
   useEffect(() => {
-    async function fetchFinds() {
+    async function fetchData() {
       try {
         setIsLoading(true)
         setError(null)
-        const response = await fetch('/api/finds')
-        if (!response.ok) {
+        setPlanLimitError(null)
+
+        // Fetch profile
+        const profileRes = await fetch('/api/profile')
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setProfile(profileData.data)
+        }
+
+        // Fetch finds
+        const findsRes = await fetch('/api/finds')
+        if (!findsRes.ok) {
           throw new Error('Failed to fetch finds')
         }
-        const result = await response.json()
+        const result = await findsRes.json()
         setFinds((result.data?.data || result.data || []) as Find[])
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
-        console.error('Error fetching finds:', err)
         // Fall back to mock data
         setFinds(mockFinds)
       } finally {
@@ -241,7 +267,7 @@ export default function InventoryPage() {
       }
     }
 
-    fetchFinds()
+    fetchData()
   }, [])
 
   // Filter finds by status and search
@@ -280,9 +306,40 @@ export default function InventoryPage() {
 
   const getEmoji = (category: string | null) => (category && categoryEmojis[category]) || categoryEmojis.default
 
+  const handleAddFind = () => {
+    if (!profile) {
+      router.push('/add-find')
+      return
+    }
+
+    const planLimit = PLAN_LIMITS[profile.plan as PlanId]?.finds
+    if (planLimit !== null && profile.finds_this_month >= planLimit) {
+      setPlanLimitError(`You've reached your monthly limit of ${planLimit} finds. Upgrade your plan to add more.`)
+      return
+    }
+
+    router.push('/add-find')
+  }
+
+  const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
+  const findsUsed = profile?.finds_this_month || 0
+
   return (
     <div className="space-y-6">
       {/* Page title is in topbar - no need to repeat */}
+
+      {/* Plan limit error state */}
+      {planLimitError && (
+        <div className="bg-amber/10 border border-amber/30 rounded p-4 text-sm text-amber space-y-2">
+          <p className="font-medium">{planLimitError}</p>
+          <button
+            onClick={() => router.push('/pricing')}
+            className="text-xs underline hover:text-amber-900 transition-colors"
+          >
+            Upgrade plan →
+          </button>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (
@@ -336,7 +393,7 @@ export default function InventoryPage() {
         />
 
         {/* Action buttons */}
-        <div className="flex gap-2 whitespace-nowrap">
+        <div className="flex gap-2 whitespace-nowrap items-center">
           <button
             className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
             style={{
@@ -350,8 +407,29 @@ export default function InventoryPage() {
           >
             select
           </button>
+
+          {/* Usage indicator */}
+          {profile && planLimit !== null && (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 text-[11px] rounded"
+              style={{
+                backgroundColor: 'rgba(61,92,58,.08)',
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.14)',
+                color: '#6B7D6A',
+              }}
+            >
+              <span>
+                {findsUsed} of {planLimit} finds used
+              </span>
+              {findsUsed >= planLimit && (
+                <span className="text-amber">●</span>
+              )}
+            </div>
+          )}
+
           <button
-            onClick={() => router.push('/add-find')}
+            onClick={handleAddFind}
             className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
             style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}

@@ -33,6 +33,8 @@ const mockFind: Find = {
   sold_price_gbp: null,
   sold_at: null,
   photos: [],
+  sku: 'WR-WOR-20260331-001',
+  platform_fields: {},
   ai_generated_description: null,
   ai_suggested_price_low: null,
   ai_suggested_price_high: null,
