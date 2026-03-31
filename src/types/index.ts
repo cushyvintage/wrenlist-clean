@@ -62,6 +62,8 @@ export interface Find {
   sold_price_gbp: number | null
   sold_at: string | null
   photos: string[]
+  sku: string | null
+  platform_fields: Record<string, string>
   ai_generated_description: string | null
   ai_suggested_price_low: number | null
   ai_suggested_price_high: number | null

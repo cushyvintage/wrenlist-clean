@@ -62,6 +62,15 @@ export async function GET(request: NextRequest) {
  * POST /api/finds
  * Create a new find for the authenticated user
  *
+ * Save flow validation:
+ * - Form sends: name, category, condition, size, colour, brand, description,
+ *   source_type, source_name, sourced_at, cost_gbp, asking_price_gbp,
+ *   status ('draft'), sku, platform_fields (Record<string, string>)
+ * - Payload maps directly to DB schema with added timestamps
+ * - Photos are NOT saved by this route (separate upload flow needed)
+ * - SKU must be unique per user (constraint in migration)
+ * - platform_fields is JSONB column storing marketplace-specific data
+ *
  * Plan enforcement:
  * - Checks profile.plan and profile.finds_this_month before creating
  * - Returns 400 if user has hit their monthly find limit
