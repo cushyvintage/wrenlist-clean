@@ -32,8 +32,7 @@ export async function GET(_request: NextRequest) {
       .eq('user_id', user.id)
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     if (!listings || listings.length === 0) {
@@ -63,7 +62,6 @@ export async function GET(_request: NextRequest) {
 
     return ApiResponseHelper.success(stats)
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/listings/stats error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/listings/stats error:', error) }    return ApiResponseHelper.internalError()
   }
 }

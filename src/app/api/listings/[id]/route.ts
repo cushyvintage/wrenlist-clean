@@ -28,14 +28,12 @@ export async function GET(__request: NextRequest, { params }: { params: Promise<
       if (error.code === 'PGRST116') {
         return ApiResponseHelper.notFound()
       }
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/listings/[id] error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/listings/[id] error:', error) }    return ApiResponseHelper.internalError()
   }
 }
 
@@ -84,14 +82,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success(data as Listing)
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('PATCH /api/listings/[id] error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('PATCH /api/listings/[id] error:', error) }    return ApiResponseHelper.internalError()
   }
 }
 
@@ -124,13 +120,11 @@ export async function DELETE(__request: NextRequest, { params }: { params: Promi
     const { error } = await supabase.from('listings').delete().eq('id', id)
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success({ success: true })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('DELETE /api/listings/[id] error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('DELETE /api/listings/[id] error:', error) }    return ApiResponseHelper.internalError()
   }
 }

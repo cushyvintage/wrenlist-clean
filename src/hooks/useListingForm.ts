@@ -81,7 +81,7 @@ const initialState: ListingFormState = {
   sourcingInfo: {
     sourceType: '',
     sourceName: '',
-    dateSourced: new Date().toISOString().split('T')[0],
+    dateSourced: new Date().toISOString().split('T')[0] || '',
   },
   pricingInfo: {
     costPaid: null,
@@ -89,7 +89,12 @@ const initialState: ListingFormState = {
   },
   marketplaceSelection: {
     selectedMarketplaces: [],
-    platformFields: {},
+    platformFields: {
+      vinted: {},
+      ebay: {},
+      etsy: {},
+      shopify: {},
+    },
   },
   photoInfo: {
     photos: [],

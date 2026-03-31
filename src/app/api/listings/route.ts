@@ -45,8 +45,7 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success({
@@ -58,8 +57,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/listings error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/listings error:', error) }    return ApiResponseHelper.internalError()
   }
 }
 
@@ -113,13 +111,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error)
-      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.created(data as Listing)
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('POST /api/listings error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('POST /api/listings error:', error) }    return ApiResponseHelper.internalError()
   }
 }

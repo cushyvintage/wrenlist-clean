@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       .neq('status', 'delisted')
 
     if (listingsError) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error fetching listings:', listingsError }
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error fetching listings:', listingsError) }
       return ApiResponseHelper.internalError(listingsError.message)
     }
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       .neq('status', 'delisted')
 
     if (updateError) {
-      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error delisting:', updateError }
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error delisting:', updateError) }
       return ApiResponseHelper.internalError(updateError.message)
     }
 
@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
       platforms: [...new Set(listings.map((l) => l.platform))],
     })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') { console.error('POST /api/listings/delist-all error:', error)
-    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production')  { console.error('POST /api/listings/delist-all error:', error) }    return ApiResponseHelper.internalError()
   }
 }
