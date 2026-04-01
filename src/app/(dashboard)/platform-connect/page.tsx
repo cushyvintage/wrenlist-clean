@@ -6,12 +6,28 @@ import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
 
+interface EbayPolicy {
+  id: string
+  name: string
+}
+
+interface EbayPolicies {
+  shipping?: EbayPolicy[]
+  payment?: EbayPolicy[]
+  returns?: EbayPolicy[]
+}
+
 export default function PlatformConnectPage() {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [ebayConnected, setEbayConnected] = useState(false)
+  const [ebaySetupComplete, setEbaySetupComplete] = useState(false)
   const [ebayUser, setEbayUser] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
+  const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
+  const [ebayPoliciesLoading, setEbayPoliciesLoading] = useState(false)
+  const [ebaySetupMessage, setEbaySetupMessage] = useState<string | null>(null)
   const [salesDetection, setSalesDetection] = useState<Record<string, boolean>>({
     ebay: true,
     vinted: true,
@@ -44,6 +60,7 @@ export default function PlatformConnectPage() {
         if (response.ok) {
           const data = await response.json()
           setEbayConnected(data.data?.connected || false)
+          setEbaySetupComplete(data.data?.setupComplete || false)
           setEbayUser(data.data?.username || null)
         }
       } catch (error) {
@@ -53,6 +70,28 @@ export default function PlatformConnectPage() {
 
     checkEbayConnection()
   }, [])
+
+  // Fetch policies when connected but not setup
+  useEffect(() => {
+    if (ebayConnected && !ebaySetupComplete) {
+      const fetchPolicies = async () => {
+        setEbayPoliciesLoading(true)
+        try {
+          const response = await fetch('/api/ebay/setup/policies')
+          if (response.ok) {
+            const data = await response.json()
+            setEbayPolicies(data.data || {})
+          }
+        } catch (error) {
+          // Silently fail
+        } finally {
+          setEbayPoliciesLoading(false)
+        }
+      }
+
+      fetchPolicies()
+    }
+  }, [ebayConnected, ebaySetupComplete])
 
   const handleConnectEbay = async () => {
     setIsLoading(true)
@@ -73,6 +112,32 @@ export default function PlatformConnectPage() {
       window.location.href = data.authUrl
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect to eBay')
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveEbayPolicies = async () => {
+    setIsLoading(true)
+    setEbaySetupMessage(null)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ebay/setup/policies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ebaySelectedPolicies),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save policies')
+      }
+
+      const { data } = await response.json()
+      setEbaySetupComplete(true)
+      setEbaySetupMessage('Policies saved successfully!')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save policies')
+    } finally {
       setIsLoading(false)
     }
   }
@@ -116,23 +181,62 @@ export default function PlatformConnectPage() {
 
       {/* eBay */}
       <Panel>
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-orange-100">
-            🛒
-          </div>
-          <div className="flex-1">
-            <div className="font-medium text-sm text-ink">eBay UK</div>
-            {ebayConnected && ebayUser ? (
-              <div className="text-xs text-ink-lt">Account: {ebayUser}</div>
-            ) : (
-              <div className="text-xs text-ink-lt">Click below to authorize</div>
-            )}
-          </div>
-          <Badge status={ebayConnected ? 'listed' : 'draft'} label={ebayConnected ? 'connected' : 'not connected'} />
-        </div>
+        {!ebayConnected ? (
+          // State A: Not connected
+          <div>
+            <div className="mb-6">
+              <h3 className="font-medium text-sm text-ink mb-4">Connect your eBay account</h3>
+              <div className="space-y-2 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="text-sm text-sage mt-0.5">✓</div>
+                  <div className="text-sm text-ink">Active eBay seller account</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="text-sm text-sage mt-0.5">✓</div>
+                  <div className="text-sm text-ink">eBay Managed Payments enabled</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="text-sm text-sage mt-0.5">✓</div>
+                  <div className="text-sm text-ink">At least one shipping policy set up in eBay</div>
+                </div>
+              </div>
+              <a
+                href="https://www.bizpolicy.ebay.co.uk/businesspolicy/policyoptin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-sage hover:text-sage-dk transition underline"
+              >
+                Set up policies in eBay Seller Hub →
+              </a>
+            </div>
 
-        {ebayConnected && ebayUser && (
-          <>
+            <button
+              onClick={handleConnectEbay}
+              disabled={isLoading}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50 mb-4"
+            >
+              {isLoading ? 'Connecting...' : 'Connect eBay account →'}
+            </button>
+
+            <div className="text-xs text-ink-lt text-center">
+              Wrenlist will create and manage listings on your behalf. Disconnect any time.
+            </div>
+          </div>
+        ) : ebaySetupComplete ? (
+          // State C: Connected + setup complete
+          <div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-orange-100">
+                🛒
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="font-medium text-sm text-ink">eBay UK — Connected ✅</div>
+                </div>
+                <div className="text-xs text-ink-lt">Account: {ebayUser}</div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
               <div>
                 <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
@@ -165,6 +269,12 @@ export default function PlatformConnectPage() {
 
             <div className="flex gap-2">
               <button
+                onClick={() => setEbaySetupComplete(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
+              >
+                Change policies
+              </button>
+              <button
                 onClick={handleConnectEbay}
                 disabled={isLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition disabled:opacity-50"
@@ -175,17 +285,134 @@ export default function PlatformConnectPage() {
                 Disconnect
               </button>
             </div>
-          </>
-        )}
+          </div>
+        ) : (
+          // State B: Connected but setup incomplete
+          <div>
+            <div className="mb-6 p-4 bg-cream-md rounded">
+              <div className="text-xs font-medium text-ink-lt mb-3">Setup progress</div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="text-sage">✓</div>
+                  <div className="text-ink">Step 1: Connected</div>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="text-ink-lt">◯</div>
+                  <div className="text-ink">Step 2: Choose policies</div>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="text-ink-lt">◯</div>
+                  <div className="text-ink">Step 3: Ready</div>
+                </div>
+              </div>
+            </div>
 
-        {!ebayConnected && (
-          <button
-            onClick={handleConnectEbay}
-            disabled={isLoading}
-            className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
-          >
-            {isLoading ? 'Connecting...' : 'Connect eBay account →'}
-          </button>
+            <h3 className="font-medium text-sm text-ink mb-2">Choose your listing policies</h3>
+            <p className="text-xs text-ink-lt mb-4">These are pulled from your eBay account</p>
+
+            {ebayPoliciesLoading ? (
+              <div className="text-center py-6">
+                <div className="text-sm text-ink-lt">Loading policies...</div>
+              </div>
+            ) : (
+              <>
+                {/* Shipping Policies */}
+                {ebayPolicies?.shipping && ebayPolicies.shipping.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-ink-lt mb-3 uppercase tracking-wide">Shipping Policy</h4>
+                    <div className="space-y-2">
+                      {ebayPolicies.shipping.map((policy) => (
+                        <label key={policy.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="shipping"
+                            value={policy.id}
+                            checked={ebaySelectedPolicies.shipping === policy.id}
+                            onChange={(e) =>
+                              setEbaySelectedPolicies({
+                                ...ebaySelectedPolicies,
+                                shipping: e.target.value,
+                              })
+                            }
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm text-ink">{policy.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Policies */}
+                {ebayPolicies?.payment && ebayPolicies.payment.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-ink-lt mb-3 uppercase tracking-wide">Payment Policy</h4>
+                    <div className="space-y-2">
+                      {ebayPolicies.payment.map((policy) => (
+                        <label key={policy.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="payment"
+                            value={policy.id}
+                            checked={ebaySelectedPolicies.payment === policy.id}
+                            onChange={(e) =>
+                              setEbaySelectedPolicies({
+                                ...ebaySelectedPolicies,
+                                payment: e.target.value,
+                              })
+                            }
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm text-ink">{policy.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Returns Policies */}
+                {ebayPolicies?.returns && ebayPolicies.returns.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-ink-lt mb-3 uppercase tracking-wide">Returns Policy</h4>
+                    <div className="space-y-2">
+                      {ebayPolicies.returns.map((policy) => (
+                        <label key={policy.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="returns"
+                            value={policy.id}
+                            checked={ebaySelectedPolicies.returns === policy.id}
+                            onChange={(e) =>
+                              setEbaySelectedPolicies({
+                                ...ebaySelectedPolicies,
+                                returns: e.target.value,
+                              })
+                            }
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm text-ink">{policy.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ebaySetupMessage && (
+                  <div className="p-3 bg-green-50 border border-green rounded text-sm text-green mb-4">
+                    {ebaySetupMessage}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveEbayPolicies}
+                  disabled={isLoading || Object.keys(ebaySelectedPolicies).length === 0}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+                >
+                  {isLoading ? 'Saving...' : 'Save settings →'}
+                </button>
+              </>
+            )}
+          </div>
         )}
       </Panel>
 
