@@ -5,11 +5,19 @@ import { getEbayClientForUser } from '@/lib/ebay-client'
 
 // eBay category mapping (simple hardcoded map for now)
 const EBAY_CATEGORY_MAP: Record<string, string> = {
-  ceramics: '11116',
-  books: '267',
-  clothing: '11450',
-  jewellery: '281',
-  homeware: '11700',
+  ceramics: '870',        // Pottery & China
+  glassware: '11700',     // Glass (Antiques)
+  books: '267',           // Books, Comics & Magazines
+  jewellery: '281',       // Jewellery & Watches
+  jewelry: '281',
+  clothing: '11450',      // Clothes, Shoes & Accessories
+  homeware: '11700',      // Home, Furniture & DIY
+  home: '11700',
+  collectibles: '11116',  // Collectables
+  medals: '15273',        // Medals
+  toys: '220',            // Toys & Games
+  furniture: '3197',      // Furniture (Antiques)
+  default: '99',          // Everything Else
 }
 
 /**
@@ -72,7 +80,7 @@ export async function POST(request: NextRequest) {
       poor: 'ACCEPTABLE',
     }
 
-    const categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP.homeware || '99'
+    const categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
     const ebayCondition = conditionMap[find.condition] || 'USED'
     const sku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
 
