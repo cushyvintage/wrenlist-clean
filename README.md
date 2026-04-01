@@ -1,6 +1,6 @@
-# Wrenlist Clean Build
+# Wrenlist
 
-Next-generation vintage resale management platform. Unify inventory, sourcing, and selling across multiple marketplaces.
+Multi-marketplace resale SaaS for UK vintage sellers.
 
 ## Quick Start
 
@@ -9,92 +9,93 @@ npm install
 npm run dev
 ```
 
-Visit http://localhost:3000
+Dev server: http://localhost:3004
 
-## Documentation
+## Project
 
-- **[CLAUDE.md](CLAUDE.md)** — Development instructions, architecture decisions, gotchas
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design, data flows, service layer
-- **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)** — Database schema and tables
-- **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — UI design system, Tailwind patterns
-- **[PRD.md](PRD.md)** — Product requirements by phase
-- **[SETUP.md](SETUP.md)** — Local development setup guide
-
-**Historical**: See [.archive/](.archive/) for Phase 1 build logs and archived documentation
+- **Marketing**: wrenlist.com
+- **App**: app.wrenlist.com (this codebase)
+- **Purpose**: Unified inventory, sourcing, and selling across eBay, Vinted, Etsy, Shopify
+- **Target**: Vintage resellers (like cushyvintage)
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
-- **Backend**: Next.js API routes
+- **Frontend**: Next.js 15, TypeScript (strict), Tailwind CSS
+- **Backend**: Next.js API routes, Zod validation
 - **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth
+- **Auth**: Supabase Auth (SSR-safe)
 - **Marketplace Integration**: Skylark Chrome extension
-
-## Phases
-
-### Phase 1: Foundation (Weeks 1-2) ✅ In Progress
-Auth, dashboard, product inventory, marketplace account detection
-
-### Phase 2: Sourcing Pipeline (Weeks 3-4)
-Sourcing log, add-find flow, inventory analytics
-
-### Phase 3: Selling & Listings (Weeks 5-6)
-Create listings, sync across marketplaces, order management
-
-### Phase 4: Operations (Weeks 7-8)
-Expenses, mileage, tax reporting
-
-### Phase 5: Polish & Launch (Week 9)
-Testing, documentation, public roadmap, launch
-
-## Development
-
-```bash
-npm run dev          # Start dev server
-npm run build        # Build for production
-npm run clean        # Lint + format + type-check (run before commit!)
-npm run lint         # ESLint only
-npm run format       # Prettier format
-npm run type-check   # TypeScript check
-```
 
 ## Project Structure
 
 ```
 src/
-├── app/            # Next.js App Router
-├── components/     # Reusable UI components
-├── hooks/          # React hooks
-├── services/       # Business logic
-├── types/          # TypeScript types
-├── utils/          # Utilities
-└── styles/         # Global styles
+├── app/(auth)/          # Login, register, password reset
+├── app/(dashboard)/     # Main SaaS pages
+│   ├── add-find/        # Create inventory items
+│   ├── inventory/       # List & manage finds
+│   ├── listings/        # Marketplace listings
+│   ├── operations/      # Expenses, mileage, tax
+│   └── ...
+├── app/api/             # API routes (auth, finds, listings, etc.)
+├── components/          # Reusable UI components
+├── lib/                 # Utilities & services
+│   ├── supabase.ts      # Client Supabase instance
+│   ├── supabase-server.ts # Server Supabase instance
+│   └── marketplace/     # Extension proxy, registry
+├── types/               # TypeScript interfaces
+└── styles/              # Global Tailwind styles
 ```
 
-## Environment Variables
+## Key Directories
+
+- **Pages**: `src/app/(dashboard)/` — authenticated pages
+- **Auth**: `src/app/(auth)/` — public auth flows
+- **API**: `src/app/api/` — endpoints (use Zod validation)
+- **Components**: `src/components/` — reusable UI
+- **Database**: `supabase/migrations/` — SQL migrations
+
+## Setup
+
+### Environment Variables
 
 Create `.env.local`:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://[project].supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_SUPABASE_URL=https://tewtfroudyicwfubgcqi.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[key from Supabase dashboard]
 NEXT_PUBLIC_SKYLARK_EXTENSION_ID=jmfdldnaajligifppkjcmognhfgicoel
 ```
 
-## API Routes
+### Database
 
-- `GET /api/health` — Health check
-- `POST /api/auth/register` — Create user
-- `POST /api/auth/login` — Login
-- `GET|POST|PATCH|DELETE /api/products` — Product CRUD (coming soon)
-- `GET|POST|DELETE /api/marketplace/accounts` — Marketplace accounts (coming soon)
+Migrations live in `supabase/migrations/`. Apply them via:
+- Supabase dashboard (SQL editor)
+- Supabase CLI (`supabase db push`)
+- Or manually via API
 
-## Contributing
+### Development
 
-1. Read CLAUDE.md for current phase
-2. Check ARCHITECTURE.md for system design
-3. Run `npm run clean` before pushing
-4. Commit with `feat:|fix:|docs:` prefix
+```bash
+npm run dev        # Start server on :3004
+npm run build      # Production build
+npm run clean      # Lint + format + type-check
+npm test           # Playwright tests
+```
+
+## Deployment
+
+Vercel auto-deploys from main branch. No manual steps needed.
+
+## Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** — Dev guide, patterns, gotchas
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design, data flows
+- **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)** — Table definitions
+- **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — UI patterns, Tailwind
+- **[PRD.md](PRD.md)** — Product roadmap
+- **[API.md](API.md)** — API endpoints
+- **[SETUP.md](SETUP.md)** — Local development
 
 ## License
 
