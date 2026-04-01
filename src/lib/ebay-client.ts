@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { fetch as undiciFetch, Headers as UndiciHeaders } from 'undici'
+import { config } from './config'
 
 // Types
 interface eBayConfig {
@@ -437,17 +438,15 @@ export async function getEbayClientForUser(
     throw new Error(`No eBay tokens found for user: ${userId}`)
   }
 
-  const config: eBayConfig = {
-    environment: (process.env.EBAY_ENVIRONMENT || 'production') as
-      | 'sandbox'
-      | 'production',
+  const ebayConfig: eBayConfig = {
+    environment: config.ebay.environment,
     marketplaceId: marketplace,
-    clientId: process.env.EBAY_CLIENT_ID!,
-    clientSecret: process.env.EBAY_CLIENT_SECRET!,
+    clientId: config.ebay.clientId,
+    clientSecret: config.ebay.clientSecret,
     redirectUrl: process.env.EBAY_REDIRECT_URI!,
   }
 
-  const client = new eBayClient(config)
+  const client = new eBayClient(ebayConfig)
 
   // Load tokens and refresh if needed
   if (tokens.refresh_token) {

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { eBayClient } from '@/lib/ebay-client'
+import { config } from '@/lib/config'
 import crypto from 'crypto'
 
 /**
@@ -44,19 +45,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create eBayClient config
-    const environment = (process.env.EBAY_ENVIRONMENT || 'production') as
-      | 'sandbox'
-      | 'production'
-
-    if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_RUNAME) {
+    if (!config.ebay.clientId || !process.env.EBAY_RUNAME) {
       return ApiResponseHelper.internalError('eBay not configured on server')
     }
 
     const client = new eBayClient({
-      environment,
+      environment: config.ebay.environment,
       marketplaceId: marketplace as 'EBAY_US' | 'EBAY_GB',
-      clientId: process.env.EBAY_CLIENT_ID,
-      clientSecret: process.env.EBAY_CLIENT_SECRET || '',
+      clientId: config.ebay.clientId,
+      clientSecret: config.ebay.clientSecret,
       // eBay OAuth requires the RuName as the redirect_uri in the authorize URL
       redirectUrl: process.env.EBAY_RUNAME,
     })

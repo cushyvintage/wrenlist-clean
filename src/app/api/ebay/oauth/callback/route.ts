@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { eBayClient } from '@/lib/ebay-client'
+import { config } from '@/lib/config'
 
 /**
  * GET /api/ebay/oauth/callback
@@ -67,21 +68,17 @@ export async function GET(request: NextRequest) {
       .eq('state', state)
 
     // Exchange code for tokens
-    const environment = (process.env.EBAY_ENVIRONMENT || 'production') as
-      | 'sandbox'
-      | 'production'
-
-    if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_CLIENT_SECRET) {
+    if (!config.ebay.clientId || !config.ebay.clientSecret) {
       return NextResponse.redirect(
         new URL('https://app.wrenlist.com/platform-connect?error=server_error')
       )
     }
 
     const client = new eBayClient({
-      environment,
+      environment: config.ebay.environment,
       marketplaceId: marketplace as 'EBAY_US' | 'EBAY_GB',
-      clientId: process.env.EBAY_CLIENT_ID,
-      clientSecret: process.env.EBAY_CLIENT_SECRET,
+      clientId: config.ebay.clientId,
+      clientSecret: config.ebay.clientSecret,
       // Token exchange also requires the RuName as redirect_uri
       redirectUrl: process.env.EBAY_RUNAME!,
     })
