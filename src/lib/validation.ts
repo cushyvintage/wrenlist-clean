@@ -33,6 +33,8 @@ export const CreateFindSchema = z.object({
   photos: z.array(z.string()).optional().default([]),
   sku: z.string().optional().nullable(),
   platform_fields: z.record(z.string()).optional().default({}),
+  color_ids: z.array(z.number()).optional().default([]),
+  selected_marketplaces: z.array(z.string()).optional().default(['vinted']),
 })
 
 export const UpdateFindSchema = CreateFindSchema.partial()

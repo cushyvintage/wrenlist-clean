@@ -1,0 +1,18 @@
+export const VINTED_COLORS = [
+  { id: 1, title: 'Black' },
+  { id: 3, title: 'Grey' },
+  { id: 4, title: 'White' },
+  { id: 5, title: 'Beige' },
+  { id: 6, title: 'Pink' },
+  { id: 7, title: 'Red' },
+  { id: 8, title: 'Orange' },
+  { id: 9, title: 'Yellow' },
+  { id: 11, title: 'Green' },
+  { id: 12, title: 'Blue' },
+  { id: 14, title: 'Purple' },
+  { id: 16, title: 'Brown' },
+  { id: 17, title: 'Cream' },
+  { id: 18, title: 'Gold' },
+  { id: 20, title: 'Silver' },
+  { id: 21, title: 'Multi-colour' },
+] as const

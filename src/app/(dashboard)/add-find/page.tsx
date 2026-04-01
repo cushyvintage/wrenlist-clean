@@ -9,6 +9,10 @@ import WrenAI from '@/components/listing/WrenAI'
 import ListOnSection from '@/components/listing/ListOnSection'
 import { MarketplaceSelector } from '@/components/listing/MarketplaceSelector'
 import { useListingForm } from '@/hooks/useListingForm'
+import { VINTED_COLORS } from '@/data/vinted-colors'
+import { VINTED_CONDITIONS } from '@/data/vinted-conditions'
+import { EBAY_CONDITIONS } from '@/data/ebay-conditions'
+import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import type { MarketplaceId } from '@/lib/marketplace/registry'
 
 interface FormData {
@@ -18,6 +22,7 @@ interface FormData {
   condition: string
   size: string
   colour: string
+  colorIds: number[]
   brand: string
   description: string
   sourceType: string
@@ -68,6 +73,7 @@ export default function AddFindPage() {
     condition: 'excellent',
     size: '',
     colour: '',
+    colorIds: [],
     brand: '',
     description: '',
     sourceType: 'charity_shop',
@@ -225,6 +231,13 @@ export default function AddFindPage() {
           status: 'draft',
           sku: formData.sku,
           platform_fields: formData.platformFields,
+          color_ids: formData.colorIds,
+          selected_marketplaces: [
+            formData.listOnEbay && 'ebay',
+            formData.listOnVinted && 'vinted',
+            formData.listOnEtsy && 'etsy',
+            formData.listOnShopify && 'shopify',
+          ].filter(Boolean),
         }),
       })
 
@@ -267,7 +280,7 @@ export default function AddFindPage() {
         <div className="flex gap-3">
           <button
             onClick={() => router.push('/inventory')}
-            className="px-4 py-2 text-sm font-medium text-ink-lt border border-sage/14 rounded hover:bg-cream-md transition-colors"
+            className="px-4 py-2 text-sm font-medium text-ink border border-sage/14 rounded hover:bg-cream-md transition-colors"
           >
             cancel
           </button>
@@ -366,7 +379,7 @@ export default function AddFindPage() {
                   </div>
                 </div>
 
-                {/* Colour & Brand */}
+                {/* Colour (text) & Brand */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">colour</label>
@@ -390,6 +403,45 @@ export default function AddFindPage() {
                   </div>
                 </div>
 
+                {/* Vinted Colour Picker (shown when Vinted selected) */}
+                {formData.listOnVinted && (
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
+                      vinted colours <span className="text-red-600">*</span> (max 2)
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {VINTED_COLORS.map((color) => {
+                        const isSelected = formData.colorIds.includes(color.id)
+                        return (
+                          <button
+                            key={color.id}
+                            onClick={() => {
+                              if (isSelected) {
+                                handleInputChange('colorIds', formData.colorIds.filter((id) => id !== color.id))
+                              } else if (formData.colorIds.length < 2) {
+                                handleInputChange('colorIds', [...formData.colorIds, color.id])
+                              }
+                            }}
+                            disabled={!isSelected && formData.colorIds.length >= 2}
+                            className={`px-2 py-2 text-xs rounded border-2 transition-all whitespace-nowrap text-center ${
+                              isSelected
+                                ? 'border-sage bg-sage/10 text-sage font-medium'
+                                : 'border-sage/14 bg-white text-ink hover:border-sage/30 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
+                          >
+                            {color.title}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {formData.colorIds.length > 0 && (
+                      <p className="text-xs text-sage-dim mt-2">
+                        Selected: {formData.colorIds.map((id) => VINTED_COLORS.find((c) => c.id === id)?.title).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Description */}
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">description</label>
@@ -404,23 +456,96 @@ export default function AddFindPage() {
               </div>
             </div>
 
-            {/* PLATFORM FIELDS */}
-            <PlatformFields
-              wrenlistCategory={formData.category}
-              selectedMarketplaces={[
-                formData.listOnEbay && 'ebay',
-                formData.listOnVinted && 'vinted',
-                formData.listOnEtsy && 'etsy',
-                formData.listOnShopify && 'shopify',
-              ].filter(Boolean) as string[]}
-              dynamicFields={formData.platformFields}
-              onFieldChange={(fieldName, value) =>
-                handleInputChange('platformFields', {
-                  ...formData.platformFields,
-                  [fieldName]: value,
-                })
-              }
-            />
+            {/* PLATFORM FIELDS PREVIEW */}
+            <div className="bg-white border border-sage/14 rounded overflow-hidden">
+              <div className="border-b border-sage/14 px-6 py-4">
+                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">platform fields preview</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                {/* eBay Platform Fields */}
+                {formData.listOnEbay && (
+                  <div className="pb-4 border-b border-sage/14 last:border-b-0">
+                    <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#E53238' }}></span>
+                      eBay UK
+                    </h3>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Category ID:</span>
+                        <span className="font-mono text-ink">
+                          {CATEGORY_MAP[formData.category]?.ebayId || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Category:</span>
+                        <span className="text-ink">{CATEGORY_MAP[formData.category]?.ebayName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Condition:</span>
+                        <span className="text-ink">
+                          {EBAY_CONDITIONS.find((c) => c.id === 'USED_EXCELLENT')?.title || 'See condition settings'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Price:</span>
+                        <span className="font-mono text-ink">£{formData.askingPrice?.toFixed(2) || '0.00'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Vinted Platform Fields */}
+                {formData.listOnVinted && (
+                  <div className="pb-4 border-b border-sage/14 last:border-b-0">
+                    <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#1BB0CE' }}></span>
+                      Vinted
+                    </h3>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Category ID:</span>
+                        <span className="font-mono text-ink">
+                          {CATEGORY_MAP[formData.category]?.vintedId || 'TBD'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Category:</span>
+                        <span className="text-ink">{CATEGORY_MAP[formData.category]?.vintedName || 'TBD'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Condition:</span>
+                        <span className="text-ink">
+                          {
+                            VINTED_CONDITIONS.find(
+                              (vc) => vc.wrenlist === formData.condition,
+                            )?.title || 'See condition settings'
+                          }
+                        </span>
+                      </div>
+                      {formData.colorIds.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-sage-dim">Colours:</span>
+                          <span className="text-ink">
+                            {formData.colorIds.map((id) => VINTED_COLORS.find((c) => c.id === id)?.title).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-sage-dim">Price:</span>
+                        <span className="font-mono text-ink">£{formData.askingPrice?.toFixed(2) || '0.00'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {!formData.listOnEbay && !formData.listOnVinted && (
+                  <div className="text-center py-4">
+                    <p className="text-xs text-sage-dim">Select at least one marketplace above to see platform fields</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* SOURCING */}
             <div className="bg-white border border-sage/14 rounded overflow-hidden">
@@ -576,8 +701,7 @@ export default function AddFindPage() {
               </div>
             </div>
 
-            {/* LIST ON */}
-            {/* MARKETPLACE SELECTOR - Uses new useListingForm hook */}
+            {/* MARKETPLACE SELECTOR */}
             <div className="bg-white border border-sage/14 rounded overflow-hidden">
               <div className="border-b border-sage/14 px-6 py-4">
                 <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">select marketplaces</h2>
