@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       condition: ebayCondition,
       brand: find.brand || undefined,
       images: find.photos || [],
-      merchantLocation: process.env.EBAY_MERCHANT_LOCATION_KEY || '002a1871-f1a8-41fc-ac4d-6002d0a9127c',
+      merchantLocation: { locationKey: process.env.EBAY_MERCHANT_LOCATION_KEY || '002a1871-f1a8-41fc-ac4d-6002d0a9127c' },
     }
 
     // If dry run, return what would be published
