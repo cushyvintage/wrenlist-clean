@@ -110,7 +110,7 @@ export class EbayConnector implements MarketplaceConnector {
       price: typedFind.asking_price_gbp || 0,
       quantity: 1,
       condition,
-      brand: typedFind.brand,
+      brand: typedFind.brand ?? undefined,
       images: typedFind.photos || [],
       aspectAttributes: {
         Size: typedFind.size || 'One Size',
