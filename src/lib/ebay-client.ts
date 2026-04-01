@@ -207,7 +207,11 @@ export class eBayClient {
       throw new Error(`${TOKEN_ENCRYPTION_KEY_ENV} not set`)
     }
 
-    const [ivHex, encrypted] = encryptedToken.split(':')
+    const parts = encryptedToken.split(':')
+    if (parts.length < 2 || !parts[0] || !parts[1]) {
+      throw new Error('Invalid encrypted token format')
+    }
+    const [ivHex, encrypted] = parts as [string, string]
     const iv = Buffer.from(ivHex, 'hex')
     const decipher = crypto.createDecipheriv(
       'aes-256-cbc',
