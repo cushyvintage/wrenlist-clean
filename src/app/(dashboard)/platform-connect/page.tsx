@@ -190,6 +190,37 @@ export default function PlatformConnectPage() {
     }
   }
 
+  const handleDisconnectEbay = async () => {
+    if (!confirm('Are you sure? This will disconnect your eBay account and delete all stored policies.')) {
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ebay/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to disconnect from eBay')
+      }
+
+      setEbayConnected(false)
+      setEbaySetupComplete(false)
+      setEbayUser(null)
+      setEbayExpiresAt(null)
+      setEbaySelectedPolicies({})
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to disconnect from eBay')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Topbar */}
@@ -346,7 +377,11 @@ export default function PlatformConnectPage() {
               >
                 ↻ Reconnect
               </button>
-              <button className="flex-1 px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition">
+              <button
+                onClick={handleDisconnectEbay}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition disabled:opacity-50"
+              >
                 Disconnect
               </button>
             </div>
