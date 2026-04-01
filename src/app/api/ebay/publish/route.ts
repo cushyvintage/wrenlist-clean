@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 // eBay category mapping (simple hardcoded map for now)
 
@@ -22,6 +23,12 @@ export async function POST(request: NextRequest) {
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
+    }
+
+    // Rate limiting: 5 per minute per user
+    const { success } = await checkRateLimit(`user:${user.id}:ebay-publish`, 5)
+    if (!success) {
+      return ApiResponseHelper.badRequest("Too many requests. Please wait a moment.")
     }
 
     const supabase = await createSupabaseServerClient()

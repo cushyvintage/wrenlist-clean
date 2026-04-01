@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateFindSchema, validateBody } from '@/lib/validation'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Find } from '@/types'
 
 /**
@@ -82,6 +83,12 @@ export async function POST(request: NextRequest) {
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
+    }
+
+    // Rate limiting: 30 per minute per user
+    const { success } = await checkRateLimit(`user:${user.id}:finds`, 30)
+    if (!success) {
+      return ApiResponseHelper.badRequest("Too many requests. Please wait a moment.")
     }
 
     const supabase = await createSupabaseServerClient()
