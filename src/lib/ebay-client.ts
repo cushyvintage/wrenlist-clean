@@ -279,6 +279,7 @@ export class eBayClient {
     const url = `${this.baseUrl}${endpoint}`
     const headers = {
       'Content-Type': 'application/json',
+      'Content-Language': 'en-GB',
       'Authorization': `Bearer ${this.getAccessToken()}`,
       ...options.headers,
     }
@@ -290,9 +291,8 @@ export class eBayClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(
-        `eBay API error (${response.status}): ${error.message || error.error}`
-      )
+      const msg = error.errors?.[0]?.message || error.message || error.error || response.statusText
+      throw new Error(`eBay API error (${response.status}): ${msg}`)
     }
 
     return response.json()
