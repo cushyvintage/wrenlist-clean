@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
+import { useEbayConnection } from '@/hooks/useEbayConnection'
 
 interface EbayPolicy {
   id: string
@@ -20,16 +21,13 @@ interface EbayPolicies {
 
 export default function PlatformConnectPage() {
   const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(false)
-  const [ebayConnected, setEbayConnected] = useState(false)
-  const [ebaySetupComplete, setEbaySetupComplete] = useState(false)
-  const [ebayUser, setEbayUser] = useState<string | null>(null)
-  const [ebayExpiresAt, setEbayExpiresAt] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const ebay = useEbayConnection()
+  const [pageError, setPageError] = useState<string | null>(null)
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
   const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
   const [ebayPoliciesLoading, setEbayPoliciesLoading] = useState(false)
   const [ebaySetupMessage, setEbaySetupMessage] = useState<string | null>(null)
+  const [policyIsLoading, setPolicyIsLoading] = useState(false)
   const [salesDetection, setSalesDetection] = useState<Record<string, boolean>>({
     ebay: true,
     vinted: true,
@@ -37,15 +35,15 @@ export default function PlatformConnectPage() {
 
   // Check if token expires within 7 days
   const isTokenExpiringWithin7Days = (): boolean => {
-    if (!ebayExpiresAt) return false
-    const expiresAt = new Date(ebayExpiresAt)
+    if (!ebay.expiresAt) return false
+    const expiresAt = new Date(ebay.expiresAt)
     const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     return expiresAt <= sevenDaysFromNow
   }
 
   const getExpiryDateFormatted = (): string => {
-    if (!ebayExpiresAt) return ''
-    const expiresAt = new Date(ebayExpiresAt)
+    if (!ebay.expiresAt) return ''
+    const expiresAt = new Date(ebay.expiresAt)
     return expiresAt.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
@@ -55,42 +53,22 @@ export default function PlatformConnectPage() {
     const errorMsg = searchParams.get('error')
 
     if (success === 'ebay') {
-      setEbayConnected(true)
-      setError(null)
+      setPageError(null)
+      ebay.refreshStatus()
       // Clear URL params
       window.history.replaceState({}, document.title, window.location.pathname)
     }
 
     if (errorMsg) {
-      setError(`OAuth failed: ${errorMsg}`)
+      setPageError(`OAuth failed: ${errorMsg}`)
       // Clear URL params
       window.history.replaceState({}, document.title, window.location.pathname)
     }
-  }, [searchParams])
-
-  // Load eBay connection status on mount
-  useEffect(() => {
-    const checkEbayConnection = async () => {
-      try {
-        const response = await fetch('/api/ebay/status')
-        if (response.ok) {
-          const data = await response.json()
-          setEbayConnected(data.data?.connected || false)
-          setEbaySetupComplete(data.data?.setupComplete || false)
-          setEbayUser(data.data?.username || null)
-          setEbayExpiresAt(data.data?.expiresAt || null)
-        }
-      } catch (error) {
-        // Silently fail - status check is non-critical
-      }
-    }
-
-    checkEbayConnection()
-  }, [])
+  }, [searchParams, ebay])
 
   // Fetch policies when connected but not setup
   useEffect(() => {
-    if (ebayConnected && !ebaySetupComplete) {
+    if (ebay.connected && !ebay.setupComplete) {
       const fetchPolicies = async () => {
         setEbayPoliciesLoading(true)
         try {
@@ -139,35 +117,12 @@ export default function PlatformConnectPage() {
 
       fetchPolicies()
     }
-  }, [ebayConnected, ebaySetupComplete])
-
-  const handleConnectEbay = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/ebay/oauth/authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate OAuth flow')
-      }
-
-      const { data } = await response.json()
-      window.location.href = data.authUrl
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect to eBay')
-      setIsLoading(false)
-    }
-  }
+  }, [ebay.connected, ebay.setupComplete])
 
   const handleSaveEbayPolicies = async () => {
-    setIsLoading(true)
+    setPolicyIsLoading(true)
     setEbaySetupMessage(null)
-    setError(null)
+    setPageError(null)
 
     try {
       const response = await fetch('/api/ebay/setup/policies', {
@@ -180,44 +135,12 @@ export default function PlatformConnectPage() {
         throw new Error('Failed to save policies')
       }
 
-      const { data } = await response.json()
-      setEbaySetupComplete(true)
+      await ebay.refreshStatus()
       setEbaySetupMessage('Policies saved successfully!')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save policies')
+      setPageError(err instanceof Error ? err.message : 'Failed to save policies')
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleDisconnectEbay = async () => {
-    if (!confirm('Are you sure? This will disconnect your eBay account and delete all stored policies.')) {
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/ebay/disconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to disconnect from eBay')
-      }
-
-      setEbayConnected(false)
-      setEbaySetupComplete(false)
-      setEbayUser(null)
-      setEbayExpiresAt(null)
-      setEbaySelectedPolicies({})
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to disconnect from eBay')
-    } finally {
-      setIsLoading(false)
+      setPolicyIsLoading(false)
     }
   }
 
@@ -232,9 +155,9 @@ export default function PlatformConnectPage() {
       </div>
 
       {/* Error banner */}
-      {error && (
+      {(pageError || ebay.error) && (
         <div className="p-3 bg-red-50 border border-red rounded text-sm text-red">
-          {error}
+          {pageError || ebay.error}
         </div>
       )}
 
@@ -260,7 +183,7 @@ export default function PlatformConnectPage() {
 
       {/* eBay */}
       <Panel>
-        {!ebayConnected ? (
+        {!ebay.connected ? (
           // State A: Not connected
           <div>
             <div className="mb-6">
@@ -290,18 +213,18 @@ export default function PlatformConnectPage() {
             </div>
 
             <button
-              onClick={handleConnectEbay}
-              disabled={isLoading}
+              onClick={ebay.connectEbay}
+              disabled={ebay.isLoading}
               className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50 mb-4"
             >
-              {isLoading ? 'Connecting...' : 'Connect eBay account →'}
+              {ebay.isLoading ? 'Connecting...' : 'Connect eBay account →'}
             </button>
 
             <div className="text-xs text-ink-lt text-center">
               Wrenlist will create and manage listings on your behalf. Disconnect any time.
             </div>
           </div>
-        ) : ebaySetupComplete ? (
+        ) : ebay.setupComplete ? (
           // State C: Connected + setup complete
           <div>
             <div className="flex items-center gap-4 mb-6">
@@ -312,14 +235,14 @@ export default function PlatformConnectPage() {
                 <div className="flex items-center gap-2">
                   <div className="font-medium text-sm text-ink">eBay UK — Connected ✅</div>
                 </div>
-                <div className="text-xs text-ink-lt">Account: {ebayUser}</div>
+                <div className="text-xs text-ink-lt">Account: {ebay.username}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
               <div>
                 <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
-                <div className="text-sm text-ink font-mono">{ebayUser}</div>
+                <div className="text-sm text-ink font-mono">{ebay.username}</div>
               </div>
               <div>
                 <div className="text-xs font-medium text-ink-lt mb-1">Marketplace</div>
@@ -335,8 +258,8 @@ export default function PlatformConnectPage() {
                   <div className="text-xs text-amber-700 mt-1">Reconnect to avoid interruptions.</div>
                 </div>
                 <button
-                  onClick={handleConnectEbay}
-                  disabled={isLoading}
+                  onClick={ebay.connectEbay}
+                  disabled={ebay.isLoading}
                   className="text-xs text-amber underline underline-offset-2 hover:text-amber-900 transition disabled:opacity-50 flex-shrink-0"
                 >
                   Reconnect →
@@ -365,21 +288,24 @@ export default function PlatformConnectPage() {
 
             <div className="flex gap-2">
               <button
-                onClick={() => setEbaySetupComplete(false)}
+                onClick={() => {
+                  setEbaySelectedPolicies({})
+                  ebay.refreshStatus()
+                }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
               >
                 Change policies
               </button>
               <button
-                onClick={handleConnectEbay}
-                disabled={isLoading}
+                onClick={ebay.connectEbay}
+                disabled={ebay.isLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition disabled:opacity-50"
               >
                 ↻ Reconnect
               </button>
               <button
-                onClick={handleDisconnectEbay}
-                disabled={isLoading}
+                onClick={ebay.disconnectEbay}
+                disabled={ebay.isLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition disabled:opacity-50"
               >
                 Disconnect
@@ -505,10 +431,10 @@ export default function PlatformConnectPage() {
 
                 <button
                   onClick={handleSaveEbayPolicies}
-                  disabled={isLoading || Object.keys(ebaySelectedPolicies).length === 0}
+                  disabled={policyIsLoading || Object.keys(ebaySelectedPolicies).length === 0}
                   className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
                 >
-                  {isLoading ? 'Saving...' : 'Save settings →'}
+                  {policyIsLoading ? 'Saving...' : 'Save settings →'}
                 </button>
               </>
             )}

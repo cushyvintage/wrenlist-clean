@@ -1,0 +1,121 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+
+export interface EbayConnectionStatus {
+  connected: boolean
+  setupComplete: boolean
+  username: string | null
+  expiresAt: string | null
+  isLoading: boolean
+  error: string | null
+}
+
+export interface UseEbayConnectionReturn extends EbayConnectionStatus {
+  connectEbay: () => Promise<void>
+  disconnectEbay: () => Promise<void>
+  refreshStatus: () => Promise<void>
+}
+
+/**
+ * Hook to manage eBay connection state and actions
+ * Encapsulates all eBay OAuth and status logic for reuse across pages
+ */
+export function useEbayConnection(): UseEbayConnectionReturn {
+  const [connected, setConnected] = useState(false)
+  const [setupComplete, setSetupComplete] = useState(false)
+  const [username, setUsername] = useState<string | null>(null)
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch connection status from API
+  const refreshStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/ebay/status')
+      if (response.ok) {
+        const data = await response.json()
+        setConnected(data.data?.connected || false)
+        setSetupComplete(data.data?.setupComplete || false)
+        setUsername(data.data?.username || null)
+        setExpiresAt(data.data?.expiresAt || null)
+      }
+    } catch (err) {
+      // Silently fail - status check is non-critical
+    }
+  }, [])
+
+  // Load status on mount
+  useEffect(() => {
+    refreshStatus()
+  }, [refreshStatus])
+
+  // Initiate OAuth flow
+  const connectEbay = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ebay/oauth/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate OAuth flow')
+      }
+
+      const { data } = await response.json()
+      window.location.href = data.authUrl
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to connect to eBay'
+      setError(msg)
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Disconnect eBay account
+  const disconnectEbay = useCallback(async () => {
+    if (!confirm('Are you sure? This will disconnect your eBay account and delete all stored policies.')) {
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ebay/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to disconnect from eBay')
+      }
+
+      setConnected(false)
+      setSetupComplete(false)
+      setUsername(null)
+      setExpiresAt(null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to disconnect from eBay'
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  return {
+    connected,
+    setupComplete,
+    username,
+    expiresAt,
+    isLoading,
+    error,
+    connectEbay,
+    disconnectEbay,
+    refreshStatus,
+  }
+}
