@@ -575,21 +575,7 @@ export default function InventoryPage() {
                   <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
                     {margin !== null ? `${margin}%` : '—'}
                   </td>
-                  <td className="py-[12px] px-[18px]">
-                    {find.status === 'draft' ? (
-                      <span className="text-[11px] italic" style={{ color: '#6B7D6A' }}>
-                        none yet
-                      </span>
-                    ) : (
-                      <div className="flex gap-1.5 flex-wrap">
-                        <PlatformTag platform="vinted" live={true} />
-                        {find.id !== '2' && find.id !== '5' && (
-                          <PlatformTag platform="ebay" live={true} />
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-[12px] px-[18px]">
+                  <td className="py-[12px] px-[12px]">
                     {(find.platform_fields as any)?.ebay?.status === 'live' ? (
                       <div className="flex items-center gap-2">
                         <Badge status="listed" />
