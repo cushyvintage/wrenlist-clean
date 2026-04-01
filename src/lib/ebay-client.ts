@@ -277,11 +277,14 @@ export class eBayClient {
     options: RequestInit = {}
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`
-    const headers = {
+    const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Accept-Language': 'en-US',
       'Authorization': `Bearer ${this.getAccessToken()}`,
-      ...options.headers,
     }
+    const extraHeaders = (options.headers as Record<string, string>) || {}
+    const headers = { ...baseHeaders, ...extraHeaders }
 
     const response = await fetch(url, {
       ...options,
