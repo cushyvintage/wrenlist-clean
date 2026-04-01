@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
       marketplaceId: marketplace as 'EBAY_US' | 'EBAY_GB',
       clientId: process.env.EBAY_CLIENT_ID,
       clientSecret: process.env.EBAY_CLIENT_SECRET,
-      redirectUrl: process.env.EBAY_REDIRECT_URI!,
+      // Token exchange also requires the RuName as redirect_uri
+      redirectUrl: process.env.EBAY_RUNAME!,
     })
 
     // Exchange authorization code for tokens
@@ -148,8 +149,10 @@ export async function GET(request: NextRequest) {
       )
     )
   } catch (error) {
+    const msg = error instanceof Error ? error.message : 'unknown'
+    console.error('[eBay callback error]', msg)
     return NextResponse.redirect(
-      new URL('https://app.wrenlist.com/platform-connect?error=callback_error')
+      new URL(`https://app.wrenlist.com/platform-connect?error=callback_error&detail=${encodeURIComponent(msg)}`)
     )
   }
 }
