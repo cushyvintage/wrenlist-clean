@@ -39,6 +39,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get user to check verification and onboarding status
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      // Check if email is verified
+      if (!user.email_confirmed_at) {
+        // Not verified — show verify-email page
+        const verifyUrl = new URL(`/verify-email?email=${encodeURIComponent(user.email || '')}`, request.url)
+        return NextResponse.redirect(verifyUrl)
+      }
+
+      // Email is verified — check onboarding status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('has_completed_onboarding')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profile?.has_completed_onboarding) {
+        // Not completed onboarding — go to onboarding
+        const onboardingUrl = new URL('/onboarding', request.url)
+        return NextResponse.redirect(onboardingUrl)
+      }
+    }
+
     // Redirect to dashboard after successful auth — use app subdomain in production
     const dashboardUrl = process.env.NODE_ENV === 'production'
       ? new URL('https://app.wrenlist.com/dashboard')

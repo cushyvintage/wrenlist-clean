@@ -23,6 +23,10 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Password strength
+  const passwordStrength = password.length >= 8 ? 'good' : 'weak'
+  const isPasswordStrong = password.length >= 8
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -61,9 +65,15 @@ export default function RegisterPage() {
       if (!data.user) throw new Error('User creation failed')
 
       // Profile is created by DB trigger from auth metadata
-      router.push('/onboarding')
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account')
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create account'
+      // Handle "User already registered" error
+      if (errorMsg.includes('already registered')) {
+        setError('An account with this email already exists')
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -94,6 +104,11 @@ export default function RegisterPage() {
         <div className="text-center mb-8">
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
+        </div>
+
+        {/* Early access banner */}
+        <div className="mb-6 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-lt text-center">
+          Wrenlist is in early access. Sign up free — no card needed.
         </div>
 
         {/* Register card */}
@@ -195,6 +210,18 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
               />
+              {password && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className={`h-1.5 flex-1 rounded-full transition-colors ${
+                    isPasswordStrong ? 'bg-green-400' : 'bg-red-300'
+                  }`} />
+                  <span className={`text-xs font-medium transition-colors ${
+                    isPasswordStrong ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {isPasswordStrong ? '✓ Strong' : '✗ Weak'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Plan selection */}
