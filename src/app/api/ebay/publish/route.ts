@@ -119,20 +119,23 @@ export async function POST(request: NextRequest) {
     // Create offer
     const offer = {
       sku: inventoryItem.sku,
+      marketplaceId: marketplace,
+      format: 'FIXED_PRICE',
       availableQuantity: 1,
+      categoryId,
+      listingDescription: find.description || find.name,
       pricingSummary: {
         price: {
           currency: marketplace === 'EBAY_GB' ? 'GBP' : 'USD',
-          value: inventoryItem.price.toString(),
+          value: inventoryItem.price.toFixed(2),
         },
       },
-      categoryId,
-      listingFormat: 'FIXED_PRICE',
-      policyIds: {
+      listingPolicies: {
         fulfillmentPolicyId: sellerConfig.fulfillment_policy_id,
         returnPolicyId: sellerConfig.return_policy_id,
         paymentPolicyId: sellerConfig.payment_policy_id,
       },
+      merchantLocationKey: sellerConfig.merchant_location_key,
     }
 
     const offerResult = await ebayClient.createOffer(offer)
