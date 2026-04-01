@@ -124,15 +124,44 @@ Vintage resale management SaaS. Clean rebuild. Single-user (no orgs). UK-first.
 ## Key Patterns
 
 ### API routes
-All in `src/app/api/`. Use Zod validation, return `ApiResponse` helper.
-Always check auth: `const { data: { user } } = await supabase.auth.getUser()`
+All in `src/app/api/`. Use `withAuth` helper from `@/lib/api-helpers` for auth checks:
+
+```typescript
+import { withAuth } from '@/lib/api-helpers'
+
+export const POST = (req: NextRequest) =>
+  withAuth(req, async (req, user, supabase) => {
+    // user is guaranteed, supabase is authenticated
+    return ApiResponseHelper.success(data)
+  })
+```
 
 ### Supabase client
-- Server: `import { createClient } from '@/lib/supabase-server'`
+- Server: `import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'`
 - Client: `import { createClient } from '@/lib/supabase'`
 
 ### Auth (middleware)
 Currently uses deprecated `createMiddlewareClient` — migrate to `@supabase/ssr` `createServerClient`.
+
+### Types
+- **Platform fields**: All marketplace data stored in `Find.platform_fields: PlatformFields | null`
+- **PlatformFields types**: Defined in `src/types/index.ts` (EbayPlatformData, VintedPlatformData, etc.)
+
+### Hooks
+- **useEbayConnection**: `src/hooks/useEbayConnection.ts` — manages eBay auth state, OAuth, disconnect
+  - Returns: `{ connected, setupComplete, username, expiresAt, isLoading, error, connectEbay(), disconnectEbay(), refreshStatus() }`
+  - Use in pages to avoid duplicating eBay connection logic
+
+### Marketplace Connectors
+- **Interface**: `src/lib/marketplaces/types.ts` — defines MarketplaceConnector
+- **eBay impl**: `src/lib/marketplaces/ebay-connector.ts` — EbayConnector class
+- **Registry**: `src/lib/marketplaces/connector-registry.ts` — getConnector(id, userId) factory
+
+Adding new marketplace:
+1. Create `ConnectorName` class in `src/lib/marketplaces/{name}-connector.ts`
+2. Implement MarketplaceConnector interface (getStatus, publish, disconnect)
+3. Add case to `getConnector()` in registry
+4. Export types from `src/lib/marketplaces/types.ts`
 
 ### Tests
 `npx playwright test` — tests run against https://wrenlist.com
