@@ -280,7 +280,6 @@ export class eBayClient {
     const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Accept-Language': 'en-US',
       'Authorization': `Bearer ${this.getAccessToken()}`,
     }
     const extraHeaders = (options.headers as Record<string, string>) || {}
