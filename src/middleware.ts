@@ -43,6 +43,7 @@ export async function middleware(req: NextRequest) {
     '/forgot-password',
     '/reset-password',
     '/verify-email',
+    '/onboarding',
     '/',
     '/landing',
     '/pricing',

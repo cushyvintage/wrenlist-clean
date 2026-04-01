@@ -61,7 +61,7 @@ export default function RegisterPage() {
       if (!data.user) throw new Error('User creation failed')
 
       // Profile is created by DB trigger from auth metadata
-      router.push('/verify-email')
+      router.push('/onboarding')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
