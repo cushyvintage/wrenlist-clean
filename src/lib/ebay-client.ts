@@ -247,7 +247,7 @@ export class eBayClient {
    * Get current access token
    */
   getAccessToken(): string {
-    if (!this.tokens) {
+    if (!this.tokens || !this.tokens.accessToken) {
       throw new Error('No tokens available. User must authenticate first.')
     }
 
@@ -399,7 +399,7 @@ export async function getEbayClientForUser(
 
   const client = new eBayClient(config)
 
-  // Decrypt and load tokens
+  // Load tokens and refresh if needed
   if (tokens.refresh_token) {
     // If token expires within next hour, refresh it
     if (new Date(tokens.expires_at) <= new Date(Date.now() + 3600000)) {
@@ -412,10 +412,12 @@ export async function getEbayClientForUser(
           access_token: newTokens.accessToken,
           refresh_token: newTokens.refreshToken,
           expires_at: newTokens.expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('user_id', userId)
         .eq('marketplace_id', marketplace)
     } else {
+      // Use existing tokens
       client.setTokens({
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,

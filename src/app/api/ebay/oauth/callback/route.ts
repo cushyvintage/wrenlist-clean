@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
       const { error: updateError } = await supabase
         .from('ebay_tokens')
         .update({
+          ebay_user: ebayUser.username,
           access_token: tokens.accessToken,
           refresh_token: tokens.refreshToken,
           expires_at: tokens.expiresAt.toISOString(),
@@ -135,6 +136,7 @@ export async function GET(request: NextRequest) {
         .insert({
           user_id: user.id,
           marketplace_id: marketplace,
+          ebay_user: ebayUser.username,
           access_token: tokens.accessToken,
           refresh_token: tokens.refreshToken,
           expires_at: tokens.expiresAt.toISOString(),
