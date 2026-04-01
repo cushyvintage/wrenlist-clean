@@ -307,27 +307,29 @@ export class eBayClient {
   ): Promise<{ success: boolean; inventoryItemId?: string; error?: string }> {
     try {
       const payload = {
-        sku,
-        title: item.title,
-        description: item.description || '',
+        product: {
+          title: item.title,
+          description: item.description || '',
+          imageUrls: item.images || [],
+        },
         condition: item.condition || 'USED',
-        price: {
-          currency: this.config.marketplaceId === 'EBAY_GB' ? 'GBP' : 'USD',
-          value: item.price.toString(),
+        availability: {
+          shipToLocationAvailability: {
+            quantity: item.quantity,
+            allocationByFormat: {
+              fixedPrice: item.quantity,
+            },
+          },
         },
-        quantity: {
-          value: item.quantity,
-        },
-        brand: item.brand,
-        imageUrls: item.images || [],
-        aspectAttributes: item.aspectAttributes || {},
-        merchantLocationKey: item.merchantLocation?.locationKey,
       }
 
       await this.apiRequest(
         '/sell/inventory/v1/inventory_item/' + encodeURIComponent(sku),
         {
           method: 'PUT',
+          headers: {
+            'Content-Language': 'en-GB',
+          },
           body: JSON.stringify(payload),
         }
       )
