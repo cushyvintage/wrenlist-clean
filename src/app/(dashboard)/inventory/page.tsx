@@ -591,7 +591,21 @@ export default function InventoryPage() {
                     )}
                   </td>
                   <td className="py-[12px] px-[18px]">
-                    {find.status === 'draft' ? (
+                    {(find.platform_fields as any)?.ebay?.status === 'live' ? (
+                      <div className="flex items-center gap-2">
+                        <Badge status="listed" />
+                        <a
+                          href={(find.platform_fields as any).ebay.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] underline underline-offset-2 transition-colors"
+                          style={{ color: '#5A7A57' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Live on eBay →
+                        </a>
+                      </div>
+                    ) : find.status === 'draft' ? (
                       <div className="flex flex-col gap-2">
                         <Badge status="draft" />
                         <button
@@ -604,8 +618,21 @@ export default function InventoryPage() {
                         >
                           complete & list →
                         </button>
+                        {ebayConnected && (
+                          <button
+                            onClick={(e) => handleListOnEbay(find.id, e)}
+                            disabled={publishingFindId === find.id}
+                            className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50 text-left"
+                            style={{ color: '#B5813A' }}
+                          >
+                            {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
+                          </button>
+                        )}
+                        {publishError[find.id] && (
+                          <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
+                        )}
                       </div>
-                    ) : (find.platform_fields as any)?.ebay?.status === 'live' ? (
+                    ) : (find.platform_fields as any)?.ebay?.status === 'live_dup' ? (
                       <div className="flex items-center gap-2">
                         <Badge status="listed" />
                         <a
