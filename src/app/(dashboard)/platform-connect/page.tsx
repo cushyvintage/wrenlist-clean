@@ -24,6 +24,7 @@ export default function PlatformConnectPage() {
   const [ebayConnected, setEbayConnected] = useState(false)
   const [ebaySetupComplete, setEbaySetupComplete] = useState(false)
   const [ebayUser, setEbayUser] = useState<string | null>(null)
+  const [ebayExpiresAt, setEbayExpiresAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
   const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
@@ -33,6 +34,20 @@ export default function PlatformConnectPage() {
     ebay: true,
     vinted: true,
   })
+
+  // Check if token expires within 7 days
+  const isTokenExpiringWithin7Days = (): boolean => {
+    if (!ebayExpiresAt) return false
+    const expiresAt = new Date(ebayExpiresAt)
+    const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    return expiresAt <= sevenDaysFromNow
+  }
+
+  const getExpiryDateFormatted = (): string => {
+    if (!ebayExpiresAt) return ''
+    const expiresAt = new Date(ebayExpiresAt)
+    return expiresAt.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
+  }
 
   // Check OAuth response
   useEffect(() => {
@@ -63,6 +78,7 @@ export default function PlatformConnectPage() {
           setEbayConnected(data.data?.connected || false)
           setEbaySetupComplete(data.data?.setupComplete || false)
           setEbayUser(data.data?.username || null)
+          setEbayExpiresAt(data.data?.expiresAt || null)
         }
       } catch (error) {
         // Silently fail - status check is non-critical
@@ -279,6 +295,23 @@ export default function PlatformConnectPage() {
                 <div className="text-sm text-ink">eBay UK (GB)</div>
               </div>
             </div>
+
+            {isTokenExpiringWithin7Days() && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
+                <div className="text-sm text-amber mt-0.5">⚠️</div>
+                <div className="flex-1">
+                  <div className="text-sm text-amber font-medium">Your eBay connection expires on {getExpiryDateFormatted()}</div>
+                  <div className="text-xs text-amber-700 mt-1">Reconnect to avoid interruptions.</div>
+                </div>
+                <button
+                  onClick={handleConnectEbay}
+                  disabled={isLoading}
+                  className="text-xs text-amber underline underline-offset-2 hover:text-amber-900 transition disabled:opacity-50 flex-shrink-0"
+                >
+                  Reconnect →
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
               <div>
