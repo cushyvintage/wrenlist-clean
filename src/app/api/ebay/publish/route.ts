@@ -50,6 +50,20 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.notFound('Find not found')
     }
 
+    // Fetch user's eBay seller config
+    const { data: sellerConfig, error: configError } = await supabase
+      .from('ebay_seller_config')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('marketplace_id', marketplace)
+      .single()
+
+    if (configError || !sellerConfig || !sellerConfig.setup_complete) {
+      return ApiResponseHelper.badRequest(
+        'eBay setup incomplete — go to Platform Connect to configure your shipping and return policies.'
+      )
+    }
+
     // Map find to eBay inventory format
     const conditionMap: Record<string, string> = {
       excellent: 'NEW',
@@ -71,7 +85,7 @@ export async function POST(request: NextRequest) {
       condition: ebayCondition,
       brand: find.brand || undefined,
       images: find.photos || [],
-      merchantLocation: { locationKey: process.env.EBAY_MERCHANT_LOCATION_KEY || '002a1871-f1a8-41fc-ac4d-6002d0a9127c' },
+      merchantLocation: { locationKey: sellerConfig.merchant_location_key },
     }
 
     // If dry run, return what would be published
@@ -115,10 +129,9 @@ export async function POST(request: NextRequest) {
       categoryId,
       listingFormat: 'FIXED_PRICE',
       policyIds: {
-        // Fetched from cushyvintage eBay seller account (EBAY_GB)
-        fulfillmentPolicyId: process.env.EBAY_FULFILLMENT_POLICY_ID || '249647611012',
-        returnPolicyId: process.env.EBAY_RETURN_POLICY_ID || '249647605012',
-        paymentPolicyId: process.env.EBAY_PAYMENT_POLICY_ID || '249647603012',
+        fulfillmentPolicyId: sellerConfig.fulfillment_policy_id,
+        returnPolicyId: sellerConfig.return_policy_id,
+        paymentPolicyId: sellerConfig.payment_policy_id,
       },
     }
 
