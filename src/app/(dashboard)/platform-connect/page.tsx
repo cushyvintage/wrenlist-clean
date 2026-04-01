@@ -80,7 +80,14 @@ export default function PlatformConnectPage() {
           const response = await fetch('/api/ebay/setup/policies')
           if (response.ok) {
             const data = await response.json()
-            setEbayPolicies(data.data || {})
+            const d = data.data || {}
+            // Map API field names to component field names
+            setEbayPolicies({
+              shipping: d.fulfillmentPolicies || [],
+              returns: d.returnPolicies || [],
+              payment: d.paymentPolicies || [],
+              locations: d.locations || [],
+            })
           }
         } catch (error) {
           // Silently fail
