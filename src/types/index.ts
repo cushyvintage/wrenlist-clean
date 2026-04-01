@@ -41,6 +41,46 @@ export interface Profile {
   updated_at: string
 }
 
+// ============================================================================
+// MARKETPLACE PLATFORM FIELDS
+// ============================================================================
+
+export interface EbayPlatformData {
+  listingId: string
+  offerId?: string
+  status: 'live' | 'draft' | 'ended'
+  url: string
+  publishedAt: string
+}
+
+export interface VintedPlatformData {
+  listingId: string
+  status: 'live' | 'draft' | 'ended'
+  url: string
+  publishedAt: string
+}
+
+export interface EtsyPlatformData {
+  listingId: string
+  status: 'live' | 'draft' | 'ended'
+  url: string
+  publishedAt: string
+}
+
+export interface ShopifyPlatformData {
+  listingId: string
+  status: 'live' | 'draft' | 'ended'
+  url: string
+  publishedAt: string
+}
+
+export interface PlatformFields {
+  ebay?: EbayPlatformData
+  vinted?: VintedPlatformData
+  etsy?: EtsyPlatformData
+  shopify?: ShopifyPlatformData
+}
+
 // Supabase `finds` table type
 export interface Find {
   id: string
@@ -63,7 +103,7 @@ export interface Find {
   sold_at: string | null
   photos: string[]
   sku: string | null
-  platform_fields: Record<string, string>
+  platform_fields: PlatformFields | null
   ai_generated_description: string | null
   ai_suggested_price_low: number | null
   ai_suggested_price_high: number | null
