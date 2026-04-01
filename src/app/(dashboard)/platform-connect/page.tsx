@@ -15,6 +15,7 @@ interface EbayPolicies {
   shipping?: EbayPolicy[]
   payment?: EbayPolicy[]
   returns?: EbayPolicy[]
+  locations?: any[]
 }
 
 export default function PlatformConnectPage() {
