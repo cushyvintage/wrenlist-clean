@@ -5,36 +5,38 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 
-let ratelimit: Ratelimit | null = null
+let redis: Redis | null = null
+const limiters = new Map<number, Ratelimit>()
 
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  })
-  ratelimit = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(20, "1 m"), // 20 req/min default
-  })
-}
-
-export async function checkRateLimit(identifier: string, limit?: number): Promise<{ success: boolean; reset: number }> {
-  if (!ratelimit) return { success: true, reset: 0 } // No-op if not configured
-
-  // Create a new limiter with custom limit if provided
-  let limiter = ratelimit
-
-  if (limit) {
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
-    limiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(limit, "1 m"),
+function getRedis(): Redis | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return null
+  if (!redis) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
     })
   }
+  return redis
+}
 
+function getLimiter(requestsPerMinute: number): Ratelimit | null {
+  const r = getRedis()
+  if (!r) return null
+  if (!limiters.has(requestsPerMinute)) {
+    limiters.set(requestsPerMinute, new Ratelimit({
+      redis: r,
+      limiter: Ratelimit.slidingWindow(requestsPerMinute, "1 m"),
+    }))
+  }
+  return limiters.get(requestsPerMinute)!
+}
+
+export async function checkRateLimit(
+  identifier: string,
+  requestsPerMinute = 20
+): Promise<{ success: boolean; reset: number }> {
+  const limiter = getLimiter(requestsPerMinute)
+  if (!limiter) return { success: true, reset: 0 } // No-op if not configured
   const result = await limiter.limit(identifier)
   return { success: result.success, reset: result.reset }
 }
