@@ -371,7 +371,7 @@ export default function InventoryPage() {
             }
           }
           return find
-        })
+        }) as Find[]
       )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to publish to eBay'
