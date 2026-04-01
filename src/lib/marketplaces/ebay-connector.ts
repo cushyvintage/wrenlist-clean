@@ -17,23 +17,7 @@ const CONDITION_MAP: Record<string, string> = {
   fair: 'USED',
 }
 
-/**
- * eBay category mapping (simplified for common vintage categories)
- */
-const CATEGORY_MAP: Record<string, string> = {
-  'Denim': '15687',
-  'Workwear': '55',
-  'Footwear': '18687',
-  'Bags': '4627',
-  'Tops': '15687',
-  'Womenswear': '15687',
-  'Menswear': '15687',
-  'Accessories': '260',
-  'Outerwear': '55',
-  'Knitwear': '15687',
-  'Vintage': '22558',
-  'Other': '99',
-}
+import { EBAY_CATEGORY_MAP as CATEGORY_MAP } from '@/lib/ebay-categories'
 
 export class EbayConnector implements MarketplaceConnector {
   id = 'ebay' as const

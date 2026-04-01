@@ -1,24 +1,10 @@
+import { EBAY_CATEGORY_MAP } from "@/lib/ebay-categories"
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 
 // eBay category mapping (simple hardcoded map for now)
-const EBAY_CATEGORY_MAP: Record<string, string> = {
-  ceramics: '870',        // Pottery & China
-  glassware: '11700',     // Glass (Antiques)
-  books: '267',           // Books, Comics & Magazines
-  jewellery: '281',       // Jewellery & Watches
-  jewelry: '281',
-  clothing: '11450',      // Clothes, Shoes & Accessories
-  homeware: '11700',      // Home, Furniture & DIY
-  home: '11700',
-  collectibles: '11116',  // Collectables
-  medals: '15273',        // Medals
-  toys: '220',            // Toys & Games
-  furniture: '3197',      // Furniture (Antiques)
-  default: '99',          // Everything Else
-}
 
 /**
  * POST /api/ebay/publish
