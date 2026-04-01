@@ -363,11 +363,11 @@ export class eBayClient {
    * Create an offer
    */
   async createOffer(offer: any): Promise<any> {
-    // Use direct fetch — Content-Language must NOT be sent to the offer endpoint
     const response = await fetch(`${this.baseUrl}/sell/inventory/v1/offer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Content-Language': 'en-US',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       },
@@ -375,6 +375,11 @@ export class eBayClient {
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }))
+      // If offer already exists, return the existing offerId
+      if (error.errors?.[0]?.errorId === 25002) {
+        const existingOfferId = error.errors[0].parameters?.find((p: any) => p.name === 'offerId')?.value
+        if (existingOfferId) return { offerId: existingOfferId }
+      }
       const msg = error.errors?.[0]?.message || error.message || response.statusText
       throw new Error(`eBay API error (${response.status}): ${msg}`)
     }
@@ -389,6 +394,7 @@ export class eBayClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Content-Language': 'en-US',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       },
