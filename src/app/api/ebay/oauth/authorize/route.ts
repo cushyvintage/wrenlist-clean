@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       | 'sandbox'
       | 'production'
 
-    if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_REDIRECT_URI) {
+    if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_RUNAME) {
       return ApiResponseHelper.internalError('eBay not configured on server')
     }
 
@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       marketplaceId: marketplace as 'EBAY_US' | 'EBAY_GB',
       clientId: process.env.EBAY_CLIENT_ID,
       clientSecret: process.env.EBAY_CLIENT_SECRET || '',
-      redirectUrl: process.env.EBAY_REDIRECT_URI,
+      // eBay OAuth requires the RuName as the redirect_uri in the authorize URL
+      redirectUrl: process.env.EBAY_RUNAME,
     })
 
     // Generate authorization URL
