@@ -1,0 +1,73 @@
+import { NextRequest } from 'next/server'
+import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { ApiResponseHelper } from '@/lib/api-response'
+import { eBayClient } from '@/lib/ebay-client'
+import crypto from 'crypto'
+
+/**
+ * POST /api/ebay/oauth/authorize
+ *
+ * Initiates eBay OAuth flow by:
+ * 1. Generating CSRF state parameter
+ * 2. Storing state in database (with TTL)
+ * 3. Generating authorization URL
+ * 4. Returning URL to client
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getServerUser()
+    if (!user) {
+      return ApiResponseHelper.unauthorized()
+    }
+
+    const supabase = await createSupabaseServerClient()
+    const body = await request.json()
+    const { marketplace = 'EBAY_GB' } = body
+
+    // Generate CSRF state parameter
+    const state = crypto.randomBytes(32).toString('hex')
+
+    // Store state in database (expires in 15 minutes)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
+
+    const { error: stateError } = await supabase
+      .from('ebay_oauth_states')
+      .insert({
+        user_id: user.id,
+        state,
+        marketplace_id: marketplace,
+        expires_at: expiresAt.toISOString(),
+      })
+
+    if (stateError) {
+      return ApiResponseHelper.internalError('Failed to initialize OAuth flow')
+    }
+
+    // Create eBayClient config
+    const environment = (process.env.EBAY_ENVIRONMENT || 'production') as
+      | 'sandbox'
+      | 'production'
+
+    if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_REDIRECT_URI) {
+      return ApiResponseHelper.internalError('eBay not configured on server')
+    }
+
+    const client = new eBayClient({
+      environment,
+      marketplaceId: marketplace as 'EBAY_US' | 'EBAY_GB',
+      clientId: process.env.EBAY_CLIENT_ID,
+      clientSecret: process.env.EBAY_CLIENT_SECRET || '',
+      redirectUrl: process.env.EBAY_REDIRECT_URI,
+    })
+
+    // Generate authorization URL
+    const authUrl = client.getAuthorizationUrl(state)
+
+    return ApiResponseHelper.success({
+      authUrl,
+      state,
+    })
+  } catch (error) {
+    return ApiResponseHelper.internalError('Failed to initiate OAuth flow')
+  }
+}

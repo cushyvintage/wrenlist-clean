@@ -1,15 +1,81 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
 
 export default function PlatformConnectPage() {
+  const searchParams = useSearchParams()
+  const [isLoading, setIsLoading] = useState(false)
+  const [ebayConnected, setEbayConnected] = useState(false)
+  const [ebayUser, setEbayUser] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [salesDetection, setSalesDetection] = useState<Record<string, boolean>>({
     ebay: true,
     vinted: true,
   })
+
+  // Check OAuth response
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const errorMsg = searchParams.get('error')
+
+    if (success === 'ebay') {
+      setEbayConnected(true)
+      setError(null)
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+
+    if (errorMsg) {
+      setError(`OAuth failed: ${errorMsg}`)
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [searchParams])
+
+  // Load eBay connection status on mount
+  useEffect(() => {
+    const checkEbayConnection = async () => {
+      try {
+        const response = await fetch('/api/ebay/status')
+        if (response.ok) {
+          const data = await response.json()
+          setEbayConnected(data.data?.connected || false)
+          setEbayUser(data.data?.username || null)
+        }
+      } catch (error) {
+        // Silently fail - status check is non-critical
+      }
+    }
+
+    checkEbayConnection()
+  }, [])
+
+  const handleConnectEbay = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ebay/oauth/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketplace: 'EBAY_GB' }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate OAuth flow')
+      }
+
+      const { data } = await response.json()
+      window.location.href = data.authUrl
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect to eBay')
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -20,6 +86,13 @@ export default function PlatformConnectPage() {
           ← back to settings
         </a>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red rounded text-sm text-red">
+          {error}
+        </div>
+      )}
 
       {/* Extension banner */}
       <div className="flex items-center gap-4 p-4 bg-sage-pale border border-sage rounded">
@@ -49,53 +122,71 @@ export default function PlatformConnectPage() {
           </div>
           <div className="flex-1">
             <div className="font-medium text-sm text-ink">eBay UK</div>
-            <div className="text-xs text-ink-lt">147 active listings synced</div>
+            {ebayConnected && ebayUser ? (
+              <div className="text-xs text-ink-lt">Account: {ebayUser}</div>
+            ) : (
+              <div className="text-xs text-ink-lt">Click below to authorize</div>
+            )}
           </div>
-          <Badge status="listed" label="connected" />
+          <Badge status={ebayConnected ? 'listed' : 'draft'} label={ebayConnected ? 'connected' : 'not connected'} />
         </div>
 
-        <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
-            <div className="text-sm text-ink font-mono">jordan_thrifts</div>
-          </div>
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Email</div>
-            <div className="text-sm text-ink font-mono">jordan@example.com</div>
-          </div>
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Synced</div>
-            <div className="text-sm text-ink">2 minutes ago</div>
-          </div>
-        </div>
+        {ebayConnected && ebayUser && (
+          <>
+            <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
+              <div>
+                <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
+                <div className="text-sm text-ink font-mono">{ebayUser}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-ink-lt mb-1">Marketplace</div>
+                <div className="text-sm text-ink">eBay UK (GB)</div>
+              </div>
+            </div>
 
-        <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
-          <div>
-            <div className="font-medium text-sm text-ink">Sale detection</div>
-            <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when eBay reports a sale</div>
-          </div>
+            <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+              <div>
+                <div className="font-medium text-sm text-ink">Sale detection</div>
+                <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when eBay reports a sale</div>
+              </div>
+              <button
+                onClick={() => setSalesDetection({ ...salesDetection, ebay: !salesDetection.ebay })}
+                className={`relative w-10 h-6 rounded-full transition ${
+                  salesDetection.ebay ? 'bg-sage' : 'bg-gray-300'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
+                    salesDetection.ebay ? 'right-0.5' : 'left-0.5'
+                  }`}
+                ></div>
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleConnectEbay}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition disabled:opacity-50"
+              >
+                ↻ Reconnect
+              </button>
+              <button className="flex-1 px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition">
+                Disconnect
+              </button>
+            </div>
+          </>
+        )}
+
+        {!ebayConnected && (
           <button
-            onClick={() => setSalesDetection({ ...salesDetection, ebay: !salesDetection.ebay })}
-            className={`relative w-10 h-6 rounded-full transition ${
-              salesDetection.ebay ? 'bg-sage' : 'bg-gray-300'
-            }`}
+            onClick={handleConnectEbay}
+            disabled={isLoading}
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
           >
-            <div
-              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
-                salesDetection.ebay ? 'right-0.5' : 'left-0.5'
-              }`}
-            ></div>
+            {isLoading ? 'Connecting...' : 'Connect eBay account →'}
           </button>
-        </div>
-
-        <div className="flex gap-2">
-          <button className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition">
-            ↻ Reconnect
-          </button>
-          <button className="flex-1 px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition">
-            Disconnect
-          </button>
-        </div>
+        )}
       </Panel>
 
       {/* Vinted */}
