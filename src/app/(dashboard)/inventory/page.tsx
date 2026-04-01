@@ -521,13 +521,12 @@ export default function InventoryPage() {
                     className="cursor-pointer"
                   />
                 </th>
-                <th className="text-left py-[10px] px-[18px] min-w-[240px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
-                <th className="text-left py-[10px] px-[18px] min-w-[140px] text-[10px] uppercase tracking-[.08em] font-medium">source</th>
-                <th className="text-right py-[10px] px-[18px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
-                <th className="text-right py-[10px] px-[18px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
-                <th className="text-right py-[10px] px-[18px] w-20 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
-                <th className="text-left py-[10px] px-[18px] min-w-[140px] text-[10px] uppercase tracking-[.08em] font-medium">platform</th>
-                <th className="text-left py-[10px] px-[18px] min-w-[120px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[180px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[90px] text-[10px] uppercase tracking-[.08em] font-medium hidden md:table-cell">source</th>
+                <th className="text-right py-[10px] px-[12px] w-14 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
+                <th className="text-right py-[10px] px-[12px] w-14 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
+                <th className="text-right py-[10px] px-[12px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
+                <th className="text-left py-[10px] px-[12px] min-w-[120px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
               </tr>
             </thead>
             <tbody>
