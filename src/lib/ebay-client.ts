@@ -451,24 +451,34 @@ export async function getEbayClientForUser(
 
   // Load tokens and refresh if needed
   if (tokens.refresh_token) {
-    // If token expires within next hour, refresh it
-    if (new Date(tokens.expires_at) <= new Date(Date.now() + 3600000)) {
-      const newTokens = await client.refreshAccessToken(tokens.refresh_token)
+    // If token expires within next 2 hours, refresh it (conservative)
+    if (new Date(tokens.expires_at) <= new Date(Date.now() + 7200000)) {
+      try {
+        const newTokens = await client.refreshAccessToken(tokens.refresh_token)
 
-      // Update database with new token
-      await supabaseClient
-        .from('ebay_tokens')
-        .update({
-          access_token: newTokens.accessToken,
-          refresh_token: newTokens.refreshToken,
-          expires_at: newTokens.expiresAt.toISOString(),
-          updated_at: new Date().toISOString(),
+        // Update database with new token
+        await supabaseClient
+          .from('ebay_tokens')
+          .update({
+            access_token: newTokens.accessToken,
+            refresh_token: newTokens.refreshToken,
+            expires_at: newTokens.expiresAt.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+          .eq('marketplace_id', marketplace)
+
+        // Load refreshed tokens into client
+        client.setTokens(newTokens)
+      } catch (error) {
+        // Log refresh error but don't throw — use existing token (might still work)
+        console.error('eBay token refresh failed:', error instanceof Error ? error.message : 'Unknown error')
+        client.setTokens({
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: new Date(tokens.expires_at),
         })
-        .eq('user_id', userId)
-        .eq('marketplace_id', marketplace)
-
-      // Load refreshed tokens into client
-      client.setTokens(newTokens)
+      }
     } else {
       // Use existing tokens
       client.setTokens({
