@@ -65,12 +65,13 @@ export async function POST(request: NextRequest) {
     const inventoryItem = {
       sku,
       title: find.name,
-      description: find.description || '',
+      description: find.description || find.name,
       price: find.asking_price_gbp || find.cost_gbp || 0,
       quantity: 1,
       condition: ebayCondition,
       brand: find.brand || undefined,
       images: find.photos || [],
+      merchantLocation: process.env.EBAY_MERCHANT_LOCATION_KEY || '002a1871-f1a8-41fc-ac4d-6002d0a9127c',
     }
 
     // If dry run, return what would be published
@@ -114,7 +115,10 @@ export async function POST(request: NextRequest) {
       categoryId,
       listingFormat: 'FIXED_PRICE',
       policyIds: {
-        // Use default policies - these can be set up in eBay seller center
+        // Fetched from cushyvintage eBay seller account (EBAY_GB)
+        fulfillmentPolicyId: process.env.EBAY_FULFILLMENT_POLICY_ID || '249647611012',
+        returnPolicyId: process.env.EBAY_RETURN_POLICY_ID || '249647605012',
+        paymentPolicyId: process.env.EBAY_PAYMENT_POLICY_ID || '249647603012',
       },
     }
 
