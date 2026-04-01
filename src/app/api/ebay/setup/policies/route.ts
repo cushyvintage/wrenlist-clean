@@ -71,15 +71,21 @@ export async function GET(request: NextRequest) {
     )
 
     // Parse responses
-    const fulfillmentData = fulfillmentRes.ok ? await fulfillmentRes.json() : { fulfillmentPolicySummaries: [] }
-    const returnData = returnRes.ok ? await returnRes.json() : { returnPolicySummaries: [] }
-    const paymentData = paymentRes.ok ? await paymentRes.json() : { paymentPolicySummaries: [] }
+    const fulfillmentData = fulfillmentRes.ok ? await fulfillmentRes.json() : { fulfillmentPolicies: [] }
+    const returnData = returnRes.ok ? await returnRes.json() : { returnPolicies: [] }
+    const paymentData = paymentRes.ok ? await paymentRes.json() : { paymentPolicies: [] }
     const locationData = locationRes.ok ? await locationRes.json() : { locations: [] }
 
     return ApiResponseHelper.success({
-      fulfillmentPolicies: fulfillmentData.fulfillmentPolicySummaries || [],
-      returnPolicies: returnData.returnPolicySummaries || [],
-      paymentPolicies: paymentData.paymentPolicySummaries || [],
+      fulfillmentPolicies: (fulfillmentData.fulfillmentPolicies || []).map((p: any) => ({
+        id: p.fulfillmentPolicyId,
+        name: p.name,
+        summary: p.shippingOptions?.[0]?.shippingServices?.[0]?.freeShipping
+          ? `${p.shippingOptions[0].shippingServices[0].shippingServiceCode?.replace('UK_', '')} · Free · ${p.handlingTime?.value ?? 1}-${(p.handlingTime?.value ?? 1) + 1} days`
+          : p.name,
+      })),
+      returnPolicies: returnData.returnPolicies || [],
+      paymentPolicies: paymentData.paymentPolicies || [],
       locations: locationData.locations || [],
     })
   } catch (error) {
