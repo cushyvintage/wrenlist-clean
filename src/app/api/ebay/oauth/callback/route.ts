@@ -18,15 +18,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
 
-    // Get authenticated user
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.redirect(
-        new URL('/auth/login?error=unauthorized', request.url)
-      )
-    }
-
     // Extract query parameters
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
@@ -37,34 +28,33 @@ export async function GET(request: NextRequest) {
     // Check for eBay errors
     if (error) {
       return NextResponse.redirect(
-        new URL(`/platform-connect?error=${encodeURIComponent(error)}`, request.url)
+        new URL(`https://app.wrenlist.com/platform-connect?error=${encodeURIComponent(error)}`)
       )
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('/platform-connect?error=missing_params', request.url)
+        new URL('https://app.wrenlist.com/platform-connect?error=missing_params')
       )
     }
 
-    // Validate state parameter (CSRF protection)
+    // Validate state parameter (CSRF protection) — no session needed, state record contains user_id
     const { data: stateRecord, error: stateError } = await supabase
       .from('ebay_oauth_states')
       .select('*')
       .eq('state', state)
-      .eq('user_id', user.id)
       .single()
 
     if (stateError || !stateRecord) {
       return NextResponse.redirect(
-        new URL('/platform-connect?error=invalid_state', request.url)
+        new URL('https://app.wrenlist.com/platform-connect?error=invalid_state')
       )
     }
 
     // Check state expiration
     if (new Date(stateRecord.expires_at) < new Date()) {
       return NextResponse.redirect(
-        new URL('/platform-connect?error=state_expired', request.url)
+        new URL('https://app.wrenlist.com/platform-connect?error=state_expired')
       )
     }
 
@@ -83,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     if (!process.env.EBAY_CLIENT_ID || !process.env.EBAY_CLIENT_SECRET) {
       return NextResponse.redirect(
-        new URL('/platform-connect?error=server_error', request.url)
+        new URL('https://app.wrenlist.com/platform-connect?error=server_error')
       )
     }
 
@@ -106,7 +96,7 @@ export async function GET(request: NextRequest) {
     const { data: existingTokens } = await supabase
       .from('ebay_tokens')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', stateRecord.user_id)
       .eq('marketplace_id', marketplace)
       .single()
 
@@ -121,12 +111,12 @@ export async function GET(request: NextRequest) {
           expires_at: tokens.expiresAt.toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id)
+        .eq('user_id', stateRecord.user_id)
         .eq('marketplace_id', marketplace)
 
       if (updateError) {
         return NextResponse.redirect(
-          new URL('/platform-connect?error=db_error', request.url)
+          new URL('https://app.wrenlist.com/platform-connect?error=db_error')
         )
       }
     } else {
@@ -134,7 +124,7 @@ export async function GET(request: NextRequest) {
       const { error: insertError } = await supabase
         .from('ebay_tokens')
         .insert({
-          user_id: user.id,
+          user_id: stateRecord.user_id,
           marketplace_id: marketplace,
           ebay_user: ebayUser.username,
           access_token: tokens.accessToken,
@@ -145,7 +135,7 @@ export async function GET(request: NextRequest) {
 
       if (insertError) {
         return NextResponse.redirect(
-          new URL('/platform-connect?error=db_error', request.url)
+          new URL('https://app.wrenlist.com/platform-connect?error=db_error')
         )
       }
     }
@@ -159,7 +149,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     return NextResponse.redirect(
-      new URL('/platform-connect?error=callback_error', request.url)
+      new URL('https://app.wrenlist.com/platform-connect?error=callback_error')
     )
   }
 }
