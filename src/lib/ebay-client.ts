@@ -279,7 +279,6 @@ export class eBayClient {
     const url = `${this.baseUrl}${endpoint}`
     const headers = {
       'Content-Type': 'application/json',
-      'Content-Language': 'en-GB',
       'Authorization': `Bearer ${this.getAccessToken()}`,
       ...options.headers,
     }
