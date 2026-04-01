@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     try {
       ebayClient = await getEbayClientForUser(user.id, supabase, marketplace as 'EBAY_GB' | 'EBAY_US')
     } catch (e) {
-      return ApiResponseHelper.unauthorized('Your eBay connection has expired. Please reconnect in Platform Connect.')
+      return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect in Platform Connect.')
     }
 
     // Create inventory item

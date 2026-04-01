@@ -292,7 +292,7 @@ export class eBayClient {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
       const msg = error.errors?.[0]?.message || error.message || error.error || response.statusText
       throw new Error(`eBay API error (${response.status}): ${msg}`)
     }
@@ -336,7 +336,7 @@ export class eBayClient {
         body: JSON.stringify(payload),
       })
       if (!invResponse.ok) {
-        const invError = await invResponse.json().catch(() => ({ message: invResponse.statusText }))
+        const invError = await invResponse.json().catch(() => ({ message: invResponse.statusText })) as any
         const msg = invError.errors?.[0]?.message || invError.message || invResponse.statusText
         throw new Error(`eBay inventory item error (${invResponse.status}): ${msg}`)
       }
@@ -375,7 +375,7 @@ export class eBayClient {
       body: JSON.stringify(offer),
     })
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
       // If offer already exists, return the existing offerId
       if (error.errors?.[0]?.errorId === 25002) {
         const existingOfferId = error.errors[0].parameters?.find((p: any) => p.name === 'offerId')?.value
@@ -401,7 +401,7 @@ export class eBayClient {
       }),
     })
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
       const msg = error.errors?.[0]?.message || error.message || response.statusText
       throw new Error(`eBay API error (${response.status}): ${msg}`)
     }

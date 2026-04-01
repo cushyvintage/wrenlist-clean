@@ -112,19 +112,19 @@ export default function PlatformConnectPage() {
 
             // Shipping: prefer "Postage Policy", else first
             if (policies.shipping && policies.shipping.length > 0) {
-              const postagePolicy = policies.shipping.find(p => p.name === 'Postage Policy')
+              const postagePolicy = policies.shipping.find((p: any) => p.name === 'Postage Policy')
               defaults.shipping = postagePolicy?.id || policies.shipping[0].id
             }
 
             // Returns: prefer "Returns policy", else first
             if (policies.returns && policies.returns.length > 0) {
-              const returnsPolicy = policies.returns.find(p => p.name === 'Returns policy')
+              const returnsPolicy = policies.returns.find((p: any) => p.name === 'Returns policy')
               defaults.returns = returnsPolicy?.id || policies.returns[0].id
             }
 
             // Payment: prefer "Payment Policy", else first
             if (policies.payment && policies.payment.length > 0) {
-              const paymentPolicy = policies.payment.find(p => p.name === 'Payment Policy')
+              const paymentPolicy = policies.payment.find((p: any) => p.name === 'Payment Policy')
               defaults.payment = paymentPolicy?.id || policies.payment[0].id
             }
 

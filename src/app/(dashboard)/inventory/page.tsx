@@ -605,11 +605,11 @@ export default function InventoryPage() {
                           complete & list →
                         </button>
                       </div>
-                    ) : find.platform_fields?.ebay?.status === 'live' ? (
+                    ) : (find.platform_fields as any)?.ebay?.status === 'live' ? (
                       <div className="flex items-center gap-2">
                         <Badge status="listed" />
                         <a
-                          href={find.platform_fields.ebay.url}
+                          href={(find.platform_fields as any).ebay.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[11px] underline underline-offset-2 transition-colors"
