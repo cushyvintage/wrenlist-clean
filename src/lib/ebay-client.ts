@@ -324,16 +324,21 @@ export class eBayClient {
         },
       }
 
-      await this.apiRequest(
-        '/sell/inventory/v1/inventory_item/' + encodeURIComponent(sku),
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Language': 'en-GB',
-          },
-          body: JSON.stringify(payload),
-        }
-      )
+      // Direct fetch — bypass apiRequest to avoid runtime-injected headers
+      const invResponse = await fetch(`${this.baseUrl}/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Language': 'en-GB',
+          'Authorization': `Bearer ${this.getAccessToken()}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      if (!invResponse.ok) {
+        const invError = await invResponse.json().catch(() => ({ message: invResponse.statusText }))
+        const msg = invError.errors?.[0]?.message || invError.message || invResponse.statusText
+        throw new Error(`eBay inventory item error (${invResponse.status}): ${msg}`)
+      }
 
       return {
         success: true,
