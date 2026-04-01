@@ -359,19 +359,43 @@ export class eBayClient {
    * Create an offer
    */
   async createOffer(offer: any): Promise<any> {
-    return await this.apiRequest('/sell/inventory/v1/offer', {
+    // Use direct fetch — Content-Language must NOT be sent to the offer endpoint
+    const response = await fetch(`${this.baseUrl}/sell/inventory/v1/offer`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+      },
       body: JSON.stringify(offer),
     })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText }))
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay API error (${response.status}): ${msg}`)
+    }
+    return response.json()
   }
 
   /**
    * Publish an offer
    */
   async publishOffer(offerId: string): Promise<any> {
-    return await this.apiRequest(`/sell/inventory/v1/offer/${offerId}/publish`, {
+    const response = await fetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/publish`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+      },
     })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText }))
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay API error (${response.status}): ${msg}`)
+    }
+    const text = await response.text()
+    return text ? JSON.parse(text) : {}
   }
 
   /**
