@@ -225,6 +225,9 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [planLimitError, setPlanLimitError] = useState<string | null>(null)
+  const [ebayConnected, setEbayConnected] = useState(false)
+  const [publishingFindId, setPublishingFindId] = useState<string | null>(null)
+  const [publishError, setPublishError] = useState<Record<string, string>>({})
 
   /**
    * Set page title on mount
@@ -248,6 +251,13 @@ export default function InventoryPage() {
         if (profileRes.ok) {
           const profileData = await profileRes.json()
           setProfile(profileData.data)
+        }
+
+        // Check eBay connection status
+        const ebayRes = await fetch('/api/ebay/status')
+        if (ebayRes.ok) {
+          const ebayData = await ebayRes.json()
+          setEbayConnected(ebayData.data?.connected || false)
         }
 
         // Fetch finds
@@ -319,6 +329,56 @@ export default function InventoryPage() {
     }
 
     router.push('/add-find')
+  }
+
+  const handleListOnEbay = async (findId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPublishingFindId(findId)
+    setPublishError({ ...publishError, [findId]: '' })
+
+    try {
+      const response = await fetch('/api/ebay/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        const message = data.message || 'Failed to publish to eBay'
+        setPublishError({ ...publishError, [findId]: message })
+        return
+      }
+
+      const data = await response.json()
+
+      // Update find with eBay listing info
+      setFinds((prevFinds) =>
+        prevFinds.map((find) => {
+          if (find.id === findId) {
+            return {
+              ...find,
+              platform_fields: {
+                ...find.platform_fields,
+                ebay: {
+                  listingId: data.data.listingId,
+                  offerId: data.data.offerId,
+                  status: 'live',
+                  url: data.data.listingUrl,
+                  publishedAt: new Date().toISOString(),
+                },
+              },
+            }
+          }
+          return find
+        })
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to publish to eBay'
+      setPublishError({ ...publishError, [findId]: message })
+    } finally {
+      setPublishingFindId(null)
+    }
   }
 
   const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
@@ -544,6 +604,35 @@ export default function InventoryPage() {
                         >
                           complete & list →
                         </button>
+                      </div>
+                    ) : find.platform_fields?.ebay?.status === 'live' ? (
+                      <div className="flex items-center gap-2">
+                        <Badge status="listed" />
+                        <a
+                          href={find.platform_fields.ebay.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] underline underline-offset-2 transition-colors"
+                          style={{ color: '#5A7A57' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Live on eBay →
+                        </a>
+                      </div>
+                    ) : ebayConnected && find.status !== 'sold' ? (
+                      <div className="flex flex-col gap-2">
+                        <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                        <button
+                          onClick={(e) => handleListOnEbay(find.id, e)}
+                          disabled={publishingFindId === find.id}
+                          className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50"
+                          style={{ color: '#5A7A57' }}
+                        >
+                          {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
+                        </button>
+                        {publishError[find.id] && (
+                          <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
+                        )}
                       </div>
                     ) : (
                       <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
