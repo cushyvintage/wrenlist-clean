@@ -1,5 +1,13 @@
 # Wrenlist Clean Build — Agent Guide
 
+## ⚠️ TypeScript Strict — Common Pitfalls
+- **Catch blocks**: `error` is `unknown`. Use `(err as any)` or `err instanceof Error ? err.message : 'unknown'`
+- **setState map callbacks**: spreading `...find` returns a union type. Always cast: `prevFinds.map(...) as Find[]`
+- **ApiResponseHelper.unauthorized()** takes 0 args — use `.badRequest(msg)` for custom error messages
+- **Dynamic fields** like `platform_fields.ebay.status`: cast as `(find.platform_fields as any)?.ebay?.status`
+- **undici**: must be in package.json (`npm install undici`) — Node 18 built-in doesn't resolve in webpack
+- **eBay headers**: `Content-Language: en-GB` = inventory PUT only. `Content-Language: en-US` = offer POST/publish. Never global.
+
 ## Project
 Vintage resale management SaaS. Clean rebuild. Single-user (no orgs). UK-first.
 
