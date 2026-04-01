@@ -607,7 +607,7 @@ export default function InventoryPage() {
                           <button
                             onClick={(e) => handleListOnEbay(find.id, e)}
                             disabled={publishingFindId === find.id}
-                            className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50 text-left"
+                            className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50 text-left whitespace-nowrap"
                             style={{ color: '#B5813A' }}
                           >
                             {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
