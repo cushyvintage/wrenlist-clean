@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { fetch as undiciFetch, Headers as UndiciHeaders } from 'undici'
 
 // Types
 interface eBayConfig {
@@ -324,14 +325,14 @@ export class eBayClient {
         },
       }
 
-      // Direct fetch — bypass apiRequest to avoid runtime-injected headers
-      const invResponse = await fetch(`${this.baseUrl}/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
+      // Use undici to avoid Vercel runtime-injected headers
+      const invResponse = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
         method: 'PUT',
-        headers: {
+        headers: new UndiciHeaders({
           'Content-Type': 'application/json',
           'Content-Language': 'en-GB',
           'Authorization': `Bearer ${this.getAccessToken()}`,
-        },
+        }),
         body: JSON.stringify(payload),
       })
       if (!invResponse.ok) {
@@ -363,14 +364,14 @@ export class eBayClient {
    * Create an offer
    */
   async createOffer(offer: any): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/sell/inventory/v1/offer`, {
+    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer`, {
       method: 'POST',
-      headers: {
+      headers: new UndiciHeaders({
         'Content-Type': 'application/json',
         'Content-Language': 'en-US',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
-      },
+      }),
       body: JSON.stringify(offer),
     })
     if (!response.ok) {
@@ -390,14 +391,14 @@ export class eBayClient {
    * Publish an offer
    */
   async publishOffer(offerId: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/publish`, {
+    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/publish`, {
       method: 'POST',
-      headers: {
+      headers: new UndiciHeaders({
         'Content-Type': 'application/json',
         'Content-Language': 'en-US',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
-      },
+      }),
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }))
