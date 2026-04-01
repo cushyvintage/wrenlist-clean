@@ -89,64 +89,28 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     const tokens = await client.exchangeCodeForTokens(code)
 
-    // Get user info from eBay to verify auth
-    client.setTokens(tokens)
-    const ebayUser = await client.getUser()
-
-    // Check if tokens entry exists
-    const { data: existingTokens } = await supabase
+    // Upsert tokens — insert or update
+    const { error: upsertError } = await supabase
       .from('ebay_tokens')
-      .select('id')
-      .eq('user_id', stateRecord.user_id)
-      .eq('marketplace_id', marketplace)
-      .single()
+      .upsert({
+        user_id: stateRecord.user_id,
+        marketplace_id: marketplace,
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        expires_at: tokens.expiresAt.toISOString(),
+        scope: tokens.scope?.join(' ') || 'sell.inventory sell.account',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,marketplace_id' })
 
-    if (existingTokens) {
-      // Update existing tokens
-      const { error: updateError } = await supabase
-        .from('ebay_tokens')
-        .update({
-          ebay_user: ebayUser.username,
-          access_token: tokens.accessToken,
-          refresh_token: tokens.refreshToken,
-          expires_at: tokens.expiresAt.toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', stateRecord.user_id)
-        .eq('marketplace_id', marketplace)
-
-      if (updateError) {
-        return NextResponse.redirect(
-          new URL('https://app.wrenlist.com/platform-connect?error=db_error')
-        )
-      }
-    } else {
-      // Create new tokens entry
-      const { error: insertError } = await supabase
-        .from('ebay_tokens')
-        .insert({
-          user_id: stateRecord.user_id,
-          marketplace_id: marketplace,
-          ebay_user: ebayUser.username,
-          access_token: tokens.accessToken,
-          refresh_token: tokens.refreshToken,
-          expires_at: tokens.expiresAt.toISOString(),
-          scope: tokens.scope.join(' '),
-        })
-
-      if (insertError) {
-        return NextResponse.redirect(
-          new URL('https://app.wrenlist.com/platform-connect?error=db_error')
-        )
-      }
+    if (upsertError) {
+      return NextResponse.redirect(
+        new URL('https://app.wrenlist.com/platform-connect?error=db_error')
+      )
     }
 
     // Redirect to success page
     return NextResponse.redirect(
-      new URL(
-        `/platform-connect?success=ebay&marketplace=${marketplace}`,
-        request.url
-      )
+      new URL('https://app.wrenlist.com/platform-connect?success=ebay')
     )
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'unknown'
