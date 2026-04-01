@@ -45,6 +45,11 @@ const EBAY_AUTH_URLS = {
   production: 'https://auth.ebay.com',
 }
 
+const EBAY_TOKEN_URLS = {
+  sandbox: 'https://api.sandbox.ebay.com/identity/v1/oauth2/token',
+  production: 'https://api.ebay.com/identity/v1/oauth2/token',
+}
+
 const EBAY_API_URLS = {
   sandbox: 'https://api.sandbox.ebay.com',
   production: 'https://api.ebay.com',
@@ -66,6 +71,7 @@ export class eBayClient {
   private tokens: eBayTokens | null = null
   private baseUrl: string
   private authUrl: string
+  private tokenUrl: string
 
   constructor(config: eBayConfig) {
     if (!config.clientId || !config.clientSecret) {
@@ -75,6 +81,7 @@ export class eBayClient {
     this.config = config
     this.baseUrl = EBAY_API_URLS[config.environment]
     this.authUrl = EBAY_AUTH_URLS[config.environment]
+    this.tokenUrl = EBAY_TOKEN_URLS[config.environment]
   }
 
   /**
@@ -97,7 +104,7 @@ export class eBayClient {
    */
   async exchangeCodeForTokens(authCode: string): Promise<eBayTokens> {
     try {
-      const response = await fetch(`${this.authUrl}/oauth2/token`, {
+      const response = await fetch(`${this.tokenUrl}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -139,7 +146,7 @@ export class eBayClient {
    */
   async refreshAccessToken(refreshToken: string): Promise<eBayTokens> {
     try {
-      const response = await fetch(`${this.authUrl}/oauth2/token`, {
+      const response = await fetch(`${this.tokenUrl}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
