@@ -83,8 +83,8 @@ export default function BlogPage() {
           <div className="text-xs font-medium text-ink">blog</div>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</button>
-          <button className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</button>
+          <a href="https://app.wrenlist.com/login" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</a>
+          <a href="https://app.wrenlist.com/register" className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</a>
         </div>
       </nav>
 

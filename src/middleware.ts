@@ -43,7 +43,6 @@ export async function middleware(req: NextRequest) {
     '/forgot-password',
     '/reset-password',
     '/verify-email',
-    '/onboarding',
     '/',
     '/landing',
     '/pricing',
@@ -53,8 +52,9 @@ export async function middleware(req: NextRequest) {
     '/roadmap',
   ]
 
-  // Protected dashboard routes
+  // Protected dashboard routes (require authentication)
   const dashboardRoutes = [
+    '/onboarding',
     '/dashboard',
     '/inventory',
     '/add-find',

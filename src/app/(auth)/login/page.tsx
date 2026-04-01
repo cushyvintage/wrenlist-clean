@@ -42,7 +42,13 @@ export default function LoginPage() {
         throw new Error(data.error || 'Failed to log in')
       }
 
-      router.push('/dashboard')
+      // Redirect to app subdomain if on marketing domain
+      const currentHost = typeof window !== 'undefined' ? window.location.host : ''
+      if (currentHost === 'wrenlist.com' || currentHost === 'www.wrenlist.com') {
+        window.location.href = 'https://app.wrenlist.com/dashboard'
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to log in')
     } finally {
