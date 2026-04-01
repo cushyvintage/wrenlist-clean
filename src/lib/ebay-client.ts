@@ -420,6 +420,9 @@ export async function getEbayClientForUser(
         })
         .eq('user_id', userId)
         .eq('marketplace_id', marketplace)
+
+      // Load refreshed tokens into client
+      client.setTokens(newTokens)
     } else {
       // Use existing tokens
       client.setTokens({
