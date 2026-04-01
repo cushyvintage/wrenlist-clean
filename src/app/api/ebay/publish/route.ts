@@ -148,8 +148,20 @@ export async function POST(request: NextRequest) {
 
     const offerResult = await ebayClient.createOffer(offer)
 
-    // Publish offer
-    const publishResult = await ebayClient.publishOffer(offerResult.offerId)
+    // Publish offer with 25002 retry
+    let publishResult
+    try {
+      publishResult = await ebayClient.publishOffer(offerResult.offerId)
+    } catch (error) {
+      // Check if error is 25002 (system error)
+      if (error instanceof Error && error.message.includes('25002')) {
+        // Wait 2 seconds and retry once
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        publishResult = await ebayClient.publishOffer(offerResult.offerId)
+      } else {
+        throw error
+      }
+    }
 
     // Update find with eBay listing info
     const platformFields = find.platform_fields || {}
