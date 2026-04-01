@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     // Generate CSRF state parameter
     const state = crypto.randomBytes(32).toString('hex')
 
-    // Store state in database (expires in 15 minutes)
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
+    // Store state in database (expires in 60 minutes)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000)
 
     const { error: stateError } = await supabase
       .from('ebay_oauth_states')
