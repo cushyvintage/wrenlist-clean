@@ -86,6 +86,7 @@ export default function InventoryDetailPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [markSoldConfirm, setMarkSoldConfirm] = useState(false)
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
 
   // Fetch find details
@@ -262,6 +263,80 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleMarkSold = async () => {
+    if (!find) return
+
+    try {
+      setIsSaving(true)
+      setError(null)
+
+      // Update find status to "sold"
+      const res = await fetch(`/api/finds/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'sold',
+          sold_at: new Date().toISOString(),
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to mark as sold')
+      }
+
+      // Delist from eBay if listing exists
+      const marketplaceRes = await fetch(`/api/finds/${id}/marketplace`)
+      if (marketplaceRes.ok) {
+        const marketplaceData = await marketplaceRes.json()
+        const ebayListing = marketplaceData.data?.find((m: any) => m.marketplace === 'ebay')
+
+        if (ebayListing && ebayListing.status === 'listed') {
+          try {
+            await fetch('/api/ebay/delist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ find_id: id }),
+            })
+          } catch (e) {
+            // Delist error is non-fatal — find is already marked as sold
+            console.error('Failed to delist from eBay:', e)
+          }
+        }
+
+        // Mark other marketplaces for delist (Vinted)
+        if (marketplaceData.data) {
+          for (const mp of marketplaceData.data) {
+            if (mp.marketplace !== 'ebay' && mp.status === 'listed') {
+              try {
+                await fetch(`/api/finds/${id}/marketplace?marketplace=${mp.marketplace}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'needs_delist' }),
+                })
+              } catch (e) {
+                console.error(`Failed to mark ${mp.marketplace} for delist:`, e)
+              }
+            }
+          }
+        }
+      }
+
+      // Reload find to show updated status
+      const findRes = await fetch(`/api/finds/${id}`)
+      if (findRes.ok) {
+        const findData = await findRes.json()
+        if (findData.data) {
+          setFind(findData.data)
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to mark as sold'
+      setError(message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -280,6 +355,57 @@ export default function InventoryDetailPage() {
         >
           Back to inventory →
         </button>
+      </div>
+    )
+  }
+
+  if (markSoldConfirm) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div
+          className="p-8 rounded text-center"
+          style={{
+            backgroundColor: '#FFF9F3',
+            borderWidth: '1px',
+            borderColor: 'rgba(196,138,58,.2)',
+          }}
+        >
+          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
+            Mark "{find.name}" as sold?
+          </h2>
+          <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>
+            This will delist the item from all active marketplaces.
+          </p>
+          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
+            Extension will handle Vinted delisting in the background.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setMarkSoldConfirm(false)}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.22)',
+                backgroundColor: 'transparent',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleMarkSold}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
+              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#A5723A')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#C4883A')}
+            >
+              {isSaving ? 'Processing...' : 'Mark as Sold'}
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -352,6 +478,22 @@ export default function InventoryDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge status={find.status as 'draft' | 'listed' | 'on_hold' | 'sold'} />
+          {!isEditing && find.status === 'listed' && (
+            <button
+              onClick={() => setMarkSoldConfirm(true)}
+              className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+              style={{
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.22)',
+                backgroundColor: 'transparent',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FED8B1')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              Mark as Sold
+            </button>
+          )}
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}

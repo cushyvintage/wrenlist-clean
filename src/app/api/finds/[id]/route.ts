@@ -131,6 +131,74 @@ export async function PUT(
 }
 
 /**
+ * PATCH /api/finds/[id]
+ * Partial update a find (supports status, sold_at, etc.)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getServerUser()
+    if (!user) {
+      return ApiResponseHelper.unauthorized()
+    }
+
+    const supabase = await createSupabaseServerClient()
+    const { id } = await params
+    const body = await request.json()
+
+    // Ensure user owns this find
+    const { data: existing, error: checkError } = await supabase
+      .from('finds')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (checkError || !existing) {
+      return ApiResponseHelper.notFound()
+    }
+
+    // Allow partial updates for: status, sold_at, sold_price_gbp
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    }
+
+    if ('status' in body) {
+      updateData.status = body.status
+    }
+    if ('sold_at' in body) {
+      updateData.sold_at = body.sold_at
+    }
+    if ('sold_price_gbp' in body) {
+      updateData.sold_price_gbp = body.sold_price_gbp
+    }
+
+    const { data, error } = await supabase
+      .from('finds')
+      .update(updateData)
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError()
+    }
+
+    return ApiResponseHelper.success(data as Find)
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('PATCH /api/finds/[id] error:', error)
+    }
+    return ApiResponseHelper.internalError()
+  }
+}
+
+/**
  * DELETE /api/finds/[id]
  * Delete a find
  */

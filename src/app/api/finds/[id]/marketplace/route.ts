@@ -127,6 +127,63 @@ export async function POST(
 }
 
 /**
+ * PATCH /api/finds/[id]/marketplace?marketplace=vinted
+ * Update status for a specific marketplace
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getServerUser()
+    if (!user) {
+      return ApiResponseHelper.unauthorized()
+    }
+
+    const { id: findId } = await params
+    const { searchParams } = new URL(request.url)
+    const marketplace = searchParams.get('marketplace')
+    const body = await request.json()
+
+    if (!marketplace) {
+      return ApiResponseHelper.badRequest('marketplace query parameter is required')
+    }
+
+    const supabase = await createSupabaseServerClient()
+
+    // Verify user owns this find
+    const { data: find, error: findError } = await supabase
+      .from('finds')
+      .select('id')
+      .eq('id', findId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (findError || !find) {
+      return ApiResponseHelper.notFound('Find not found')
+    }
+
+    // Update marketplace data status
+    const { error } = await supabase
+      .from('product_marketplace_data')
+      .update({
+        status: body.status || 'needs_delist',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('find_id', findId)
+      .eq('marketplace', marketplace)
+
+    if (error) {
+      return ApiResponseHelper.internalError()
+    }
+
+    return ApiResponseHelper.success({ message: 'Marketplace data updated' })
+  } catch (error) {
+    return ApiResponseHelper.internalError()
+  }
+}
+
+/**
  * DELETE /api/finds/[id]/marketplace?marketplace=vinted
  * Delete marketplace data for a specific marketplace
  */

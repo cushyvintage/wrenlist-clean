@@ -417,6 +417,29 @@ export class eBayClient {
   }
 
   /**
+   * End an offer (delist the listing)
+   */
+  async endOffer(offerId: string): Promise<any> {
+    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/end_item`, {
+      method: 'POST',
+      headers: new UndiciHeaders({
+        'Content-Type': 'application/json',
+        'Content-Language': 'en-US',
+        'Accept-Language': 'en-GB',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+      }),
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay API error (${response.status}): ${msg}`)
+    }
+    const text = await response.text()
+    return text ? JSON.parse(text) : {}
+  }
+
+  /**
    * Get current user info
    */
   async getUser(): Promise<any> {

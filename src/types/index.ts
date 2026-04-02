@@ -28,6 +28,7 @@ export type FindCondition = 'excellent' | 'good' | 'fair'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
 export type ListingStatus = 'draft' | 'live' | 'sold' | 'delisted'
+export type MarketplaceDataStatus = 'not_listed' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
 
 export interface Profile {
   id: string
@@ -135,6 +136,22 @@ export interface Listing {
 
 export interface FindWithListings extends FindWithMargin {
   listings: Listing[]
+}
+
+export interface ProductMarketplaceData {
+  id: string
+  find_id: string
+  marketplace: Platform
+  platform_listing_id: string | null
+  platform_listing_url: string | null
+  platform_category_id: string | null
+  listing_price: number | null
+  fields: Record<string, any>
+  status: MarketplaceDataStatus
+  error_message: string | null
+  last_synced_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ============================================================================
