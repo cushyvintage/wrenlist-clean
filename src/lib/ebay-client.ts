@@ -445,6 +445,36 @@ export class eBayClient {
   async getUser(): Promise<any> {
     return await this.apiRequest('/sell/account/v1/user')
   }
+
+  /**
+   * Get orders from Fulfillment API
+   */
+  async getOrders(params: { limit?: number; filter?: string } = {}): Promise<any> {
+    const { limit = 50, filter } = params
+    const url = new URL(`${this.baseUrl}/sell/fulfillment/v1/order`)
+    url.searchParams.set('limit', limit.toString())
+    if (filter) {
+      url.searchParams.set('filter', filter)
+    }
+
+    const response = await undiciFetch(url.toString(), {
+      method: 'GET',
+      headers: new UndiciHeaders({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-GB',
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay API error (${response.status}): ${msg}`)
+    }
+
+    return response.json()
+  }
 }
 
 /**

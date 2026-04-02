@@ -88,6 +88,7 @@ export default function InventoryDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [markSoldConfirm, setMarkSoldConfirm] = useState(false)
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   // Fetch find details
   useEffect(() => {
@@ -337,6 +338,43 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleSyncOrders = async () => {
+    try {
+      setIsSyncing(true)
+      setError(null)
+
+      const res = await fetch('/api/ebay/sync-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.message || 'Failed to sync orders')
+      }
+
+      const result = await res.json()
+
+      // Show success message
+      setError(null)
+      alert(`Synced ${result.data?.ordersChecked || 0} orders, found ${result.data?.itemsSold || 0} sold items`)
+
+      // Reload find to show updated status if it was marked as sold
+      const findRes = await fetch(`/api/finds/${id}`)
+      if (findRes.ok) {
+        const findData = await findRes.json()
+        if (findData.data) {
+          setFind(findData.data)
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to sync orders'
+      setError(message)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -478,6 +516,24 @@ export default function InventoryDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge status={find.status as 'draft' | 'listed' | 'on_hold' | 'sold'} />
+          {!isEditing && (
+            <button
+              onClick={handleSyncOrders}
+              disabled={isSyncing}
+              className="px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              title="Sync eBay orders"
+              style={{
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.22)',
+                backgroundColor: 'transparent',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => !isSyncing && (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {isSyncing ? '↻ Syncing...' : '↻ Sync'}
+            </button>
+          )}
           {!isEditing && find.status === 'listed' && (
             <button
               onClick={() => setMarkSoldConfirm(true)}
