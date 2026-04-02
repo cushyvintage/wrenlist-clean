@@ -74,7 +74,8 @@ VALUES (
     "condition_description": { "show": true, "required": false },
     "brand": { "show": false },
     "author": { "show": true, "required": false },
-    "isbn": { "show": true, "required": false }
+    "isbn": { "show": true, "required": false },
+    "language": { "show": true, "required": false, "options": ["English", "French", "German", "Spanish", "Italian", "Welsh", "Other"] }
   }',
   'manual'
 )
@@ -91,6 +92,7 @@ VALUES (
     "brand": { "show": false },
     "author": { "show": true, "required": false },
     "isbn": { "show": true, "required": false },
+    "language": { "show": true, "required": false, "options": ["English", "French", "German", "Spanish", "Italian", "Welsh", "Other"] },
     "accept_offers": { "show": true, "required": false },
     "is_auction": { "show": true, "required": false }
   }',

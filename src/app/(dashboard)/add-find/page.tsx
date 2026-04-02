@@ -17,10 +17,16 @@ interface PlatformFieldsData {
     secondaryColor?: number
     conditionDescription?: string
     material?: number[]
+    author?: string
+    isbn?: string
+    language?: string
   }
   ebay?: {
     acceptOffers?: boolean
     isAuction?: boolean
+    author?: string
+    isbn?: string
+    language?: string
   }
 }
 
@@ -818,6 +824,68 @@ export default function AddFindPage() {
                     ) : (
                       <p className="text-xs text-sage-dim mb-3">Material selection coming soon</p>
                     )}
+                  </div>
+                )}
+
+                {/* Author (Books) */}
+                {fieldConfig?.author?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Author
+                      {fieldConfig.author.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData.platformFields.vinted?.author) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'author', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="e.g. Jane Austen"
+                    />
+                  </div>
+                )}
+
+                {/* ISBN (Books) */}
+                {fieldConfig?.isbn?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      ISBN
+                      {fieldConfig.isbn.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData.platformFields.vinted?.isbn) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'isbn', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="978..."
+                    />
+                  </div>
+                )}
+
+                {/* Language (Books) */}
+                {fieldConfig?.language?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Language
+                      {fieldConfig.language.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <select
+                      value={(formData.platformFields.vinted?.language) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'language', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    >
+                      <option value="">Select language</option>
+                      {fieldConfig.language.options?.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
               </>
