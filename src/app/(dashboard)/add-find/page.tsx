@@ -63,7 +63,9 @@ const CONDITIONS: { value: FindCondition; label: string }[] = [
   { value: 'fair', label: 'Fair / Worn' },
 ]
 
-const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP).sort()
+const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP)
+  .sort()
+  .map(key => ({ value: key, label: key.charAt(0).toUpperCase() + key.slice(1) }))
 
 export default function AddFindPage() {
   const router = useRouter()
@@ -365,9 +367,9 @@ export default function AddFindPage() {
                 className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
               >
                 <option value="">Select a category</option>
-                {CANONICAL_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {CANONICAL_CATEGORIES.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>
