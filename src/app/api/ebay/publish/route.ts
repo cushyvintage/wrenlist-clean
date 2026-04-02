@@ -67,10 +67,12 @@ export async function POST(request: NextRequest) {
 
     // Map find to eBay inventory format
     const conditionMap: Record<string, string> = {
-      excellent: 'NEW',
-      good: 'LIKE_NEW',
-      fair: 'GOOD_REFURBISHED',
-      poor: 'ACCEPTABLE',
+      excellent: 'LIKE_NEW',
+      good: 'USED_GOOD',
+      fair: 'USED_ACCEPTABLE',
+      poor: 'FOR_PARTS_OR_NOT_WORKING',
+      new_with_tags: 'NEW_WITH_TAGS',
+      new_without_tags: 'NEW_WITHOUT_TAGS',
     }
 
     const categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
