@@ -8,6 +8,8 @@ import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
 import { FindCondition, Platform, CategoryFieldConfig, FieldConfig } from '@/types'
 
+declare const chrome: any
+
 interface PlatformFieldsData {
   vinted?: {
     primaryColor?: number
@@ -359,16 +361,17 @@ export default function AddFindPage() {
       const findId = data?.data?.id || data?.id
 
       // Upload photos if any
+      let uploadedPhotoUrls: string[] = []
       if (findId && formData.photos.length > 0) {
         setError('Uploading photos...')
-        const photoUrls = await uploadPhotosToStorage(findId)
+        uploadedPhotoUrls = await uploadPhotosToStorage(findId)
         setUploadProgress(50)
 
         // Update find with photo URLs
         const patchResponse = await fetch(`/api/finds/${findId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photos: photoUrls }),
+          body: JSON.stringify({ photos: uploadedPhotoUrls }),
         })
 
         if (!patchResponse.ok) {
@@ -401,7 +404,49 @@ export default function AddFindPage() {
             publishResults.ebay = { success: false, error: 'eBay publish failed' }
           }
         }
-        // Vinted: handled by extension — no direct API call here
+        if (platform === 'vinted') {
+          setError('Publishing to Vinted via extension...')
+          try {
+            const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+            const result = await new Promise<any>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Extension timed out')), 60000)
+              // @ts-ignore — chrome is injected by browser extension
+              if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage(EXTENSION_ID, {
+                  action: 'publish_vinted',
+                  find: {
+                    name: formData.title,
+                    description: formData.description,
+                    category: formData.category,
+                    condition: formData.condition,
+                    asking_price_gbp: formData.price,
+                    brand: formData.brand || null,
+                    photos: uploadedPhotoUrls, // Supabase Storage URLs
+                    platform_fields: {
+                      selectedPlatforms: formData.selectedPlatforms,
+                      vinted: formData.platformFields.vinted,
+                    }
+                  },
+                  findId,
+                }, (response: any) => {
+                  clearTimeout(timeout)
+                  if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
+                  else resolve(response)
+                })
+              } else {
+                clearTimeout(timeout)
+                reject(new Error('Wrenlist extension not installed. Please install it to publish to Vinted.'))
+              }
+            })
+            if (result?.ok) {
+              publishResults.vinted = { success: true, url: result.listingUrl }
+            } else {
+              publishResults.vinted = { success: false, error: result?.error || 'Vinted publish failed' }
+            }
+          } catch (e: any) {
+            publishResults.vinted = { success: false, error: e.message }
+          }
+        }
       }
 
       setUploadProgress(100)
