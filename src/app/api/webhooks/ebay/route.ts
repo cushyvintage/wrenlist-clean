@@ -62,21 +62,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // eBay expects: HMAC-SHA256(challenge_code, verification_token)
-    const signature = crypto
-      .createHmac('sha256', verificationToken)
-      .update(challengeCode)
-      .digest('base64')
+    // eBay expects: SHA256(challengeCode + verificationToken + endpointUrl)
+    // Returns challengeResponse as JSON body (not in header)
+    const endpointUrl = `https://app.wrenlist.com/api/webhooks/ebay`
+    const hash = crypto
+      .createHash('sha256')
+      .update(challengeCode + verificationToken + endpointUrl)
+      .digest('hex')
 
-    return NextResponse.json(
-      { challengeResponse: challengeCode },
-      {
-        status: 200,
-        headers: {
-          'X-EBAY-SIGNATURE-256': signature,
-        },
-      }
-    )
+    return NextResponse.json({ challengeResponse: hash }, { status: 200 })
   } catch (error) {
     console.error('[eBay Webhook] GET error:', error)
     return NextResponse.json(
@@ -92,41 +86,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify signature
-    const signature = request.headers.get('X-EBAY-SIGNATURE-256')
-    if (!signature) {
-      console.warn('[eBay Webhook] Missing signature header')
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 401 }
-      )
-    }
-
-    const verificationToken = process.env.EBAY_WEBHOOK_VERIFICATION_TOKEN || ''
-    if (!verificationToken) {
-      console.error('[eBay Webhook] Missing verification token')
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
-    // Read body for signature verification
+    // eBay POST notifications use EC signature with a rotating public key.
+    // Full verification requires fetching eBay's public key and verifying the
+    // X-EBAY-SIGNATURE header (different from challenge response).
+    // For now: log the signature header and accept all events.
+    // TODO: implement full EC signature verification when scaling to multi-seller.
+    const signatureHeader = request.headers.get('X-EBAY-SIGNATURE')
     const body = await request.text()
-
-    // Verify: HMAC-SHA256(body, verification_token) == signature
-    const expectedSignature = crypto
-      .createHmac('sha256', verificationToken)
-      .update(body)
-      .digest('base64')
-
-    if (signature !== expectedSignature) {
-      console.warn('[eBay Webhook] Invalid signature')
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      )
-    }
+    console.log('[eBay Webhook] Received notification, signature present:', !!signatureHeader)
 
     // Parse payload
     const payload: eBayWebhookPayload = JSON.parse(body)
