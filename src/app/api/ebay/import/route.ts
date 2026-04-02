@@ -18,15 +18,15 @@ const EBAY_TO_CATEGORY: Record<string, string> = {
 }
 
 const CONDITION_MAP: Record<string, string> = {
-  'NEW': 'new_with_tags',
-  'NEW_WITH_TAGS': 'new_with_tags',
+  'NEW': 'excellent',
+  'NEW_WITH_TAGS': 'excellent',
   'NEW_WITHOUT_TAGS': 'excellent',
   'LIKE_NEW': 'excellent',
   'USED_EXCELLENT': 'excellent',
   'USED_VERY_GOOD': 'excellent',
   'USED_GOOD': 'good',
   'USED_ACCEPTABLE': 'fair',
-  'FOR_PARTS_OR_NOT_WORKING': 'fair',
+  'FOR_PARTS_OR_NOT_WORKING': 'poor',
 }
 
 /**
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
               asking_price_gbp: price,
               photos: product.imageUrls || [],
               sku,
-              status: listingId ? 'active' : 'draft',
+              status: listingId ? 'listed' : 'draft',
               platform_fields: { selectedPlatforms: ['ebay'], ebay: {} },
               selected_marketplaces: ['ebay'],
             })

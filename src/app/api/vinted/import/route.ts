@@ -17,11 +17,13 @@ const VINTED_TO_CATEGORY: Record<number, string> = {
 
 // Map Vinted status string → Wrenlist condition
 const CONDITION_MAP: Record<string, string> = {
-  'New with tags': 'new_with_tags',
+  'New with tags': 'excellent',
   'New without tags': 'excellent',
   'Very good': 'excellent',
   'Good': 'good',
   'Satisfactory': 'fair',
+  'Fair': 'fair',
+  'Poor': 'poor',
 }
 
 /**
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
             condition,
             asking_price_gbp: parseFloat(item.price?.amount || item.price_numeric || '0'),
             photos: item.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean) || [],
-            status: 'active',
+            status: 'listed',
             platform_fields: {
               selectedPlatforms: ['vinted'],
               vinted: {
