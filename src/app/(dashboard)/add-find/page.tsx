@@ -1,753 +1,740 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
-import PlatformFields from '@/components/listing/PlatformFields'
-import TemplateSelector from '@/components/listing/TemplateSelector'
-import WrenAI from '@/components/listing/WrenAI'
-import ListOnSection from '@/components/listing/ListOnSection'
-import { MarketplaceSelector } from '@/components/listing/MarketplaceSelector'
-import { useListingForm } from '@/hooks/useListingForm'
 import { VINTED_COLORS } from '@/data/vinted-colors'
-import { VINTED_CONDITIONS } from '@/data/vinted-conditions'
-import { EBAY_CONDITIONS } from '@/data/ebay-conditions'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
-import type { MarketplaceId } from '@/lib/marketplace/registry'
+import { FindCondition, Platform } from '@/types'
 
-interface FormData {
-  itemName: string
-  category: string
-  categoryPath: string
-  condition: string
-  size: string
-  colour: string
-  colorIds: number[]
-  brand: string
-  description: string
-  sourceType: string
-  sourceName: string
-  costPaid: number | null
-  dateSourced: string
-  sku: string
-  askingPrice: number | null
-  listOnEbay: boolean
-  listOnVinted: boolean
-  listOnEtsy: boolean
-  listOnShopify: boolean
-  photos: File[]
-  appliedTemplate: string | null
-  platformFields: Record<string, string>
+interface PlatformFieldsData {
+  vinted?: {
+    primaryColor?: number
+    secondaryColor?: number
+    conditionDescription?: string
+    material?: number[]
+  }
+  ebay?: {
+    acceptOffers?: boolean
+    isAuction?: boolean
+  }
 }
 
-const sourceTypes = [
-  'house_clearance',
-  'charity_shop',
-  'car_boot',
-  'online_haul',
-  'flea_market',
-  'other',
+interface FormData {
+  // Canonical fields
+  title: string
+  description: string
+  category: string
+  price: number | null
+  brand: string
+  condition: FindCondition
+  quantity: number
+
+  // Photos
+  photos: File[]
+  photoPreviews: string[]
+
+  // Platform selection
+  selectedPlatforms: Platform[]
+
+  // Platform-specific fields
+  platformFields: PlatformFieldsData
+
+  // Shipping
+  shippingWeight: number | null
+  shippingDimensions: {
+    length: number | null
+    width: number | null
+    height: number | null
+  }
+
+  // Internal fields
+  sku: string
+  costPrice: number | null
+  internalNote: string
+
+  // Pricing overrides
+  platformPrices: Record<Platform, number | null>
+}
+
+const CONDITIONS: { value: FindCondition; label: string }[] = [
+  { value: 'excellent', label: 'Excellent / Like new' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair / Worn' },
 ]
 
-const conditions = ['excellent', 'good', 'fair', 'poor']
+const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP).sort()
 
 export default function AddFindPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
-  const [skuEditMode, setSkuEditMode] = useState(false)
-
-  // Initialize useListingForm hook for centralized state management
-  const { state: listingFormState, actions: listingFormActions } = useListingForm()
-
-  useEffect(() => {
-    document.title = 'Add Find | Wrenlist'
-    generateAndSetSku()
-  }, [])
-
   const [formData, setFormData] = useState<FormData>({
-    itemName: '',
-    category: 'clothing',
-    categoryPath: 'Clothing › Workwear › Jackets',
-    condition: 'excellent',
-    size: '',
-    colour: '',
-    colorIds: [],
-    brand: '',
+    title: '',
     description: '',
-    sourceType: 'charity_shop',
-    sourceName: '',
-    costPaid: null,
-    dateSourced: new Date().toISOString().substring(0, 10),
-    sku: generateSku(),
-    askingPrice: null,
-    listOnEbay: true,
-    listOnVinted: true,
-    listOnEtsy: false,
-    listOnShopify: false,
+    category: '',
+    price: null,
+    brand: '',
+    condition: 'good',
+    quantity: 1,
     photos: [],
-    appliedTemplate: null,
+    photoPreviews: [],
+    selectedPlatforms: ['vinted'],
     platformFields: {},
+    shippingWeight: null,
+    shippingDimensions: { length: null, width: null, height: null },
+    sku: '',
+    costPrice: null,
+    internalNote: '',
+    platformPrices: { vinted: null, ebay: null, etsy: null, shopify: null },
   })
 
-  function generateSku(): string {
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const num = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
-    return `WR-CLO-${date}-${num}`
-  }
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showPriceOverrides, setShowPriceOverrides] = useState(false)
 
-  async function generateAndSetSku() {
-    try {
-      // Fetch count of user's finds
-      const response = await fetch('/api/finds')
-      const { data } = await response.json()
-      const counter = (data?.length || 0) + 1
+  // Handle form field changes
+  const handleInputChange = useCallback(
+    (field: keyof FormData, value: any) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }))
+    },
+    []
+  )
 
-      // Get category code (first 3 letters uppercase)
-      const catCode = formData.category.substring(0, 3).toUpperCase()
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const sku = `WR-${catCode}-${date}-${String(counter).padStart(3, '0')}`
-
-      setFormData((prev) => ({ ...prev, sku }))
-    } catch {
-      // Fallback to default generation
-      setFormData((prev) => ({ ...prev, sku: generateSku() }))
-    }
-  }
-
-  const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleApplyTemplate = (template: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      appliedTemplate: template.id,
-      category: template.category || prev.category,
-      condition: template.condition || prev.condition,
-      brand: template.brand || prev.brand,
-      platformFields: template.platform_fields || {},
-      listOnEbay: template.marketplaces?.includes('ebay') ?? prev.listOnEbay,
-      listOnVinted: template.marketplaces?.includes('vinted') ?? prev.listOnVinted,
-      listOnEtsy: template.marketplaces?.includes('etsy') ?? prev.listOnEtsy,
-      listOnShopify: template.marketplaces?.includes('shopify') ?? prev.listOnShopify,
-      askingPrice: template.default_price ?? prev.askingPrice,
-    }))
-  }
-
-  const handleSaveTemplate = async () => {
-    if (!formData.itemName.trim()) {
-      setError('Please enter an item name before saving template')
-      return
-    }
-
-    const templateName = prompt('Template name:', '')
-    if (!templateName) return
-
-    try {
-      const response = await fetch('/api/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: templateName,
-          category: formData.category,
-          condition: formData.condition,
-          brand: formData.brand,
-          platform_fields: formData.platformFields,
-          marketplaces: [
-            formData.listOnEbay && 'ebay',
-            formData.listOnVinted && 'vinted',
-            formData.listOnEtsy && 'etsy',
-            formData.listOnShopify && 'shopify',
-          ].filter(Boolean),
-          default_price: formData.askingPrice,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save template')
+  // Handle platform selection
+  const handlePlatformToggle = useCallback((platform: Platform) => {
+    setFormData((prev) => {
+      const isSelected = prev.selectedPlatforms.includes(platform)
+      return {
+        ...prev,
+        selectedPlatforms: isSelected
+          ? prev.selectedPlatforms.filter((p) => p !== platform)
+          : [...prev.selectedPlatforms, platform],
       }
-
-      setError(null)
-      // Show success message (could add toast here)
-    } catch (err) {
-      setError('Failed to save template')
-    }
-  }
-
-  const handlePhotoUpload = (files: File[]) => {
-    const remainingSlots = 10 - formData.photos.length
-    const filesToAdd = files.slice(0, remainingSlots)
-
-    setFormData((prev) => ({
-      ...prev,
-      photos: [...prev.photos, ...filesToAdd],
-    }))
-
-    filesToAdd.forEach((file) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhotoPreviews((prev) => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(file)
     })
-  }
+  }, [])
 
-  const removePhoto = (index: number) => {
+  // Handle photos
+  const handleAddPhotos = useCallback((files: File[]) => {
+    setFormData((prev) => {
+      const newPhotos = [...prev.photos, ...files].slice(0, 10)
+      const newPreviews = newPhotos.map((file) => URL.createObjectURL(file))
+      return {
+        ...prev,
+        photos: newPhotos,
+        photoPreviews: newPreviews,
+      }
+    })
+  }, [])
+
+  const handleRemovePhoto = useCallback((index: number) => {
     setFormData((prev) => ({
       ...prev,
       photos: prev.photos.filter((_, i) => i !== index),
+      photoPreviews: prev.photoPreviews.filter((_, i) => i !== index),
     }))
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
-  }
+  }, [])
 
-  const handleSave = async () => {
+  // Handle platform-specific fields
+  const handlePlatformFieldChange = useCallback(
+    (platform: Platform, field: string, value: any) => {
+      setFormData((prev) => ({
+        ...prev,
+        platformFields: {
+          ...prev.platformFields,
+          [platform]: {
+            ...((prev.platformFields as any)[platform] || {}),
+            [field]: value,
+          },
+        },
+      }))
+    },
+    []
+  )
+
+  // Calculate title char limit based on platforms
+  const titleCharLimit = useMemo(() => {
+    if (formData.selectedPlatforms.includes('ebay')) {
+      return 80
+    }
+    return 255
+  }, [formData.selectedPlatforms])
+
+  // Get category info for selected platforms
+  const categoryInfo = useMemo(() => {
+    if (!formData.category) return null
+    return CATEGORY_MAP[formData.category] || null
+  }, [formData.category])
+
+  // Handle save (draft)
+  const handleSaveDraft = async () => {
+    setIsLoading(true)
+    setError(null)
     try {
-      setError(null)
-      setIsLoading(true)
-
-      if (!formData.itemName.trim()) {
-        setError('Item name is required')
-        return
-      }
-
       const response = await fetch('/api/finds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.itemName,
-          category: formData.category,
-          condition: formData.condition,
-          size: formData.size,
-          colour: formData.colour,
-          brand: formData.brand,
+          name: formData.title,
           description: formData.description,
-          source_type: formData.sourceType,
-          source_name: formData.sourceName,
-          sourced_at: new Date(formData.dateSourced).toISOString(),
-          cost_gbp: formData.costPaid,
-          asking_price_gbp: formData.askingPrice,
+          category: formData.category,
+          asking_price_gbp: formData.price,
+          brand: formData.brand,
+          condition: formData.condition,
+          sku: formData.sku || null,
+          cost_gbp: formData.costPrice,
+          platform_fields: {
+            ...formData.platformFields,
+            selectedPlatforms: formData.selectedPlatforms,
+            shippingWeight: formData.shippingWeight,
+            shippingDimensions: formData.shippingDimensions,
+            platformPrices: formData.platformPrices,
+          },
           status: 'draft',
-          sku: formData.sku,
-          platform_fields: formData.platformFields,
-          color_ids: formData.colorIds,
-          selected_marketplaces: [
-            formData.listOnEbay && 'ebay',
-            formData.listOnVinted && 'vinted',
-            formData.listOnEtsy && 'etsy',
-            formData.listOnShopify && 'shopify',
-          ].filter(Boolean),
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        const errorMessage = errorData.error || 'Failed to save find'
-
-        // Check if this is a plan limit error
-        if (response.status === 400 && errorMessage.includes('Monthly find limit')) {
-          setError(errorMessage)
-          return
-        }
-
-        throw new Error(errorMessage)
+        throw new Error((errorData as any).error || 'Failed to save draft')
       }
 
-      const result = await response.json()
-
-      router.push('/inventory')
+      const data = await response.json()
+      router.push(`/inventory`)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred'
-      setError(message)
+      setError((err as any).message || 'An error occurred')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const calculateMargin = (): number | null => {
-    if (!formData.costPaid || !formData.askingPrice) return null
-    return Math.round(((formData.askingPrice - formData.costPaid) / formData.askingPrice) * 100)
+  // Handle publish
+  const handlePublish = async () => {
+    if (!formData.title.trim()) {
+      setError('Title is required')
+      return
+    }
+    if (!formData.category) {
+      setError('Category is required')
+      return
+    }
+    if (formData.selectedPlatforms.length === 0) {
+      setError('Select at least one marketplace')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/finds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.title,
+          description: formData.description,
+          category: formData.category,
+          asking_price_gbp: formData.price,
+          brand: formData.brand,
+          condition: formData.condition,
+          sku: formData.sku || null,
+          cost_gbp: formData.costPrice,
+          platform_fields: {
+            ...formData.platformFields,
+            selectedPlatforms: formData.selectedPlatforms,
+            shippingWeight: formData.shippingWeight,
+            shippingDimensions: formData.shippingDimensions,
+            platformPrices: formData.platformPrices,
+          },
+          status: 'listed',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error((errorData as any).error || 'Failed to publish')
+      }
+
+      const data = await response.json()
+      router.push(`/inventory`)
+    } catch (err) {
+      setError((err as any).message || 'An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const margin = calculateMargin()
-
   return (
-    <div className="space-y-0">
-      {/* TOP BAR */}
-      <div className="flex justify-between items-center px-6 py-5 border-b border-sage/14 bg-white sticky top-0 z-10">
-        <h1 className="text-2xl font-serif italic text-ink">log a new find</h1>
-        <div className="flex gap-3">
+    <div className="min-h-screen bg-cream">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-sage/14 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
-            onClick={() => router.push('/inventory')}
-            className="px-4 py-2 text-sm font-medium text-ink border border-sage/14 rounded hover:bg-cream-md transition-colors"
+            onClick={() => router.back()}
+            className="text-sm text-sage-lt hover:text-sage transition-colors"
           >
-            cancel
+            ← Back
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition-colors disabled:opacity-50"
-          >
-            {isLoading ? 'saving...' : 'save find'}
-          </button>
+          <h1 className="text-xl font-semibold text-ink">Add a find</h1>
+          <div className="w-16" />
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="bg-cream p-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* LEFT COLUMN - Main form (3 columns) */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* PHOTOS */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">photos</h2>
-              </div>
-              <div className="p-6">
-                <PhotoUpload
-                  photos={formData.photos}
-                  photoPreviews={photoPreviews}
-                  onAddPhotos={handlePhotoUpload}
-                  onRemovePhoto={removePhoto}
-                  maxPhotos={10}
-                />
-              </div>
-            </div>
+      {/* Error message */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-6 py-4 mt-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-            {/* ITEM DETAILS */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">item details</h2>
-              </div>
-              <div className="p-6 space-y-5">
-                {/* Item name */}
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">item name</label>
-                  <input
-                    type="text"
-                    value={formData.itemName}
-                    onChange={(e) => handleInputChange('itemName', e.target.value)}
-                    placeholder="Brand, item, colour, size..."
-                    className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                  />
-                </div>
-
-                {/* Category breadcrumb */}
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">category</label>
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-sage/14 rounded text-sm cursor-pointer hover:border-sage/30">
-                    <span className="text-ink">Clothing › Workwear › Jackets</span>
-                    <span className="ml-auto text-sage-lt text-xs">change</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs bg-sage-pale text-sage-dk px-2 py-1 rounded flex items-center gap-1">
-                      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                        <path d="M1.5 4.5l2 2 4-4" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-                      </svg>
-                      Carhartt Workwear template applied
-                    </span>
-                    <button className="text-xs text-ink-lt underline cursor-pointer">clear</button>
-                  </div>
-                </div>
-
-                {/* Condition & Size */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">condition</label>
-                    <select
-                      value={formData.condition}
-                      onChange={(e) => handleInputChange('condition', e.target.value)}
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink focus:outline-none focus:border-sage/30"
-                    >
-                      {conditions.map((cond) => (
-                        <option key={cond} value={cond}>
-                          {cond.charAt(0).toUpperCase() + cond.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">size</label>
+      {/* Main layout */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-12 gap-8">
+          {/* LEFT PANEL - Marketplace Selector */}
+          <div className="col-span-2">
+            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24">
+              <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
+              <div className="space-y-3">
+                {(['vinted', 'ebay'] as Platform[]).map((platform) => (
+                  <label key={platform} className="flex items-center gap-3 cursor-pointer group">
                     <input
-                      type="text"
-                      value={formData.size}
-                      onChange={(e) => handleInputChange('size', e.target.value)}
-                      placeholder="M, 32, 10..."
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
+                      type="checkbox"
+                      checked={formData.selectedPlatforms.includes(platform)}
+                      onChange={() => handlePlatformToggle(platform)}
+                      className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
                     />
-                  </div>
-                </div>
-
-                {/* Colour (text) & Brand */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">colour</label>
-                    <input
-                      type="text"
-                      value={formData.colour}
-                      onChange={(e) => handleInputChange('colour', e.target.value)}
-                      placeholder="Brown..."
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">brand</label>
-                    <input
-                      type="text"
-                      value={formData.brand}
-                      onChange={(e) => handleInputChange('brand', e.target.value)}
-                      placeholder="Brand..."
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Vinted Colour Picker (shown when Vinted selected) */}
-                {formData.listOnVinted && (
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
-                      vinted colours <span className="text-red-600">*</span> (max 2)
-                    </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {VINTED_COLORS.map((color) => {
-                        const isSelected = formData.colorIds.includes(color.id)
-                        return (
-                          <button
-                            key={color.id}
-                            onClick={() => {
-                              if (isSelected) {
-                                handleInputChange('colorIds', formData.colorIds.filter((id) => id !== color.id))
-                              } else if (formData.colorIds.length < 2) {
-                                handleInputChange('colorIds', [...formData.colorIds, color.id])
-                              }
-                            }}
-                            disabled={!isSelected && formData.colorIds.length >= 2}
-                            className={`px-2 py-2 text-xs rounded border-2 transition-all whitespace-nowrap text-center ${
-                              isSelected
-                                ? 'border-sage bg-sage/10 text-sage font-medium'
-                                : 'border-sage/14 bg-white text-ink hover:border-sage/30 disabled:opacity-50 disabled:cursor-not-allowed'
-                            }`}
-                          >
-                            {color.title}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {formData.colorIds.length > 0 && (
-                      <p className="text-xs text-sage-dim mt-2">
-                        Selected: {formData.colorIds.map((id) => VINTED_COLORS.find((c) => c.id === id)?.title).join(', ')}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Description */}
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Describe the item, any flaws, measurements..."
-                    rows={3}
-                    className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* PLATFORM FIELDS PREVIEW */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">platform fields preview</h2>
-              </div>
-              <div className="p-6 space-y-4">
-                {/* eBay Platform Fields */}
-                {formData.listOnEbay && (
-                  <div className="pb-4 border-b border-sage/14 last:border-b-0">
-                    <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#E53238' }}></span>
-                      eBay UK
-                    </h3>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Category ID:</span>
-                        <span className="font-mono text-ink">
-                          {CATEGORY_MAP[formData.category]?.ebayId || 'N/A'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Category:</span>
-                        <span className="text-ink">{CATEGORY_MAP[formData.category]?.ebayName || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Condition:</span>
-                        <span className="text-ink">
-                          {EBAY_CONDITIONS.find((c) => c.id === 'USED_EXCELLENT')?.title || 'See condition settings'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Price:</span>
-                        <span className="font-mono text-ink">£{formData.askingPrice?.toFixed(2) || '0.00'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Vinted Platform Fields */}
-                {formData.listOnVinted && (
-                  <div className="pb-4 border-b border-sage/14 last:border-b-0">
-                    <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#1BB0CE' }}></span>
-                      Vinted
-                    </h3>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Category ID:</span>
-                        <span className="font-mono text-ink">
-                          {CATEGORY_MAP[formData.category]?.vintedId || 'TBD'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Category:</span>
-                        <span className="text-ink">{CATEGORY_MAP[formData.category]?.vintedName || 'TBD'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Condition:</span>
-                        <span className="text-ink">
-                          {
-                            VINTED_CONDITIONS.find(
-                              (vc) => vc.wrenlist === formData.condition,
-                            )?.title || 'See condition settings'
-                          }
-                        </span>
-                      </div>
-                      {formData.colorIds.length > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-sage-dim">Colours:</span>
-                          <span className="text-ink">
-                            {formData.colorIds.map((id) => VINTED_COLORS.find((c) => c.id === id)?.title).join(', ')}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-sage-dim">Price:</span>
-                        <span className="font-mono text-ink">£{formData.askingPrice?.toFixed(2) || '0.00'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {!formData.listOnEbay && !formData.listOnVinted && (
-                  <div className="text-center py-4">
-                    <p className="text-xs text-sage-dim">Select at least one marketplace above to see platform fields</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* SOURCING */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">sourcing</h2>
-              </div>
-              <div className="p-6 space-y-5">
-                {/* Source Type & Location */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">source type</label>
-                    <select
-                      value={formData.sourceType}
-                      onChange={(e) => handleInputChange('sourceType', e.target.value)}
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink focus:outline-none focus:border-sage/30"
-                    >
-                      {sourceTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type
-                            .split('_')
-                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                            .join(' ')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">source name / location</label>
-                    <input
-                      type="text"
-                      value={formData.sourceName}
-                      onChange={(e) => handleInputChange('sourceName', e.target.value)}
-                      placeholder="Shop name or location..."
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Cost & Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">cost paid (£)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.costPaid !== null ? formData.costPaid.toString() : ''}
-                      onChange={(e) => handleInputChange('costPaid', e.target.value ? parseFloat(e.target.value) : null)}
-                      placeholder="0.00"
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">date sourced</label>
-                    <input
-                      type="date"
-                      value={formData.dateSourced}
-                      onChange={(e) => handleInputChange('dateSourced', e.target.value)}
-                      className="w-full px-3 py-2.5 border border-sage/14 rounded text-sm text-ink focus:outline-none focus:border-sage/30"
-                    />
-                  </div>
-                </div>
-
-                {/* SKU */}
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2 flex justify-between">
-                    <span>SKU</span>
-                    <span className="font-normal text-sage-lt text-xs flex items-center gap-1">
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M4 1v6M1 4h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                      </svg>
-                      auto-generated
+                    <span className="text-sm text-ink group-hover:text-sage transition-colors">
+                      {platform === 'vinted' ? 'Vinted' : 'eBay UK'}
                     </span>
                   </label>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={formData.sku}
-                      readOnly={!skuEditMode}
-                      onChange={(e) => handleInputChange('sku', e.target.value)}
-                      className={`flex-1 px-3 py-2.5 border rounded text-sm font-mono text-sage-dk focus:outline-none focus:border-sage/30 ${
-                        skuEditMode ? 'bg-white border-sage/30' : 'bg-cream-md border-sage/14'
-                      }`}
-                    />
-                    <button
-                      onClick={() => {
-                        if (!skuEditMode && !skuEditMode) {
-                          generateAndSetSku()
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CENTRE PANEL - Main Form */}
+          <div className="col-span-7 space-y-6">
+            {/* Photos */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <h3 className="text-sm font-semibold text-ink mb-4">Photos</h3>
+              <PhotoUpload
+                photos={formData.photos}
+                photoPreviews={formData.photoPreviews}
+                onAddPhotos={handleAddPhotos}
+                onRemovePhoto={handleRemovePhoto}
+                maxPhotos={10}
+              />
+            </div>
+
+            {/* Title */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Title</label>
+              <textarea
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value.slice(0, titleCharLimit))}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                rows={2}
+                placeholder="Item title"
+              />
+              <div className="text-xs text-sage-dim mt-1">
+                {formData.title.length}/{titleCharLimit}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value.slice(0, 2000))}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                rows={4}
+                placeholder="Describe the item..."
+              />
+              <div className="text-xs text-sage-dim mt-1">
+                {formData.description.length}/2000
+              </div>
+            </div>
+
+            {/* Category */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => handleInputChange('category', e.target.value)}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+              >
+                <option value="">Select a category</option>
+                {CANONICAL_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {categoryInfo && (
+                <div className="mt-3 p-3 bg-cream-md rounded text-xs text-sage-dim">
+                  <p>
+                    {formData.selectedPlatforms.includes('ebay') && (
+                      <span className="block">eBay: {categoryInfo.ebayName}</span>
+                    )}
+                  </p>
+                  <p>
+                    {formData.selectedPlatforms.includes('vinted') && categoryInfo.vintedName && (
+                      <span className="block">Vinted: {categoryInfo.vintedName}</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Price & Platform Pricing */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Price</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-sage-dim">£</span>
+                  <input
+                    type="number"
+                    value={formData.price ?? ''}
+                    onChange={(e) =>
+                      handleInputChange('price', e.target.value ? parseFloat(e.target.value) : null)
+                    }
+                    className="flex-1 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="0.00"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPriceOverrides(!showPriceOverrides)}
+                className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+              >
+                {showPriceOverrides ? 'Hide' : 'Adjust prices per marketplace'} →
+              </button>
+
+              {showPriceOverrides && (
+                <div className="space-y-3 pt-3 border-t border-sage/14">
+                  {formData.selectedPlatforms.map((platform) => (
+                    <div key={platform} className="flex items-center gap-2">
+                      <label className="text-xs text-sage-dim w-16">
+                        {platform === 'vinted' ? 'Vinted' : 'eBay'}
+                      </label>
+                      <span className="text-xs text-sage-dim">£</span>
+                      <input
+                        type="number"
+                        value={formData.platformPrices[platform] ?? ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            platformPrices: {
+                              ...prev.platformPrices,
+                              [platform]: e.target.value ? parseFloat(e.target.value) : null,
+                            },
+                          }))
                         }
-                        setSkuEditMode(!skuEditMode)
-                      }}
-                      className="px-3 py-2.5 border border-sage/14 rounded text-xs font-medium hover:bg-cream-md transition-colors whitespace-nowrap"
-                    >
-                      {skuEditMode ? 'save' : skuEditMode ? 'regenerate' : 'edit'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-sage-dim mt-2">Format: WR-[CATEGORY]-[YYYYMMDD]-[counter]. Click edit to manually change or regenerate.</p>
+                        className="flex-1 px-2 py-1 border border-sage/14 rounded text-xs focus:outline-none focus:ring-2 focus:ring-sage/30"
+                        placeholder={formData.price?.toString() || '0.00'}
+                        step="0.01"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* eBay-only fields */}
+              {formData.selectedPlatforms.includes('ebay') && (
+                <div className="pt-3 border-t border-sage/14 space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(formData.platformFields.ebay?.acceptOffers) ?? false}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('ebay', 'acceptOffers', e.target.checked)
+                      }
+                      className="w-4 h-4 border border-sage/30 rounded"
+                    />
+                    <span className="text-xs text-ink">Accept offers</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(formData.platformFields.ebay?.isAuction) ?? false}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('ebay', 'isAuction', e.target.checked)
+                      }
+                      className="w-4 h-4 border border-sage/30 rounded"
+                    />
+                    <span className="text-xs text-ink">Is auction</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Brand */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Brand</label>
+              <input
+                type="text"
+                value={formData.brand}
+                onChange={(e) => handleInputChange('brand', e.target.value)}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                placeholder="Leave blank if unsure"
+              />
+            </div>
+
+            {/* Condition */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Condition</label>
+              <select
+                value={formData.condition}
+                onChange={(e) => handleInputChange('condition', e.target.value as FindCondition)}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+              >
+                {CONDITIONS.map((cond) => (
+                  <option key={cond.value} value={cond.value}>
+                    {cond.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quantity */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6">
+              <label className="block text-sm font-semibold text-ink mb-2">Quantity</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) =>
+                    handleInputChange('quantity', Math.max(1, parseInt(e.target.value) || 1))
+                  }
+                  min="1"
+                  className="w-20 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                />
+                <span className="text-xs text-sage-dim">pcs</span>
+              </div>
+            </div>
+
+            {/* Vinted-specific fields */}
+            {formData.selectedPlatforms.includes('vinted') && (
+              <>
+                {/* Primary Colour */}
+                <div className="bg-white rounded-lg border border-sage/14 p-6">
+                  <label className="block text-sm font-semibold text-ink mb-2">Primary colour</label>
+                  <select
+                    value={(formData.platformFields.vinted?.primaryColor) ?? ''}
+                    onChange={(e) =>
+                      handlePlatformFieldChange('vinted', 'primaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  >
+                    <option value="">Select a colour</option>
+                    {VINTED_COLORS.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Secondary Colour */}
+                <div className="bg-white rounded-lg border border-sage/14 p-6">
+                  <label className="block text-sm font-semibold text-ink mb-2">
+                    Secondary colour <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                  </label>
+                  <select
+                    value={(formData.platformFields.vinted?.secondaryColor) ?? ''}
+                    onChange={(e) =>
+                      handlePlatformFieldChange('vinted', 'secondaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  >
+                    <option value="">None</option>
+                    {VINTED_COLORS.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Condition Description */}
+                <div className="bg-white rounded-lg border border-sage/14 p-6">
+                  <label className="block text-sm font-semibold text-ink mb-2">
+                    Condition description <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={(formData.platformFields.vinted?.conditionDescription) ?? ''}
+                    onChange={(e) =>
+                      handlePlatformFieldChange('vinted', 'conditionDescription', e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    rows={3}
+                    placeholder="e.g. Small stain on cuff..."
+                  />
+                </div>
+
+                {/* Material (placeholder) */}
+                <div className="bg-white rounded-lg border border-sage/14 p-6">
+                  <label className="block text-sm font-semibold text-ink mb-2">
+                    Material <span className="text-xs text-sage-dim font-normal">(optional, up to 3)</span>
+                  </label>
+                  <p className="text-xs text-sage-dim mb-3">Material selection coming soon</p>
+                </div>
+              </>
+            )}
+
+            {/* Shipping */}
+            <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-4">
+              <h3 className="text-sm font-semibold text-ink">Shipping</h3>
+
+              <div>
+                <label className="block text-xs text-sage-dim mb-2">Weight (kg)</label>
+                <input
+                  type="number"
+                  value={formData.shippingWeight ?? ''}
+                  onChange={(e) =>
+                    handleInputChange('shippingWeight', e.target.value ? parseFloat(e.target.value) : null)
+                  }
+                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  placeholder="0.00"
+                  step="0.1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-sage-dim mb-2">Dimensions (L × W × H, cm)</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    value={formData.shippingDimensions.length ?? ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        shippingDimensions: {
+                          ...prev.shippingDimensions,
+                          length: e.target.value ? parseFloat(e.target.value) : null,
+                        },
+                      }))
+                    }
+                    className="px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Length"
+                    step="0.1"
+                  />
+                  <input
+                    type="number"
+                    value={formData.shippingDimensions.width ?? ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        shippingDimensions: {
+                          ...prev.shippingDimensions,
+                          width: e.target.value ? parseFloat(e.target.value) : null,
+                        },
+                      }))
+                    }
+                    className="px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Width"
+                    step="0.1"
+                  />
+                  <input
+                    type="number"
+                    value={formData.shippingDimensions.height ?? ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        shippingDimensions: {
+                          ...prev.shippingDimensions,
+                          height: e.target.value ? parseFloat(e.target.value) : null,
+                        },
+                      }))
+                    }
+                    className="px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Height"
+                    step="0.1"
+                  />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN - Sidebar (1 column) */}
-          <div className="space-y-6">
-            {/* TEMPLATES */}
-            <TemplateSelector
-              appliedTemplate={formData.appliedTemplate}
-              onApply={handleApplyTemplate}
-              onSaveTemplate={handleSaveTemplate}
-            />
-
-            {/* WREN AI */}
-            <WrenAI onUseSuggestedPrice={(price) => handleInputChange('askingPrice', price)} />
-
-            {/* PRICING */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-5 py-3">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">pricing</h2>
+          {/* RIGHT PANEL - Internal Fields */}
+          <div className="col-span-3">
+            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">SKU</label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => handleInputChange('sku', e.target.value)}
+                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  placeholder="Optional"
+                />
               </div>
-              <div className="p-4 space-y-3">
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">asking price (£)</label>
+
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Cost price</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-sage-dim">£</span>
                   <input
                     type="number"
-                    step="0.01"
-                    value={formData.askingPrice !== null ? formData.askingPrice.toString() : ''}
-                    onChange={(e) => handleInputChange('askingPrice', e.target.value ? parseFloat(e.target.value) : null)}
+                    value={formData.costPrice ?? ''}
+                    onChange={(e) =>
+                      handleInputChange('costPrice', e.target.value ? parseFloat(e.target.value) : null)
+                    }
+                    className="flex-1 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                     placeholder="0.00"
-                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30"
+                    step="0.01"
                   />
                 </div>
-                {(formData.costPaid || formData.askingPrice) && (
-                  <div className="bg-cream-md rounded p-3 space-y-2 text-xs">
-                    {formData.costPaid && (
-                      <div className="flex justify-between">
-                        <span className="text-ink-lt">cost</span>
-                        <span className="font-mono text-ink">£{formData.costPaid.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {formData.askingPrice && (
-                      <div className="flex justify-between">
-                        <span className="text-ink-lt">asking</span>
-                        <span className="font-mono text-ink">£{formData.askingPrice.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {formData.costPaid && formData.askingPrice && (
-                      <div className="flex justify-between border-t border-sage/14 pt-2">
-                        <span className="text-sage font-medium">margin</span>
-                        <span className="font-mono text-sage font-semibold">{margin}%</span>
-                      </div>
-                    )}
+                {formData.price && formData.costPrice && (
+                  <div className="text-xs text-sage-dim mt-1">
+                    Margin: {Math.round(((formData.price - formData.costPrice) / formData.price) * 100)}%
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* MARKETPLACE SELECTOR */}
-            <div className="bg-white border border-sage/14 rounded overflow-hidden">
-              <div className="border-b border-sage/14 px-6 py-4">
-                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">select marketplaces</h2>
-              </div>
-              <div className="p-6">
-                <MarketplaceSelector
-                  selectedIds={listingFormState.marketplaceSelection.selectedMarketplaces}
-                  onChange={(selectedIds) => {
-                    listingFormActions.setMarketplaces(selectedIds)
-                    // Also update legacy formData for backward compatibility
-                    handleInputChange('listOnEbay', selectedIds.includes('ebay'))
-                    handleInputChange('listOnVinted', selectedIds.includes('vinted'))
-                    handleInputChange('listOnEtsy', selectedIds.includes('etsy'))
-                    handleInputChange('listOnShopify', selectedIds.includes('shopify'))
-                  }}
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">Internal note</label>
+                <textarea
+                  value={formData.internalNote}
+                  onChange={(e) => handleInputChange('internalNote', e.target.value)}
+                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  rows={4}
+                  placeholder="For your reference only"
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* ERROR MESSAGE */}
-            {error && (
-              <div className="space-y-3">
-                <div className="bg-red-lt/60 border border-red/30 rounded p-3 text-xs text-red">
-                  {error}
-                </div>
-                {error.includes('Monthly find limit') && (
-                  <button
-                    onClick={() => router.push('/pricing')}
-                    className="w-full py-2 px-3 bg-sage-pale text-sage-dk rounded text-xs font-medium hover:bg-sage/10 transition-colors"
-                  >
-                    Upgrade plan →
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* SAVE BUTTON */}
-            <div className="border-t border-sage/14 pt-4 mt-4">
-              <button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="w-full py-3 bg-green-900 text-white rounded font-medium text-sm hover:bg-green-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'saving...' : 'save find & crosslist'}
-              </button>
-            </div>
+      {/* Action Bar */}
+      <div className="sticky bottom-0 bg-white border-t border-sage/14 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="text-sm text-sage-lt hover:text-sage transition-colors"
+          >
+            ← Back
+          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveDraft}
+              disabled={isLoading}
+              className="px-4 py-2 text-sm border border-sage/14 rounded hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Saving...' : 'Save draft'}
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={isLoading}
+              className="px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Publishing...' : 'Publish'}
+            </button>
           </div>
         </div>
       </div>
