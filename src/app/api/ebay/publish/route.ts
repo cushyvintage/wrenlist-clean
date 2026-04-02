@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
     const ebayCondition = conditionMap[find.condition] || 'USED'
     const sku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
 
+    if (!find.photos || find.photos.length === 0) {
+      return ApiResponseHelper.badRequest('At least one photo is required to publish to eBay. Please add photos and try again.')
+    }
+
     const inventoryItem = {
       sku,
       title: find.name,
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
       quantity: 1,
       condition: ebayCondition,
       brand: find.brand || undefined,
-      images: find.photos || [],
+      images: find.photos,
       merchantLocation: { locationKey: sellerConfig.merchant_location_key },
     }
 
