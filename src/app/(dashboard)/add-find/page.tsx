@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
+import CategoryPicker from '@/components/listing/CategoryPicker'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
@@ -564,33 +565,12 @@ export default function AddFindPage() {
 
             {/* Category */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
-              <label className="block text-sm font-semibold text-ink mb-2">Category</label>
-              <select
+              <label className="block text-sm font-semibold text-ink mb-4">Category</label>
+              <CategoryPicker
                 value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-              >
-                <option value="">Select a category</option>
-                {CANONICAL_CATEGORIES.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {categoryInfo && (
-                <div className="mt-3 p-3 bg-cream-md rounded text-xs text-sage-dim">
-                  <p>
-                    {formData.selectedPlatforms.includes('ebay') && (
-                      <span className="block">eBay: {categoryInfo.ebayName}</span>
-                    )}
-                  </p>
-                  <p>
-                    {formData.selectedPlatforms.includes('vinted') && categoryInfo.vintedName && (
-                      <span className="block">Vinted: {categoryInfo.vintedName}</span>
-                    )}
-                  </p>
-                </div>
-              )}
+                onChange={(value) => handleInputChange('category', value)}
+                selectedPlatforms={formData.selectedPlatforms}
+              />
             </div>
 
             {/* Price & Platform Pricing */}
