@@ -124,7 +124,9 @@ export default function AddFindPage() {
 
       try {
         const marketplace = formData.selectedPlatforms.includes('vinted') ? 'vinted' : 'ebay'
-        const response = await fetch(`/api/config/category-fields?category=${formData.category}&marketplace=${marketplace}`)
+        // Include daily cache-bust so stale config doesn't persist beyond 24h
+        const cacheBust = new Date().toISOString().slice(0, 10)
+        const response = await fetch(`/api/config/category-fields?category=${formData.category}&marketplace=${marketplace}&d=${cacheBust}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch field config')
@@ -704,6 +706,25 @@ export default function AddFindPage() {
                       rows={3}
                       placeholder="e.g. Small stain on cuff..."
                     />
+                  </div>
+                )}
+
+                {/* Size — clothing/footwear only */}
+                {fieldConfig?.size?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Size{fieldConfig.size.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData.platformFields.vinted as any)?.size ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'size', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="e.g. M, 12, EU 38..."
+                    />
+                    <p className="text-xs text-sage-dim mt-1">Size options will be populated by the Vinted extension</p>
                   </div>
                 )}
 
