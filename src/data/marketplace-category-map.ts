@@ -1,6 +1,11 @@
 /**
  * Maps Wrenlist canonical categories to platform category IDs and names
  * Used for auto-mapping when user selects a marketplace
+ *
+ * Vinted category IDs (vintedId) — fetch full tree once logged in:
+ *   GET https://www.vinted.co.uk/api/v2/catalog?page=1&per_page=100 (requires session cookie)
+ * Store result in src/data/vinted-categories.json and import here.
+ * Current IDs are approximate — verify against live API before launch.
  */
 export const CATEGORY_MAP: Record<
   string,
