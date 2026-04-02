@@ -32,10 +32,11 @@ export const CreateFindSchema = z.object({
   sold_at: z.string().datetime().optional().nullable(),
   photos: z.array(z.string()).optional().default([]),
   sku: z.string().optional().nullable(),
-  platform_fields: z.record(z.string()).optional().default({}),
+  platform_fields: z.record(z.unknown()).optional().default({}),
   color_ids: z.array(z.number()).optional().default([]),
   selected_marketplaces: z.array(z.string()).optional().default(['vinted']),
 })
+// Note: platform_fields accepts nested objects (JSONB)
 
 export const UpdateFindSchema = CreateFindSchema.partial()
 
@@ -112,7 +113,7 @@ export const CreateListingTemplateSchema = z.object({
   category: z.string().optional().nullable(),
   condition: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
-  platform_fields: z.record(z.string()).optional().default({}),
+  platform_fields: z.record(z.unknown()).optional().default({}),
   marketplaces: z.array(z.string()).optional().default([]),
   default_price: z.number().nonnegative().optional().nullable(),
 })
