@@ -60,7 +60,15 @@ export async function POST(request: NextRequest) {
 
         // Map condition
         const condition = CONDITION_MAP[item.status] || 'good'
-        const category = VINTED_TO_CATEGORY[item.catalog_id] || 'other'
+        // catalog_id may be absent in wardrobe list response — default to 'other'
+        const category = item.catalog_id ? (VINTED_TO_CATEGORY[item.catalog_id] || 'other') : 'other'
+        // Wardrobe endpoint uses `brand` field, catalog endpoint uses `brand_title`
+        const brand = item.brand_title || item.brand || null
+        // Photos: wardrobe returns full_size_url, catalog returns url
+        const photos = item.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean) || []
+        // Generate SKU for imported items
+        const catPrefix = category.slice(0, 3).toUpperCase()
+        const sku = `VT-${catPrefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`
 
         // Create find
         const { data: find, error: findError } = await supabase
@@ -70,16 +78,17 @@ export async function POST(request: NextRequest) {
             name: item.title,
             description: item.description || null,
             category,
-            brand: item.brand_title || null,
+            brand: brand !== 'no brand' ? brand : null,
             condition,
-            asking_price_gbp: parseFloat(item.price?.amount || item.price_numeric || '0'),
-            photos: item.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean) || [],
+            asking_price_gbp: parseFloat(item.price?.amount || String(item.price_numeric || 0)),
+            photos,
+            sku,
             status: 'listed',
             platform_fields: {
               selectedPlatforms: ['vinted'],
               vinted: {
                 primaryColor: item.colour_ids?.[0] || null,
-                catalogId: item.catalog_id,
+                catalogId: item.catalog_id || null,
               }
             },
             selected_marketplaces: ['vinted'],
