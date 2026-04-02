@@ -275,6 +275,33 @@ export interface MarketplaceListing {
 // API RESPONSES
 // ============================================================================
 
+// ============================================================================
+// MARKETPLACE CATEGORY CONFIG
+// ============================================================================
+
+export interface FieldConfig {
+  show: boolean
+  required?: boolean
+  max?: number
+  options?: string[]
+}
+
+export interface CategoryFieldConfig {
+  id: string
+  category: string
+  marketplace: Platform
+  platform_category_id: string | null
+  platform_category_path: string | null
+  fields: Record<string, FieldConfig>
+  source: 'manual' | 'vinted_api' | 'ebay_api'
+  last_updated: string
+  created_at: string
+}
+
+// ============================================================================
+// API RESPONSES
+// ============================================================================
+
 export interface ApiResponse<T> {
   data?: T
   error?: string

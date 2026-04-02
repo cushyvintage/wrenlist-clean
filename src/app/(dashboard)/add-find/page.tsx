@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
-import { FindCondition, Platform } from '@/types'
+import { FindCondition, Platform, CategoryFieldConfig, FieldConfig } from '@/types'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -94,6 +94,7 @@ export default function AddFindPage() {
   const [error, setError] = useState<string | null>(null)
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
 
   // Handle form field changes
   const handleInputChange = useCallback(
@@ -112,6 +113,33 @@ export default function AddFindPage() {
     },
     []
   )
+
+  // Fetch category field config when category or marketplace changes
+  useEffect(() => {
+    const fetchFieldConfig = async () => {
+      if (!formData.category) {
+        setFieldConfig(null)
+        return
+      }
+
+      try {
+        const marketplace = formData.selectedPlatforms.includes('vinted') ? 'vinted' : 'ebay'
+        const response = await fetch(`/api/config/category-fields?category=${formData.category}&marketplace=${marketplace}`)
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch field config')
+        }
+
+        const config = await response.json()
+        setFieldConfig(config.fields)
+      } catch (err) {
+        console.error('Error fetching field config:', err)
+        setFieldConfig(null)
+      }
+    }
+
+    fetchFieldConfig()
+  }, [formData.category, formData.selectedPlatforms])
 
   // Handle SKU regeneration
   const handleRegenerateSKU = useCallback(() => {
@@ -614,68 +642,100 @@ export default function AddFindPage() {
             {formData.selectedPlatforms.includes('vinted') && (
               <>
                 {/* Primary Colour */}
-                <div className="bg-white rounded-lg border border-sage/14 p-6">
-                  <label className="block text-sm font-semibold text-ink mb-2">Primary colour</label>
-                  <select
-                    value={(formData.platformFields.vinted?.primaryColor) ?? ''}
-                    onChange={(e) =>
-                      handlePlatformFieldChange('vinted', 'primaryColor', e.target.value ? parseInt(e.target.value) : undefined)
-                    }
-                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                  >
-                    <option value="">Select a colour</option>
-                    {VINTED_COLORS.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {fieldConfig?.colour?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Primary colour
+                      {fieldConfig.colour.required && <span className="text-red-500"> *</span>}
+                    </label>
+                    <select
+                      value={(formData.platformFields.vinted?.primaryColor) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'primaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    >
+                      <option value="">Select a colour</option>
+                      {VINTED_COLORS.map((color) => (
+                        <option key={color.id} value={color.id}>
+                          {color.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Secondary Colour */}
-                <div className="bg-white rounded-lg border border-sage/14 p-6">
-                  <label className="block text-sm font-semibold text-ink mb-2">
-                    Secondary colour <span className="text-xs text-sage-dim font-normal">(optional)</span>
-                  </label>
-                  <select
-                    value={(formData.platformFields.vinted?.secondaryColor) ?? ''}
-                    onChange={(e) =>
-                      handlePlatformFieldChange('vinted', 'secondaryColor', e.target.value ? parseInt(e.target.value) : undefined)
-                    }
-                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                  >
-                    <option value="">None</option>
-                    {VINTED_COLORS.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {fieldConfig?.colour?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Secondary colour <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                    </label>
+                    <select
+                      value={(formData.platformFields.vinted?.secondaryColor) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'secondaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    >
+                      <option value="">None</option>
+                      {VINTED_COLORS.map((color) => (
+                        <option key={color.id} value={color.id}>
+                          {color.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Condition Description */}
-                <div className="bg-white rounded-lg border border-sage/14 p-6">
-                  <label className="block text-sm font-semibold text-ink mb-2">
-                    Condition description <span className="text-xs text-sage-dim font-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    value={(formData.platformFields.vinted?.conditionDescription) ?? ''}
-                    onChange={(e) =>
-                      handlePlatformFieldChange('vinted', 'conditionDescription', e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    rows={3}
-                    placeholder="e.g. Small stain on cuff..."
-                  />
-                </div>
+                {fieldConfig?.condition_description?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Condition description{' '}
+                      <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                    </label>
+                    <textarea
+                      value={(formData.platformFields.vinted?.conditionDescription) ?? ''}
+                      onChange={(e) =>
+                        handlePlatformFieldChange('vinted', 'conditionDescription', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      rows={3}
+                      placeholder="e.g. Small stain on cuff..."
+                    />
+                  </div>
+                )}
 
-                {/* Material (placeholder) */}
-                <div className="bg-white rounded-lg border border-sage/14 p-6">
-                  <label className="block text-sm font-semibold text-ink mb-2">
-                    Material <span className="text-xs text-sage-dim font-normal">(optional, up to 3)</span>
-                  </label>
-                  <p className="text-xs text-sage-dim mb-3">Material selection coming soon</p>
-                </div>
+                {/* Material */}
+                {fieldConfig?.material?.show && (
+                  <div className="bg-white rounded-lg border border-sage/14 p-6">
+                    <label className="block text-sm font-semibold text-ink mb-2">
+                      Material{' '}
+                      <span className="text-xs text-sage-dim font-normal">
+                        (optional{fieldConfig.material.options ? ', select one' : ''})
+                      </span>
+                    </label>
+                    {fieldConfig.material.options && fieldConfig.material.options.length > 0 ? (
+                      <select
+                        value={(formData.platformFields.vinted?.material as any)?.[0] ?? ''}
+                        onChange={(e) =>
+                          handlePlatformFieldChange('vinted', 'material', e.target.value ? [e.target.value] : undefined)
+                        }
+                        className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      >
+                        <option value="">Select a material</option>
+                        {fieldConfig.material.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-xs text-sage-dim mb-3">Material selection coming soon</p>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
