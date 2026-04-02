@@ -148,14 +148,14 @@ export class eBayClient {
    */
   async refreshAccessToken(refreshToken: string): Promise<eBayTokens> {
     try {
-      const response = await fetch(`${this.tokenUrl}`, {
+      const response = await undiciFetch(`${this.tokenUrl}`, {
         method: 'POST',
-        headers: {
+        headers: new UndiciHeaders({
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${Buffer.from(
             `${this.config.clientId}:${this.config.clientSecret}`
           ).toString('base64')}`,
-        },
+        }),
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token: refreshToken,
@@ -164,13 +164,13 @@ export class eBayClient {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json() as any
         throw new Error(
           `Token refresh failed: ${error.error_description || error.error}`
         )
       }
 
-      const data: eBayOAuthResponse = await response.json()
+      const data = await response.json() as eBayOAuthResponse
 
       this.tokens = {
         accessToken: data.access_token,
@@ -287,9 +287,10 @@ export class eBayClient {
     const extraHeaders = (options.headers as Record<string, string>) || {}
     const headers = { ...baseHeaders, ...extraHeaders }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
+    const response = await undiciFetch(url, {
+      method: options.method || 'GET',
+      headers: new UndiciHeaders(headers),
+      body: options.body as any,
     })
 
     if (!response.ok) {
@@ -369,7 +370,7 @@ export class eBayClient {
       method: 'POST',
       headers: new UndiciHeaders({
         'Content-Type': 'application/json',
-        'Content-Language': 'en-US',
+        'Content-Language': 'en-GB',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       }),
@@ -396,7 +397,7 @@ export class eBayClient {
       method: 'POST',
       headers: new UndiciHeaders({
         'Content-Type': 'application/json',
-        'Content-Language': 'en-US',
+        'Content-Language': 'en-GB',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       }),
