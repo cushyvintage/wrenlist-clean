@@ -112,11 +112,10 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect in Platform Connect.')
     }
 
-    // Create inventory item
-    try {
-      await ebayClient.createInventoryItem(inventoryItem.sku, inventoryItem)
-    } catch (error) {
-      // Continue anyway - item might already exist
+    // Create inventory item (throw if fails — only swallow if already exists)
+    const invResult = await ebayClient.createInventoryItem(inventoryItem.sku, inventoryItem)
+    if (!invResult.success && invResult.error && !invResult.error.includes('already exists')) {
+      return ApiResponseHelper.internalError(`Failed to create eBay inventory item: ${invResult.error}`)
     }
 
     // Create offer
