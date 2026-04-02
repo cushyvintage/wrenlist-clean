@@ -277,10 +277,10 @@ export default function AddFindPage() {
       }
 
       const data = await response.json()
-      const findId = data.id
+      const findId = data?.data?.id || data?.id
 
       // Upload photos if any
-      if (formData.photos.length > 0) {
+      if (findId && formData.photos.length > 0) {
         setError('Uploading photos...')
         const photoUrls = await uploadPhotosToStorage(findId)
         setUploadProgress(50)
@@ -356,10 +356,10 @@ export default function AddFindPage() {
       }
 
       const data = await response.json()
-      const findId = data.id
+      const findId = data?.data?.id || data?.id
 
       // Upload photos if any
-      if (formData.photos.length > 0) {
+      if (findId && formData.photos.length > 0) {
         setError('Uploading photos...')
         const photoUrls = await uploadPhotosToStorage(findId)
         setUploadProgress(50)
@@ -377,7 +377,45 @@ export default function AddFindPage() {
         }
       }
 
+      setUploadProgress(75)
+
+      // Publish to each selected marketplace
+      const publishResults: Record<string, { success: boolean; url?: string; error?: string }> = {}
+
+      for (const platform of formData.selectedPlatforms) {
+        if (platform === 'ebay') {
+          setError('Publishing to eBay...')
+          try {
+            const publishResp = await fetch('/api/ebay/publish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ findId, marketplace: 'EBAY_GB' }),
+            })
+            const publishData = await publishResp.json()
+            if (!publishResp.ok) {
+              publishResults.ebay = { success: false, error: publishData.error || 'eBay publish failed' }
+            } else {
+              publishResults.ebay = { success: true, url: publishData.data?.listingUrl }
+            }
+          } catch {
+            publishResults.ebay = { success: false, error: 'eBay publish failed' }
+          }
+        }
+        // Vinted: handled by extension — no direct API call here
+      }
+
       setUploadProgress(100)
+      setError(null)
+
+      // Surface any publish errors before redirecting
+      const failures = Object.entries(publishResults).filter(([, r]) => !r.success)
+      if (failures.length > 0) {
+        const msgs = failures.map(([p, r]) => `${p}: ${r.error}`).join(', ')
+        setError(`Saved but publish failed — ${msgs}. Check Platform Connect.`)
+        setIsLoading(false)
+        return
+      }
+
       router.push(`/inventory`)
     } catch (err) {
       setError((err as any).message || 'An error occurred')
