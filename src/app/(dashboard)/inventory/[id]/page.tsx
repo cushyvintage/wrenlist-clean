@@ -232,6 +232,27 @@ export default function InventoryDetailPage() {
       const result = await res.json()
       setFind(result.data as Find)
       setIsEditing(false)
+
+      // If Vinted listing exists, update it via extension (non-blocking)
+      const vintedData = find.platform_fields?.vinted as any
+      const vintedListingId = vintedData?.listingId
+      if (vintedListingId && typeof window !== 'undefined') {
+        try {
+          const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+          const chrome = (window as any).chrome
+          if (chrome?.runtime) {
+            chrome.runtime.sendMessage(EXTENSION_ID, {
+              action: 'update_vinted',
+              find: result.data,
+              findId: id,
+              listingId: vintedListingId,
+            }, (resp: any) => {
+              if (chrome.runtime.lastError) console.warn('Vinted update failed:', chrome.runtime.lastError.message)
+              else if (!resp?.ok) console.warn('Vinted update error:', resp?.error)
+            })
+          }
+        } catch { /* non-fatal */ }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save'
       setError(message)
