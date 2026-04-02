@@ -455,21 +455,45 @@ export default function AddFindPage() {
           }
         }
         if (platform === 'shopify') {
-          setError('Publishing to Shopify...')
+          setError('Publishing to Shopify via extension...')
           try {
-            const publishResp = await fetch('/api/shopify/publish', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ findId }),
+            const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+            const SHOP_ID = 'pyedpp-i5' // Dom's store — will be dynamic from user settings later
+            const result = await new Promise<any>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Extension timed out — ensure you are logged into admin.shopify.com')), 60000)
+              if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage(EXTENSION_ID, {
+                  action: 'publish_shopify',
+                  shopId: SHOP_ID,
+                  find: {
+                    name: formData.title,
+                    description: formData.description,
+                    category: formData.category,
+                    condition: formData.condition,
+                    asking_price_gbp: formData.price,
+                    cost_gbp: formData.costPrice,
+                    brand: formData.brand || null,
+                    sku: formData.sku || null,
+                    photos: uploadedPhotoUrls,
+                  },
+                  findId,
+                }, (response: any) => {
+                  clearTimeout(timeout)
+                  if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
+                  else resolve(response)
+                })
+              } else {
+                clearTimeout(timeout)
+                reject(new Error('Wrenlist extension not installed'))
+              }
             })
-            const publishData = await publishResp.json()
-            if (!publishResp.ok) {
-              publishResults.shopify = { success: false, error: publishData.error || 'Shopify publish failed' }
+            if (result?.ok) {
+              publishResults.shopify = { success: true, url: result.listingUrl }
             } else {
-              publishResults.shopify = { success: true, url: publishData.data?.listingUrl }
+              publishResults.shopify = { success: false, error: result?.error || 'Shopify publish failed' }
             }
-          } catch {
-            publishResults.shopify = { success: false, error: 'Shopify publish failed' }
+          } catch (e: any) {
+            publishResults.shopify = { success: false, error: e.message }
           }
         }
       }
