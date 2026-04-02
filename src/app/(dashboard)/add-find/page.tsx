@@ -454,6 +454,24 @@ export default function AddFindPage() {
             publishResults.vinted = { success: false, error: e.message }
           }
         }
+        if (platform === 'shopify') {
+          setError('Publishing to Shopify...')
+          try {
+            const publishResp = await fetch('/api/shopify/publish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ findId }),
+            })
+            const publishData = await publishResp.json()
+            if (!publishResp.ok) {
+              publishResults.shopify = { success: false, error: publishData.error || 'Shopify publish failed' }
+            } else {
+              publishResults.shopify = { success: true, url: publishData.data?.listingUrl }
+            }
+          } catch {
+            publishResults.shopify = { success: false, error: 'Shopify publish failed' }
+          }
+        }
       }
 
       setUploadProgress(100)
@@ -508,7 +526,7 @@ export default function AddFindPage() {
             <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24">
               <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
               <div className="space-y-3">
-                {(['vinted', 'ebay'] as Platform[]).map((platform) => (
+                {(['vinted', 'ebay', 'shopify'] as Platform[]).map((platform) => (
                   <label key={platform} className="flex items-center gap-3 cursor-pointer group">
                     <input
                       type="checkbox"
@@ -517,7 +535,7 @@ export default function AddFindPage() {
                       className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
                     />
                     <span className="text-sm text-ink group-hover:text-sage transition-colors">
-                      {platform === 'vinted' ? 'Vinted' : 'eBay UK'}
+                      {platform === 'vinted' ? 'Vinted' : platform === 'ebay' ? 'eBay UK' : 'Shopify'}
                     </span>
                   </label>
                 ))}

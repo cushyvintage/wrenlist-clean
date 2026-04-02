@@ -32,6 +32,13 @@ export default function PlatformConnectPage() {
     ebay: true,
     vinted: true,
   })
+  const [shopifyConnected, setShopifyConnected] = useState(false)
+  const [shopifyName, setShopifyName] = useState<string | null>(null)
+  const [shopifyDomain, setShopifyDomain] = useState<string | null>(null)
+  const [shopifyFormOpen, setShopifyFormOpen] = useState(false)
+  const [shopifyFormData, setShopifyFormData] = useState({ storeDomain: '', accessToken: '' })
+  const [shopifyLoading, setShopifyLoading] = useState(false)
+  const [shopifyError, setShopifyError] = useState<string | null>(null)
 
   // Check if token expires within 7 days
   const isTokenExpiringWithin7Days = (): boolean => {
@@ -141,6 +148,84 @@ export default function PlatformConnectPage() {
       setPageError(err instanceof Error ? err.message : 'Failed to save policies')
     } finally {
       setPolicyIsLoading(false)
+    }
+  }
+
+  // Fetch Shopify connection status on mount
+  useEffect(() => {
+    const fetchShopifyStatus = async () => {
+      try {
+        const response = await fetch('/api/shopify/connect')
+        if (response.ok) {
+          const data = await response.json()
+          setShopifyConnected(data.data.connected)
+          setShopifyName(data.data.shopName)
+          setShopifyDomain(data.data.storeDomain)
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    }
+
+    fetchShopifyStatus()
+  }, [])
+
+  const handleShopifyConnect = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!shopifyFormData.storeDomain || !shopifyFormData.accessToken) {
+      setShopifyError('Store domain and access token are required')
+      return
+    }
+
+    setShopifyLoading(true)
+    setShopifyError(null)
+    setPageError(null)
+
+    try {
+      const response = await fetch('/api/shopify/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeDomain: shopifyFormData.storeDomain,
+          accessToken: shopifyFormData.accessToken,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to connect Shopify')
+      }
+
+      setShopifyConnected(true)
+      setShopifyName(data.data.shopName)
+      setShopifyDomain(data.data.storeDomain)
+      setShopifyFormOpen(false)
+      setShopifyFormData({ storeDomain: '', accessToken: '' })
+    } catch (err) {
+      setShopifyError(err instanceof Error ? err.message : 'Failed to connect Shopify')
+    } finally {
+      setShopifyLoading(false)
+    }
+  }
+
+  const handleShopifyDisconnect = async () => {
+    if (!confirm('Disconnect Shopify? You can reconnect anytime.')) return
+
+    setShopifyLoading(true)
+    try {
+      const response = await fetch('/api/shopify/connect', {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setShopifyConnected(false)
+        setShopifyName(null)
+        setShopifyDomain(null)
+      }
+    } catch (error) {
+      setPageError('Failed to disconnect Shopify')
+    } finally {
+      setShopifyLoading(false)
     }
   }
 
@@ -532,7 +617,7 @@ export default function PlatformConnectPage() {
         </div>
       </Panel>
 
-      {/* Shopify - Disconnected */}
+      {/* Shopify */}
       <Panel>
         <div className="flex items-center gap-4 mb-4">
           <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-50">
@@ -540,21 +625,102 @@ export default function PlatformConnectPage() {
           </div>
           <div className="flex-1">
             <div className="font-medium text-sm text-ink">Shopify</div>
-            <div className="text-xs text-ink-lt">Crosslist to your Shopify store. Requires Wrenlist extension.</div>
+            <div className="text-xs text-ink-lt">Crosslist to your Shopify store</div>
           </div>
-          <Badge status="draft" label="not connected" />
+          <Badge status={shopifyConnected ? 'listed' : 'draft'} label={shopifyConnected ? 'connected' : 'not connected'} />
         </div>
 
-        <div className="flex items-center gap-3 p-3 bg-cream-md rounded mb-4">
-          <div className="text-xs text-sage-dim">📦</div>
-          <div className="flex-1">
-            <div className="font-medium text-xs text-ink">Extension ready</div>
-            <div className="text-xs text-ink-lt">Wrenlist extension is installed. Enter your Shopify store URL to connect.</div>
+        {shopifyError && (
+          <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm text-red-700">
+            {shopifyError}
           </div>
-          <button className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition flex-shrink-0">
-            Connect →
-          </button>
-        </div>
+        )}
+
+        {shopifyConnected && shopifyName ? (
+          <>
+            <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+              <div>
+                <div className="text-xs font-medium text-ink-lt mb-1">Store</div>
+                <div className="text-sm text-ink font-medium">{shopifyName}</div>
+                <div className="text-xs text-ink-lt">{shopifyDomain}</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2">
+                <div className="text-xs text-ink-lt">Connected</div>
+              </div>
+              <button
+                onClick={handleShopifyDisconnect}
+                disabled={shopifyLoading}
+                className="px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition disabled:opacity-50"
+              >
+                {shopifyLoading ? 'Disconnecting...' : 'Disconnect'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 p-3 bg-cream-md rounded mb-4">
+              <div className="text-xs text-sage-dim">🔑</div>
+              <div className="flex-1">
+                <div className="font-medium text-xs text-ink">Create a Custom App</div>
+                <div className="text-xs text-ink-lt">
+                  In your Shopify admin, go to <strong>Settings → Apps and integrations → App and integration settings → Develop apps</strong>, then create a custom app with these permissions: <strong>read_products, write_products, read_inventory, write_inventory</strong>
+                </div>
+              </div>
+            </div>
+
+            {!shopifyFormOpen ? (
+              <button
+                onClick={() => setShopifyFormOpen(true)}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
+              >
+                Connect Store
+              </button>
+            ) : (
+              <form onSubmit={handleShopifyConnect} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Store domain (e.g., mystore.myshopify.com)"
+                  value={shopifyFormData.storeDomain}
+                  onChange={(e) =>
+                    setShopifyFormData({ ...shopifyFormData, storeDomain: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                />
+                <input
+                  type="password"
+                  placeholder="Admin API access token"
+                  value={shopifyFormData.accessToken}
+                  onChange={(e) =>
+                    setShopifyFormData({ ...shopifyFormData, accessToken: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={shopifyLoading}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+                  >
+                    {shopifyLoading ? 'Connecting...' : 'Connect'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShopifyFormOpen(false)
+                      setShopifyFormData({ storeDomain: '', accessToken: '' })
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
+        )}
       </Panel>
 
       {/* Tip */}
