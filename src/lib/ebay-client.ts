@@ -275,7 +275,7 @@ export class eBayClient {
   /**
    * Make authenticated API request
    */
-  private async apiRequest(
+  async apiRequest(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<any> {
