@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
+import { generateSKU } from '@/lib/sku'
 import { FindCondition, Platform } from '@/types'
 
 interface PlatformFieldsData {
@@ -92,17 +93,35 @@ export default function AddFindPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   // Handle form field changes
   const handleInputChange = useCallback(
     (field: keyof FormData, value: any) => {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-      }))
+      setFormData((prev) => {
+        const updated = {
+          ...prev,
+          [field]: value,
+        }
+        // Auto-generate SKU when category changes and SKU is empty
+        if (field === 'category' && !prev.sku && value) {
+          updated.sku = generateSKU(value)
+        }
+        return updated
+      })
     },
     []
   )
+
+  // Handle SKU regeneration
+  const handleRegenerateSKU = useCallback(() => {
+    if (formData.category) {
+      setFormData((prev) => ({
+        ...prev,
+        sku: generateSKU(prev.category),
+      }))
+    }
+  }, [formData.category])
 
   // Handle platform selection
   const handlePlatformToggle = useCallback((platform: Platform) => {
@@ -169,10 +188,35 @@ export default function AddFindPage() {
     return CATEGORY_MAP[formData.category] || null
   }, [formData.category])
 
+  // Upload photos to Supabase Storage
+  const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
+    if (!formData.photos.length) return []
+
+    const uploadFormData = new FormData()
+    uploadFormData.append('find_id', findId)
+    formData.photos.forEach((photo) => {
+      uploadFormData.append('photos', photo)
+    })
+
+    const uploadResponse = await fetch('/api/finds/upload-photos', {
+      method: 'POST',
+      body: uploadFormData,
+    })
+
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json()
+      throw new Error((errorData as any).error || 'Failed to upload photos')
+    }
+
+    const uploadData = await uploadResponse.json()
+    return uploadData.urls || []
+  }
+
   // Handle save (draft)
   const handleSaveDraft = async () => {
     setIsLoading(true)
     setError(null)
+    setUploadProgress(0)
     try {
       const response = await fetch('/api/finds', {
         method: 'POST',
@@ -203,11 +247,34 @@ export default function AddFindPage() {
       }
 
       const data = await response.json()
+      const findId = data.id
+
+      // Upload photos if any
+      if (formData.photos.length > 0) {
+        setError('Uploading photos...')
+        const photoUrls = await uploadPhotosToStorage(findId)
+        setUploadProgress(50)
+
+        // Update find with photo URLs
+        const patchResponse = await fetch(`/api/finds/${findId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: photoUrls }),
+        })
+
+        if (!patchResponse.ok) {
+          const errorData = await patchResponse.json()
+          throw new Error((errorData as any).error || 'Failed to update photos')
+        }
+      }
+
+      setUploadProgress(100)
       router.push(`/inventory`)
     } catch (err) {
       setError((err as any).message || 'An error occurred')
     } finally {
       setIsLoading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -228,6 +295,7 @@ export default function AddFindPage() {
 
     setIsLoading(true)
     setError(null)
+    setUploadProgress(0)
     try {
       const response = await fetch('/api/finds', {
         method: 'POST',
@@ -258,11 +326,34 @@ export default function AddFindPage() {
       }
 
       const data = await response.json()
+      const findId = data.id
+
+      // Upload photos if any
+      if (formData.photos.length > 0) {
+        setError('Uploading photos...')
+        const photoUrls = await uploadPhotosToStorage(findId)
+        setUploadProgress(50)
+
+        // Update find with photo URLs
+        const patchResponse = await fetch(`/api/finds/${findId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: photoUrls }),
+        })
+
+        if (!patchResponse.ok) {
+          const errorData = await patchResponse.json()
+          throw new Error((errorData as any).error || 'Failed to update photos')
+        }
+      }
+
+      setUploadProgress(100)
       router.push(`/inventory`)
     } catch (err) {
       setError((err as any).message || 'An error occurred')
     } finally {
       setIsLoading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -667,13 +758,23 @@ export default function AddFindPage() {
             <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">SKU</label>
-                <input
-                  type="text"
-                  value={formData.sku}
-                  onChange={(e) => handleInputChange('sku', e.target.value)}
-                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                  placeholder="Optional"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => handleInputChange('sku', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Optional"
+                  />
+                  <button
+                    onClick={handleRegenerateSKU}
+                    disabled={!formData.category}
+                    className="px-2 py-2 text-sm text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Regenerate SKU"
+                  >
+                    🔄
+                  </button>
+                </div>
               </div>
 
               <div>
