@@ -152,6 +152,7 @@ export class eBayClient {
         method: 'POST',
         headers: new UndiciHeaders({
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept-Language': 'en-GB',
           'Authorization': `Basic ${Buffer.from(
             `${this.config.clientId}:${this.config.clientSecret}`
           ).toString('base64')}`,
@@ -282,6 +283,7 @@ export class eBayClient {
     const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Accept-Language': 'en-GB',
       'Authorization': `Bearer ${this.getAccessToken()}`,
     }
     const extraHeaders = (options.headers as Record<string, string>) || {}
@@ -333,6 +335,7 @@ export class eBayClient {
         headers: new UndiciHeaders({
           'Content-Type': 'application/json',
           'Content-Language': 'en-GB',
+        'Accept-Language': 'en-GB',
           'Authorization': `Bearer ${this.getAccessToken()}`,
         }),
         body: JSON.stringify(payload),
@@ -371,6 +374,7 @@ export class eBayClient {
       headers: new UndiciHeaders({
         'Content-Type': 'application/json',
         'Content-Language': 'en-GB',
+        'Accept-Language': 'en-GB',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       }),
@@ -398,6 +402,7 @@ export class eBayClient {
       headers: new UndiciHeaders({
         'Content-Type': 'application/json',
         'Content-Language': 'en-GB',
+        'Accept-Language': 'en-GB',
         'Accept': 'application/json',
         'Authorization': `Bearer ${this.getAccessToken()}`,
       }),
