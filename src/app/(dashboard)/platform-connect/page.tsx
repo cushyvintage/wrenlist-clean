@@ -36,7 +36,7 @@ export default function PlatformConnectPage() {
   const [shopifyName, setShopifyName] = useState<string | null>(null)
   const [shopifyDomain, setShopifyDomain] = useState<string | null>(null)
   const [shopifyFormOpen, setShopifyFormOpen] = useState(false)
-  const [shopifyFormData, setShopifyFormData] = useState({ storeDomain: '', accessToken: '' })
+  const [shopifyFormData, setShopifyFormData] = useState({ storeDomain: '' })
   const [shopifyLoading, setShopifyLoading] = useState(false)
   const [shopifyError, setShopifyError] = useState<string | null>(null)
 
@@ -172,8 +172,8 @@ export default function PlatformConnectPage() {
 
   const handleShopifyConnect = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!shopifyFormData.storeDomain || !shopifyFormData.accessToken) {
-      setShopifyError('Store domain and access token are required')
+    if (!shopifyFormData.storeDomain) {
+      setShopifyError('Store domain is required')
       return
     }
 
@@ -187,7 +187,6 @@ export default function PlatformConnectPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeDomain: shopifyFormData.storeDomain,
-          accessToken: shopifyFormData.accessToken,
         }),
       })
 
@@ -200,7 +199,7 @@ export default function PlatformConnectPage() {
       setShopifyName(data.data.shopName)
       setShopifyDomain(data.data.storeDomain)
       setShopifyFormOpen(false)
-      setShopifyFormData({ storeDomain: '', accessToken: '' })
+      setShopifyFormData({ storeDomain: '' })
     } catch (err) {
       setShopifyError(err instanceof Error ? err.message : 'Failed to connect Shopify')
     } finally {
@@ -535,25 +534,13 @@ export default function PlatformConnectPage() {
           </div>
           <div className="flex-1">
             <div className="font-medium text-sm text-ink">Vinted</div>
-            <div className="text-xs text-ink-lt">83 active listings synced</div>
+            <div className="text-xs text-ink-lt">Automatic via extension</div>
           </div>
-          <Badge status="listed" label="connected" />
         </div>
 
-        <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
-            <div className="text-sm text-ink font-mono">@jordanthrifts</div>
-          </div>
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Email</div>
-            <div className="text-sm text-ink font-mono">jordan@example.com</div>
-          </div>
-          <div>
-            <div className="text-xs font-medium text-ink-lt mb-1">Synced</div>
-            <div className="text-sm text-ink">5 minutes ago</div>
-          </div>
-        </div>
+        <p className="text-sm text-ink mb-4">
+          Vinted connects automatically via the Wrenlist extension. Simply log in to <strong>vinted.co.uk</strong> in your browser and Wrenlist will detect your account.
+        </p>
 
         <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
           <div>
@@ -661,14 +648,10 @@ export default function PlatformConnectPage() {
           </>
         ) : (
           <>
-            <div className="flex items-center gap-3 p-3 bg-cream-md rounded mb-4">
-              <div className="text-xs text-sage-dim">🔑</div>
-              <div className="flex-1">
-                <div className="font-medium text-xs text-ink">Create a Custom App</div>
-                <div className="text-xs text-ink-lt">
-                  In your Shopify admin, go to <strong>Settings → Apps and integrations → App and integration settings → Develop apps</strong>, then create a custom app with these permissions: <strong>read_products, write_products, read_inventory, write_inventory</strong>
-                </div>
-              </div>
+            <div className="space-y-4 mb-4">
+              <p className="text-sm text-ink">
+                Connect your Shopify store. You must be logged into <strong>admin.shopify.com</strong> in your browser. The Wrenlist extension handles publishing automatically.
+              </p>
             </div>
 
             {!shopifyFormOpen ? (
@@ -682,19 +665,10 @@ export default function PlatformConnectPage() {
               <form onSubmit={handleShopifyConnect} className="space-y-3">
                 <input
                   type="text"
-                  placeholder="Store domain (e.g., mystore.myshopify.com)"
+                  placeholder="Store ID or domain (e.g., pyedpp-i5 or pyedpp-i5.myshopify.com)"
                   value={shopifyFormData.storeDomain}
                   onChange={(e) =>
                     setShopifyFormData({ ...shopifyFormData, storeDomain: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                />
-                <input
-                  type="password"
-                  placeholder="Admin API access token"
-                  value={shopifyFormData.accessToken}
-                  onChange={(e) =>
-                    setShopifyFormData({ ...shopifyFormData, accessToken: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                 />
@@ -710,7 +684,7 @@ export default function PlatformConnectPage() {
                     type="button"
                     onClick={() => {
                       setShopifyFormOpen(false)
-                      setShopifyFormData({ storeDomain: '', accessToken: '' })
+                      setShopifyFormData({ storeDomain: '' })
                     }}
                     className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
                   >

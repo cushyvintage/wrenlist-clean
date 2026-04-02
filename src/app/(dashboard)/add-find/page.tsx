@@ -104,6 +104,28 @@ export default function AddFindPage() {
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
+  const [shopifyShopId, setShopifyShopId] = useState<string | null>(null)
+
+  // Fetch Shopify store domain on component mount
+  useEffect(() => {
+    const fetchShopifyConnection = async () => {
+      try {
+        const response = await fetch('/api/shopify/connect')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.data.connected && data.data.storeDomain) {
+            // Extract shop ID from domain (e.g., "pyedpp-i5" from "pyedpp-i5.myshopify.com")
+            const shopId = data.data.storeDomain.split('.')[0]
+            setShopifyShopId(shopId)
+          }
+        }
+      } catch (err) {
+        // Silently fail — Shopify not connected
+      }
+    }
+
+    fetchShopifyConnection()
+  }, [])
 
   // Handle form field changes
   const handleInputChange = useCallback(
@@ -455,16 +477,18 @@ export default function AddFindPage() {
           }
         }
         if (platform === 'shopify') {
+          if (!shopifyShopId) {
+            throw new Error('Connect your Shopify store in Platform Connect first')
+          }
           setError('Publishing to Shopify via extension...')
           try {
             const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
-            const SHOP_ID = 'pyedpp-i5' // Dom's store — will be dynamic from user settings later
             const result = await new Promise<any>((resolve, reject) => {
               const timeout = setTimeout(() => reject(new Error('Extension timed out — ensure you are logged into admin.shopify.com')), 60000)
               if (typeof chrome !== 'undefined' && chrome.runtime) {
                 chrome.runtime.sendMessage(EXTENSION_ID, {
                   action: 'publish_shopify',
-                  shopId: SHOP_ID,
+                  shopId: shopifyShopId,
                   find: {
                     name: formData.title,
                     description: formData.description,

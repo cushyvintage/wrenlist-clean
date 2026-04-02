@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/shopify/connect
- * Save store_domain + access_token, verify token
+ * Save store_domain only (uses extension session cookies, no token needed)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -52,41 +52,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { storeDomain, accessToken } = body
+    const { storeDomain } = body
 
-    if (!storeDomain || !accessToken) {
-      return ApiResponseHelper.badRequest('Missing storeDomain or accessToken')
+    if (!storeDomain) {
+      return ApiResponseHelper.badRequest('Missing storeDomain')
     }
 
-    // Verify token by calling Shopify API
+    // Normalize store domain
     const shopifyUrl = storeDomain.includes('myshopify.com')
       ? storeDomain
       : `${storeDomain}.myshopify.com`
 
-    const verifyResponse = await fetch(
-      `https://${shopifyUrl}/admin/api/2024-01/shop.json`,
-      {
-        method: 'GET',
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-
-    if (!verifyResponse.ok) {
-      if (verifyResponse.status === 401 || verifyResponse.status === 403) {
-        return ApiResponseHelper.badRequest('Invalid token or unauthorized access')
-      }
-      return ApiResponseHelper.badRequest('Failed to verify Shopify token')
-    }
-
-    const shopData = await verifyResponse.json()
-    const shop = shopData.shop
-
-    if (!shop) {
-      return ApiResponseHelper.badRequest('Could not fetch shop data')
-    }
+    // Extract shop name from domain (e.g., "pyedpp-i5" from "pyedpp-i5.myshopify.com")
+    const shopName = shopifyUrl.split('.')[0]
 
     const supabase = await createSupabaseServerClient()
 
@@ -97,10 +75,7 @@ export async function POST(request: NextRequest) {
         {
           user_id: user.id,
           store_domain: shopifyUrl,
-          access_token: accessToken,
-          shop_name: shop.name,
-          shop_email: shop.email,
-          last_verified_at: new Date().toISOString(),
+          shop_name: shopName,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }

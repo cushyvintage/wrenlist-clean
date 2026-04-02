@@ -3,11 +3,8 @@ CREATE TABLE IF NOT EXISTS shopify_connections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   store_domain text NOT NULL,
-  access_token text NOT NULL,
   shop_name text,
-  shop_email text,
   connected_at timestamptz DEFAULT now(),
-  last_verified_at timestamptz,
   updated_at timestamptz DEFAULT now()
 );
 
