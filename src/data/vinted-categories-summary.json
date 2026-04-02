@@ -1,0 +1,28 @@
+{
+  "fetched": "2026-04-02",
+  "source": "GET /api/v2/item_upload/catalogs (requires Vinted login)",
+  "note": "Full tree available via /api/v2/item_upload/catalogs when logged in. Key IDs for Dom's stock below.",
+  "top_level": [
+    {"id": 1904, "code": "WOMEN_ROOT", "title": "Women", "subcategories": {"clothing": 4, "shoes": 16, "bags": 19, "accessories": 1187, "beauty": 146}},
+    {"id": 5, "code": "MENS", "title": "Men", "subcategories": {"clothing": 2050, "shoes": 1231, "accessories": 82}},
+    {"id": 1193, "code": "CHILDREN_NEW", "title": "Kids"},
+    {"id": 1918, "code": "HOME", "title": "Home", "subcategories": {"tableware": 1920, "textiles": 1919, "home_accessories": 1934, "furniture": 3154, "tools_diy": 3811, "outdoor_garden": 3812}},
+    {"id": 2994, "code": "ELECTRONICS", "title": "Electronics", "subcategories": {"video_games": 3002, "books": 2997}},
+    {"id": 3154, "code": "FURNITURE", "title": "Furniture"},
+    {"id": 5106, "code": "H_PET_CARE", "title": "Pet care"}
+  ],
+  "dom_stock_mapping": {
+    "ceramics": {"vinted_id": 1920, "vinted_path": "Home > Tableware > Dinnerware", "notes": "Plates (1960), Bowls (1959), Dinner sets (1958)"},
+    "glassware": {"vinted_id": 2005, "vinted_path": "Home > Tableware > Drinkware", "notes": "Cups & mugs (2006), stemmed glasses (2009), tumblers (2010)"},
+    "books": {"vinted_id": 2997, "vinted_path": "Electronics > Books", "notes": "Top-level books category"},
+    "jewellery": {"vinted_id": 21, "vinted_path": "Women > Accessories > Jewellery", "notes": "Earrings (163), Necklaces (164), Bracelets (165), Rings (553)"},
+    "clothing": {"vinted_id": 4, "vinted_path": "Women > Clothing", "notes": "Or Men > Clothing (2050) for menswear"},
+    "homeware": {"vinted_id": 1934, "vinted_path": "Home > Home accessories", "notes": "Includes candles (1935), clocks (1936), storage (1939), vases (1940)"},
+    "collectibles": {"vinted_id": null, "vinted_path": "No direct match", "notes": "Try Home > Home accessories > Decorative accessories (3823)"},
+    "medals": {"vinted_id": null, "vinted_path": "No direct match", "notes": "Closest: Women > Accessories > Jewellery > Brooches (167)"},
+    "toys": {"vinted_id": 1499, "vinted_path": "Kids > Toys", "notes": "Toy figures (1730), soft toys (1764), educational (1763)"},
+    "furniture": {"vinted_id": 3154, "vinted_path": "Home > Furniture", "notes": "Seating (3158), Storage (3187), Tables (3160)"},
+    "teapots_coffeepots": {"vinted_id": 3856, "vinted_path": "Home > Tableware > Serveware > Coffee pots & teapots"},
+    "jugs": {"vinted_id": 3857, "vinted_path": "Home > Tableware > Serveware > Jugs"}
+  }
+}
