@@ -134,6 +134,9 @@ export async function PUT(
 /**
  * PATCH /api/finds/[id]
  * Partial update a find (supports status, sold_at, etc.)
+ *
+ * When status changes to 'sold', automatically marks all active marketplace
+ * listings as 'needs_delist' so the extension can delist them
  */
 export async function PATCH(
   request: NextRequest,
@@ -152,7 +155,7 @@ export async function PATCH(
     // Ensure user owns this find
     const { data: existing, error: checkError } = await supabase
       .from('finds')
-      .select('id')
+      .select('id, status')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
@@ -166,8 +169,11 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     }
 
-    if ('status' in body) {
-      updateData.status = body.status
+    const isStatusChanging = 'status' in body
+    const newStatus = body.status
+
+    if (isStatusChanging) {
+      updateData.status = newStatus
     }
     if ('sold_at' in body) {
       updateData.sold_at = body.sold_at
@@ -191,6 +197,16 @@ export async function PATCH(
       return ApiResponseHelper.internalError()
     }
 
+    // Auto-delist: if status changed to 'sold', mark all active listings for delist
+    if (isStatusChanging && newStatus === 'sold' && existing.status !== 'sold') {
+      try {
+        await markMarketplacesForDelist(supabase, id)
+      } catch (delistError) {
+        // Log but don't fail the request - find was updated successfully
+        console.error('Failed to auto-delist marketplaces:', delistError)
+      }
+    }
+
     return ApiResponseHelper.success(data as Find)
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -198,6 +214,45 @@ export async function PATCH(
     }
     return ApiResponseHelper.internalError()
   }
+}
+
+/**
+ * Helper: Mark all active marketplace listings as 'needs_delist'
+ * This triggers the extension to delist from each marketplace
+ */
+async function markMarketplacesForDelist(supabase: any, findId: string) {
+  const { data: marketplaceData, error: fetchError } = await supabase
+    .from('product_marketplace_data')
+    .select('marketplace')
+    .eq('find_id', findId)
+    .eq('status', 'listed')
+
+  if (fetchError) {
+    console.error('Failed to fetch marketplace data:', fetchError)
+    return
+  }
+
+  if (!marketplaceData || marketplaceData.length === 0) {
+    // No active listings to delist
+    return
+  }
+
+  // Update all active listings to 'needs_delist'
+  const { error: updateError } = await supabase
+    .from('product_marketplace_data')
+    .update({
+      status: 'needs_delist',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('find_id', findId)
+    .eq('status', 'listed')
+
+  if (updateError) {
+    console.error('Failed to mark marketplaces for delist:', updateError)
+    throw updateError
+  }
+
+  console.log(`[Auto-Delist] Marked ${marketplaceData.length} marketplace(s) for delist for find ${findId}`)
 }
 
 /**
