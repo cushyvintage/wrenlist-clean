@@ -26,17 +26,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const includeStats = searchParams.get('stats') === 'true'
 
-    // Get finds
-    const finds = await getFinds({
+    // Get finds (scoped to authenticated user)
+    const finds = await getFinds(user.id, {
       status,
       search: search || undefined,
     })
 
     const response: any = { finds }
 
-    // Include stats if requested
+    // Include stats if requested (scoped to authenticated user)
     if (includeStats) {
-      const stats = await getFindStats()
+      const stats = await getFindStats(user.id)
       response.stats = stats
     }
 

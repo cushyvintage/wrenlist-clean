@@ -130,17 +130,10 @@ export default function AddFindPage() {
   // Handle form field changes
   const handleInputChange = useCallback(
     (field: keyof FormData, value: any) => {
-      setFormData((prev) => {
-        const updated = {
-          ...prev,
-          [field]: value,
-        }
-        // Auto-generate SKU when category changes and SKU is empty
-        if (field === 'category' && !prev.sku && value) {
-          updated.sku = generateSKU(value)
-        }
-        return updated
-      })
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }))
     },
     []
   )
@@ -177,6 +170,8 @@ export default function AddFindPage() {
   // Handle SKU regeneration
   const handleRegenerateSKU = useCallback(() => {
     if (formData.category) {
+      // Generate a new SKU client-side for preview
+      // Actual uniqueness checked on save (API will re-validate or generate if needed)
       setFormData((prev) => ({
         ...prev,
         sku: generateSKU(prev.category),

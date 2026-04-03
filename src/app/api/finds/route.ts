@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateFindSchema, validateBody } from '@/lib/validation'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { generateUniqueSKU } from '@/lib/sku'
 import type { Find } from '@/types'
 
 /**
@@ -122,9 +123,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generate unique SKU if not provided, or validate provided SKU is unique
+    let sku = validation.data.sku
+    if (!sku) {
+      // Generate unique SKU with retries
+      sku = await generateUniqueSKU(validation.data.category, user.id)
+    } else {
+      // If user provided SKU, verify it's unique for this user
+      const { data: existingSku } = await supabase
+        .from('finds')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('sku', sku)
+        .single()
+
+      if (existingSku) {
+        return ApiResponseHelper.badRequest(`SKU "${sku}" already exists. Please use a different SKU.`)
+      }
+    }
+
     const find = {
       user_id: user.id,
       ...validation.data,
+      sku,
       sourced_at: validation.data.sourced_at || new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

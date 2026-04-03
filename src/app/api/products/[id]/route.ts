@@ -21,20 +21,12 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const find = await getFind(id)
+    const find = await getFind(id, user.id)
 
     if (!find) {
       return NextResponse.json(
         { error: 'Find not found' },
         { status: 404 }
-      )
-    }
-
-    // Verify ownership
-    if (find.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       )
     }
 
@@ -61,8 +53,8 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify ownership first
-    const find = await getFind(id)
+    // Verify ownership first (scoped query)
+    const find = await getFind(id, user.id)
     if (!find) {
       return NextResponse.json(
         { error: 'Find not found' },
@@ -70,15 +62,8 @@ export async function PUT(request: NextRequest, { params }: { params: RouteParam
       )
     }
 
-    if (find.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      )
-    }
-
     const body = await request.json()
-    const updated = await updateFind(id, body)
+    const updated = await updateFind(id, user.id, body)
 
     return NextResponse.json({ find: updated })
   } catch (error: any) {

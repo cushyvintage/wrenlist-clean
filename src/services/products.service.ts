@@ -7,9 +7,12 @@ import { supabase, validateSupabaseConfig } from './supabase'
 import { Find, FindStatus } from '@/types'
 
 /**
- * Get all finds for the current user
+ * Get all finds for a specific user
+ * @param userId - The authenticated user ID to scope results
+ * @param filters - Optional filters (status, search)
  */
 export async function getFinds(
+  userId: string,
   filters?: {
     status?: FindStatus | 'all'
     search?: string
@@ -20,6 +23,7 @@ export async function getFinds(
   let query = supabase
     .from('finds')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (filters?.status && filters.status !== 'all') {
@@ -38,15 +42,18 @@ export async function getFinds(
 }
 
 /**
- * Get a single find by ID
+ * Get a single find by ID, scoped to a user
+ * @param id - The find ID
+ * @param userId - The authenticated user ID for scope
  */
-export async function getFind(id: string): Promise<Find | null> {
+export async function getFind(id: string, userId: string): Promise<Find | null> {
   validateSupabaseConfig()
 
   const { data, error } = await supabase
     .from('finds')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
 
   if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows
@@ -72,10 +79,14 @@ export async function createFind(
 }
 
 /**
- * Update a find
+ * Update a find, scoped to a user
+ * @param id - The find ID
+ * @param userId - The authenticated user ID for scope
+ * @param updates - Partial updates to apply
  */
 export async function updateFind(
   id: string,
+  userId: string,
   updates: Partial<Omit<Find, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
 ): Promise<Find> {
   validateSupabaseConfig()
@@ -84,6 +95,7 @@ export async function updateFind(
     .from('finds')
     .update(updates)
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single()
 
@@ -92,23 +104,27 @@ export async function updateFind(
 }
 
 /**
- * Delete a find
+ * Delete a find, scoped to a user
+ * @param id - The find ID
+ * @param userId - The authenticated user ID for scope
  */
-export async function deleteFind(id: string): Promise<void> {
+export async function deleteFind(id: string, userId: string): Promise<void> {
   validateSupabaseConfig()
 
   const { error } = await supabase
     .from('finds')
     .delete()
     .eq('id', id)
+    .eq('user_id', userId)
 
   if (error) throw error
 }
 
 /**
- * Get find statistics for dashboard
+ * Get find statistics for dashboard, scoped to a user
+ * @param userId - The authenticated user ID to scope results
  */
-export async function getFindStats(): Promise<{
+export async function getFindStats(userId: string): Promise<{
   total: number
   draft: number
   listed: number
@@ -122,6 +138,7 @@ export async function getFindStats(): Promise<{
   const { data, error } = await supabase
     .from('finds')
     .select('status, cost_gbp, asking_price_gbp')
+    .eq('user_id', userId)
 
   if (error) throw error
   if (!data || data.length === 0) {
@@ -157,15 +174,18 @@ export async function getFindStats(): Promise<{
 }
 
 /**
- * Get finds by status
+ * Get finds by status, scoped to a user
+ * @param status - The find status to filter by
+ * @param userId - The authenticated user ID to scope results
  */
-export async function getFindsByStatus(status: FindStatus): Promise<Find[]> {
+export async function getFindsByStatus(status: FindStatus, userId: string): Promise<Find[]> {
   validateSupabaseConfig()
 
   const { data, error } = await supabase
     .from('finds')
     .select('*')
     .eq('status', status)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

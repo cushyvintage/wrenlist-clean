@@ -32,6 +32,9 @@ export default function PlatformConnectPage() {
     ebay: true,
     vinted: true,
   })
+  const [vintedConnected, setVintedConnected] = useState(false)
+  const [vintedUsername, setVintedUsername] = useState<string | null>(null)
+  const [vintedLoading, setVintedLoading] = useState(false)
   const [shopifyConnected, setShopifyConnected] = useState(false)
   const [shopifyName, setShopifyName] = useState<string | null>(null)
   const [shopifyDomain, setShopifyDomain] = useState<string | null>(null)
@@ -150,6 +153,27 @@ export default function PlatformConnectPage() {
       setPolicyIsLoading(false)
     }
   }
+
+  // Fetch Vinted connection status on mount
+  useEffect(() => {
+    const fetchVintedStatus = async () => {
+      try {
+        setVintedLoading(true)
+        const response = await fetch('/api/vinted/connect')
+        if (response.ok) {
+          const data = await response.json()
+          setVintedConnected(data.data.connected)
+          setVintedUsername(data.data.vintedUsername)
+        }
+      } catch (error) {
+        // Silently fail
+      } finally {
+        setVintedLoading(false)
+      }
+    }
+
+    fetchVintedStatus()
+  }, [])
 
   // Fetch Shopify connection status on mount
   useEffect(() => {
@@ -528,57 +552,110 @@ export default function PlatformConnectPage() {
 
       {/* Vinted */}
       <Panel>
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
-            👚
-          </div>
-          <div className="flex-1">
-            <div className="font-medium text-sm text-ink">Vinted</div>
-            <div className="text-xs text-ink-lt">Automatic via extension</div>
-          </div>
-        </div>
-
-        <p className="text-sm text-ink mb-4">
-          Vinted connects automatically via the Wrenlist extension. Simply log in to <strong>vinted.co.uk</strong> in your browser and Wrenlist will detect your account.
-        </p>
-
-        <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+        {!vintedConnected ? (
+          // State A: Not connected
           <div>
-            <div className="font-medium text-sm text-ink">Sale detection</div>
-            <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when Vinted reports a sale</div>
-          </div>
-          <button
-            onClick={() => setSalesDetection({ ...salesDetection, vinted: !salesDetection.vinted })}
-            className={`relative w-10 h-6 rounded-full transition ${
-              salesDetection.vinted ? 'bg-sage' : 'bg-gray-300'
-            }`}
-          >
-            <div
-              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
-                salesDetection.vinted ? 'right-0.5' : 'left-0.5'
-              }`}
-            ></div>
-          </button>
-        </div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
+                👚
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-sm text-ink">Vinted</div>
+                <div className="text-xs text-ink-lt">Automatic via extension</div>
+              </div>
+            </div>
 
-        <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
-          <div className="text-sm text-amber">⚠</div>
-          <div className="text-sm text-amber">
-            <strong>Heads up about Vinted's Terms of Service</strong> — Vinted's ToS prohibit third-party automation tools.{' '}
-            <a href="https://www.vinted.co.uk/terms-and-conditions" className="underline hover:no-underline">
-              Read Vinted's terms →
-            </a>
-          </div>
-        </div>
+            <p className="text-sm text-ink mb-4">
+              Vinted connects automatically via the Wrenlist extension. Simply log in to <strong>vinted.co.uk</strong> in your browser and Wrenlist will detect your account.
+            </p>
 
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2">
-            <div className="text-xs text-ink-lt">Managed by Wrenlist extension</div>
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
+              <div className="text-sm text-amber">⚠</div>
+              <div className="text-sm text-amber">
+                <strong>Heads up about Vinted's Terms of Service</strong> — Vinted's ToS prohibit third-party automation tools.{' '}
+                <a href="https://www.vinted.co.uk/terms-and-conditions" className="underline hover:no-underline">
+                  Read Vinted's terms →
+                </a>
+              </div>
+            </div>
+
+            <p className="text-xs text-ink-lt text-center">
+              {vintedLoading ? 'Checking status...' : 'Extension not detected. Install it to continue.'}
+            </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition">
-            Disconnect
-          </button>
-        </div>
+        ) : (
+          // State B: Connected
+          <div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
+                👚
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="font-medium text-sm text-ink">Vinted — Connected ✅</div>
+                </div>
+                <div className="text-xs text-ink-lt">Account: {vintedUsername}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
+              <div>
+                <div className="text-xs font-medium text-ink-lt mb-1">Username</div>
+                <div className="text-sm text-ink font-mono">{vintedUsername}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-ink-lt mb-1">Platform</div>
+                <div className="text-sm text-ink">Vinted UK</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+              <div>
+                <div className="font-medium text-sm text-ink">Sale detection</div>
+                <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when Vinted reports a sale</div>
+              </div>
+              <button
+                onClick={() => setSalesDetection({ ...salesDetection, vinted: !salesDetection.vinted })}
+                className={`relative w-10 h-6 rounded-full transition ${
+                  salesDetection.vinted ? 'bg-sage' : 'bg-gray-300'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
+                    salesDetection.vinted ? 'right-0.5' : 'left-0.5'
+                  }`}
+                ></div>
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2">
+                <div className="text-xs text-ink-lt">Managed by Wrenlist extension</div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!confirm('Disconnect Vinted? You can reconnect anytime by logging in via the extension.')) return
+                  setVintedLoading(true)
+                  try {
+                    const response = await fetch('/api/vinted/connect', { method: 'DELETE' })
+                    if (response.ok) {
+                      setVintedConnected(false)
+                      setVintedUsername(null)
+                    }
+                  } catch (error) {
+                    setPageError('Failed to disconnect Vinted')
+                  } finally {
+                    setVintedLoading(false)
+                  }
+                }}
+                disabled={vintedLoading}
+                className="px-4 py-2 text-sm font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition disabled:opacity-50"
+              >
+                {vintedLoading ? 'Disconnecting...' : 'Disconnect'}
+              </button>
+            </div>
+          </div>
+        )}
       </Panel>
 
       {/* Etsy - Pending */}
