@@ -1,10 +1,15 @@
 'use client'
 
+import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
+import { removeBackground } from '@/lib/background-removal'
+
 interface PhotoUploadProps {
   photos: File[]
   photoPreviews: string[]
   onAddPhotos: (files: File[]) => void
   onRemovePhoto: (index: number) => void
+  onUpdatePhoto?: (index: number, preview: string) => void
   maxPhotos?: number
 }
 
@@ -13,8 +18,44 @@ export default function PhotoUpload({
   photoPreviews,
   onAddPhotos,
   onRemovePhoto,
+  onUpdatePhoto,
   maxPhotos = 10,
 }: PhotoUploadProps) {
+  const [removingBgIndex, setRemovingBgIndex] = useState<number | null>(null)
+  const [bgRemovalError, setBgRemovalError] = useState<string | null>(null)
+  const handleRemoveBackground = async (index: number) => {
+    if (index < 0 || index >= photos.length) return
+
+    setRemovingBgIndex(index)
+    setBgRemovalError(null)
+
+    try {
+      const photoFile = photos[index]!
+      const processedFile = await removeBackground(photoFile)
+
+      // Update form state with processed photo
+      // Create new array with replaced photo at index
+      const updatedPhotos = [...photos]
+      updatedPhotos[index] = processedFile
+
+      // Create object URL for preview
+      const newPreview = URL.createObjectURL(processedFile)
+
+      // Update parent component
+      onAddPhotos(updatedPhotos)
+
+      if (onUpdatePhoto) {
+        onUpdatePhoto(index, newPreview)
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setBgRemovalError(`Background removal failed: ${errorMsg}`)
+      console.error('Background removal error:', error)
+    } finally {
+      setRemovingBgIndex(null)
+    }
+  }
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.currentTarget.classList.add('border-sage', 'bg-cream-md')
@@ -116,8 +157,34 @@ export default function PhotoUpload({
               </button>
             )}
           </div>
-          <div className="flex justify-end">
-            <button className="text-xs text-sage-lt hover:text-sage cursor-pointer underline underline-offset-2">Remove background (AI) →</button>
+          <div className="space-y-2">
+            {bgRemovalError && (
+              <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                {bgRemovalError}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              {photoPreviews.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={removingBgIndex === idx}
+                  onClick={() => handleRemoveBackground(idx)}
+                  className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
+                >
+                  {removingBgIndex === idx ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    <>
+                      🪄 Photo {idx + 1}
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-start gap-2 text-xs text-sage-dim">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 mt-0.5">
