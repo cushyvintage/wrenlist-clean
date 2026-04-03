@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
+import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
+import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import { Badge } from '@/components/wren/Badge'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
-import type { Find, FindCondition, Platform } from '@/types'
+import { applyTemplate } from '@/lib/templates/apply-template'
+import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
+import type { ListingFormData } from '@/types/listing-form'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -89,6 +93,9 @@ export default function InventoryDetailPage() {
   const [markSoldConfirm, setMarkSoldConfirm] = useState(false)
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
+  const [templateAppliedBanner, setTemplateAppliedBanner] = useState(false)
+  const [incompleteFields, setIncompleteFields] = useState<string[]>([])
 
   // Fetch find details
   useEffect(() => {
@@ -149,6 +156,59 @@ export default function InventoryDetailPage() {
       [field]: value,
     }))
   }, [])
+
+  // Convert inventory FormData to ListingFormData for template operations
+  const formDataToListingFormData = useCallback((): ListingFormData => {
+    return {
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      price: formData.price,
+      brand: formData.brand,
+      condition: formData.condition,
+      quantity: formData.quantity,
+      photos: formData.photos,
+      photoPreviews: formData.photoPreviews,
+      selectedPlatforms: formData.selectedPlatforms,
+      platformFields: formData.platformFields,
+      shippingWeight: formData.shippingWeight,
+      shippingDimensions: formData.shippingDimensions,
+      sku: formData.sku,
+      costPrice: formData.costPrice,
+      internalNote: formData.internalNote,
+      platformPrices: formData.platformPrices,
+    }
+  }, [formData])
+
+  // Apply template to form data
+  const handleApplyTemplate = useCallback((template: ListingTemplate) => {
+    const listingFormData = formDataToListingFormData()
+    const { merged, incompleteRequiredFields } = applyTemplate(template, listingFormData)
+
+    setFormData({
+      title: merged.title,
+      description: merged.description,
+      category: merged.category,
+      price: merged.price,
+      brand: merged.brand,
+      condition: merged.condition,
+      quantity: merged.quantity,
+      photos: merged.photos,
+      photoPreviews: merged.photoPreviews,
+      selectedPlatforms: merged.selectedPlatforms,
+      platformFields: merged.platformFields,
+      shippingWeight: merged.shippingWeight,
+      shippingDimensions: merged.shippingDimensions,
+      sku: merged.sku,
+      costPrice: merged.costPrice,
+      internalNote: merged.internalNote,
+      platformPrices: merged.platformPrices,
+    })
+
+    setIncompleteFields(incompleteRequiredFields)
+    setTemplateAppliedBanner(true)
+    setTimeout(() => setTemplateAppliedBanner(false), 3000)
+  }, [formDataToListingFormData])
 
   const handlePlatformToggle = useCallback((platform: Platform) => {
     setFormData((prev) => {
@@ -804,16 +864,60 @@ export default function InventoryDetailPage() {
 
       {/* Edit mode */}
       {isEditing && (
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left: Marketplace selector */}
+        <div className="space-y-6">
+          {/* Template applied banner */}
+          {templateAppliedBanner && (
+            <div
+              className="p-3 rounded text-sm"
+              style={{
+                backgroundColor: 'rgba(34, 197, 94, .1)',
+                borderWidth: '1px',
+                borderColor: 'rgba(34, 197, 94, .3)',
+                color: '#22C55E',
+              }}
+            >
+              ✓ Template applied! Review highlighted fields before saving.
+            </div>
+          )}
+
+          {/* Incomplete fields banner */}
+          {incompleteFields.length > 0 && (
+            <div
+              className="p-3 rounded text-sm space-y-1"
+              style={{
+                backgroundColor: 'rgba(245, 158, 11, .1)',
+                borderWidth: '1px',
+                borderColor: 'rgba(245, 158, 11, .3)',
+                color: '#F59E0B',
+              }}
+            >
+              <div>⚠ {incompleteFields.length} required field(s) incomplete:</div>
+              <ul className="text-xs space-y-0.5 ml-4">
+                {incompleteFields.map((field) => (
+                  <li key={field}>• {field}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Form grid */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* Left: Marketplace selector */}
           <div
-            className="col-span-2 space-y-3 p-4 rounded sticky top-24 h-fit"
+            className="col-span-2 space-y-4 p-4 rounded sticky top-24 h-fit"
             style={{
               backgroundColor: '#F5F0E8',
               borderWidth: '1px',
               borderColor: 'rgba(61,92,58,.14)',
             }}
           >
+            {/* Template picker */}
+            <div className="space-y-2">
+              <TemplatePickerPopover onSelectTemplate={handleApplyTemplate} />
+            </div>
+
+            <div style={{ height: '1px', backgroundColor: 'rgba(61,92,58,.14)' }} />
+
             <p className="text-xs uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>
               List On
             </p>
@@ -1234,6 +1338,43 @@ export default function InventoryDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Save as template section */}
+            {!showSaveAsTemplate && (
+              <div className="pt-4 border-t" style={{ borderColor: 'rgba(61,92,58,.14)' }}>
+                <button
+                  onClick={() => setShowSaveAsTemplate(true)}
+                  className="text-sm text-sage hover:text-sage-dk transition underline underline-offset-2"
+                >
+                  💾 Save as template
+                </button>
+              </div>
+            )}
+            {showSaveAsTemplate && (
+              <SaveAsTemplateInput
+                formData={formDataToListingFormData()}
+                onSaveSuccess={() => {
+                  setShowSaveAsTemplate(false)
+                  // Show success toast
+                  const toast = document.createElement('div')
+                  toast.textContent = '✓ Template saved!'
+                  toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    padding: 12px 16px;
+                    background-color: rgba(34, 197, 94, .9);
+                    color: white;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    z-index: 100;
+                  `
+                  document.body.appendChild(toast)
+                  setTimeout(() => toast.remove(), 3000)
+                }}
+                onClose={() => setShowSaveAsTemplate(false)}
+              />
+            )}
           </div>
 
           {/* Right: Internal fields */}
@@ -1318,39 +1459,40 @@ export default function InventoryDetailPage() {
             </div>
           </div>
 
-          {/* Edit mode action bar */}
-          <div
-            className="col-span-12 sticky bottom-0 flex items-center justify-between gap-2 p-4 rounded mt-6"
-          style={{
-            backgroundColor: '#F5F0E8',
-            borderWidth: '1px',
-            borderColor: 'rgba(61,92,58,.14)',
-          }}
-        >
-          <button
-            onClick={() => setIsEditing(false)}
-            className="px-4 py-2 text-sm font-medium rounded transition-colors"
-            style={{
-              borderWidth: '1px',
-              borderColor: 'rgba(61,92,58,.22)',
-              backgroundColor: 'transparent',
-              color: '#3D5C3A',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-            style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
-            onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#2C4428')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+            {/* Edit mode action bar */}
+            <div
+              className="col-span-12 sticky bottom-0 flex items-center justify-between gap-2 p-4 rounded mt-6"
+              style={{
+                backgroundColor: '#F5F0E8',
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.14)',
+              }}
+            >
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors"
+                style={{
+                  borderWidth: '1px',
+                  borderColor: 'rgba(61,92,58,.22)',
+                  backgroundColor: 'transparent',
+                  color: '#3D5C3A',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+                onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#2C4428')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}
