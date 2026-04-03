@@ -414,7 +414,7 @@ export default function ListingsPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-serif text-2xl italic text-ink">listings</h1>
           <Link
-            href="/listings/create"
+            href="/add-find"
             className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
           >
             + new listing
@@ -459,7 +459,7 @@ export default function ListingsPage() {
             </div>
             {listings.length === 0 && (
               <Link
-                href="/listings/create"
+                href="/add-find"
                 className="text-sm font-medium text-sage hover:text-sage-dk"
               >
                 create your first listing →
