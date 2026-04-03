@@ -1,9 +1,10 @@
+import * as Sentry from '@sentry/nextjs'
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { init } = await import('@sentry/nextjs')
     const dsn = process.env.SENTRY_DSN
     if (dsn) {
-      init({
+      Sentry.init({
         dsn,
         environment: process.env.NODE_ENV,
         tracesSampleRate: 0.1,
@@ -12,10 +13,9 @@ export async function register() {
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    const { init } = await import('@sentry/nextjs')
     const dsn = process.env.SENTRY_DSN
     if (dsn) {
-      init({
+      Sentry.init({
         dsn,
         environment: process.env.NODE_ENV,
         tracesSampleRate: 0.1,
@@ -23,3 +23,5 @@ export async function register() {
     }
   }
 }
+
+export const onRequestError = Sentry.captureRequestError
