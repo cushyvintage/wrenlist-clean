@@ -1,14 +1,36 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
-import { Badge } from '@/components/wren/Badge'
-import type { Find } from '@/types'
+
+interface SoldItem {
+  id: string
+  name: string
+  category: string
+  cost_gbp: number | null
+  sold_price_gbp: number | null
+  sourced_at: string | null
+  sold_at: string | null
+  marketplace?: string
+  margin_percent?: number
+  days_listed?: number
+}
+
+interface Metrics {
+  itemsSold: number
+  totalRevenue: number
+  totalCost: number
+  totalProfit: number
+  avgMargin: number
+  avgPerItem: number
+}
 
 export default function SoldHistoryPage() {
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'all'>('month')
-  const [soldFinds, setSoldFinds] = useState<Find[]>([])
+  const [items, setItems] = useState<SoldItem[]>([])
+  const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,42 +38,28 @@ export default function SoldHistoryPage() {
     document.title = 'Sold Items | Wrenlist'
   }, [])
 
-  // Fetch sold finds
+  // Fetch sold items with metrics
   useEffect(() => {
-    const fetchSoldFinds = async () => {
+    const fetchSoldItems = async () => {
       try {
         setIsLoading(true)
         setError(null)
-        const response = await fetch('/api/finds?status=sold')
+        const response = await fetch(`/api/sold?timeframe=${timeframe}`)
         if (!response.ok) throw new Error('Failed to fetch sold items')
         const result = await response.json()
-        setSoldFinds(result.data?.data || result.data || [])
+        setItems(result.data?.items || [])
+        setMetrics(result.data?.metrics || null)
       } catch (err) {
         console.error('Error fetching sold items:', err)
         setError(err instanceof Error ? err.message : 'Failed to load sold items')
-        setSoldFinds([])
+        setItems([])
+        setMetrics(null)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchSoldFinds()
-  }, [])
-
-  // Calculate metrics from actual data
-  const itemsSold = soldFinds.length
-  const totalRevenue = soldFinds.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
-  const totalCost = soldFinds.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
-  const totalProfit = totalRevenue - totalCost
-  const avgMargin = soldFinds.length > 0
-    ? Math.round(
-        soldFinds
-          .map((item) => {
-            if (!item.cost_gbp || !item.sold_price_gbp) return 0
-            return ((item.sold_price_gbp - item.cost_gbp) / item.sold_price_gbp) * 100
-          })
-          .reduce((a, b) => a + b, 0) / soldFinds.length
-      )
-    : 0
+    fetchSoldItems()
+  }, [timeframe])
 
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return '—'
@@ -67,79 +75,31 @@ export default function SoldHistoryPage() {
     return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: '2-digit' })
   }
 
-  const getDaysListed = (find: Find): number => {
-    if (!find.sourced_at || !find.sold_at) return 0
-    const sourced = new Date(find.sourced_at).getTime()
-    const sold = new Date(find.sold_at).getTime()
-    return Math.round((sold - sourced) / (1000 * 60 * 60 * 24))
-  }
-
   return (
     <div className="space-y-6">
-      {/* Topbar */}
+      {/* Page header */}
       <div className="flex items-center justify-between border-b border-border pb-4">
-        <h1 className="text-lg font-serif text-ink">sold history</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTimeframe('month')}
-              className={`px-4 py-2 text-sm font-medium rounded transition ${
-                timeframe === 'month'
-                  ? 'bg-sage text-white'
-                  : 'bg-cream-md text-ink hover:bg-cream-dk'
-              }`}
-            >
-              this month
-            </button>
-            <button
-              onClick={() => setTimeframe('quarter')}
-              className={`px-4 py-2 text-sm font-medium rounded transition ${
-                timeframe === 'quarter'
-                  ? 'bg-sage text-white'
-                  : 'bg-cream-md text-ink hover:bg-cream-dk'
-              }`}
-            >
-              3 months
-            </button>
-            <button
-              onClick={() => setTimeframe('all')}
-              className={`px-4 py-2 text-sm font-medium rounded transition ${
-                timeframe === 'all'
-                  ? 'bg-sage text-white'
-                  : 'bg-cream-md text-ink hover:bg-cream-dk'
-              }`}
-            >
-              all time
-            </button>
-          </div>
-          <button className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition">
-            export CSV
-          </button>
+        <div>
+          <h1 className="text-lg font-serif text-ink">sold history</h1>
+          <p className="text-xs text-ink-lt mt-1">Track all sold items and profits</p>
         </div>
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard
-          label="items sold"
-          value={itemsSold.toString()}
-          delta="+8 vs last month"
-        />
-        <StatCard
-          label="total revenue"
-          value={`£${totalRevenue.toLocaleString()}`}
-          delta={`£${Math.round(totalRevenue / itemsSold)} avg per item`}
-        />
-        <StatCard
-          label="total profit"
-          value={`£${totalProfit.toLocaleString()}`}
-          delta="after cost & packaging"
-        />
-        <StatCard
-          label="avg margin"
-          value={`${avgMargin}%`}
-          delta="up from 61%"
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex gap-2 bg-cream rounded p-1">
+            {(['month', 'quarter', 'all'] as const).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-3 py-1 text-xs font-medium rounded transition ${
+                  timeframe === tf
+                    ? 'bg-sage text-white'
+                    : 'text-ink hover:bg-cream-dk'
+                }`}
+              >
+                {tf === 'month' ? 'this month' : tf === 'quarter' ? '3 months' : 'all time'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Error state */}
@@ -154,55 +114,101 @@ export default function SoldHistoryPage() {
         <div className="text-center py-8 text-ink-lt">Loading sold items...</div>
       )}
 
-      {/* Sold items table */}
-      {!isLoading && (
+      {/* Stats grid */}
+      {!isLoading && metrics && (
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard
+            label="items sold"
+            value={metrics.itemsSold.toString()}
+            delta={`£${metrics.avgPerItem} avg per item`}
+          />
+          <StatCard
+            label="total revenue"
+            value={`£${metrics.totalRevenue.toLocaleString()}`}
+            delta={`${metrics.itemsSold} ${metrics.itemsSold === 1 ? 'item' : 'items'}`}
+          />
+          <StatCard
+            label="total profit"
+            value={`£${metrics.totalProfit.toLocaleString()}`}
+            delta={`after cost`}
+          />
+          <StatCard
+            label="avg margin"
+            value={`${metrics.avgMargin}%`}
+            delta={`on ${timeframe}`}
+          />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && items.length === 0 && (
         <Panel>
-          <h3 className="font-medium text-sm text-ink mb-4">all sold items</h3>
-          {soldFinds.length === 0 ? (
-            <div className="py-8 text-center text-ink-lt">
-              <p>No items sold yet</p>
-              <p className="text-xs mt-2">Sold items will appear here</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">item</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">category</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">source</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">cost</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">sold for</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">margin</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">days listed</th>
-                    <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">sold</th>
+          <div className="py-12 text-center">
+            <p className="text-ink mb-2">No items sold yet</p>
+            <p className="text-xs text-ink-lt mb-4">
+              Items you have sold appear here automatically when Wrenlist detects a sale, or you can mark items as sold yourself.
+            </p>
+            <Link
+              href="/inventory"
+              className="inline-block text-sm text-sage hover:text-sage-dk underline underline-offset-2"
+            >
+              → Go to inventory
+            </Link>
+          </div>
+        </Panel>
+      )}
+
+      {/* Sold items table */}
+      {!isLoading && items.length > 0 && (
+        <Panel>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">item</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">category</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">marketplace</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">cost</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">sold for</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">margin</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">days listed</th>
+                  <th className="px-4 py-2 text-left font-medium text-ink-lt text-xs">sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-border hover:bg-cream-md transition"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/inventory/${item.id}`}
+                        className="font-medium text-sm text-sage hover:underline"
+                      >
+                        {item.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-ink-lt text-sm capitalize">{item.category}</td>
+                    <td className="px-4 py-3 text-ink-lt text-sm">{item.marketplace || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-ink text-sm">
+                      £{item.cost_gbp?.toFixed(2) || '—'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-ink text-sm font-medium">
+                      £{item.sold_price_gbp?.toFixed(2) || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-mono">
+                      <span className={item.margin_percent && item.margin_percent > 0 ? 'text-green-600' : 'text-ink-lt'}>
+                        {item.margin_percent}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-ink text-sm">{item.days_listed}</td>
+                    <td className="px-4 py-3 text-ink-lt text-sm">{formatDate(item.sold_at)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {soldFinds.map((find) => {
-                    const margin = find.cost_gbp && find.sold_price_gbp
-                      ? Math.round(((find.sold_price_gbp - find.cost_gbp) / find.sold_price_gbp) * 100)
-                      : 0
-                    const daysListed = getDaysListed(find)
-                    return (
-                      <tr key={find.id} className="border-b border-border hover:bg-cream-md transition">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-sm text-ink">{find.name}</div>
-                        </td>
-                        <td className="px-4 py-3 text-ink-lt text-sm capitalize">{find.category}</td>
-                        <td className="px-4 py-3 text-ink-lt text-sm">{find.source_name || '—'}</td>
-                        <td className="px-4 py-3 font-mono text-ink text-sm">£{find.cost_gbp}</td>
-                        <td className="px-4 py-3 font-mono text-ink text-sm">£{find.sold_price_gbp}</td>
-                        <td className="px-4 py-3 text-green-600 text-sm font-mono">{margin}%</td>
-                        <td className="px-4 py-3 font-mono text-ink text-sm">{daysListed}</td>
-                        <td className="px-4 py-3 text-ink-lt text-sm">{formatDate(find.sold_at)}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
     </div>

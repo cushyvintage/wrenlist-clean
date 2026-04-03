@@ -91,6 +91,7 @@ export default function InventoryDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [markSoldConfirm, setMarkSoldConfirm] = useState(false)
+  const [markSoldData, setMarkSoldData] = useState({ price: '', date: '' })
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
@@ -352,13 +353,17 @@ export default function InventoryDetailPage() {
       setIsSaving(true)
       setError(null)
 
+      const soldPrice = markSoldData.price ? parseFloat(markSoldData.price) : null
+      const soldDate = markSoldData.date ? new Date(markSoldData.date).toISOString() : new Date().toISOString()
+
       // Update find status to "sold"
       const res = await fetch(`/api/finds/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'sold',
-          sold_at: new Date().toISOString(),
+          sold_at: soldDate,
+          ...(soldPrice && { sold_price_gbp: soldPrice }),
         }),
       })
 
@@ -482,7 +487,7 @@ export default function InventoryDetailPage() {
     return (
       <div className="max-w-2xl mx-auto">
         <div
-          className="p-8 rounded text-center"
+          className="p-8 rounded"
           style={{
             backgroundColor: '#FFF9F3',
             borderWidth: '1px',
@@ -492,15 +497,55 @@ export default function InventoryDetailPage() {
           <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
             Mark "{find.name}" as sold?
           </h2>
-          <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>
+          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
             This will delist the item from all active marketplaces.
           </p>
-          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
-            Extension will handle Vinted delisting in the background.
-          </p>
-          <div className="flex gap-3 justify-center">
+
+          {/* Form fields */}
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#6B7D6A' }}>
+                Sold price (£)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder={find.asking_price_gbp?.toString() || '0.00'}
+                value={markSoldData.price}
+                onChange={(e) => setMarkSoldData(prev => ({ ...prev, price: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded border"
+                style={{
+                  borderColor: 'rgba(61,92,58,.22)',
+                  backgroundColor: '#FFF',
+                  color: '#1E2E1C',
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#6B7D6A' }}>
+                Date sold
+              </label>
+              <input
+                type="date"
+                value={markSoldData.date}
+                onChange={(e) => setMarkSoldData(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded border"
+                style={{
+                  borderColor: 'rgba(61,92,58,.22)',
+                  backgroundColor: '#FFF',
+                  color: '#1E2E1C',
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
             <button
-              onClick={() => setMarkSoldConfirm(false)}
+              onClick={() => {
+                setMarkSoldConfirm(false)
+                setMarkSoldData({ price: '', date: '' })
+              }}
               className="px-4 py-2 text-sm font-medium rounded transition-colors"
               style={{
                 borderWidth: '1px',
