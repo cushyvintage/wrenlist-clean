@@ -75,10 +75,7 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return ApiResponseHelper.success({
-      data: tripsWithStats,
-      pagination: { limit, offset, total: count || 0 },
-    })
+    return ApiResponseHelper.success(tripsWithStats)
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/sourcing error:', error)

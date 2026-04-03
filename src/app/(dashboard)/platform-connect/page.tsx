@@ -44,26 +44,41 @@ export default function PlatformConnectPage() {
   const [shopifyError, setShopifyError] = useState<string | null>(null)
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
+  const [vintedImportLoading, setVintedImportLoading] = useState(false)
+  const [vintedImportResult, setVintedImportResult] = useState<{ imported: number; skipped: number; errors: number } | null>(null)
+  const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
+  const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
+  const [vintedActionError, setVintedActionError] = useState<string | null>(null)
 
 
-  // Ping the Wrenlist extension to check if it's installed
-  const pingExtension = async (): Promise<void> => {
+  // Check Vinted session via the Wrenlist extension
+  const checkVintedSession = async (): Promise<void> => {
     try {
+      const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
         setExtensionDetected(false)
         return
       }
 
-      const response = await new Promise<{ success: boolean; version?: string }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false }), 2000)
-        chrome.runtime.sendMessage({ type: 'ping' }, (response) => {
+      const response = await new Promise<{ loggedIn: boolean; username?: string; tld?: string }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ loggedIn: false }), 3000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'get_vinted_session' }, (response) => {
           clearTimeout(timeout)
-          resolve(response || { success: false })
+          if (chrome.runtime.lastError) {
+            resolve({ loggedIn: false })
+          } else {
+            resolve(response || { loggedIn: false })
+          }
         })
       })
 
-      setExtensionDetected(response.success)
-      if (response.version) setExtensionVersion(response.version)
+      setExtensionDetected(true)
+      if (response.loggedIn && response.username) {
+        setVintedConnected(true)
+        setVintedUsername(response.username)
+      } else {
+        setVintedConnected(false)
+      }
     } catch (error) {
       setExtensionDetected(false)
     }
@@ -199,7 +214,7 @@ export default function PlatformConnectPage() {
     }
 
     fetchVintedStatus()
-    void pingExtension()
+    void checkVintedSession()
   }, [])
 
   // Fetch Shopify connection status on mount
@@ -276,6 +291,121 @@ export default function PlatformConnectPage() {
       setPageError('Failed to disconnect Shopify')
     } finally {
       setShopifyLoading(false)
+    }
+  }
+
+  const handleVintedImport = async () => {
+    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    setVintedImportLoading(true)
+    setVintedActionError(null)
+    setVintedImportResult(null)
+
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        throw new Error('Extension not available')
+      }
+
+      const extensionResponse = await new Promise<{ success: boolean; listings?: any[] }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ success: false }), 60000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200 }, (response) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError) {
+            resolve({ success: false })
+          } else {
+            resolve(response || { success: false })
+          }
+        })
+      })
+
+      if (!extensionResponse.success || !extensionResponse.listings) {
+        throw new Error('Failed to fetch Vinted listings from extension')
+      }
+
+      // Send listings to backend for import
+      const apiResponse = await fetch('/api/import/vinted-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listings: extensionResponse.listings }),
+      })
+
+      if (!apiResponse.ok) {
+        throw new Error('Failed to import listings')
+      }
+
+      const result = await apiResponse.json()
+      setVintedImportResult(result.data)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
+      setVintedActionError(message)
+    } finally {
+      setVintedImportLoading(false)
+    }
+  }
+
+  const handleVintedSync = async () => {
+    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    setVintedSyncLoading(true)
+    setVintedActionError(null)
+    setVintedSyncResult(null)
+
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        throw new Error('Extension not available')
+      }
+
+      // Get all finds with Vinted listings
+      const findsResponse = await fetch('/api/finds?platform=vinted')
+      if (!findsResponse.ok) {
+        throw new Error('Failed to fetch finds')
+      }
+
+      const findsData = await findsResponse.json()
+      const finds = findsData.data || []
+
+      if (finds.length === 0) {
+        setVintedSyncResult({ updated: 0, failed: 0 })
+        return
+      }
+
+      // Send to extension for status sync
+      const extensionResponse = await new Promise<{ success: boolean; updates?: any[] }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ success: false }), 30000)
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'sync_vinted_status', data: { products: finds } },
+          (response) => {
+            clearTimeout(timeout)
+            if (chrome.runtime.lastError) {
+              resolve({ success: false })
+            } else {
+              resolve(response || { success: false })
+            }
+          }
+        )
+      })
+
+      if (!extensionResponse.success || !extensionResponse.updates) {
+        throw new Error('Failed to sync status from extension')
+      }
+
+      // Send updates to backend
+      const apiResponse = await fetch('/api/vinted/sync-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: extensionResponse.updates }),
+      })
+
+      if (!apiResponse.ok) {
+        throw new Error('Failed to sync status')
+      }
+
+      const result = await apiResponse.json()
+      setVintedSyncResult(result.data)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to sync status'
+      setVintedActionError(message)
+    } finally {
+      setVintedSyncLoading(false)
     }
   }
 
@@ -607,7 +737,7 @@ export default function PlatformConnectPage() {
             </div>
 
             <p className="text-xs text-ink-lt text-center">
-              {vintedLoading || extensionDetected === null ? 'Checking status...' : extensionDetected ? `Extension detected (v${extensionVersion || '?'})` : 'Extension not detected. Install it to continue.'}
+              {vintedLoading || extensionDetected === null ? 'Checking status...' : extensionDetected ? 'Extension detected ✓' : 'Extension not detected. Install it to continue.'}
             </p>
           </div>
         ) : (
@@ -652,6 +782,42 @@ export default function PlatformConnectPage() {
                     salesDetection.vinted ? 'right-0.5' : 'left-0.5'
                   }`}
                 ></div>
+              </button>
+            </div>
+
+            {vintedActionError && (
+              <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm text-red-700">
+                {vintedActionError}
+              </div>
+            )}
+
+            {vintedImportResult && (
+              <div className="bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm text-green-700">
+                ✅ Imported {vintedImportResult.imported} new finds {vintedImportResult.skipped > 0 && `, ${vintedImportResult.skipped} already in Wrenlist`}
+              </div>
+            )}
+
+            {vintedSyncResult && (
+              <div className="bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm text-green-700">
+                ✅ Synced status: {vintedSyncResult.updated} item{vintedSyncResult.updated !== 1 ? 's' : ''} updated
+                {vintedSyncResult.failed > 0 && `, ${vintedSyncResult.failed} failed`}
+              </div>
+            )}
+
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={handleVintedImport}
+                disabled={vintedImportLoading || vintedSyncLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+              >
+                {vintedImportLoading ? 'Importing...' : '📥 Import from Vinted'}
+              </button>
+              <button
+                onClick={handleVintedSync}
+                disabled={vintedImportLoading || vintedSyncLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+              >
+                {vintedSyncLoading ? 'Syncing...' : '🔄 Sync status'}
               </button>
             </div>
 
