@@ -66,6 +66,9 @@ interface FormData {
   costPrice: number | null
   internalNote: string
 
+  // Sourcing trip link
+  sourcingTripId: string | null
+
   // Pricing overrides
   platformPrices: Record<Platform, number | null>
 }
@@ -100,6 +103,7 @@ export default function AddFindPage() {
     sku: '',
     costPrice: null,
     internalNote: '',
+    sourcingTripId: null,
     platformPrices: { vinted: null, ebay: null, etsy: null, shopify: null },
   })
 
@@ -118,6 +122,7 @@ export default function AddFindPage() {
     confidence: 'high' | 'medium' | 'low'
   } | null>(null)
   const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
+  const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -148,6 +153,29 @@ export default function AddFindPage() {
       setShowSaveAsTemplate(true)
     }
 
+    // Check if sourcingTripId param is set, fetch trip name
+    const sourcingTripIdParam = searchParams.get('sourcingTripId')
+    if (sourcingTripIdParam) {
+      const fetchTripName = async () => {
+        try {
+          const response = await fetch(`/api/sourcing/${sourcingTripIdParam}`)
+          if (!response.ok) {
+            throw new Error('Failed to load trip')
+          }
+          const { data: trip } = await response.json()
+          setFormData((prev) => ({
+            ...prev,
+            sourcingTripId: sourcingTripIdParam,
+          }))
+          setSourcingTripName(trip.name)
+        } catch (err) {
+          console.error('Failed to load sourcing trip:', err)
+        }
+      }
+
+      fetchTripName()
+    }
+
     // Check if templateId param is set, auto-apply the template
     const templateId = searchParams.get('templateId')
     if (templateId) {
@@ -159,7 +187,7 @@ export default function AddFindPage() {
           }
           const { data: template } = await response.json()
           const result = applyTemplate(template, formData)
-          setFormData(result.merged)
+          setFormData(prev => ({ ...result.merged, sourcingTripId: prev.sourcingTripId }))
           setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
           setTemplateAppliedBanner(template.name)
           // Auto-dismiss banner after 3 seconds
@@ -195,7 +223,7 @@ export default function AddFindPage() {
   // Apply a template to the current form
   const handleApplyTemplate = useCallback((template: ListingTemplate) => {
     const result = applyTemplate(template, formData)
-    setFormData(result.merged)
+    setFormData(prev => ({ ...result.merged, sourcingTripId: prev.sourcingTripId }))
     setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
     setTemplateAppliedBanner(template.name)
     // Auto-dismiss banner after 3 seconds
@@ -436,6 +464,7 @@ export default function AddFindPage() {
           condition: formData.condition,
           sku: formData.sku || null,
           cost_gbp: formData.costPrice,
+          sourcing_trip_id: formData.sourcingTripId,
           platform_fields: {
             ...formData.platformFields,
             selectedPlatforms: formData.selectedPlatforms,
@@ -515,6 +544,7 @@ export default function AddFindPage() {
           condition: formData.condition,
           sku: formData.sku || null,
           cost_gbp: formData.costPrice,
+          sourcing_trip_id: formData.sourcingTripId,
           platform_fields: {
             ...formData.platformFields,
             selectedPlatforms: formData.selectedPlatforms,
@@ -800,6 +830,25 @@ export default function AddFindPage() {
                     ✕
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Sourcing trip banner */}
+            {sourcingTripName && (
+              <div className="rounded-lg border border-sage/20 bg-sage/5 p-4 flex items-center justify-between">
+                <span className="text-sm text-ink">
+                  Adding to trip: <strong>{sourcingTripName}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, sourcingTripId: null }))
+                    setSourcingTripName(null)
+                  }}
+                  className="text-xs px-2 py-1 text-sage-lt hover:text-sage transition-colors"
+                >
+                  ✕
+                </button>
               </div>
             )}
 

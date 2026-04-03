@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
       ...validation.data,
       sku,
       sourced_at: validation.data.sourced_at || new Date().toISOString(),
+      sourcing_trip_id: validation.data.sourcing_trip_id || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

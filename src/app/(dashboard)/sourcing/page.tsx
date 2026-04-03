@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Loader2 } from 'lucide-react'
-import type { SourcingTripWithStats, SourcingTripType } from '@/types'
+import type { SourcingTripWithStats, SourcingTripType, Supplier } from '@/types'
 import { SOURCING_TRIP_TYPES } from '@/types'
 
 type FilterType = 'all' | SourcingTripType
@@ -20,6 +20,7 @@ const FILTER_TABS: { value: FilterType; label: string }[] = [
 export default function SourcingPage() {
   const router = useRouter()
   const [trips, setTrips] = useState<SourcingTripWithStats[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
@@ -35,7 +36,22 @@ export default function SourcingPage() {
     miles: '',
     entry_fee_gbp: '',
     notes: '',
+    supplier_id: '',
   })
+
+  // Fetch suppliers
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/suppliers')
+      if (!response.ok) {
+        throw new Error('Failed to fetch suppliers')
+      }
+      const result = await response.json()
+      setSuppliers(result.data?.data || result.data || [])
+    } catch (err) {
+      console.error('Error fetching suppliers:', err)
+    }
+  }, [])
 
   // Fetch trips
   const fetchTrips = useCallback(async () => {
@@ -59,7 +75,8 @@ export default function SourcingPage() {
 
   useEffect(() => {
     fetchTrips()
-  }, [fetchTrips])
+    fetchSuppliers()
+  }, [fetchTrips, fetchSuppliers])
 
   // Handle form input changes
   const handleInputChange = (
@@ -93,6 +110,7 @@ export default function SourcingPage() {
         miles: formData.miles ? parseFloat(formData.miles) : null,
         entry_fee_gbp: formData.entry_fee_gbp ? parseFloat(formData.entry_fee_gbp) : null,
         notes: formData.notes.trim() || null,
+        supplier_id: formData.supplier_id || null,
       }
 
       const response = await fetch('/api/sourcing', {
@@ -114,6 +132,7 @@ export default function SourcingPage() {
         miles: '',
         entry_fee_gbp: '',
         notes: '',
+        supplier_id: '',
       })
       setShowCreateForm(false)
       await fetchTrips()
@@ -160,6 +179,12 @@ export default function SourcingPage() {
     const mileageDeductible = (trip.miles || 0) * 0.45
     const tripCost = (trip.entry_fee_gbp || 0) + mileageDeductible
     return trip.total_spent_gbp + tripCost
+  }
+
+  // Get supplier name by ID
+  const getSupplierName = (supplierId: string | null) => {
+    if (!supplierId) return null
+    return suppliers.find((s) => s.id === supplierId)?.name || null
   }
 
   return (
@@ -306,6 +331,26 @@ export default function SourcingPage() {
                   className="w-full px-3 py-2 border border-sage/22 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                 />
               </div>
+
+              {/* Supplier */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-sage-dim font-medium mb-1.5">
+                  Supplier (optional)
+                </label>
+                <select
+                  name="supplier_id"
+                  value={formData.supplier_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-sage/22 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                >
+                  <option value="">Select supplier...</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Notes */}
@@ -409,7 +454,10 @@ export default function SourcingPage() {
                         {SOURCING_TRIP_TYPES[trip.type]}
                       </span>
                     </div>
-                    {trip.location && <p className="text-xs text-ink-lt">{trip.location}</p>}
+                    <div className="text-xs text-ink-lt space-y-1">
+                      {trip.location && <p>{trip.location}</p>}
+                      {getSupplierName(trip.supplier_id) && <p>Supplier: {getSupplierName(trip.supplier_id)}</p>}
+                    </div>
                   </div>
                   <span className="text-xs text-ink-lt whitespace-nowrap">{formatDate(trip.date)}</span>
                 </div>

@@ -272,6 +272,7 @@ export interface SourcingTrip {
   miles: number | null
   entry_fee_gbp: number | null
   notes: string | null
+  supplier_id: string | null
   created_at: string
   updated_at: string
 }

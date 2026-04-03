@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createSupabaseServerClient()
     const body = await request.json()
 
-    const { name, type, location, date, miles, entry_fee_gbp, notes } = body
+    const { name, type, location, date, miles, entry_fee_gbp, notes, supplier_id } = body
 
     // Validate required fields
     if (!name || !type || !date) {
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       miles: miles ? parseFloat(miles) : null,
       entry_fee_gbp: entry_fee_gbp ? parseFloat(entry_fee_gbp) : null,
       notes: notes || null,
+      supplier_id: supplier_id || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
