@@ -71,7 +71,7 @@ export default function SaveAsTemplateInput({
             setTemplateName(e.target.value)
             setError(null)
           }}
-          onKeyPress={(e) => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter') {
               handleSave()
             }

@@ -16,6 +16,7 @@ export default function TemplatePickerPopover({ onSelectTemplate }: TemplatePick
   const [error, setError] = useState<string | null>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const hasFetched = useRef(false)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -65,7 +66,8 @@ export default function TemplatePickerPopover({ onSelectTemplate }: TemplatePick
 
   const handleOpenClick = () => {
     setIsOpen(!isOpen)
-    if (!isOpen && templates.length === 0 && !error && !isLoading) {
+    if (!isOpen && !hasFetched.current) {
+      hasFetched.current = true
       fetchTemplates()
     }
   }
@@ -81,6 +83,8 @@ export default function TemplatePickerPopover({ onSelectTemplate }: TemplatePick
         ref={buttonRef}
         onClick={handleOpenClick}
         className="flex items-center gap-2 px-3 py-2 text-sm text-sage-lt hover:text-sage transition-colors border border-sage/14 rounded hover:bg-cream-md"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
       >
         <span>📋</span>
         <span>Use template</span>
