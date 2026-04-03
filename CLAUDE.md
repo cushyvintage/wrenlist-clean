@@ -16,3 +16,8 @@
 ## Dev Server
 - **Port:** 3004 (Next.js picks this if 3000 is busy)
 - **Start:** `npm run dev` from `/Volumes/ExternalAI/github/wrenlist-clean`
+
+## Key Paths
+- **Active dev repo:** `/Volumes/ExternalAI/github/wrenlist-clean`
+- **Extension source:** `/Volumes/ExternalAI/github/wrenlist-clean/extension/src`
+- **Legacy repo (reference only):** `/Volumes/ExternalAI/github/wrenlist`
