@@ -12,24 +12,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and category are required' }, { status: 400 })
     }
 
-    const prompt = `You are a vintage marketplace seller. Write a compelling, brief (~150 words) product listing description for this item.
+    const prompt = `You are an expert vintage reseller writing compelling marketplace listings. Write a 150-180 word product description that will make buyers want to purchase this item immediately.
 
 Item Details:
 - Title: ${title}
 - Category: ${category}
 ${brand ? `- Brand: ${brand}` : ''}
-- Condition: ${condition}
+- Condition: ${condition || 'good'}
 
-The description should:
-- Be written in a friendly, engaging seller's voice
-- Highlight condition honestly (excellent = like new, good = used with minimal wear, fair = well-worn)
-- Be specific to the ${category} category
-${brand ? `- Mention the brand "${brand}" naturally` : ''}
-- Be suitable for both Vinted and eBay
-- Avoid excessive punctuation or emojis
-- Focus on what makes it appealing to buyers
+Requirements:
+- Open with the most compelling detail (age, maker, rarity, visual appeal)
+- Describe condition honestly but positively: excellent = pristine/like new, good = light use/minimal wear, fair = character marks/well-loved
+- Mention specific visual details that a photo might not convey (weight, texture, markings, pattern names if known)
+${brand ? `- Work in "${brand}" naturally — its heritage or reputation adds value` : ''}
+- Close with why this piece belongs in someone's home/collection
+- Tone: warm, knowledgeable, not salesy — like a trusted dealer, not a car advert
+- Format: flowing prose, no bullet points, no ALL CAPS, no excessive exclamation marks
 
-Write ONLY the description text, no preamble.`
+Write ONLY the description. No title, no preamble.`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -38,7 +38,7 @@ Write ONLY the description text, no preamble.`
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       }),

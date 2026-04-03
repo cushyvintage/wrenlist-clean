@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: 'image_url',
-              image_url: { url: photoUrl, detail: 'low' },
+              image_url: { url: photoUrl, detail: 'high' },
             },
             {
               type: 'text',
