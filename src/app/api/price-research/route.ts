@@ -69,6 +69,7 @@ Provide 3-5 sample listings per platform. Base prices on realistic UK market dat
       body: JSON.stringify({
         model: 'gpt-4o',
         max_tokens: 2000,
+        response_format: { type: 'json_object' },
         messages: [{ role: 'user', content: prompt }],
       }),
     })
@@ -81,7 +82,9 @@ Provide 3-5 sample listings per platform. Base prices on realistic UK market dat
       choices: Array<{ message: { content: string } }>
     }
 
-    const content = data.choices[0]?.message?.content?.trim() ?? ''
+    const raw = data.choices[0]?.message?.content?.trim() ?? ''
+    // Strip markdown code fences if present
+    const content = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
 
     let priceData: PriceResearchResponse
     try {
