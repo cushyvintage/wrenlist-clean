@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-interface GoogleBooksVolume {
-  volumeInfo?: {
-    title?: string
-    authors?: string[]
-    description?: string
-    publishedDate?: string
-    pageCount?: number
-    categories?: string[]
-    industryIdentifiers?: Array<{
-      type: string
-      identifier: string
-    }>
-  }
+interface OpenLibraryBook {
+  title?: string
+  authors?: Array<{ name: string }>
+  description?: string | { value: string }
+  publish_date?: string
+  number_of_pages?: number
+  subjects?: Array<{ name: string }>
 }
 
 export async function GET(request: NextRequest) {
@@ -24,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate ISBN: must be 10 or 13 digits
-    const isbnDigits = isbn.replace(/[^0-9]/g, '')
+    const isbnDigits = isbn.replace(/[^0-9Xx]/g, '')
     if (isbnDigits.length !== 10 && isbnDigits.length !== 13) {
       return NextResponse.json(
         { error: 'ISBN must be 10 or 13 digits' },
@@ -32,33 +26,35 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Use Open Library API — free, no key, no quota limits
     const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbnDigits)}`
+      `https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbnDigits)}&format=json&jscmd=data`,
+      { next: { revalidate: 86400 } } // cache for 24h
     )
 
     if (!response.ok) {
-      throw new Error(`Google Books API error: ${response.status}`)
+      throw new Error(`Open Library API error: ${response.status}`)
     }
 
-    const data = (await response.json()) as { items?: GoogleBooksVolume[] }
+    const data = await response.json() as Record<string, OpenLibraryBook>
+    const key = `ISBN:${isbnDigits}`
+    const book = data[key]
 
-    if (!data.items || data.items.length === 0) {
+    if (!book) {
       return NextResponse.json({ error: 'ISBN not found' }, { status: 404 })
     }
 
-    const volume = data.items[0]
-    if (!volume) {
-      return NextResponse.json({ error: 'ISBN not found' }, { status: 404 })
-    }
-    const info = volume.volumeInfo
+    const description = typeof book.description === 'string'
+      ? book.description
+      : book.description?.value ?? ''
 
     return NextResponse.json({
-      title: info?.title || '',
-      authors: info?.authors || [],
-      description: info?.description || '',
-      publishedDate: info?.publishedDate || '',
-      pageCount: info?.pageCount || null,
-      categories: info?.categories || [],
+      title: book.title ?? '',
+      authors: (book.authors ?? []).map((a) => a.name),
+      description,
+      publishedDate: book.publish_date ?? '',
+      pageCount: book.number_of_pages ?? null,
+      categories: (book.subjects ?? []).map((s) => s.name).slice(0, 5),
     })
   } catch (error) {
     console.error('Failed to lookup ISBN:', error)
