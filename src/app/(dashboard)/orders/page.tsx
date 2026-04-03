@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { Platform } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 interface Order {
   id: string
@@ -33,7 +34,7 @@ export default function OrdersPage() {
         const response = await fetch('/api/orders')
         if (!response.ok) throw new Error('Failed to fetch orders')
         const result = await response.json()
-        setOrders(result.data?.data || result.data || [])
+        setOrders(unwrapApiResponse<Order[]>(result))
       } catch (err) {
         console.error('Failed to fetch orders:', err)
         setError(err instanceof Error ? err.message : 'Failed to load orders')

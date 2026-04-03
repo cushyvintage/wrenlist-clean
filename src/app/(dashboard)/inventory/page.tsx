@@ -7,6 +7,7 @@ import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import { PLAN_LIMITS } from '@/config/plans'
 import type { Find, Profile, PlanId } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 // Fallback mock data for when API is unavailable
 const mockFinds: Find[] = [
@@ -314,7 +315,7 @@ export default function InventoryPage() {
           throw new Error('Failed to fetch finds')
         }
         const result = await findsRes.json()
-        setFinds((result.data?.data || result.data || []) as Find[])
+        setFinds(unwrapApiResponse<Find[]>(result))
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
@@ -494,7 +495,7 @@ export default function InventoryPage() {
       const findsRes = await fetch('/api/finds')
       if (findsRes.ok) {
         const result = await findsRes.json()
-        setFinds((result.data?.data || result.data || []) as Find[])
+        setFinds(unwrapApiResponse<Find[]>(result))
       }
 
       // Clear selection and close form

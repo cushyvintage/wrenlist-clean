@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Star, Trash2, Edit2, Plus } from 'lucide-react'
 import type { Supplier, SupplierType } from '@/types'
+import { fetchApi } from '@/lib/api-utils'
+import { useApiCall } from '@/hooks/useApiCall'
 
 const typeLabel: Record<SupplierType, string> = {
   house_clearance: 'House Clearance',
@@ -38,9 +40,7 @@ interface SupplierWithStats extends Supplier {
 }
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<SupplierWithStats[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: suppliers, isLoading: loading, error, call: refetchSuppliers } = useApiCall<SupplierWithStats[]>([])
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<SupplierType | 'all'>('all')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -58,35 +58,22 @@ export default function SuppliersPage() {
 
   // Load suppliers
   useEffect(() => {
-    loadSuppliers()
-  }, [])
+    refetchSuppliers(() => fetchApi<SupplierWithStats[]>('/api/suppliers'))
+  }, [refetchSuppliers])
 
-  async function loadSuppliers() {
-    try {
-      setLoading(true)
-      setError(null)
-      const res = await fetch('/api/suppliers')
-      if (!res.ok) throw new Error('Failed to load suppliers')
-      const json = await res.json()
-      setSuppliers((json.data || json) as SupplierWithStats[])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load suppliers')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  const [formError, setFormError] = useState<string | null>(null)
   async function handleAddSupplier(e: React.FormEvent) {
     e.preventDefault()
     try {
       setSubmitting(true)
+      setFormError(null)
       const res = await fetch('/api/suppliers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
       if (!res.ok) throw new Error('Failed to create supplier')
-      await loadSuppliers()
+      await refetchSuppliers(() => fetchApi<SupplierWithStats[]>('/api/suppliers'))
       setShowAddForm(false)
       setFormData({
         name: '',
@@ -98,7 +85,7 @@ export default function SuppliersPage() {
         rating: 0,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create supplier')
+      setFormError(err instanceof Error ? err.message : 'Failed to create supplier')
     } finally {
       setSubmitting(false)
     }
@@ -108,15 +95,15 @@ export default function SuppliersPage() {
     try {
       const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete supplier')
-      await loadSuppliers()
+      await refetchSuppliers(() => fetchApi<SupplierWithStats[]>('/api/suppliers'))
       setDeleteConfirm(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete supplier')
+      setFormError(err instanceof Error ? err.message : 'Failed to delete supplier')
     }
   }
 
   // Filter suppliers
-  const filtered = suppliers.filter((supplier) => {
+  const filtered = (suppliers || []).filter((supplier) => {
     const matchesSearch =
       !search ||
       supplier.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -131,7 +118,7 @@ export default function SuppliersPage() {
   const supplierTypes = Object.entries(typeLabel).map(([key]) => key as SupplierType)
 
   // EMPTY STATE
-  if (!loading && suppliers.length === 0) {
+  if (!loading && (suppliers?.length ?? 0) === 0) {
     return (
       <div className="flex flex-col gap-6">
         <div className="border-b border-sage/14 pb-6 flex items-center justify-between">

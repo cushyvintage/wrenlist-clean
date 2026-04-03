@@ -5,7 +5,9 @@ import { useRouter, useParams } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
-import { Badge } from '@/components/wren/Badge'
+import MarkAsSoldModal from '@/components/inventory/MarkAsSoldModal'
+import InventoryItemHeader from '@/components/inventory/InventoryItemHeader'
+import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { applyTemplate } from '@/lib/templates/apply-template'
@@ -346,15 +348,15 @@ export default function InventoryDetailPage() {
     }
   }
 
-  const handleMarkSold = async () => {
+  const handleMarkSold = async (priceInput?: string, dateInput?: string) => {
     if (!find) return
 
     try {
       setIsSaving(true)
       setError(null)
 
-      const soldPrice = markSoldData.price ? parseFloat(markSoldData.price) : null
-      const soldDate = markSoldData.date ? new Date(markSoldData.date).toISOString() : new Date().toISOString()
+      const soldPrice = (priceInput || markSoldData.price) ? parseFloat(priceInput || markSoldData.price) : null
+      const soldDate = (dateInput || markSoldData.date) ? new Date((dateInput || markSoldData.date)).toISOString() : new Date().toISOString()
 
       // Update find status to "sold"
       const res = await fetch(`/api/finds/${id}`, {
@@ -485,215 +487,45 @@ export default function InventoryDetailPage() {
 
   if (markSoldConfirm) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div
-          className="p-8 rounded"
-          style={{
-            backgroundColor: '#FFF9F3',
-            borderWidth: '1px',
-            borderColor: 'rgba(196,138,58,.2)',
-          }}
-        >
-          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
-            Mark "{find.name}" as sold?
-          </h2>
-          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
-            This will delist the item from all active marketplaces.
-          </p>
-
-          {/* Form fields */}
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#6B7D6A' }}>
-                Sold price (£)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder={find.asking_price_gbp?.toString() || '0.00'}
-                value={markSoldData.price}
-                onChange={(e) => setMarkSoldData(prev => ({ ...prev, price: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded border"
-                style={{
-                  borderColor: 'rgba(61,92,58,.22)',
-                  backgroundColor: '#FFF',
-                  color: '#1E2E1C',
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#6B7D6A' }}>
-                Date sold
-              </label>
-              <input
-                type="date"
-                value={markSoldData.date}
-                onChange={(e) => setMarkSoldData(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded border"
-                style={{
-                  borderColor: 'rgba(61,92,58,.22)',
-                  backgroundColor: '#FFF',
-                  color: '#1E2E1C',
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => {
-                setMarkSoldConfirm(false)
-                setMarkSoldData({ price: '', date: '' })
-              }}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleMarkSold}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
-              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#A5723A')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#C4883A')}
-            >
-              {isSaving ? 'Processing...' : 'Mark as Sold'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <MarkAsSoldModal
+        find={find}
+        onConfirm={async (price, date) => {
+          await handleMarkSold(price, date)
+          setMarkSoldConfirm(false)
+          setMarkSoldData({ price: '', date: '' })
+        }}
+        onCancel={() => {
+          setMarkSoldConfirm(false)
+          setMarkSoldData({ price: '', date: '' })
+        }}
+        isLoading={isSaving}
+      />
     )
   }
 
   if (deleteConfirm) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div
-          className="p-8 rounded text-center"
-          style={{
-            backgroundColor: '#FFF9F3',
-            borderWidth: '1px',
-            borderColor: 'rgba(196,138,58,.2)',
-          }}
-        >
-          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
-            Delete "{find.name}"?
-          </h2>
-          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
-            This action cannot be undone.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => setDeleteConfirm(false)}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
-              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#A5723A')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#C4883A')}
-            >
-              {isSaving ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <DeleteConfirmModal
+        find={find}
+        isOpen={deleteConfirm}
+        isLoading={isSaving}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(false)}
+      />
     )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div
-        className="flex items-center justify-between pb-4"
-        style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
-      >
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push('/inventory')}
-            className="text-sm text-sage hover:text-sage-dk transition"
-          >
-            ← Back
-          </button>
-          <h1 className="text-2xl font-medium" style={{ color: '#1E2E1C' }}>
-            {find.name}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge status={find.status as 'draft' | 'listed' | 'on_hold' | 'sold'} />
-          {!isEditing && (
-            <button
-              onClick={handleSyncOrders}
-              disabled={isSyncing}
-              className="px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-50"
-              title="Sync eBay orders"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-              onMouseEnter={(e) => !isSyncing && (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              {isSyncing ? '↻ Syncing...' : '↻ Sync'}
-            </button>
-          )}
-          {!isEditing && find.status === 'listed' && (
-            <button
-              onClick={() => setMarkSoldConfirm(true)}
-              className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FED8B1')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              Mark as Sold
-            </button>
-          )}
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              Edit
-            </button>
-          )}
-        </div>
-      </div>
+      <InventoryItemHeader
+        find={find}
+        isEditing={isEditing}
+        isSyncing={isSyncing}
+        onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
+        onEditClick={() => setIsEditing(true)}
+        onSyncClick={handleSyncOrders}
+      />
 
       {/* Error state */}
       {error && (

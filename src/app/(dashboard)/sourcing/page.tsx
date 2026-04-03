@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import type { SourcingTripWithStats, SourcingTripType, Supplier } from '@/types'
 import { SOURCING_TRIP_TYPES } from '@/types'
+import { fetchApi } from '@/lib/api-utils'
+import { useApiCall } from '@/hooks/useApiCall'
 
 type FilterType = 'all' | SourcingTripType
 
@@ -19,10 +21,8 @@ const FILTER_TABS: { value: FilterType; label: string }[] = [
 
 export default function SourcingPage() {
   const router = useRouter()
-  const [trips, setTrips] = useState<SourcingTripWithStats[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: trips, isLoading, error, call: refetchTrips } = useApiCall<SourcingTripWithStats[]>([])
+  const { data: suppliers, call: refetchSuppliers } = useApiCall<Supplier[]>([])
   const [filter, setFilter] = useState<FilterType>('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -39,44 +39,10 @@ export default function SourcingPage() {
     supplier_id: '',
   })
 
-  // Fetch suppliers
-  const fetchSuppliers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/suppliers')
-      if (!response.ok) {
-        throw new Error('Failed to fetch suppliers')
-      }
-      const result = await response.json()
-      setSuppliers(result.data?.data || result.data || [])
-    } catch (err) {
-      console.error('Error fetching suppliers:', err)
-    }
-  }, [])
-
-  // Fetch trips
-  const fetchTrips = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const response = await fetch('/api/sourcing')
-      if (!response.ok) {
-        throw new Error('Failed to fetch trips')
-      }
-      const result = await response.json()
-      setTrips(result.data?.data || result.data || [])
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred'
-      setError(message)
-      console.error('Error fetching trips:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    fetchTrips()
-    fetchSuppliers()
-  }, [fetchTrips, fetchSuppliers])
+    refetchTrips(() => fetchApi<SourcingTripWithStats[]>('/api/sourcing'))
+    refetchSuppliers(() => fetchApi<Supplier[]>('/api/suppliers'))
+  }, [refetchTrips, refetchSuppliers])
 
   // Handle form input changes
   const handleInputChange = (
@@ -90,17 +56,18 @@ export default function SourcingPage() {
   }
 
   // Create new trip
+  const [createError, setCreateError] = useState<string | null>(null)
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.name.trim() || !formData.type || !formData.date) {
-      setError('Please fill in required fields')
+      setCreateError('Please fill in required fields')
       return
     }
 
     try {
       setIsCreating(true)
-      setError(null)
+      setCreateError(null)
 
       const payload = {
         name: formData.name.trim(),
@@ -135,10 +102,10 @@ export default function SourcingPage() {
         supplier_id: '',
       })
       setShowCreateForm(false)
-      await fetchTrips()
+      await refetchTrips(() => fetchApi<SourcingTripWithStats[]>('/api/sourcing'))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
-      setError(message)
+      setCreateError(message)
       console.error('Error creating trip:', err)
     } finally {
       setIsCreating(false)
@@ -146,7 +113,7 @@ export default function SourcingPage() {
   }
 
   // Filter trips
-  const filteredTrips = trips.filter((trip) => (filter === 'all' ? true : trip.type === filter))
+  const filteredTrips = (trips || []).filter((trip) => (filter === 'all' ? true : trip.type === filter))
 
   // Calculate mileage deductible hint
   const mileageDeductible = formData.miles ? parseFloat(formData.miles) * 0.45 : 0
@@ -184,7 +151,7 @@ export default function SourcingPage() {
   // Get supplier name by ID
   const getSupplierName = (supplierId: string | null) => {
     if (!supplierId) return null
-    return suppliers.find((s) => s.id === supplierId)?.name || null
+    return (suppliers || []).find((s) => s.id === supplierId)?.name || null
   }
 
   return (
@@ -203,7 +170,7 @@ export default function SourcingPage() {
       </div>
 
       {/* Empty State */}
-      {!isLoading && trips.length === 0 && (
+      {!isLoading && (trips?.length ?? 0) === 0 && (
         <div className="border border-sage/14 rounded-lg p-12 text-center bg-cream/50">
           <div className="text-4xl mb-4">🛍</div>
           <h2 className="font-serif text-xl italic text-ink mb-2">Sourcing trips</h2>
@@ -344,7 +311,7 @@ export default function SourcingPage() {
                   className="w-full px-3 py-2 border border-sage/22 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                 >
                   <option value="">Select supplier...</option>
-                  {suppliers.map((supplier) => (
+                  {(suppliers || []).map((supplier) => (
                     <option key={supplier.id} value={supplier.id}>
                       {supplier.name}
                     </option>
@@ -369,9 +336,9 @@ export default function SourcingPage() {
             </div>
 
             {/* Error */}
-            {error && (
+            {createError && (
               <div className="bg-red-100 border border-red-300 rounded p-2 text-sm text-red-700">
-                {error}
+                {createError}
               </div>
             )}
 
@@ -399,7 +366,7 @@ export default function SourcingPage() {
       )}
 
       {/* Filter Tabs */}
-      {!isLoading && trips.length > 0 && (
+      {!isLoading && (trips?.length ?? 0) > 0 && (
         <div className="flex gap-2 flex-wrap border-b border-sage/14 pb-4">
           {FILTER_TABS.map((tab) => (
             <button
@@ -428,12 +395,12 @@ export default function SourcingPage() {
       {/* Error State */}
       {error && !isCreating && (
         <div className="bg-red-100 border border-red-300 rounded p-3 text-sm text-red-700">
-          {error}
+          {error || 'Failed to load trips'}
         </div>
       )}
 
       {/* Trip Cards Grid */}
-      {!isLoading && trips.length > 0 && (
+      {!isLoading && (trips?.length ?? 0) > 0 && (
         <div className="grid gap-4">
           {filteredTrips.map((trip) => {
             const roiStatus = getRoiStatus(trip)
@@ -498,7 +465,7 @@ export default function SourcingPage() {
       )}
 
       {/* No trips after filter */}
-      {!isLoading && trips.length > 0 && filteredTrips.length === 0 && (
+      {!isLoading && (trips?.length ?? 0) > 0 && filteredTrips.length === 0 && (
         <div className="text-center text-ink-lt py-8">
           No trips found for this filter
         </div>
