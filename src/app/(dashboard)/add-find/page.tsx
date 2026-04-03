@@ -7,7 +7,8 @@ import CategoryPicker from '@/components/listing/CategoryPicker'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
-import { FindCondition, Platform, CategoryFieldConfig, FieldConfig } from '@/types'
+import { applyTemplate } from '@/lib/templates/apply-template'
+import { FindCondition, Platform, CategoryFieldConfig, FieldConfig, ListingTemplate } from '@/types'
 
 declare const chrome: any
 
@@ -105,6 +106,7 @@ export default function AddFindPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
   const [shopifyShopId, setShopifyShopId] = useState<string | null>(null)
+  const [incompleteRequiredFields, setIncompleteRequiredFields] = useState<Set<string>>(new Set())
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -134,9 +136,22 @@ export default function AddFindPage() {
         ...prev,
         [field]: value,
       }))
+      // Clear incomplete field flag when user interacts
+      setIncompleteRequiredFields((prev) => {
+        const updated = new Set(prev)
+        updated.delete(field)
+        return updated
+      })
     },
     []
   )
+
+  // Apply a template to the current form
+  const handleApplyTemplate = useCallback((template: ListingTemplate) => {
+    const result = applyTemplate(template, formData)
+    setFormData(result.merged)
+    setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
+  }, [formData])
 
   // Fetch category field config when category or marketplace changes
   useEffect(() => {
@@ -226,6 +241,12 @@ export default function AddFindPage() {
           },
         },
       }))
+      // Clear incomplete platform field flag when user interacts
+      setIncompleteRequiredFields((prev) => {
+        const updated = new Set(prev)
+        updated.delete(`platformFields.${platform}`)
+        return updated
+      })
     },
     []
   )
@@ -606,12 +627,21 @@ export default function AddFindPage() {
               <textarea
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value.slice(0, titleCharLimit))}
-                className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                className={`w-full px-3 py-2 border rounded text-sm resize-none focus:outline-none focus:ring-2 ${
+                  incompleteRequiredFields.has('title')
+                    ? 'border-amber-400 focus:ring-amber-400'
+                    : 'border-sage/14 focus:ring-sage/30'
+                }`}
                 rows={2}
                 placeholder="Item title"
               />
-              <div className="text-xs text-sage-dim mt-1">
-                {formData.title.length}/{titleCharLimit}
+              <div className="flex justify-between items-start mt-1">
+                <div className="text-xs text-sage-dim">
+                  {formData.title.length}/{titleCharLimit}
+                </div>
+                {incompleteRequiredFields.has('title') && (
+                  <span className="text-xs text-amber-600">Required — complete before publishing</span>
+                )}
               </div>
             </div>
 
@@ -621,18 +651,36 @@ export default function AddFindPage() {
               <textarea
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value.slice(0, 2000))}
-                className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+                className={`w-full px-3 py-2 border rounded text-sm resize-none focus:outline-none focus:ring-2 ${
+                  incompleteRequiredFields.has('description')
+                    ? 'border-amber-400 focus:ring-amber-400'
+                    : 'border-sage/14 focus:ring-sage/30'
+                }`}
                 rows={4}
                 placeholder="Describe the item..."
               />
-              <div className="text-xs text-sage-dim mt-1">
-                {formData.description.length}/2000
+              <div className="flex justify-between items-start mt-1">
+                <div className="text-xs text-sage-dim">
+                  {formData.description.length}/2000
+                </div>
+                {incompleteRequiredFields.has('description') && (
+                  <span className="text-xs text-amber-600">Required — complete before publishing</span>
+                )}
               </div>
             </div>
 
             {/* Category */}
-            <div className="bg-white rounded-lg border border-sage/14 p-6">
-              <label className="block text-sm font-semibold text-ink mb-4">Category</label>
+            <div className={`bg-white rounded-lg border p-6 ${
+              incompleteRequiredFields.has('category')
+                ? 'border-amber-400'
+                : 'border-sage/14'
+            }`}>
+              <div className="flex justify-between items-start mb-4">
+                <label className="block text-sm font-semibold text-ink">Category</label>
+                {incompleteRequiredFields.has('category') && (
+                  <span className="text-xs text-amber-600">Required — complete before publishing</span>
+                )}
+              </div>
               <CategoryPicker
                 value={formData.category}
                 onChange={(value) => handleInputChange('category', value)}
@@ -644,18 +692,27 @@ export default function AddFindPage() {
             <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">Price</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-sage-dim">£</span>
-                  <input
-                    type="number"
-                    value={formData.price ?? ''}
-                    onChange={(e) =>
-                      handleInputChange('price', e.target.value ? parseFloat(e.target.value) : null)
-                    }
-                    className="flex-1 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    placeholder="0.00"
-                    step="0.01"
-                  />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-sage-dim">£</span>
+                    <input
+                      type="number"
+                      value={formData.price ?? ''}
+                      onChange={(e) =>
+                        handleInputChange('price', e.target.value ? parseFloat(e.target.value) : null)
+                      }
+                      className={`flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${
+                        incompleteRequiredFields.has('price')
+                          ? 'border-amber-400 focus:ring-amber-400'
+                          : 'border-sage/14 focus:ring-sage/30'
+                      }`}
+                      placeholder="0.00"
+                      step="0.01"
+                    />
+                  </div>
+                  {incompleteRequiredFields.has('price') && (
+                    <span className="text-xs text-amber-600">Required — complete before publishing</span>
+                  )}
                 </div>
               </div>
 
@@ -740,17 +797,26 @@ export default function AddFindPage() {
             {/* Condition */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
               <label className="block text-sm font-semibold text-ink mb-2">Condition</label>
-              <select
-                value={formData.condition}
-                onChange={(e) => handleInputChange('condition', e.target.value as FindCondition)}
-                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-              >
-                {CONDITIONS.map((cond) => (
-                  <option key={cond.value} value={cond.value}>
-                    {cond.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-2">
+                <select
+                  value={formData.condition}
+                  onChange={(e) => handleInputChange('condition', e.target.value as FindCondition)}
+                  className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${
+                    incompleteRequiredFields.has('condition')
+                      ? 'border-amber-400 focus:ring-amber-400'
+                      : 'border-sage/14 focus:ring-sage/30'
+                  }`}
+                >
+                  {CONDITIONS.map((cond) => (
+                    <option key={cond.value} value={cond.value}>
+                      {cond.label}
+                    </option>
+                  ))}
+                </select>
+                {incompleteRequiredFields.has('condition') && (
+                  <span className="text-xs text-amber-600">Required — complete before publishing</span>
+                )}
+              </div>
             </div>
 
             {/* Quantity */}

@@ -254,6 +254,25 @@ export function formatGBP(amount: number | null): string {
 }
 
 // ============================================================================
+// LISTING TEMPLATES
+// ============================================================================
+
+export interface ListingTemplate {
+  id: string
+  user_id: string
+  name: string
+  category: string | null
+  condition: FindCondition | null
+  brand: string | null
+  platform_fields: Record<string, any>
+  marketplaces: Platform[]
+  default_price: number | null
+  usage_count: number
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
 // MARKETPLACE
 // ============================================================================
 
