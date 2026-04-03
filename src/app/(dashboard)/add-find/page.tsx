@@ -6,6 +6,7 @@ import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
+import BarcodeScanner from '@/components/barcode/BarcodeScanner'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
@@ -128,6 +129,9 @@ export default function AddFindPage() {
   const [isbnLooking, setIsbnLooking] = useState(false)
   const [isbnError, setIsbnError] = useState<string | null>(null)
   const [isbnResult, setIsbnResult] = useState<{ title: string; authors: string[] } | null>(null)
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false)
+  const [barcodeScanSupported, setBarcodeScanSupported] = useState(true)
+  const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -207,6 +211,13 @@ export default function AddFindPage() {
       autoApplyTemplate()
     }
   }, [searchParams])
+
+  // Check for BarcodeDetector API support
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setBarcodeScanSupported(typeof (window as any).BarcodeDetector !== 'undefined')
+    }
+  }, [])
 
   // Handle form field changes
   const handleInputChange = useCallback(
@@ -335,6 +346,98 @@ export default function AddFindPage() {
       setIsbnLooking(false)
     }
   }, [isbnInput, formData.title, formData.selectedPlatforms])
+
+  // Handle barcode scan detection
+  const handleBarcodeDetected = useCallback(
+    async (code: string) => {
+      setBarcodeScannerOpen(false)
+      setIsbnInput(code)
+
+      // Auto-trigger ISBN lookup with the detected code
+      try {
+        const response = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(code)}`)
+
+        if (!response.ok) {
+          setIsbnError(`ISBN not found: ${code}`)
+          return
+        }
+
+        const data = await response.json()
+        setIsbnResult({ title: data.title, authors: data.authors })
+
+        // Auto-fill title if empty
+        if (!formData.title && data.title) {
+          handleInputChange('title', data.title)
+        }
+
+        // Auto-fill author fields for both platforms
+        if (data.authors && data.authors.length > 0) {
+          const authorName = data.authors[0]
+          if (formData.selectedPlatforms.includes('vinted')) {
+            handlePlatformFieldChange('vinted', 'author', authorName)
+          }
+          if (formData.selectedPlatforms.includes('ebay')) {
+            handlePlatformFieldChange('ebay', 'author', authorName)
+          }
+        }
+
+        // Auto-fill ISBN for both platforms
+        if (formData.selectedPlatforms.includes('vinted')) {
+          handlePlatformFieldChange('vinted', 'isbn', code)
+        }
+        if (formData.selectedPlatforms.includes('ebay')) {
+          handlePlatformFieldChange('ebay', 'isbn', code)
+        }
+
+        // Clear input after successful lookup
+        setIsbnInput('')
+        setTimeout(() => setIsbnResult(null), 2500)
+      } catch (err) {
+        setIsbnError((err as any).message || 'Failed to lookup ISBN')
+      }
+    },
+    [formData.title, formData.selectedPlatforms]
+  )
+
+  // Handle photo classification for category detection
+  const handleClassifyPhoto = useCallback(
+    async (index: number) => {
+      if (!formData.photoPreviews[index]) return
+
+      const photoUrl = formData.photoPreviews[index]
+      // Only classify public URLs from Supabase (not blob URLs)
+      if (!photoUrl.startsWith('http')) return
+
+      setClassifyingPhotoIndex(index)
+
+      try {
+        const response = await fetch('/api/ai/classify-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoUrl }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to classify photo')
+        }
+
+        const data = await response.json()
+
+        // Auto-select category if confidence is high
+        if (data.confidence === 'high' && !formData.category) {
+          handleInputChange('category', data.category)
+        }
+
+        setAutoDetectedCategory(data)
+        setTimeout(() => setAutoDetectedCategory(null), 3000)
+      } catch (err) {
+        console.error('Failed to classify photo:', err)
+      } finally {
+        setClassifyingPhotoIndex(null)
+      }
+    },
+    [formData.photoPreviews, formData.category]
+  )
 
   // Handle description generation
   const handleGenerateDescription = useCallback(async () => {
@@ -915,7 +1018,19 @@ export default function AddFindPage() {
 
             {/* Photos */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
-              <h3 className="text-sm font-semibold text-ink mb-4">Photos</h3>
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-sm font-semibold text-ink">Photos</h3>
+                {formData.photoPreviews.length > 0 && !formData.category && (
+                  <button
+                    type="button"
+                    onClick={() => formData.photoPreviews[0] && handleClassifyPhoto(0)}
+                    disabled={classifyingPhotoIndex === 0}
+                    className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed transition-colors underline underline-offset-2"
+                  >
+                    {classifyingPhotoIndex === 0 ? '⏳ Identifying...' : '🔍 Identify item'}
+                  </button>
+                )}
+              </div>
               <PhotoUpload
                 photos={formData.photos}
                 photoPreviews={formData.photoPreviews}
@@ -930,13 +1045,33 @@ export default function AddFindPage() {
               <div className="flex justify-between items-start mb-2">
                 <label className="block text-sm font-semibold text-ink">Title</label>
                 {formData.category?.startsWith('books') && (
-                  <button
-                    type="button"
-                    onClick={() => setIsbnLookupOpen(!isbnLookupOpen)}
-                    className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
-                  >
-                    📚 Look up by ISBN
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsbnLookupOpen(!isbnLookupOpen)}
+                      className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+                    >
+                      📚 Look up by ISBN
+                    </button>
+                    {barcodeScanSupported ? (
+                      <button
+                        type="button"
+                        onClick={() => setBarcodeScannerOpen(true)}
+                        className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+                      >
+                        📷 Scan barcode
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="Barcode scanning not supported on this browser"
+                        className="text-xs text-sage-dim opacity-50 cursor-not-allowed"
+                      >
+                        📷 Scan barcode
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               <textarea
@@ -1574,6 +1709,13 @@ export default function AddFindPage() {
           </div>
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={barcodeScannerOpen}
+        onClose={() => setBarcodeScannerOpen(false)}
+        onDetected={handleBarcodeDetected}
+      />
     </div>
   )
 }

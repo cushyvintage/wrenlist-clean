@@ -248,7 +248,14 @@ const categoryEmojis: Record<string, string> = {
   default: '📦',
 }
 
-type StatusFilter = 'all' | 'listed' | 'draft' | 'on_hold' | 'sold'
+type StatusFilter = 'all' | 'listed' | 'draft' | 'on_hold' | 'sold' | 'aging'
+
+// Helper function to calculate days listed
+const getDaysListed = (find: Find): number => {
+  const now = new Date()
+  const listedDate = new Date(find.updated_at)
+  return Math.floor((now.getTime() - listedDate.getTime()) / (1000 * 60 * 60 * 24))
+}
 
 export default function InventoryPage() {
   const router = useRouter()
@@ -263,6 +270,12 @@ export default function InventoryPage() {
   const [ebayConnected, setEbayConnected] = useState(false)
   const [publishingFindId, setPublishingFindId] = useState<string | null>(null)
   const [publishError, setPublishError] = useState<Record<string, string>>({})
+  const [bulkPublishConfirm, setBulkPublishConfirm] = useState(false)
+  const [bulkPublishing, setBulkPublishing] = useState(false)
+  const [bulkPublishError, setBulkPublishError] = useState<string | null>(null)
+  const [showMarkSoldForm, setShowMarkSoldForm] = useState(false)
+  const [markSoldPrice, setMarkSoldPrice] = useState('')
+  const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
 
   /**
    * Set page title on mount
@@ -317,7 +330,15 @@ export default function InventoryPage() {
 
   // Filter finds by status and search
   const filteredFinds = finds.filter((find) => {
-    const statusMatch = selectedStatus === 'all' || find.status === selectedStatus
+    let statusMatch = false
+    if (selectedStatus === 'all') {
+      statusMatch = true
+    } else if (selectedStatus === 'aging') {
+      statusMatch = find.status === 'listed' && getDaysListed(find) >= 30
+    } else {
+      statusMatch = find.status === selectedStatus
+    }
+
     const searchMatch =
       searchQuery === '' ||
       find.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -325,6 +346,9 @@ export default function InventoryPage() {
       (find.source_name && find.source_name.toLowerCase().includes(searchQuery.toLowerCase()))
     return statusMatch && searchMatch
   })
+
+  // Count aging items for badge
+  const agingCount = finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30).length
 
   const toggleItemSelection = (id: string) => {
     const newSelected = new Set(selectedItems)
@@ -416,6 +440,75 @@ export default function InventoryPage() {
     }
   }
 
+  const handleBulkPublishVinted = async () => {
+    const findIds = Array.from(selectedItems)
+    setBulkPublishing(true)
+    setBulkPublishError(null)
+
+    try {
+      const response = await fetch('/api/bulk/publish-vinted', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findIds }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        const message = data.message || 'Failed to queue items for publishing'
+        setBulkPublishError(message)
+        return
+      }
+
+      // Clear selection and close modal
+      setSelectedItems(new Set())
+      setBulkPublishConfirm(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to queue items for publishing'
+      setBulkPublishError(message)
+    } finally {
+      setBulkPublishing(false)
+    }
+  }
+
+  const handleBulkMarkSold = async () => {
+    const findIds = Array.from(selectedItems)
+    const price = markSoldPrice ? parseFloat(markSoldPrice) : undefined
+
+    setBulkMarkingSold(true)
+
+    try {
+      const response = await fetch('/api/bulk/mark-sold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findIds, soldPrice: price }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        const message = data.message || 'Failed to mark items as sold'
+        setBulkPublishError(message)
+        return
+      }
+
+      // Refresh finds
+      const findsRes = await fetch('/api/finds')
+      if (findsRes.ok) {
+        const result = await findsRes.json()
+        setFinds((result.data?.data || result.data || []) as Find[])
+      }
+
+      // Clear selection and close form
+      setSelectedItems(new Set())
+      setShowMarkSoldForm(false)
+      setMarkSoldPrice('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to mark items as sold'
+      setBulkPublishError(message)
+    } finally {
+      setBulkMarkingSold(false)
+    }
+  }
+
   const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
   const findsUsed = profile?.finds_this_month || 0
 
@@ -450,25 +543,29 @@ export default function InventoryPage() {
       >
         {/* Status filter pills */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'listed', 'draft', 'on_hold', 'sold'] as StatusFilter[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => setSelectedStatus(status)}
-              className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
-              style={
-                selectedStatus === status
-                  ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
-                  : {
-                      backgroundColor: 'transparent',
-                      borderColor: 'rgba(61,92,58,.22)',
-                      borderWidth: '1px',
-                      color: '#6B7D6A',
-                    }
-              }
-            >
-              {status === 'on_hold' ? 'on hold' : status}
-            </button>
-          ))}
+          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging'] as StatusFilter[]).map((status) => {
+            const label =
+              status === 'on_hold' ? 'on hold' : status === 'aging' ? `aging (${agingCount})` : status
+            return (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
+                style={
+                  selectedStatus === status
+                    ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
+                    : {
+                        backgroundColor: 'transparent',
+                        borderColor: 'rgba(61,92,58,.22)',
+                        borderWidth: '1px',
+                        color: '#6B7D6A',
+                      }
+                }
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
 
         {/* Search input */}
@@ -535,6 +632,190 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Bulk action error */}
+      {bulkPublishError && (
+        <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+          {bulkPublishError}
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedItems.size > 0 && (
+        <div
+          className="flex items-center justify-between p-4 rounded sticky bottom-0 z-10"
+          style={{
+            backgroundColor: '#D4E2D2',
+            borderWidth: '1px',
+            borderColor: '#3D5C3A',
+          }}
+        >
+          <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+            {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+          </span>
+
+          <div className="flex gap-2">
+            {/* Publish to Vinted button */}
+            <button
+              onClick={() => setBulkPublishConfirm(true)}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                backgroundColor: '#3D5C3A',
+                color: '#F5F0E8',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+            >
+              Publish to Vinted
+            </button>
+
+            {/* Mark as sold button */}
+            <button
+              onClick={() => setShowMarkSoldForm(!showMarkSoldForm)}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                backgroundColor: '#F5F0E8',
+                borderWidth: '1px',
+                borderColor: '#3D5C3A',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+            >
+              Mark as sold
+            </button>
+
+            {/* Clear selection button */}
+            <button
+              onClick={() => setSelectedItems(new Set())}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                backgroundColor: 'transparent',
+                borderWidth: '1px',
+                borderColor: '#3D5C3A',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as sold form */}
+      {showMarkSoldForm && selectedItems.size > 0 && (
+        <div
+          className="p-4 rounded"
+          style={{
+            backgroundColor: '#F5F0E8',
+            borderWidth: '1px',
+            borderColor: 'rgba(61,92,58,.22)',
+          }}
+        >
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#6B7D6A' }}>
+                Sold price (£) — applies to all {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
+              </label>
+              <input
+                type="number"
+                value={markSoldPrice}
+                onChange={(e) => setMarkSoldPrice(e.target.value)}
+                placeholder="optional"
+                className="w-full mt-2 px-3 py-2 text-sm rounded"
+                style={{
+                  backgroundColor: '#FFF',
+                  borderWidth: '1px',
+                  borderColor: 'rgba(61,92,58,.22)',
+                  color: '#1E2E1C',
+                }}
+              />
+            </div>
+            <button
+              onClick={handleBulkMarkSold}
+              disabled={bulkMarkingSold}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              style={{
+                backgroundColor: '#3D5C3A',
+                color: '#F5F0E8',
+              }}
+              onMouseEnter={(e) => !bulkMarkingSold && (e.currentTarget.style.backgroundColor = '#2C4428')}
+              onMouseLeave={(e) => !bulkMarkingSold && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+            >
+              {bulkMarkingSold ? 'Marking...' : 'Mark as sold'}
+            </button>
+            <button
+              onClick={() => {
+                setShowMarkSoldForm(false)
+                setMarkSoldPrice('')
+              }}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                backgroundColor: 'transparent',
+                borderWidth: '1px',
+                borderColor: '#3D5C3A',
+                color: '#3D5C3A',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk publish confirmation modal */}
+      {bulkPublishConfirm && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setBulkPublishConfirm(false)}
+        >
+          <div
+            className="bg-white rounded p-6 max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: '#1E2E1C' }}>
+              Publish {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} to Vinted?
+            </h3>
+            <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
+              The extension will publish these items to Vinted one by one. This may take a few moments.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setBulkPublishConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors"
+                style={{
+                  backgroundColor: 'transparent',
+                  borderWidth: '1px',
+                  borderColor: 'rgba(61,92,58,.22)',
+                  color: '#3D5C3A',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkPublishVinted}
+                disabled={bulkPublishing}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: '#3D5C3A',
+                  color: '#F5F0E8',
+                }}
+                onMouseEnter={(e) => !bulkPublishing && (e.currentTarget.style.backgroundColor = '#2C4428')}
+                onMouseLeave={(e) => !bulkPublishing && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+              >
+                {bulkPublishing ? 'Publishing...' : 'Publish to Vinted'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading state */}
       {isLoading && (
         <div className="text-center text-ink-lt py-8">
@@ -567,6 +848,9 @@ export default function InventoryPage() {
             <tbody>
             {filteredFinds.map((find) => {
               const margin = calculateMargin(find.cost_gbp, find.asking_price_gbp)
+              const daysListed = getDaysListed(find)
+              const isAged30 = find.status === 'listed' && daysListed >= 30
+              const isAged60 = find.status === 'listed' && daysListed >= 60
               return (
                 <tr
                   key={find.id}
@@ -612,8 +896,18 @@ export default function InventoryPage() {
                   </td>
                   <td className="py-[12px] px-[12px]">
                     {(find.platform_fields as any)?.ebay?.status === 'live' ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge status="listed" />
+                        {isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                            60d+ no sale
+                          </span>
+                        )}
+                        {isAged30 && !isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                            30d+ no sale
+                          </span>
+                        )}
                         <a
                           href={(find.platform_fields as any).ebay.url}
                           target="_blank"
@@ -653,8 +947,18 @@ export default function InventoryPage() {
                         )}
                       </div>
                     ) : (find.platform_fields as any)?.ebay?.status === 'live_dup' ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge status="listed" />
+                        {isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                            60d+ no sale
+                          </span>
+                        )}
+                        {isAged30 && !isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                            30d+ no sale
+                          </span>
+                        )}
                         <a
                           href={(find.platform_fields as any).ebay.url}
                           target="_blank"
@@ -668,7 +972,19 @@ export default function InventoryPage() {
                       </div>
                     ) : ebayConnected && find.status !== 'sold' ? (
                       <div className="flex flex-col gap-2">
-                        <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                          {isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                              60d+ no sale
+                            </span>
+                          )}
+                          {isAged30 && !isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                              30d+ no sale
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={(e) => handleListOnEbay(find.id, e)}
                           disabled={publishingFindId === find.id}
@@ -682,7 +998,19 @@ export default function InventoryPage() {
                         )}
                       </div>
                     ) : (
-                      <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                        {isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                            60d+ no sale
+                          </span>
+                        )}
+                        {isAged30 && !isAged60 && (
+                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                            30d+ no sale
+                          </span>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>

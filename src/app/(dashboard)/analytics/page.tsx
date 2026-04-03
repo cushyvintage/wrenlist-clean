@@ -42,10 +42,21 @@ interface PlatformData {
   percentage: number
 }
 
+interface AgingData {
+  aged_30: number
+  aged_60: number
+  oldest_item: {
+    name: string
+    days_listed: number
+    category: string | null
+  } | null
+}
+
 export default function AnalyticsPage() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('month')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [categories, setCategories] = useState<CategoryAnalytics[]>([])
+  const [aging, setAging] = useState<AgingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,20 +70,23 @@ export default function AnalyticsPage() {
         setIsLoading(true)
         setError(null)
 
-        const [summaryRes, categoriesRes] = await Promise.all([
+        const [summaryRes, categoriesRes, agingRes] = await Promise.all([
           fetch('/api/analytics/summary'),
           fetch('/api/analytics/by-category'),
+          fetch('/api/analytics/aging'),
         ])
 
-        if (!summaryRes.ok || !categoriesRes.ok) {
+        if (!summaryRes.ok || !categoriesRes.ok || !agingRes.ok) {
           throw new Error('Failed to fetch analytics data')
         }
 
         const summaryData = await summaryRes.json()
         const categoriesData = await categoriesRes.json()
+        const agingData = await agingRes.json()
 
         setSummary(summaryData)
         setCategories(categoriesData)
+        setAging(agingData)
       } catch (err) {
         console.error('Error fetching analytics:', err)
         setError(err instanceof Error ? err.message : 'Failed to load analytics')
@@ -179,6 +193,33 @@ export default function AnalyticsPage() {
       {!isLoading && !summary?.total_finds && (
         <div className="text-center py-12">
           <p className="text-ink-lt mb-4">Add and sell finds to see analytics here</p>
+        </div>
+      )}
+
+      {/* Aged stock alert */}
+      {!isLoading && aging && (aging.aged_30 > 0 || aging.aged_60 > 0) && (
+        <div className="bg-amber/10 border border-amber/30 rounded p-4">
+          <p className="text-sm text-amber font-medium mb-2">
+            📦 Aged stock alert
+          </p>
+          <p className="text-sm text-amber-900 mb-3">
+            {aging.aged_60} items listed 60+ days · {aging.aged_30 - aging.aged_60} items listed 30+ days
+            {aging.oldest_item && (
+              <>
+                <br />
+                <span className="text-xs">Oldest: {aging.oldest_item.name} ({aging.oldest_item.days_listed}d)</span>
+              </>
+            )}
+          </p>
+          <button
+            onClick={() => {
+              // Navigate to inventory with aging filter
+              window.location.href = '/inventory?filter=aging'
+            }}
+            className="text-sm underline underline-offset-2 text-amber hover:text-amber-900 transition-colors"
+          >
+            Review aged inventory →
+          </button>
         </div>
       )}
 

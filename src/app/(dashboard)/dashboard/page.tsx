@@ -23,11 +23,17 @@ interface AnalyticsSummary {
   this_month_mileage_gbp: number
 }
 
+interface WrenInsight {
+  insight: string
+  type: 'alert' | 'tip' | 'info'
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { user } = useAuthContext()
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [finds, setFinds] = useState<Find[]>([])
+  const [insight, setInsight] = useState<WrenInsight | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -37,10 +43,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both summary and recent finds
-        const [summaryRes, findsRes] = await Promise.all([
+        // Fetch summary, finds, and insight
+        const [summaryRes, findsRes, insightRes] = await Promise.all([
           fetch('/api/analytics/summary'),
           fetch('/api/finds'),
+          fetch('/api/insights/wren'),
         ])
 
         if (summaryRes.ok) {
@@ -51,6 +58,11 @@ export default function DashboardPage() {
         if (findsRes.ok) {
           const json = await findsRes.json()
           setFinds(json.data?.data || json.data || [])
+        }
+
+        if (insightRes.ok) {
+          const insightData = await insightRes.json()
+          setInsight(insightData)
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -183,15 +195,16 @@ export default function DashboardPage() {
         {/* Right: Insights & activity */}
         <div className="space-y-4">
           {/* Wren insight */}
-          <InsightCard
-            text={finds.length === 0
-              ? 'Add items to your inventory to start tracking metrics and insights.'
-              : 'Your estate sale finds have 3x higher margins than charity shop finds.'}
-            link={{
-              text: finds.length === 0 ? 'Add first item' : 'see sourcing analysis',
-              onClick: () => router.push(finds.length === 0 ? '/add-find' : '/analytics'),
-            }}
-          />
+          {insight && (
+            <InsightCard
+              text={insight.insight}
+              type={insight.type}
+              link={{
+                text: insight.type === 'alert' ? 'adjust prices' : 'view inventory →',
+                onClick: () => router.push(insight.type === 'alert' ? '/inventory' : '/add-find'),
+              }}
+            />
+          )}
 
           {/* Quick stats */}
           <Panel title="This month">

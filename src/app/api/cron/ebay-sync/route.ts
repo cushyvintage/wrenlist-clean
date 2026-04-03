@@ -52,10 +52,10 @@ export async function GET(request: NextRequest) {
       try {
         const ebayClient = await getEbayClientForUser(userId, supabase, 'EBAY_GB')
 
-        // Fetch recent orders
+        // Fetch recent orders (both pending and completed)
         const ordersResponse = await ebayClient.getOrders({
-          limit: 50,
-          filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS}',
+          limit: 100,
+          filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|COMPLETED}',
         })
 
         const orders = ordersResponse.orders || []
