@@ -26,6 +26,7 @@ export type PlanId = 'free' | 'nester' | 'forager' | 'flock'
 export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
 export type FindCondition = 'excellent' | 'good' | 'fair'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
+export type SupplierType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'flea_market' | 'online' | 'other'
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
 export type ListingStatus = 'draft' | 'live' | 'sold' | 'delisted'
 export type MarketplaceDataStatus = 'not_listed' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
@@ -38,6 +39,24 @@ export interface Profile {
   stripe_customer_id: string | null
   finds_this_month: number
   finds_reset_at: string
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
+// SUPPLIERS
+// ============================================================================
+
+export interface Supplier {
+  id: string
+  user_id: string
+  name: string
+  type: SupplierType
+  location: string | null
+  contact_name: string | null
+  phone: string | null
+  notes: string | null
+  rating: number | null
   created_at: string
   updated_at: string
 }
