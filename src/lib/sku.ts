@@ -4,8 +4,6 @@
  * Example: WL-CER-X2KP91
  */
 
-import { createSupabaseServerClient } from './supabase-server'
-
 const CATEGORY_PREFIXES: Record<string, string> = {
   ceramics: 'CER',
   glassware: 'GLS',
@@ -48,6 +46,7 @@ export async function generateUniqueSKU(category: string, userId: string): Promi
     const sku = generateSKU(category)
 
     try {
+      const { createSupabaseServerClient } = await import('./supabase-server')
       const supabase = await createSupabaseServerClient()
 
       // Check if this SKU already exists for this user
