@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Edit2, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Trash2, Edit2, X, Copy } from 'lucide-react'
 
 interface Template {
   id: string
@@ -25,6 +26,7 @@ interface Toast {
 }
 
 export default function TemplatesPage() {
+  const router = useRouter()
   const [templates, setTemplates] = useState<Template[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -166,10 +168,18 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="border-b border-sage/14 pb-6">
-        <h1 className="font-serif text-2xl italic text-ink mb-2">templates</h1>
-        <p className="text-sm text-ink-lt">Reuse listing fields across finds to speed up the add-find flow</p>
+      {/* Header with Create button */}
+      <div className="border-b border-sage/14 pb-6 flex items-start justify-between">
+        <div>
+          <h1 className="font-serif text-2xl italic text-ink mb-2">templates</h1>
+          <p className="text-sm text-ink-lt">Reuse listing fields across finds to speed up the add-find flow</p>
+        </div>
+        <button
+          onClick={() => router.push('/add-find?saveAsTemplate=true')}
+          className="px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors"
+        >
+          + Create template
+        </button>
       </div>
 
       {/* Error State */}
@@ -213,13 +223,7 @@ export default function TemplatesPage() {
                   Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
-                  Condition
-                </th>
-                <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
                   Platforms
-                </th>
-                <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
-                  Fields
                 </th>
                 <th className="px-6 py-3 text-left text-xs uppercase tracking-wider font-medium text-sage-dim">
                   Used
@@ -279,28 +283,44 @@ export default function TemplatesPage() {
                     </>
                   ) : (
                     <>
-                      <td className="px-6 py-4 text-sm font-medium text-ink">
-                        {template.name}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium text-ink">
+                            {template.name}
+                          </div>
+                          {template.default_price && (
+                            <div className="text-xs text-sage-dim">
+                              Price: £{template.default_price.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-ink-lt">
-                        {template.category || '—'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-ink-lt">
-                        {template.condition || '—'}
+                      <td className="px-6 py-4 text-sm">
+                        {template.category ? (
+                          <span className="inline-block px-2 py-1 bg-sage/10 text-sage text-xs rounded">
+                            {template.category}
+                          </span>
+                        ) : (
+                          <span className="text-ink-lt">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-ink-lt">
                         {template.marketplaces.length > 0
                           ? template.marketplaces.map((p) => platformLabels[p] || p).join(', ')
                           : '—'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-ink-lt">
-                        {fieldCount(template)}
-                      </td>
                       <td className="px-6 py-4 text-sm font-mono text-ink">
-                        {template.usage_count}
+                        {template.usage_count} {template.usage_count === 1 ? 'time' : 'times'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => router.push(`/add-find?templateId=${template.id}`)}
+                            className="p-2 hover:bg-sage/10 rounded transition"
+                            title="Apply to new find"
+                          >
+                            <Copy width={16} height={16} className="text-ink-lt hover:text-ink" />
+                          </button>
                           <button
                             onClick={() => startEdit(template)}
                             className="p-2 hover:bg-sage/10 rounded transition"

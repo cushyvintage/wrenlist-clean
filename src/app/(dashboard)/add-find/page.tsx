@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
+import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
+import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
@@ -80,6 +82,7 @@ const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP)
 
 export default function AddFindPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
@@ -107,6 +110,8 @@ export default function AddFindPage() {
   const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
   const [shopifyShopId, setShopifyShopId] = useState<string | null>(null)
   const [incompleteRequiredFields, setIncompleteRequiredFields] = useState<Set<string>>(new Set())
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
+  const [templateAppliedBanner, setTemplateAppliedBanner] = useState<string | null>(null)
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -128,6 +133,41 @@ export default function AddFindPage() {
 
     fetchShopifyConnection()
   }, [])
+
+  // Handle URL params on mount
+  useEffect(() => {
+    // Check if saveAsTemplate param is set, auto-open the save-as-template input
+    const saveAsTemplateParam = searchParams.get('saveAsTemplate')
+    if (saveAsTemplateParam === 'true') {
+      setShowSaveAsTemplate(true)
+    }
+
+    // Check if templateId param is set, auto-apply the template
+    const templateId = searchParams.get('templateId')
+    if (templateId) {
+      const autoApplyTemplate = async () => {
+        try {
+          const response = await fetch(`/api/templates/${templateId}`)
+          if (!response.ok) {
+            throw new Error('Failed to load template')
+          }
+          const { data: template } = await response.json()
+          const result = applyTemplate(template, formData)
+          setFormData(result.merged)
+          setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
+          setTemplateAppliedBanner(template.name)
+          // Auto-dismiss banner after 3 seconds
+          setTimeout(() => setTemplateAppliedBanner(null), 3000)
+          // Increment usage count
+          await fetch(`/api/templates/${templateId}`, { method: 'PATCH' })
+        } catch (err) {
+          console.error('Failed to auto-apply template:', err)
+        }
+      }
+
+      autoApplyTemplate()
+    }
+  }, [searchParams])
 
   // Handle form field changes
   const handleInputChange = useCallback(
@@ -151,6 +191,13 @@ export default function AddFindPage() {
     const result = applyTemplate(template, formData)
     setFormData(result.merged)
     setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
+    setTemplateAppliedBanner(template.name)
+    // Auto-dismiss banner after 3 seconds
+    setTimeout(() => setTemplateAppliedBanner(null), 3000)
+    // Increment usage count
+    fetch(`/api/templates/${template.id}`, { method: 'PATCH' }).catch((err) => {
+      console.error('Failed to increment template usage:', err)
+    })
   }, [formData])
 
   // Fetch category field config when category or marketplace changes
@@ -575,6 +622,19 @@ export default function AddFindPage() {
         </div>
       </div>
 
+      {/* Template applied banner */}
+      {templateAppliedBanner && (
+        <div className="max-w-7xl mx-auto px-6 py-3 mt-4 bg-sage/5 border border-sage/20 rounded-lg text-sm text-sage flex items-center justify-between">
+          <span>✓ Template applied: <strong>{templateAppliedBanner}</strong></span>
+          <button
+            onClick={() => setTemplateAppliedBanner(null)}
+            className="text-sage-lt hover:text-sage transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Error message */}
       {error && (
         <div className="max-w-7xl mx-auto px-6 py-4 mt-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -587,22 +647,25 @@ export default function AddFindPage() {
         <div className="grid grid-cols-12 gap-8">
           {/* LEFT PANEL - Marketplace Selector */}
           <div className="col-span-2">
-            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24">
-              <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
-              <div className="space-y-3">
-                {(['vinted', 'ebay', 'shopify'] as Platform[]).map((platform) => (
-                  <label key={platform} className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={formData.selectedPlatforms.includes(platform)}
-                      onChange={() => handlePlatformToggle(platform)}
-                      className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
-                    />
-                    <span className="text-sm text-ink group-hover:text-sage transition-colors">
-                      {platform === 'vinted' ? 'Vinted' : platform === 'ebay' ? 'eBay UK' : 'Shopify'}
-                    </span>
-                  </label>
-                ))}
+            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-4">
+              <TemplatePickerPopover onSelectTemplate={handleApplyTemplate} />
+              <div>
+                <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
+                <div className="space-y-3">
+                  {(['vinted', 'ebay', 'shopify'] as Platform[]).map((platform) => (
+                    <label key={platform} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={formData.selectedPlatforms.includes(platform)}
+                        onChange={() => handlePlatformToggle(platform)}
+                        className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
+                      />
+                      <span className="text-sm text-ink group-hover:text-sage transition-colors">
+                        {platform === 'vinted' ? 'Vinted' : platform === 'ebay' ? 'eBay UK' : 'Shopify'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1151,6 +1214,30 @@ export default function AddFindPage() {
             </div>
           </div>
         </div>
+
+        {/* Save as Template section */}
+        {!showSaveAsTemplate && (
+          <div className="mt-8 pb-8">
+            <button
+              onClick={() => setShowSaveAsTemplate(true)}
+              className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+            >
+              💾 Save this as a template →
+            </button>
+          </div>
+        )}
+
+        {showSaveAsTemplate && (
+          <div className="mt-8 pb-8 bg-white rounded-lg border border-sage/14 p-4">
+            <SaveAsTemplateInput
+              formData={formData}
+              onSaveSuccess={() => {
+                setShowSaveAsTemplate(false)
+              }}
+              onClose={() => setShowSaveAsTemplate(false)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Action Bar */}
