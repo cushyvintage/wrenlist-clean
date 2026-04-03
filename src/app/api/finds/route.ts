@@ -3,7 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateFindSchema, validateBody } from '@/lib/validation'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { generateUniqueSKU } from '@/lib/sku'
+import { generateUniqueSKU } from '@/lib/sku.server'
 import type { Find } from '@/types'
 
 /**
