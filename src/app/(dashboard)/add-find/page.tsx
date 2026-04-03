@@ -123,6 +123,11 @@ export default function AddFindPage() {
   } | null>(null)
   const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
+  const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
+  const [isbnInput, setIsbnInput] = useState('')
+  const [isbnLooking, setIsbnLooking] = useState(false)
+  const [isbnError, setIsbnError] = useState<string | null>(null)
+  const [isbnResult, setIsbnResult] = useState<{ title: string; authors: string[] } | null>(null)
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -274,6 +279,62 @@ export default function AddFindPage() {
       }))
     }
   }, [formData.category])
+
+  // Handle ISBN lookup
+  const handleIsbnLookup = useCallback(async () => {
+    if (!isbnInput.trim()) {
+      setIsbnError('ISBN is required')
+      return
+    }
+
+    setIsbnLooking(true)
+    setIsbnError(null)
+    setIsbnResult(null)
+
+    try {
+      const response = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(isbnInput)}`)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error((errorData as any).error || 'ISBN not found')
+      }
+
+      const data = await response.json()
+      setIsbnResult({ title: data.title, authors: data.authors })
+
+      // Auto-fill title if empty
+      if (!formData.title && data.title) {
+        handleInputChange('title', data.title)
+      }
+
+      // Auto-fill author fields for both platforms
+      if (data.authors && data.authors.length > 0) {
+        const authorName = data.authors[0]
+        if (formData.selectedPlatforms.includes('vinted')) {
+          handlePlatformFieldChange('vinted', 'author', authorName)
+        }
+        if (formData.selectedPlatforms.includes('ebay')) {
+          handlePlatformFieldChange('ebay', 'author', authorName)
+        }
+      }
+
+      // Auto-fill ISBN for both platforms
+      if (formData.selectedPlatforms.includes('vinted')) {
+        handlePlatformFieldChange('vinted', 'isbn', isbnInput)
+      }
+      if (formData.selectedPlatforms.includes('ebay')) {
+        handlePlatformFieldChange('ebay', 'isbn', isbnInput)
+      }
+
+      // Clear input after successful lookup
+      setIsbnInput('')
+      setTimeout(() => setIsbnResult(null), 2500)
+    } catch (err) {
+      setIsbnError((err as any).message || 'Failed to lookup ISBN')
+    } finally {
+      setIsbnLooking(false)
+    }
+  }, [isbnInput, formData.title, formData.selectedPlatforms])
 
   // Handle description generation
   const handleGenerateDescription = useCallback(async () => {
@@ -866,7 +927,18 @@ export default function AddFindPage() {
 
             {/* Title */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
-              <label className="block text-sm font-semibold text-ink mb-2">Title</label>
+              <div className="flex justify-between items-start mb-2">
+                <label className="block text-sm font-semibold text-ink">Title</label>
+                {formData.category === 'books' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsbnLookupOpen(!isbnLookupOpen)}
+                    className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+                  >
+                    📚 Look up by ISBN
+                  </button>
+                )}
+              </div>
               <textarea
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value.slice(0, titleCharLimit))}
@@ -886,6 +958,45 @@ export default function AddFindPage() {
                   <span className="text-xs text-amber-600">Required — complete before publishing</span>
                 )}
               </div>
+
+              {/* ISBN Lookup Input */}
+              {formData.category === 'books' && isbnLookupOpen && (
+                <div className="mt-4 pt-4 border-t border-sage/14 space-y-3">
+                  {isbnError && (
+                    <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                      {isbnError}
+                    </div>
+                  )}
+                  {isbnResult && (
+                    <div className="text-xs bg-sage/5 border border-sage/20 rounded px-2 py-1 text-sage">
+                      ✓ Found: <strong>{isbnResult.title}</strong>
+                      {isbnResult.authors.length > 0 && ` by ${isbnResult.authors.join(', ')}`}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={isbnInput}
+                      onChange={(e) => setIsbnInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleIsbnLookup()
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-sage/14 rounded text-xs focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="Enter ISBN (10 or 13 digits)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleIsbnLookup}
+                      disabled={isbnLooking || !isbnInput.trim()}
+                      className="px-2 py-2 text-xs bg-sage text-white rounded hover:bg-sage-lt disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isbnLooking ? '⏳' : 'Look up'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
