@@ -67,8 +67,8 @@ export default function SuppliersPage() {
       setError(null)
       const res = await fetch('/api/suppliers')
       if (!res.ok) throw new Error('Failed to load suppliers')
-      const data = await res.json()
-      setSuppliers(data as SupplierWithStats[])
+      const json = await res.json()
+      setSuppliers((json.data || json) as SupplierWithStats[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load suppliers')
     } finally {

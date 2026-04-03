@@ -47,7 +47,7 @@ export default function SourcingPage() {
         throw new Error('Failed to fetch trips')
       }
       const result = await response.json()
-      setTrips(result.data || [])
+      setTrips(result.data?.data || result.data || [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
       setError(message)
