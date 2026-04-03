@@ -6,8 +6,9 @@ import type { Listing } from '@/types'
 
 /**
  * GET /api/listings
- * Fetch all listings for the authenticated user
- * Query params: find_id?, platform?, status?, limit?, offset?
+ * Fetch all marketplace listings for the authenticated user from product_marketplace_data
+ * Joins with finds to get find details (name, photos, cost_gbp, asking_price_gbp, category, brand)
+ * Query params: marketplace?, status?, search?, limit?, offset?
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,24 +19,44 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient()
     const { searchParams } = new URL(request.url)
-    const findId = searchParams.get('find_id')
-    const platform = searchParams.get('platform')
+    const marketplace = searchParams.get('marketplace')
     const status = searchParams.get('status')
+    const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
+    // Query product_marketplace_data joined with finds
     let query = supabase
-      .from('listings')
-      .select('*')
-      .eq('user_id', user.id)
+      .from('product_marketplace_data')
+      .select(`
+        id,
+        find_id,
+        marketplace,
+        platform_listing_id,
+        platform_listing_url,
+        listing_price,
+        status,
+        error_message,
+        created_at,
+        updated_at,
+        finds!inner (
+          id,
+          user_id,
+          name,
+          photos,
+          cost_gbp,
+          asking_price_gbp,
+          category,
+          brand,
+          condition,
+          description
+        )
+      `)
+      .eq('finds.user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (findId && findId !== 'all') {
-      query = query.eq('find_id', findId)
-    }
-
-    if (platform && platform !== 'all') {
-      query = query.eq('platform', platform)
+    if (marketplace && marketplace !== 'all') {
+      query = query.eq('marketplace', marketplace)
     }
 
     if (status && status !== 'all') {
@@ -45,11 +66,27 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', error)
+      }
+      return ApiResponseHelper.internalError(error.message)
+    }
+
+    // Apply search filter in memory if needed (optional)
+    let filtered = data || []
+    if (search) {
+      const searchLower = search.toLowerCase()
+      filtered = filtered.filter((item: any) => {
+        const find = item.finds
+        return (
+          find.name.toLowerCase().includes(searchLower) ||
+          (find.brand && find.brand.toLowerCase().includes(searchLower))
+        )
+      })
     }
 
     return ApiResponseHelper.success({
-      data: data as Listing[],
+      data: filtered,
       pagination: {
         limit,
         offset,
@@ -57,7 +94,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/listings error:', error) }    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('GET /api/listings error:', error)
+    }
+    return ApiResponseHelper.internalError()
   }
 }
 
