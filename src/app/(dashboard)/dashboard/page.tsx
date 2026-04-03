@@ -9,9 +9,24 @@ import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import type { Find } from '@/types'
 
+interface AnalyticsSummary {
+  total_finds: number
+  listed_finds: number
+  sold_finds: number
+  total_revenue_gbp: number
+  total_cost_gbp: number
+  gross_margin_pct: number
+  avg_days_to_sell: number
+  this_month_finds: number
+  this_month_revenue: number
+  this_month_expenses: number
+  this_month_mileage_gbp: number
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { user } = useAuthContext()
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [finds, setFinds] = useState<Find[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -20,62 +35,43 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    const fetchFinds = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/finds')
-        if (!res.ok) throw new Error('Failed to fetch finds')
-        const json = await res.json()
-        // API returns { data: { data: [...] } }
-        setFinds(json.data?.data || json.data || [])
+        // Fetch both summary and recent finds
+        const [summaryRes, findsRes] = await Promise.all([
+          fetch('/api/analytics/summary'),
+          fetch('/api/finds'),
+        ])
+
+        if (summaryRes.ok) {
+          const summaryData = await summaryRes.json()
+          setSummary(summaryData)
+        }
+
+        if (findsRes.ok) {
+          const json = await findsRes.json()
+          setFinds(json.data?.data || json.data || [])
+        }
       } catch (error) {
-        console.error('Error fetching finds:', error)
+        console.error('Error fetching dashboard data:', error)
         setFinds([])
       } finally {
         setIsLoading(false)
       }
     }
-    fetchFinds()
+    fetchData()
   }, [])
 
-  // Calculate metrics from real data
-  const activeFinds = finds.filter((f) => f.status === 'listed').length
-  const inventoryValue = finds
-    .filter((f) => f.status !== 'sold')
-    .reduce((sum, f) => sum + (f.asking_price_gbp || 0), 0)
+  // Use summary data for metrics
+  const activeFinds = summary?.listed_finds || 0
+  const monthlyRevenue = summary?.this_month_revenue || 0
+  const avgMargin = summary?.gross_margin_pct || 0
+  const avgDaysToSell = summary?.avg_days_to_sell || 0
 
   // Current month metrics
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-
-  const soldThisMonth = finds.filter((f) => {
-    if (!f.sold_at) return false
-    const soldDate = new Date(f.sold_at)
-    return soldDate >= monthStart && soldDate <= monthEnd
-  })
-
-  const monthlyRevenue = soldThisMonth.reduce((sum, f) => sum + (f.sold_price_gbp || 0), 0)
-
-  // Average margin calculation
-  const findWithMargin = finds.map((f) => {
-    if (!f.cost_gbp || !f.sold_price_gbp) return null
-    return ((f.sold_price_gbp - f.cost_gbp) / f.cost_gbp) * 100
-  }).filter((m) => m !== null) as number[]
-
-  const avgMargin = findWithMargin.length > 0
-    ? Math.round(findWithMargin.reduce((a, b) => a + b, 0) / findWithMargin.length)
-    : 0
-
-  // Days to sell calculation
-  const soldItems = finds.filter((f) => f.status === 'sold' && f.sourced_at && f.sold_at)
-  const dayToSellValues = soldItems.map((f) => {
-    const sourced = new Date(f.sourced_at!).getTime()
-    const sold = new Date(f.sold_at!).getTime()
-    return Math.round((sold - sourced) / (1000 * 60 * 60 * 24))
-  })
-  const avgDaysToSell = dayToSellValues.length > 0
-    ? Math.round(dayToSellValues.reduce((a, b) => a + b, 0) / dayToSellValues.length)
-    : 0
 
   const recentFinds = finds.slice(0, 3)
   const findsList = isLoading ? 'skeleton' : finds.length === 0 ? 'empty' : 'loaded'
@@ -102,33 +98,41 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Active finds"
-          value={activeFinds}
-          delta={isLoading ? '...' : `${activeFinds} listed`}
-          suffix=""
-        />
-        <StatCard
-          label="Monthly revenue"
-          value={monthlyRevenue}
-          prefix="£"
-          delta={isLoading ? '...' : `£${monthlyRevenue.toFixed(2)}`}
-          suffix=""
-        />
-        <StatCard
-          label="Avg margin"
-          value={avgMargin}
-          suffix="%"
-          delta={isLoading ? '...' : 'from sold items'}
-        />
-        <StatCard
-          label="Days to sell"
-          value={avgDaysToSell}
-          suffix=" days"
-          delta={isLoading ? '...' : 'average'}
-        />
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 bg-sage/10 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Active finds"
+            value={activeFinds}
+            delta={`${activeFinds} listed`}
+            suffix=""
+          />
+          <StatCard
+            label="Monthly revenue"
+            value={monthlyRevenue}
+            prefix="£"
+            delta={`£${monthlyRevenue.toFixed(2)}`}
+            suffix=""
+          />
+          <StatCard
+            label="Avg margin"
+            value={avgMargin}
+            suffix="%"
+            delta="from sold items"
+          />
+          <StatCard
+            label="Days to sell"
+            value={avgDaysToSell}
+            suffix=" days"
+            delta="average"
+          />
+        </div>
+      )}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -194,14 +198,11 @@ export default function DashboardPage() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-ink-lt">Finds listed</span>
-                <span className="font-medium text-ink">{finds.filter((f) => {
-                  const createdDate = new Date(f.created_at)
-                  return createdDate >= monthStart && createdDate <= monthEnd && f.status === 'listed'
-                }).length}</span>
+                <span className="font-medium text-ink">{summary?.this_month_finds || 0}</span>
               </div>
               <div className="flex justify-between border-t border-sage/14 pt-3">
                 <span className="text-ink-lt">Items sold</span>
-                <span className="font-medium text-ink">{soldThisMonth.length}</span>
+                <span className="font-medium text-ink">{summary?.sold_finds || 0}</span>
               </div>
               <div className="flex justify-between border-t border-sage/14 pt-3">
                 <span className="text-ink-lt">Total revenue</span>

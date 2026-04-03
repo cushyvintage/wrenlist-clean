@@ -350,6 +350,13 @@ export default function AddFindPage() {
     }))
   }, [])
 
+  const handleUpdatePhoto = useCallback((index: number, preview: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      photoPreviews: prev.photoPreviews.map((p, i) => (i === index ? preview : p)),
+    }))
+  }, [])
+
   // Handle platform-specific fields
   const handlePlatformFieldChange = useCallback(
     (platform: Platform, field: string, value: any) => {

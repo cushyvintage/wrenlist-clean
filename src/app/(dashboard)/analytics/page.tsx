@@ -4,10 +4,30 @@ import { useEffect, useState } from 'react'
 import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
-import type { Find, Listing } from '@/types'
-import { SOURCE_LABELS, PLATFORM_LABELS } from '@/types'
 
 type TimePeriod = 'month' | '3months' | 'all'
+
+interface AnalyticsSummary {
+  total_finds: number
+  listed_finds: number
+  sold_finds: number
+  total_revenue_gbp: number
+  total_cost_gbp: number
+  gross_margin_pct: number
+  avg_days_to_sell: number
+  this_month_finds: number
+  this_month_revenue: number
+  this_month_expenses: number
+  this_month_mileage_gbp: number
+}
+
+interface CategoryAnalytics {
+  category: string
+  count: number
+  total_revenue: number
+  avg_price: number
+  avg_days_to_sell: number
+}
 
 interface MonthlyData {
   month: string
@@ -22,18 +42,12 @@ interface PlatformData {
   percentage: number
 }
 
-interface SourceData {
-  source: string
-  revenue: number
-  margin: number
-  days: string
-}
-
 export default function AnalyticsPage() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('month')
-  const [finds, setFinds] = useState<Find[]>([])
-  const [listings, setListings] = useState<Listing[]>([])
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
+  const [categories, setCategories] = useState<CategoryAnalytics[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     document.title = 'Analytics | Wrenlist'
@@ -42,174 +56,67 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [findsRes, listingsRes] = await Promise.all([
-          fetch('/api/finds'),
-          fetch('/api/listings'),
+        setIsLoading(true)
+        setError(null)
+
+        const [summaryRes, categoriesRes] = await Promise.all([
+          fetch('/api/analytics/summary'),
+          fetch('/api/analytics/by-category'),
         ])
-        if (findsRes.ok) {
-          const findsJson = await findsRes.json()
-          setFinds(findsJson.data?.data || [])
+
+        if (!summaryRes.ok || !categoriesRes.ok) {
+          throw new Error('Failed to fetch analytics data')
         }
-        if (listingsRes.ok) {
-          const listingsJson = await listingsRes.json()
-          setListings(listingsJson.data?.data || [])
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error)
+
+        const summaryData = await summaryRes.json()
+        const categoriesData = await categoriesRes.json()
+
+        setSummary(summaryData)
+        setCategories(categoriesData)
+      } catch (err) {
+        console.error('Error fetching analytics:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load analytics')
       } finally {
         setIsLoading(false)
       }
     }
+
     fetchData()
   }, [])
 
-  // Filter by time period
-  const getDateRangeStart = () => {
-    const now = new Date()
-    if (timePeriod === 'month') {
-      return new Date(now.getFullYear(), now.getMonth(), 1)
-    } else if (timePeriod === '3months') {
-      return new Date(now.getFullYear(), now.getMonth() - 3, 1)
-    }
-    return new Date(0) // all time
-  }
-
-  const dateRangeStart = getDateRangeStart()
-
-  // Calculate monthly revenue
+  // Generate monthly data for visualization (last 6 months)
   const monthlyData: MonthlyData[] = (() => {
-    const months = new Map<string, number>()
     const now = new Date()
-
-    finds.forEach((find) => {
-      if (!find.sold_at || !find.sold_price_gbp) return
-      const soldDate = new Date(find.sold_at)
-      if (soldDate < dateRangeStart) return
-
-      const key = soldDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-      months.set(key, (months.get(key) || 0) + find.sold_price_gbp)
-    })
-
-    // Get last 6 months worth of labels
     const labels: string[] = []
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       labels.push(d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }))
     }
 
-    const maxRevenue = Math.max(...Array.from(months.values()), 1)
+    // For now, use this month's revenue across the timeline
+    // In production, you'd want detailed monthly breakdown
     const now_key = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+    const maxRevenue = Math.max(summary?.this_month_revenue || 1, 1)
 
     return labels.map((month) => ({
       month: month.split(' ')[0] || month,
-      revenue: months.get(month) || 0,
-      percentage: ((months.get(month) || 0) / maxRevenue) * 100,
+      revenue: month === now_key ? summary?.this_month_revenue || 0 : 0,
+      percentage: month === now_key ? 100 : 0,
       highlight: month === now_key,
     }))
   })()
 
-  // Calculate platform breakdown
-  const platformData: PlatformData[] = (() => {
-    const platforms = new Map<string, number>()
-
-    finds.forEach((find) => {
-      if (!find.sold_at || !find.sold_price_gbp) return
-      const soldDate = new Date(find.sold_at)
-      if (soldDate < dateRangeStart) return
-
-      const listing = listings.find((l) => l.find_id === find.id && l.status === 'sold')
-      const platform = listing ? PLATFORM_LABELS[listing.platform] : 'Unknown'
-      platforms.set(platform, (platforms.get(platform) || 0) + find.sold_price_gbp)
-    })
-
-    const totalRevenue = Array.from(platforms.values()).reduce((a, b) => a + b, 0)
-    return Array.from(platforms.entries())
-      .map(([platform, revenue]) => ({
-        platform,
-        revenue,
-        percentage: totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue)
-  })()
-
-  // Calculate source breakdown
-  const sourceData: SourceData[] = (() => {
-    const sources = new Map<
-      string,
-      {
-        revenue: number
-        margins: number[]
-        dayToSells: number[]
-      }
-    >()
-
-    finds.forEach((find) => {
-      if (!find.sold_at || !find.sold_price_gbp) return
-      const soldDate = new Date(find.sold_at)
-      if (soldDate < dateRangeStart) return
-
-      const sourceLabel = find.source_type ? SOURCE_LABELS[find.source_type] : 'Unknown'
-      const existing = sources.get(sourceLabel) || {
-        revenue: 0,
-        margins: [],
-        dayToSells: [],
-      }
-
-      existing.revenue += find.sold_price_gbp
-
-      if (find.cost_gbp) {
-        const margin = ((find.sold_price_gbp - find.cost_gbp) / find.cost_gbp) * 100
-        existing.margins.push(margin)
-      }
-
-      if (find.sourced_at) {
-        const days = Math.round(
-          (new Date(find.sold_at).getTime() - new Date(find.sourced_at).getTime()) /
-            (1000 * 60 * 60 * 24),
-        )
-        existing.dayToSells.push(days)
-      }
-
-      sources.set(sourceLabel, existing)
-    })
-
-    return Array.from(sources.entries())
-      .map(([source, data]) => ({
-        source,
-        revenue: data.revenue,
-        margin:
-          data.margins.length > 0
-            ? Math.round(data.margins.reduce((a, b) => a + b, 0) / data.margins.length)
-            : 0,
-        days:
-          data.dayToSells.length > 0
-            ? (
-                data.dayToSells.reduce((a, b) => a + b, 0) / data.dayToSells.length
-              ).toFixed(1)
-            : '0',
-      }))
-      .sort((a, b) => b.revenue - a.revenue)
-  })()
-
-  // Total metrics
-  const totalRevenue = finds
-    .filter((f) => {
-      if (!f.sold_at) return false
-      return new Date(f.sold_at) >= dateRangeStart
-    })
-    .reduce((sum, f) => sum + (f.sold_price_gbp || 0), 0)
-
-  const allMargins = finds
-    .filter((f) => f.cost_gbp && f.sold_price_gbp)
-    .map((f) => ((f.sold_price_gbp! - f.cost_gbp!) / f.cost_gbp!) * 100)
-  const avgMargin = allMargins.length > 0
-    ? Math.round(allMargins.reduce((a, b) => a + b, 0) / allMargins.length)
-    : 0
-
-  const itemsSold = finds.filter((f) => {
-    if (!f.sold_at) return false
-    return new Date(f.sold_at) >= dateRangeStart
-  }).length
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-serif text-2xl italic text-ink">analytics</h1>
+        <div className="text-center py-12">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -238,43 +145,45 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Hero stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          label="Total revenue"
-          value={totalRevenue}
-          prefix="£"
-          delta={isLoading ? '...' : `${itemsSold} items sold`}
-          suffix=""
-        />
-        <StatCard
-          label="Avg margin"
-          value={avgMargin}
-          suffix="%"
-          delta={isLoading ? '...' : 'from sold items'}
-        />
-        <StatCard
-          label="Items sold"
-          value={itemsSold}
-          delta={
-            isLoading
-              ? '...'
-              : itemsSold > 0
-                ? `avg £${(totalRevenue / itemsSold).toFixed(2)} per item`
-                : 'no sales yet'
-          }
-          suffix=""
-        />
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 bg-sage/10 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard
+            label="Total revenue"
+            value={summary?.total_revenue_gbp || 0}
+            prefix="£"
+            delta={summary ? `${summary.sold_finds} items sold` : 'no sales yet'}
+            suffix=""
+          />
+          <StatCard
+            label="Gross margin"
+            value={summary?.gross_margin_pct || 0}
+            suffix="%"
+            delta={summary ? 'from sold items' : '—'}
+          />
+          <StatCard
+            label="Avg days to sell"
+            value={summary?.avg_days_to_sell || 0}
+            suffix=" days"
+            delta={summary ? 'average' : '—'}
+          />
+        </div>
+      )}
 
       {/* Empty state */}
-      {!isLoading && finds.length === 0 && (
+      {!isLoading && !summary?.total_finds && (
         <div className="text-center py-12">
           <p className="text-ink-lt mb-4">Add and sell finds to see analytics here</p>
         </div>
       )}
 
       {/* Charts and tables */}
-      {!isLoading && finds.length > 0 && (
+      {!isLoading && summary && summary.total_finds > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Monthly revenue chart - spans 2 columns */}
           <div className="lg:col-span-2">
@@ -294,7 +203,7 @@ export default function AnalyticsPage() {
                             item.highlight ? 'text-sage' : 'text-ink-md'
                           }`}
                         >
-                          £{item.revenue > 0 ? (item.revenue / 1000).toFixed(1) : '0'}k
+                          £{item.revenue > 0 ? item.revenue.toFixed(0) : '0'}
                         </div>
 
                         {/* Bar */}
@@ -302,7 +211,7 @@ export default function AnalyticsPage() {
                           className={`w-full rounded-t ${
                             item.highlight ? 'bg-sage' : 'bg-sage-pale'
                           }`}
-                          style={{ height: `${item.percentage}%` }}
+                          style={{ height: `${Math.max(item.percentage, 5)}%` }}
                         />
 
                         {/* Month label */}
@@ -323,92 +232,84 @@ export default function AnalyticsPage() {
             </Panel>
           </div>
 
-          {/* By Platform table */}
-          <Panel title="by platform">
-            {platformData.length > 0 ? (
+          {/* By Category table */}
+          <Panel title="by category">
+            {categories.length > 0 ? (
               <table className="w-full text-sm">
                 <tbody>
-                  {platformData.map((item, idx) => (
+                  {categories.slice(0, 5).map((item, idx) => (
                     <tr
-                      key={item.platform}
+                      key={item.category}
                       className={`border-b border-sage/14 ${
-                        idx === platformData.length - 1 ? 'border-0' : ''
+                        idx === Math.min(categories.length - 1, 4) ? 'border-0' : ''
                       }`}
                     >
-                      <td className="py-3 px-3 text-ink-md">{item.platform}</td>
+                      <td className="py-3 px-3 text-ink-md text-xs">{item.category}</td>
                       <td className="py-3 px-3 text-right font-mono text-xs">
-                        £{item.revenue.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-xs font-medium text-sage-lt">
-                        {item.percentage}%
+                        £{item.total_revenue.toLocaleString()}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p className="text-ink-lt text-sm py-4">No sales data yet</p>
+              <p className="text-ink-lt text-sm py-4">No categories yet</p>
             )}
           </Panel>
         </div>
       )}
 
-      {/* Bottom section - By Source + Insight */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* By Source table - spans 2 columns */}
-        <div className="lg:col-span-2">
-          <Panel title="by source">
-            {sourceData.length > 0 ? (
-              <table className="w-full text-sm">
-                <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
-                  <tr>
-                    <th className="text-left py-3 px-3">source</th>
-                    <th className="text-right py-3 px-3">revenue</th>
-                    <th className="text-right py-3 px-3">avg margin</th>
-                    <th className="text-right py-3 px-3">avg days</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourceData.map((item, idx) => (
-                    <tr
-                      key={item.source}
-                      className={`border-b border-sage/14 ${
-                        idx === sourceData.length - 1 ? 'border-0' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-3 text-ink-md">{item.source}</td>
-                      <td className="py-3 px-3 text-right font-mono text-xs">
-                        £{item.revenue.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-xs font-medium text-green-700">
-                        {item.margin}%
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-xs">
-                        {item.days}d
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-ink-lt text-sm py-4">No sales data yet</p>
-            )}
-          </Panel>
-        </div>
+      {/* Category breakdown table - full width */}
+      {!isLoading && summary && categories.length > 0 && (
+        <Panel title="category breakdown">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
+              <tr>
+                <th className="text-left py-3 px-3">category</th>
+                <th className="text-right py-3 px-3">count</th>
+                <th className="text-right py-3 px-3">revenue</th>
+                <th className="text-right py-3 px-3">avg price</th>
+                <th className="text-right py-3 px-3">avg days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((item, idx) => (
+                <tr
+                  key={item.category}
+                  className={`border-b border-sage/14 ${
+                    idx === categories.length - 1 ? 'border-0' : ''
+                  }`}
+                >
+                  <td className="py-3 px-3 text-ink-md">{item.category}</td>
+                  <td className="py-3 px-3 text-right font-mono text-xs">{item.count}</td>
+                  <td className="py-3 px-3 text-right font-mono text-xs">
+                    £{item.total_revenue.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-right font-mono text-xs">
+                    £{item.avg_price.toFixed(2)}
+                  </td>
+                  <td className="py-3 px-3 text-right font-mono text-xs">
+                    {item.avg_days_to_sell}d
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      )}
 
-        {/* Insight card */}
-        <InsightCard
-          text={
-            sourceData.length > 0
-              ? 'House clearances deliver 40% faster sell-through and 27 points more margin than charity shops. Your next sourcing trip should prioritise them.'
-              : 'Sell items from different sources to see sourcing insights.'
-          }
-          link={{
-            text: sourceData.length > 0 ? 'view sourcing recommendations →' : 'add first find',
-            onClick: () => {},
-          }}
-        />
-      </div>
+      {/* Insight card */}
+      <InsightCard
+        text={
+          summary && summary.total_finds > 0
+            ? `You've listed ${summary.total_finds} items and sold ${summary.sold_finds} with an average margin of ${summary.gross_margin_pct}%. Keep up the momentum!`
+            : 'Add items to your inventory to start tracking metrics and insights.'
+        }
+        link={{
+          text: summary && summary.total_finds > 0 ? 'view inventory' : 'add first find',
+          onClick: () => {},
+        }}
+      />
     </div>
   )
 }
