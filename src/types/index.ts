@@ -52,6 +52,7 @@ export interface EbayPlatformData {
   status: 'live' | 'draft' | 'ended'
   url: string
   publishedAt: string
+  categoryId?: number
 }
 
 export interface VintedPlatformData {

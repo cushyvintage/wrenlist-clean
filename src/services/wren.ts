@@ -1,14 +1,32 @@
 // lib/ai/wren.ts
-// All Claude API calls for Wrenlist's AI features
+// All OpenAI API calls for Wrenlist's AI features
 // Used for: listing generation, price suggestions, sourcing insights
 
-import Anthropic from '@anthropic-ai/sdk'
+const MODEL = 'gpt-4o'
+const API_KEY = process.env.OPENAI_API_KEY
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+async function openaiRequest(messages: any[]): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.7,
+    }),
+  })
 
-const MODEL = 'claude-sonnet-4-6'
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+  }
+
+  const data = await response.json()
+  return data.choices[0]?.message?.content || ''
+}
 
 // ── LISTING GENERATION ──────────────────────────────────────────────────────
 
@@ -51,14 +69,7 @@ Return JSON only, no markdown:
   "tags": ["array", "of", "8-10", "relevant", "search", "tags"]
 }`
 
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 600,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const content = message.content[0]
-  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
+  const text = await openaiRequest([{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }
 
@@ -96,14 +107,7 @@ Return JSON only, no markdown:
   "avgDaysToSell": 0
 }`
 
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 300,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const content = message.content[0]
-  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
+  const text = await openaiRequest([{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }
 
@@ -135,7 +139,7 @@ export async function generateInsight(
   categoryStats: CategoryStats[],
   period: string = 'last 90 days'
 ): Promise<WrenInsight> {
-  const prompt = `You are Wren, an AI analyst for a UK reselling business. 
+  const prompt = `You are Wren, an AI analyst for a UK reselling business.
 Generate a single sharp, actionable insight based on this seller's data.
 
 Source performance (${period}):
@@ -154,13 +158,6 @@ Return JSON only, no markdown:
   "recommendation": "One clear action they should take"
 }`
 
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 200,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const content = message.content[0]
-  const text = content && 'type' in content && content.type === 'text' ? content.text : ''
+  const text = await openaiRequest([{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }

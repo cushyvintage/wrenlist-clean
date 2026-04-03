@@ -21,6 +21,20 @@ const CATEGORY_TO_VINTED_CATALOG_ID: Record<string, number> = {
   other: 1934,        // fallback → Home & Decor
 }
 
+const CATEGORY_TO_EBAY_CATEGORY_ID: Record<string, number> = {
+  ceramics: 163531,
+  glassware: 870,
+  books: 267,
+  jewellery: 281,
+  clothing: 15724,
+  homeware: 20444,
+  collectibles: 1,
+  medals: 4702,
+  toys: 19016,
+  furniture: 20091,
+  other: 99,
+}
+
 // For now, we'll define Condition mapping locally since the extension has its own Condition enum
 type CrosslistCondition = 'NewWithTags' | 'NewWithoutTags' | 'VeryGood' | 'Good' | 'Fair' | 'Poor'
 
@@ -113,13 +127,19 @@ export function findToCrosslistProduct(find: Find): CrosslistProduct {
     shippingLength: find.shipping_length_cm || undefined,
   }
 
-  // Extract Vinted metadata from platform_fields if available
+  // Extract Vinted & eBay metadata from platform_fields if available
   const vintedMetadata = find.platform_fields?.vinted
+  const ebayMetadata = find.platform_fields?.ebay
 
-  // Resolve catalog ID: prefer stored value, fall back to category mapping
+  // Resolve Vinted catalog ID: prefer stored value, fall back to category mapping
   const resolvedCatalogId: number | undefined =
     vintedMetadata?.catalogId ??
     (find.category ? (CATEGORY_TO_VINTED_CATALOG_ID[find.category.toLowerCase()] ?? CATEGORY_TO_VINTED_CATALOG_ID['other']) : undefined)
+
+  // Resolve eBay category ID: prefer stored value, fall back to category mapping
+  const resolvedEbayCategoryId: number | undefined =
+    ebayMetadata?.categoryId ??
+    (find.category ? (CATEGORY_TO_EBAY_CATEGORY_ID[find.category.toLowerCase()] ?? CATEGORY_TO_EBAY_CATEGORY_ID['other']) : undefined)
 
   return {
     id: find.id,
@@ -137,6 +157,7 @@ export function findToCrosslistProduct(find: Find): CrosslistProduct {
     shipping: shipping as ShippingInfo & Record<string, unknown>,
     dynamicProperties: {
       ...(resolvedCatalogId && { vintedCatalogId: String(resolvedCatalogId) }),
+      ...(resolvedEbayCategoryId && { ebayCategoryId: String(resolvedEbayCategoryId) }),
       ...(vintedMetadata?.packageSizeId && { packageSizeId: String(vintedMetadata.packageSizeId) }),
       ...(vintedMetadata?.colorIds && { colorIds: vintedMetadata.colorIds.map(String).join(',') }),
       ...(vintedMetadata?.materialId && { materialId: String(vintedMetadata.materialId) }),
