@@ -6,7 +6,8 @@ import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
-import BarcodeScanner from '@/components/barcode/BarcodeScanner'
+import PlatformSelector from '@/components/add-find/PlatformSelector'
+import ISBNLookup from '@/components/add-find/ISBNLookup'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { generateSKU } from '@/lib/sku'
@@ -125,12 +126,6 @@ export default function AddFindPage() {
   const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
-  const [isbnInput, setIsbnInput] = useState('')
-  const [isbnLooking, setIsbnLooking] = useState(false)
-  const [isbnError, setIsbnError] = useState<string | null>(null)
-  const [isbnResult, setIsbnResult] = useState<{ title: string; authors: string[] } | null>(null)
-  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false)
-  const [barcodeScanSupported, setBarcodeScanSupported] = useState(true)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
 
   // Fetch Shopify store domain on component mount
@@ -212,13 +207,6 @@ export default function AddFindPage() {
     }
   }, [searchParams])
 
-  // Check for BarcodeDetector API support
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setBarcodeScanSupported(typeof (window as any).BarcodeDetector !== 'undefined')
-    }
-  }, [])
-
   // Handle form field changes
   const handleInputChange = useCallback(
     (field: keyof FormData, value: any) => {
@@ -290,114 +278,6 @@ export default function AddFindPage() {
       }))
     }
   }, [formData.category])
-
-  // Handle ISBN lookup
-  const handleIsbnLookup = useCallback(async () => {
-    if (!isbnInput.trim()) {
-      setIsbnError('ISBN is required')
-      return
-    }
-
-    setIsbnLooking(true)
-    setIsbnError(null)
-    setIsbnResult(null)
-
-    try {
-      const response = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(isbnInput)}`)
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error((errorData as any).error || 'ISBN not found')
-      }
-
-      const data = await response.json()
-      setIsbnResult({ title: data.title, authors: data.authors })
-
-      // Auto-fill title if empty
-      if (!formData.title && data.title) {
-        handleInputChange('title', data.title)
-      }
-
-      // Auto-fill author fields for both platforms
-      if (data.authors && data.authors.length > 0) {
-        const authorName = data.authors[0]
-        if (formData.selectedPlatforms.includes('vinted')) {
-          handlePlatformFieldChange('vinted', 'author', authorName)
-        }
-        if (formData.selectedPlatforms.includes('ebay')) {
-          handlePlatformFieldChange('ebay', 'author', authorName)
-        }
-      }
-
-      // Auto-fill ISBN for both platforms
-      if (formData.selectedPlatforms.includes('vinted')) {
-        handlePlatformFieldChange('vinted', 'isbn', isbnInput)
-      }
-      if (formData.selectedPlatforms.includes('ebay')) {
-        handlePlatformFieldChange('ebay', 'isbn', isbnInput)
-      }
-
-      // Clear input after successful lookup
-      setIsbnInput('')
-      setTimeout(() => setIsbnResult(null), 2500)
-    } catch (err) {
-      setIsbnError((err as any).message || 'Failed to lookup ISBN')
-    } finally {
-      setIsbnLooking(false)
-    }
-  }, [isbnInput, formData.title, formData.selectedPlatforms])
-
-  // Handle barcode scan detection
-  const handleBarcodeDetected = useCallback(
-    async (code: string) => {
-      setBarcodeScannerOpen(false)
-      setIsbnInput(code)
-
-      // Auto-trigger ISBN lookup with the detected code
-      try {
-        const response = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(code)}`)
-
-        if (!response.ok) {
-          setIsbnError(`ISBN not found: ${code}`)
-          return
-        }
-
-        const data = await response.json()
-        setIsbnResult({ title: data.title, authors: data.authors })
-
-        // Auto-fill title if empty
-        if (!formData.title && data.title) {
-          handleInputChange('title', data.title)
-        }
-
-        // Auto-fill author fields for both platforms
-        if (data.authors && data.authors.length > 0) {
-          const authorName = data.authors[0]
-          if (formData.selectedPlatforms.includes('vinted')) {
-            handlePlatformFieldChange('vinted', 'author', authorName)
-          }
-          if (formData.selectedPlatforms.includes('ebay')) {
-            handlePlatformFieldChange('ebay', 'author', authorName)
-          }
-        }
-
-        // Auto-fill ISBN for both platforms
-        if (formData.selectedPlatforms.includes('vinted')) {
-          handlePlatformFieldChange('vinted', 'isbn', code)
-        }
-        if (formData.selectedPlatforms.includes('ebay')) {
-          handlePlatformFieldChange('ebay', 'isbn', code)
-        }
-
-        // Clear input after successful lookup
-        setIsbnInput('')
-        setTimeout(() => setIsbnResult(null), 2500)
-      } catch (err) {
-        setIsbnError((err as any).message || 'Failed to lookup ISBN')
-      }
-    },
-    [formData.title, formData.selectedPlatforms]
-  )
 
   // Handle photo classification for category detection
   const handleClassifyPhoto = useCallback(
@@ -925,24 +805,10 @@ export default function AddFindPage() {
           <div className="col-span-2">
             <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-4">
               <TemplatePickerPopover onSelectTemplate={handleApplyTemplate} />
-              <div>
-                <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
-                <div className="space-y-3">
-                  {(['vinted', 'ebay', 'shopify'] as Platform[]).map((platform) => (
-                    <label key={platform} className="flex items-center gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={formData.selectedPlatforms.includes(platform)}
-                        onChange={() => handlePlatformToggle(platform)}
-                        className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
-                      />
-                      <span className="text-sm text-ink group-hover:text-sage transition-colors">
-                        {platform === 'vinted' ? 'Vinted' : platform === 'ebay' ? 'eBay UK' : 'Shopify'}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <PlatformSelector
+                selectedPlatforms={formData.selectedPlatforms}
+                onPlatformToggle={handlePlatformToggle}
+              />
             </div>
           </div>
 
@@ -1044,35 +910,16 @@ export default function AddFindPage() {
             <div className="bg-white rounded-lg border border-sage/14 p-6">
               <div className="flex justify-between items-start mb-2">
                 <label className="block text-sm font-semibold text-ink">Title</label>
-                {formData.category?.startsWith('books') && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsbnLookupOpen(!isbnLookupOpen)}
-                      className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
-                    >
-                      📚 Look up by ISBN
-                    </button>
-                    {barcodeScanSupported ? (
-                      <button
-                        type="button"
-                        onClick={() => setBarcodeScannerOpen(true)}
-                        className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
-                      >
-                        📷 Scan barcode
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        title="Barcode scanning not supported on this browser"
-                        className="text-xs text-sage-dim opacity-50 cursor-not-allowed"
-                      >
-                        📷 Scan barcode
-                      </button>
-                    )}
-                  </div>
-                )}
+                <ISBNLookup
+                  isOpen={isbnLookupOpen}
+                  onOpenChange={setIsbnLookupOpen}
+                  category={formData.category}
+                  selectedPlatforms={formData.selectedPlatforms}
+                  onTitleFill={(title) => handleInputChange('title', title)}
+                  onAuthorFill={(platform, author) => handlePlatformFieldChange(platform, 'author', author)}
+                  onIsbnFill={(platform, isbn) => handlePlatformFieldChange(platform, 'isbn', isbn)}
+                  currentTitle={formData.title}
+                />
               </div>
               <textarea
                 value={formData.title}
@@ -1093,45 +940,6 @@ export default function AddFindPage() {
                   <span className="text-xs text-amber-600">Required — complete before publishing</span>
                 )}
               </div>
-
-              {/* ISBN Lookup Input */}
-              {formData.category?.startsWith('books') && isbnLookupOpen && (
-                <div className="mt-4 pt-4 border-t border-sage/14 space-y-3">
-                  {isbnError && (
-                    <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
-                      {isbnError}
-                    </div>
-                  )}
-                  {isbnResult && (
-                    <div className="text-xs bg-sage/5 border border-sage/20 rounded px-2 py-1 text-sage">
-                      ✓ Found: <strong>{isbnResult.title}</strong>
-                      {isbnResult.authors.length > 0 && ` by ${isbnResult.authors.join(', ')}`}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={isbnInput}
-                      onChange={(e) => setIsbnInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleIsbnLookup()
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 border border-sage/14 rounded text-xs focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      placeholder="Enter ISBN (10 or 13 digits)"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleIsbnLookup}
-                      disabled={isbnLooking || !isbnInput.trim()}
-                      className="px-2 py-2 text-xs bg-sage text-white rounded hover:bg-sage-lt disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isbnLooking ? '⏳' : 'Look up'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Description */}
@@ -1709,13 +1517,6 @@ export default function AddFindPage() {
           </div>
         </div>
       </div>
-
-      {/* Barcode Scanner Modal */}
-      <BarcodeScanner
-        isOpen={barcodeScannerOpen}
-        onClose={() => setBarcodeScannerOpen(false)}
-        onDetected={handleBarcodeDetected}
-      />
     </div>
   )
 }
