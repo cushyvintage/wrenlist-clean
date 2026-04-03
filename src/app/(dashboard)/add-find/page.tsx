@@ -112,6 +112,12 @@ export default function AddFindPage() {
   const [incompleteRequiredFields, setIncompleteRequiredFields] = useState<Set<string>>(new Set())
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
   const [templateAppliedBanner, setTemplateAppliedBanner] = useState<string | null>(null)
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
+  const [autoDetectedCategory, setAutoDetectedCategory] = useState<{
+    category: string
+    confidence: 'high' | 'medium' | 'low'
+  } | null>(null)
+  const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
 
   // Fetch Shopify store domain on component mount
   useEffect(() => {
@@ -240,6 +246,75 @@ export default function AddFindPage() {
       }))
     }
   }, [formData.category])
+
+  // Handle description generation
+  const handleGenerateDescription = useCallback(async () => {
+    if (!formData.title || !formData.category) {
+      setError('Title and category are required to generate description')
+      return
+    }
+
+    setIsGeneratingDescription(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          category: formData.category,
+          brand: formData.brand || undefined,
+          condition: formData.condition,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error((errorData as any).error || 'Failed to generate description')
+      }
+
+      const data = await response.json()
+      handleInputChange('description', data.description)
+    } catch (err) {
+      setError((err as any).message || 'Failed to generate description')
+    } finally {
+      setIsGeneratingDescription(false)
+    }
+  }, [formData.title, formData.category, formData.brand, formData.condition])
+
+  // Classify first photo when photos change
+  useEffect(() => {
+    const classifyFirstPhoto = async () => {
+      if (!formData.photoPreviews.length || formData.category || dismissedAutoDetection) {
+        return
+      }
+
+      // Only try to classify if we have a URL from Supabase (not a blob URL)
+      const firstPhoto = formData.photoPreviews[0]
+      if (!firstPhoto || !firstPhoto.startsWith('http')) {
+        return
+      }
+
+      try {
+        const response = await fetch('/api/ai/classify-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoUrl: firstPhoto }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setAutoDetectedCategory(data)
+        }
+      } catch (err) {
+        // Silently fail — photo classification is optional
+        console.error('Failed to classify photo:', err)
+      }
+    }
+
+    classifyFirstPhoto()
+  }, [formData.photoPreviews, formData.category, dismissedAutoDetection])
 
   // Handle platform selection
   const handlePlatformToggle = useCallback((platform: Platform) => {
@@ -672,6 +747,55 @@ export default function AddFindPage() {
 
           {/* CENTRE PANEL - Main Form */}
           <div className="col-span-7 space-y-6">
+            {/* Auto-detected category banner */}
+            {autoDetectedCategory && !formData.category && !dismissedAutoDetection && (
+              <div className={`rounded-lg border p-4 flex items-center justify-between ${
+                autoDetectedCategory.confidence === 'high'
+                  ? 'bg-sage/5 border-sage/20'
+                  : autoDetectedCategory.confidence === 'medium'
+                    ? 'bg-amber/5 border-amber/20'
+                    : 'bg-slate-50 border-slate-20'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    {autoDetectedCategory.confidence === 'high' ? '✓' : autoDetectedCategory.confidence === 'medium' ? '?' : '?'}{' '}
+                    <span className={
+                      autoDetectedCategory.confidence === 'high'
+                        ? 'text-sage'
+                        : autoDetectedCategory.confidence === 'medium'
+                          ? 'text-amber'
+                          : 'text-slate-600'
+                    }>
+                      {autoDetectedCategory.confidence === 'high'
+                        ? 'Category detected: '
+                        : 'Looks like '}
+                      <strong className="capitalize">{autoDetectedCategory.category}</strong>
+                      {autoDetectedCategory.confidence !== 'high' ? '?' : ''}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleInputChange('category', autoDetectedCategory.category)
+                      setAutoDetectedCategory(null)
+                    }}
+                    className="text-xs px-2 py-1 rounded bg-sage text-white hover:bg-sage-lt transition-colors"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedAutoDetection(true)}
+                    className="text-xs px-2 py-1 text-sage-lt hover:text-sage transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Photos */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
               <h3 className="text-sm font-semibold text-ink mb-4">Photos</h3>
@@ -710,7 +834,23 @@ export default function AddFindPage() {
 
             {/* Description */}
             <div className="bg-white rounded-lg border border-sage/14 p-6">
-              <label className="block text-sm font-semibold text-ink mb-2">Description</label>
+              <div className="flex justify-between items-start mb-2">
+                <label className="block text-sm font-semibold text-ink">Description</label>
+                <button
+                  type="button"
+                  onClick={handleGenerateDescription}
+                  disabled={!formData.title || !formData.category || isGeneratingDescription}
+                  className="text-xs px-2 py-1 rounded border border-sage/14 text-sage-lt hover:text-sage hover:border-sage/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  {isGeneratingDescription ? (
+                    <>
+                      <span className="inline-block animate-spin">⏳</span> Generating...
+                    </>
+                  ) : (
+                    <>✨ Generate</>
+                  )}
+                </button>
+              </div>
               <textarea
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value.slice(0, 2000))}
