@@ -1,5 +1,26 @@
 import type { Find } from '@/types'
 
+/**
+ * Maps wrenlist category slugs → Vinted UK catalog IDs
+ * Derived from the reverse map in /api/vinted/import/route.ts
+ * Use the most general/default catalog ID per category for publishing
+ */
+const CATEGORY_TO_VINTED_CATALOG_ID: Record<string, number> = {
+  ceramics: 1960,     // Home > Tableware & Crockery > General
+  teapots: 3856,      // Home > Tableware > Teapots
+  jugs: 3857,         // Home > Tableware > Jugs & Pitchers
+  glassware: 2005,    // Home > Glassware > General
+  books: 2997,        // Books > General
+  jewellery: 21,      // Accessories > Jewellery > General
+  clothing: 4,        // Women > Clothing (generic fallback)
+  homeware: 1934,     // Home > Home Decor
+  collectibles: 3823, // Antiques > Collectibles
+  medals: 167,        // Antiques > Medals
+  toys: 1499,         // Toys & Games > General
+  furniture: 3154,    // Home > Furniture
+  other: 1934,        // fallback → Home & Decor
+}
+
 // For now, we'll define Condition mapping locally since the extension has its own Condition enum
 type CrosslistCondition = 'NewWithTags' | 'NewWithoutTags' | 'VeryGood' | 'Good' | 'Fair' | 'Poor'
 
@@ -95,6 +116,11 @@ export function findToCrosslistProduct(find: Find): CrosslistProduct {
   // Extract Vinted metadata from platform_fields if available
   const vintedMetadata = find.platform_fields?.vinted
 
+  // Resolve catalog ID: prefer stored value, fall back to category mapping
+  const resolvedCatalogId: number | undefined =
+    vintedMetadata?.catalogId ??
+    (find.category ? (CATEGORY_TO_VINTED_CATALOG_ID[find.category.toLowerCase()] ?? CATEGORY_TO_VINTED_CATALOG_ID['other']) : undefined)
+
   return {
     id: find.id,
     title: find.name,
@@ -110,7 +136,7 @@ export function findToCrosslistProduct(find: Find): CrosslistProduct {
     quantity: 1,
     shipping: shipping as ShippingInfo & Record<string, unknown>,
     dynamicProperties: {
-      ...(vintedMetadata?.catalogId && { vintedCatalogId: String(vintedMetadata.catalogId) }),
+      ...(resolvedCatalogId && { vintedCatalogId: String(resolvedCatalogId) }),
       ...(vintedMetadata?.packageSizeId && { packageSizeId: String(vintedMetadata.packageSizeId) }),
       ...(vintedMetadata?.colorIds && { colorIds: vintedMetadata.colorIds.map(String).join(',') }),
       ...(vintedMetadata?.materialId && { materialId: String(vintedMetadata.materialId) }),
