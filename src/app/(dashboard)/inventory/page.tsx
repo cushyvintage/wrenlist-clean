@@ -40,6 +40,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '2',
@@ -71,6 +72,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '3',
@@ -102,6 +104,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '4',
@@ -133,6 +136,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '5',
@@ -164,6 +168,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '6',
@@ -195,6 +200,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
   {
     id: '7',
@@ -226,6 +232,7 @@ const mockFinds: Find[] = [
     shipping_length_cm: null,
     shipping_width_cm: null,
     shipping_height_cm: null,
+    sourcing_trip_id: null,
   },
 ]
 

@@ -24,13 +24,8 @@ const typeEmoji: Record<SupplierType, string> = {
   other: '📍',
 }
 
-interface SupplierDetailProps {
-  params: {
-    id: string
-  }
-}
-
-export default function SupplierDetailPage({ params }: SupplierDetailProps) {
+export default function SupplierDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string>('')
   const router = useRouter()
   const [supplier, setSupplier] = useState<Supplier | null>(null)
   const [finds, setFinds] = useState<Find[]>([])
@@ -41,17 +36,25 @@ export default function SupplierDetailPage({ params }: SupplierDetailProps) {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
+  // Load params
+  useEffect(() => {
+    paramsPromise.then(({ id: supplierId }) => {
+      setId(supplierId)
+    })
+  }, [paramsPromise])
+
   // Load supplier and finds
   useEffect(() => {
+    if (!id) return
     loadSupplier()
     loadFinds()
-  }, [params.id])
+  }, [id])
 
   async function loadSupplier() {
     try {
       setLoading(true)
       setError(null)
-      const res = await fetch(`/api/suppliers/${params.id}`)
+      const res = await fetch(`/api/suppliers/${id}`)
       if (!res.ok) throw new Error('Failed to load supplier')
       const data = await res.json()
       setSupplier(data as Supplier)
@@ -84,7 +87,7 @@ export default function SupplierDetailPage({ params }: SupplierDetailProps) {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`/api/suppliers/${params.id}`, {
+      const res = await fetch(`/api/suppliers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -103,7 +106,7 @@ export default function SupplierDetailPage({ params }: SupplierDetailProps) {
   async function handleDelete() {
     try {
       setSubmitting(true)
-      const res = await fetch(`/api/suppliers/${params.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete supplier')
       router.push('/suppliers')
     } catch (err) {

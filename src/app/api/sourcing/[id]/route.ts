@@ -9,16 +9,17 @@ import type { SourcingTrip, SourcingTripWithStats } from '@/types'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
     const supabase = await createSupabaseServerClient()
-    const tripId = params.id
+    const tripId = id
 
     // Fetch trip
     const { data: trip, error: tripError } = await supabase
@@ -81,16 +82,17 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
     const supabase = await createSupabaseServerClient()
-    const tripId = params.id
+    const tripId = id
     const body = await request.json()
 
     // Verify ownership
@@ -141,16 +143,17 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
     }
 
     const supabase = await createSupabaseServerClient()
-    const tripId = params.id
+    const tripId = id
 
     // Verify ownership
     const { data: trip, error: tripError } = await supabase

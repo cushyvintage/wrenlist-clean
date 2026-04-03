@@ -51,6 +51,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -95,6 +96,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -139,6 +141,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -183,6 +186,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -227,6 +231,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -271,6 +276,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -315,6 +321,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
   {
@@ -359,6 +366,7 @@ const mockListings: (Listing & { find?: Find })[] = [
       shipping_length_cm: null,
       shipping_width_cm: null,
       shipping_height_cm: null,
+      sourcing_trip_id: null,
     },
   },
 ]

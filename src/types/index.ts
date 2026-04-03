@@ -144,6 +144,7 @@ export interface Find {
   shipping_length_cm: number | null
   shipping_width_cm: number | null
   shipping_height_cm: number | null
+  sourcing_trip_id: string | null
   created_at: string
   updated_at: string
 }
@@ -244,6 +245,42 @@ export const MILEAGE_PURPOSE_LABELS: Record<MileagePurpose, string> = {
   sourcing: 'Sourcing',
   delivery: 'Delivery',
   other: 'Other',
+}
+
+// ============================================================================
+// SOURCING TRIPS
+// ============================================================================
+
+export type SourcingTripType = 'car_boot' | 'charity_shop' | 'house_clearance' | 'flea_market' | 'online' | 'other'
+
+export const SOURCING_TRIP_TYPES: Record<SourcingTripType, string> = {
+  car_boot: 'Car boot',
+  charity_shop: 'Charity shop',
+  house_clearance: 'House clearance',
+  flea_market: 'Flea market',
+  online: 'Online',
+  other: 'Other',
+}
+
+export interface SourcingTrip {
+  id: string
+  user_id: string
+  name: string
+  type: SourcingTripType
+  location: string | null
+  date: string // ISO date YYYY-MM-DD
+  miles: number | null
+  entry_fee_gbp: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SourcingTripWithStats extends SourcingTrip {
+  find_count: number
+  total_spent_gbp: number
+  total_potential_revenue_gbp: number
+  roi_multiplier: number | null
 }
 
 // Display labels
