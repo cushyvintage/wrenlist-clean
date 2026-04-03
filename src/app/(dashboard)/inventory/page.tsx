@@ -446,7 +446,12 @@ export default function InventoryPage() {
     setBulkPublishing(true)
     setBulkPublishError(null)
 
+    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
+    const hasExtension = !!(chromeExt?.runtime?.sendMessage)
+
     try {
+      // Validate queue server-side first
       const response = await fetch('/api/bulk/publish-vinted', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -455,17 +460,58 @@ export default function InventoryPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        const message = data.message || 'Failed to queue items for publishing'
-        setBulkPublishError(message)
+        setBulkPublishError(data.message || 'Failed to queue items for publishing')
         return
       }
 
-      // Clear selection and close modal
+      if (hasExtension) {
+        // Fetch each product payload and dispatch to extension one by one
+        let failed = 0
+        for (const findId of findIds) {
+          try {
+            const payloadRes = await fetch(`/api/chrome-extension/vinted/product-payload/${findId}`)
+            if (!payloadRes.ok) { failed++; continue }
+            const payloadData = await payloadRes.json()
+            const product = payloadData?.data?.product ?? payloadData?.product
+            if (!product) { failed++; continue }
+
+            await new Promise<void>((resolve) => {
+              chromeExt.runtime.sendMessage(
+                EXTENSION_ID,
+                { action: 'publishtomarketplace', marketplace: 'vinted', product },
+                (resp: any) => {
+                  if (chromeExt.runtime.lastError) {
+                    console.warn('Extension publish error:', chromeExt.runtime.lastError.message)
+                    failed++
+                  } else if (!resp?.success && !resp?.ok) {
+                    console.warn('Vinted publish failed for', findId, resp?.error)
+                    failed++
+                  }
+                  resolve()
+                }
+              )
+            })
+          } catch (e) {
+            console.warn('Payload fetch failed for', findId, e)
+            failed++
+          }
+        }
+
+        if (failed > 0) {
+          setBulkPublishError(`${failed} of ${findIds.length} items failed to publish — check the extension is open on Vinted`)
+          return
+        }
+      } else {
+        // No extension detected — show install prompt
+        setBulkPublishError('Wrenlist extension not detected. Install it and make sure Vinted is open in another tab.')
+        return
+      }
+
+      // Success — clear selection
       setSelectedItems(new Set())
       setBulkPublishConfirm(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to queue items for publishing'
-      setBulkPublishError(message)
+      setBulkPublishError(err instanceof Error ? err.message : 'Failed to publish items')
     } finally {
       setBulkPublishing(false)
     }
