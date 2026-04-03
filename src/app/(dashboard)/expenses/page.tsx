@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Expense, ExpenseCategory } from '@/types'
 import { EXPENSE_LABELS } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 const categoryColors: Record<ExpenseCategory, string> = {
   packaging: 'bg-amber-lt text-amber-dk',
@@ -43,7 +44,7 @@ export default function ExpensesPage() {
         const response = await fetch(`/api/expenses?${queryParams}`)
         if (!response.ok) throw new Error('Failed to fetch expenses')
         const data = await response.json()
-        setExpenses(data.data || [])
+        setExpenses(unwrapApiResponse<Expense[]>(data))
       } catch (err) {
         console.error('Failed to fetch expenses:', err)
         setError(err instanceof Error ? err.message : 'Failed to load expenses')
@@ -67,7 +68,7 @@ export default function ExpensesPage() {
         const response = await fetch(`/api/expenses?${queryParams}`)
         if (!response.ok) throw new Error('Failed to fetch expenses')
         const data = await response.json()
-        setExpenses(data.data || [])
+        setExpenses(unwrapApiResponse<Expense[]>(data))
       } catch (err) {
         console.error('Failed to refetch expenses:', err)
       }

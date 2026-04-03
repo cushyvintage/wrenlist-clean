@@ -4,6 +4,7 @@ import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { useState, useEffect } from 'react'
 import type { Find, Expense, Mileage } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 export default function TaxPage() {
   const [taxYear, setTaxYear] = useState('2025-26')
@@ -31,21 +32,21 @@ export default function TaxPage() {
         const sellsRes = await fetch('/api/finds?status=sold')
         if (sellsRes.ok) {
           const sellsData = await sellsRes.json()
-          setSells(sellsData.data || [])
+          setSells(unwrapApiResponse<Find[]>(sellsData))
         }
 
         // Fetch expenses
         const expensesRes = await fetch(`/api/expenses?start_date=${startDate}&end_date=${endDate}`)
         if (expensesRes.ok) {
           const expensesData = await expensesRes.json()
-          setExpenses(expensesData.data || [])
+          setExpenses(unwrapApiResponse<Expense[]>(expensesData))
         }
 
         // Fetch mileage
         const mileageRes = await fetch(`/api/mileage?start_date=${startDate}&end_date=${endDate}`)
         if (mileageRes.ok) {
           const mileageData = await mileageRes.json()
-          setMileages(mileageData.data || [])
+          setMileages(unwrapApiResponse<Mileage[]>(mileageData))
         }
       } catch (err) {
         console.error('Error fetching tax data:', err)

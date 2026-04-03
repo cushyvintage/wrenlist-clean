@@ -7,6 +7,7 @@ import { InsightCard } from '@/components/wren/InsightCard'
 import { InventoryRow } from '@/components/wren/InventoryRow'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { unwrapApiResponse } from '@/lib/api-utils'
 import type { Find } from '@/types'
 
 interface AnalyticsSummary {
@@ -57,7 +58,7 @@ export default function DashboardPage() {
 
         if (findsRes.ok) {
           const json = await findsRes.json()
-          setFinds(json.data?.data || json.data || [])
+          setFinds(unwrapApiResponse<Find[]>(json))
         }
 
         if (insightRes.ok) {
@@ -243,12 +244,12 @@ export default function DashboardPage() {
             {finds.slice(0, 3).map((find) => (
               <div key={find.id} className="pb-3 border-b border-sage/14 last:border-0">
                 <p className="font-medium text-ink">
-                  {find.status === 'sold' ? 'Sold' : 'Added'} &ldquo;{find.name}&rdquo;
+                  {find.status === 'sold' ? 'Sold' : 'Added'} &ldquo;{find.name || 'Untitled item'}&rdquo;
                 </p>
                 <p className="text-xs text-ink-lt mt-1">
                   {find.status === 'sold' && find.sold_at
                     ? `${new Date(find.sold_at).toLocaleDateString()} • £${find.sold_price_gbp}`
-                    : `${new Date(find.created_at).toLocaleDateString()} • ${find.source_type}`}
+                    : `${new Date(find.created_at).toLocaleDateString()} • ${find.source_name || find.source_type || ''}`}
                 </p>
               </div>
             ))}

@@ -6,6 +6,7 @@ import { MileageForm } from '@/components/forms/MileageForm'
 import { useState, useEffect } from 'react'
 import type { Mileage, MileagePurpose } from '@/types'
 import { MILEAGE_PURPOSE_LABELS, HMRC_MILEAGE_RATE } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 const purposeColors: Record<MileagePurpose, string> = {
   car_boot: 'bg-amber-lt text-amber-dk',
@@ -38,7 +39,7 @@ export default function MileagePage() {
         const response = await fetch('/api/mileage')
         if (!response.ok) throw new Error('Failed to fetch mileage')
         const data = await response.json()
-        const entries: Mileage[] = data.data || []
+        const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
         setMileages(entries)
 
         // Extract unique vehicles
@@ -67,7 +68,7 @@ export default function MileagePage() {
         const response = await fetch('/api/mileage')
         if (!response.ok) throw new Error('Failed to fetch mileage')
         const data = await response.json()
-        const entries: Mileage[] = data.data || []
+        const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
         setMileages(entries)
 
         // Update vehicles

@@ -921,7 +921,7 @@ export default function InventoryPage() {
                       <span className="text-lg">{getEmoji(find.category)}</span>
                       <div className="flex-1">
                         <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
-                          {find.name}
+                          {find.name || 'Untitled'}
                         </div>
                         <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
                           {find.category}
@@ -930,7 +930,7 @@ export default function InventoryPage() {
                     </div>
                   </td>
                   <td className="py-[12px] px-[18px] text-[11px]" style={{ color: '#6B7D6A' }}>
-                    {find.source_name}
+                    {find.source_name || ''}
                   </td>
                   <td className="py-[12px] px-[18px] font-mono text-[12px]" style={{ color: '#4A5E48' }}>
                     £{find.cost_gbp}
