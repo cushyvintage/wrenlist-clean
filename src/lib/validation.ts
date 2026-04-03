@@ -35,6 +35,11 @@ export const CreateFindSchema = z.object({
   platform_fields: z.record(z.unknown()).optional().default({}),
   color_ids: z.array(z.number()).optional().default([]),
   selected_marketplaces: z.array(z.string()).optional().default(['vinted']),
+  // Shipping fields for marketplace publishing
+  shipping_weight_grams: z.number().nonnegative().optional().nullable(),
+  shipping_length_cm: z.number().nonnegative().optional().nullable(),
+  shipping_width_cm: z.number().nonnegative().optional().nullable(),
+  shipping_height_cm: z.number().nonnegative().optional().nullable(),
 })
 // Note: platform_fields accepts nested objects (JSONB)
 

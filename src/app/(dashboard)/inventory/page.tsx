@@ -36,6 +36,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '2',
@@ -63,6 +67,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '3',
@@ -90,6 +98,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '4',
@@ -117,6 +129,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '5',
@@ -144,6 +160,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '6',
@@ -171,6 +191,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
   {
     id: '7',
@@ -198,6 +222,10 @@ const mockFinds: Find[] = [
     ai_suggested_price_high: null,
     created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date().toISOString(),
+    shipping_weight_grams: null,
+    shipping_length_cm: null,
+    shipping_width_cm: null,
+    shipping_height_cm: null,
   },
 ]
 

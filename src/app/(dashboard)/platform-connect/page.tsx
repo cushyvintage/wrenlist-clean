@@ -42,6 +42,32 @@ export default function PlatformConnectPage() {
   const [shopifyFormData, setShopifyFormData] = useState({ storeDomain: '' })
   const [shopifyLoading, setShopifyLoading] = useState(false)
   const [shopifyError, setShopifyError] = useState<string | null>(null)
+  const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
+  const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
+
+
+  // Ping the Wrenlist extension to check if it's installed
+  const pingExtension = async (): Promise<void> => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        setExtensionDetected(false)
+        return
+      }
+
+      const response = await new Promise<{ success: boolean; version?: string }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ success: false }), 2000)
+        chrome.runtime.sendMessage({ type: 'ping' }, (response) => {
+          clearTimeout(timeout)
+          resolve(response || { success: false })
+        })
+      })
+
+      setExtensionDetected(response.success)
+      if (response.version) setExtensionVersion(response.version)
+    } catch (error) {
+      setExtensionDetected(false)
+    }
+  }
 
   // Check if token expires within 7 days
   const isTokenExpiringWithin7Days = (): boolean => {
@@ -173,6 +199,7 @@ export default function PlatformConnectPage() {
     }
 
     fetchVintedStatus()
+    void pingExtension()
   }, [])
 
   // Fetch Shopify connection status on mount
@@ -580,7 +607,7 @@ export default function PlatformConnectPage() {
             </div>
 
             <p className="text-xs text-ink-lt text-center">
-              {vintedLoading ? 'Checking status...' : 'Extension not detected. Install it to continue.'}
+              {vintedLoading || extensionDetected === null ? 'Checking status...' : extensionDetected ? `Extension detected (v${extensionVersion || '?'})` : 'Extension not detected. Install it to continue.'}
             </p>
           </div>
         ) : (

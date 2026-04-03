@@ -144,6 +144,10 @@ type ExternalMessage = Record<string, unknown>;
           sendResponse(withError(error));
         });
         return true;
+      case "ping":
+        // Extension detection ping from platform
+        sendResponse({ success: true, version: EXTENSION_VERSION });
+        return true;
       default:
         return false;
     }

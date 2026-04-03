@@ -59,6 +59,17 @@ export interface VintedPlatformData {
   status: 'live' | 'draft' | 'ended'
   url: string
   publishedAt: string
+  // Metadata for relisting without reconfiguration
+  catalogId?: number
+  brandId?: number
+  brandTitle?: string
+  sizeId?: number
+  sizeTitle?: string
+  colorIds?: number[]
+  colorTitles?: string[]
+  materialId?: number
+  packageSizeId?: number
+  conditionId?: number
 }
 
 export interface EtsyPlatformData {
@@ -108,6 +119,11 @@ export interface Find {
   ai_generated_description: string | null
   ai_suggested_price_low: number | null
   ai_suggested_price_high: number | null
+  // Shipping fields (required for Vinted/eBay publishing)
+  shipping_weight_grams: number | null
+  shipping_length_cm: number | null
+  shipping_width_cm: number | null
+  shipping_height_cm: number | null
   created_at: string
   updated_at: string
 }

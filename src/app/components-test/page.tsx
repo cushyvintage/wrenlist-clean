@@ -40,6 +40,10 @@ const mockFind: Find = {
   ai_suggested_price_high: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  shipping_weight_grams: null,
+  shipping_length_cm: null,
+  shipping_width_cm: null,
+  shipping_height_cm: null,
 }
 
 const mockListing: Partial<Listing> & { find?: Partial<Find> } = {
