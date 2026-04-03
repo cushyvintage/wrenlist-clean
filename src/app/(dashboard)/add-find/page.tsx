@@ -929,7 +929,7 @@ export default function AddFindPage() {
             <div className="bg-white rounded-lg border border-sage/14 p-6">
               <div className="flex justify-between items-start mb-2">
                 <label className="block text-sm font-semibold text-ink">Title</label>
-                {formData.category === 'books' && (
+                {formData.category?.startsWith('books') && (
                   <button
                     type="button"
                     onClick={() => setIsbnLookupOpen(!isbnLookupOpen)}
@@ -960,7 +960,7 @@ export default function AddFindPage() {
               </div>
 
               {/* ISBN Lookup Input */}
-              {formData.category === 'books' && isbnLookupOpen && (
+              {formData.category?.startsWith('books') && isbnLookupOpen && (
                 <div className="mt-4 pt-4 border-t border-sage/14 space-y-3">
                   {isbnError && (
                     <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
