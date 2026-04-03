@@ -317,72 +317,22 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            {/* Current Plan */}
-            <div className="bg-sage-pale border border-sage rounded-md p-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium text-sage text-sm mb-1">
-                    Forager Plan
-                  </h3>
-                  <p className="text-xs text-sage-dim">
-                    Annual billing • Renews 15 Apr 2025
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono font-medium text-ink">£9.99/mo</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Payment Methods */}
-            <div>
-              <h3 className="font-medium text-ink text-sm mb-4">
-                Payment Methods
-              </h3>
-              <div className="bg-white border border-sage/14 rounded-md p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-8 bg-blue-100 rounded flex items-center justify-center text-lg">
-                    💳
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-ink">
-                      Visa ending in 4242
-                    </p>
-                    <p className="text-xs text-ink-lt">Expires 12/25</p>
-                  </div>
-                </div>
-                <button className="px-3 py-1.5 text-xs bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream rounded-sm transition-colors font-medium">
-                  Edit
-                </button>
-              </div>
-            </div>
-
-            {/* Invoice History */}
-            <div>
-              <h3 className="font-medium text-ink text-sm mb-3">
-                Invoice History
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-sage/14">
-                  <span className="text-ink">Invoice #INV-2025-03</span>
-                  <span className="font-mono text-ink-lt">£99.90</span>
-                  <button className="text-sage-lt hover:text-sage text-xs font-medium underline">
-                    Download
-                  </button>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-sage/14">
-                  <span className="text-ink">Invoice #INV-2024-12</span>
-                  <span className="font-mono text-ink-lt">£99.90</span>
-                  <button className="text-sage-lt hover:text-sage text-xs font-medium underline">
-                    Download
-                  </button>
-                </div>
-              </div>
+            <div className="bg-cream-md rounded-md p-6 border border-sage/14">
+              <p className="text-ink-lt text-sm mb-4">
+                Your billing dashboard has moved to a dedicated page with more detailed information.
+              </p>
+              <button
+                onClick={() => window.location.href = '/billing'}
+                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors"
+              >
+                Go to Billing Dashboard
+              </button>
             </div>
           </div>
         )}
 
-        {/* Legal Section */}
+
+                {/* Legal Section */}
         {activeTab === 'legal' && (
           <div className="space-y-8">
             <div>
