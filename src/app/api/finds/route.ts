@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique SKU if not provided, or validate provided SKU is unique
-    let sku = validation.data.sku
-    if (!sku) {
+    let sku = validation.data.sku || null
+    if (!sku && validation.data.category) {
       // Generate unique SKU with retries
       sku = await generateUniqueSKU(validation.data.category, user.id)
-    } else {
+    } else if (sku) {
       // If user provided SKU, verify it's unique for this user
       const { data: existingSku } = await supabase
         .from('finds')

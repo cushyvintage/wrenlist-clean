@@ -38,6 +38,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient()
 
+    // Verify find exists and belongs to authenticated user
+    const { data: find, error: findError } = await supabase
+      .from('finds')
+      .select('id')
+      .eq('id', findId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (findError || !find) {
+      return ApiResponseHelper.notFound()
+    }
+
     // Ensure bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
     if (bucketsError) {

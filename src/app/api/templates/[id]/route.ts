@@ -24,14 +24,11 @@ export async function GET(
       .from('listing_templates')
       .select('*')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (error || !template) {
       return ApiResponseHelper.notFound('Template not found')
-    }
-
-    if (template.user_id !== user.id) {
-      return ApiResponseHelper.forbidden()
     }
 
     return ApiResponseHelper.success(template)
@@ -58,19 +55,16 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    // Check ownership
+    // Check ownership (scoped query)
     const { data: template, error: fetchError } = await supabase
       .from('listing_templates')
       .select('user_id, usage_count')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !template) {
       return ApiResponseHelper.notFound('Template not found')
-    }
-
-    if (template.user_id !== user.id) {
-      return ApiResponseHelper.forbidden()
     }
 
     // Validate update data
@@ -119,19 +113,16 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
-    // Check ownership
+    // Check ownership (scoped query)
     const { data: template, error: fetchError } = await supabase
       .from('listing_templates')
       .select('user_id')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !template) {
       return ApiResponseHelper.notFound('Template not found')
-    }
-
-    if (template.user_id !== user.id) {
-      return ApiResponseHelper.forbidden()
     }
 
     // Validate update data
@@ -149,6 +140,7 @@ export async function PUT(
       .from('listing_templates')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select('*')
       .single()
 
@@ -179,22 +171,23 @@ export async function DELETE(
     const supabase = await createSupabaseServerClient()
     const { id } = await params
 
-    // Check ownership
+    // Check ownership (scoped query)
     const { data: template, error: fetchError } = await supabase
       .from('listing_templates')
       .select('user_id')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !template) {
       return ApiResponseHelper.notFound('Template not found')
     }
 
-    if (template.user_id !== user.id) {
-      return ApiResponseHelper.forbidden()
-    }
-
-    const { error } = await supabase.from('listing_templates').delete().eq('id', id)
+    const { error } = await supabase
+      .from('listing_templates')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
     if (error) {
       return ApiResponseHelper.internalError(error.message)

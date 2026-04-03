@@ -88,8 +88,8 @@ export async function DELETE(request: NextRequest, { params }: { params: RoutePa
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify ownership first
-    const find = await getFind(id)
+    // Verify ownership first (scoped query)
+    const find = await getFind(id, user.id)
     if (!find) {
       return NextResponse.json(
         { error: 'Find not found' },
@@ -97,14 +97,7 @@ export async function DELETE(request: NextRequest, { params }: { params: RoutePa
       )
     }
 
-    if (find.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      )
-    }
-
-    await deleteFind(id)
+    await deleteFind(id, user.id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

@@ -111,6 +111,7 @@ export async function PUT(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('user_id', user.id)
       .select('*')
       .single()
 
@@ -179,6 +180,7 @@ export async function PATCH(
       .from('finds')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select('*')
       .single()
 
@@ -231,6 +233,7 @@ export async function DELETE(
       .from('finds')
       .delete()
       .eq('id', id)
+      .eq('user_id', user.id)
 
     if (error) {
       if (process.env.NODE_ENV !== 'production') {
