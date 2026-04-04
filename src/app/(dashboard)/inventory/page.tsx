@@ -299,7 +299,7 @@ export default function InventoryPage() {
         const profileRes = await fetch('/api/profile')
         if (profileRes.ok) {
           const profileData = await profileRes.json()
-          setProfile(profileData.data)
+          setProfile(unwrapApiResponse<Profile>(profileData))
         }
 
         // Check eBay connection status
