@@ -28,8 +28,8 @@ export default function BillingPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch profile')
       }
-      const data = await response.json()
-      setProfile(data)
+      const json = await response.json()
+      setProfile(json.data ?? json)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(msg)
