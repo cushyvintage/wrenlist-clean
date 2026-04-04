@@ -391,6 +391,29 @@ export default function InventoryPage() {
     router.push('/add-find')
   }
 
+  const handleUpgradeToNester = async () => {
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: 'nester', interval: 'monthly' }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.data?.url) {
+          window.location.href = data.data.url
+          return
+        }
+      }
+    } catch (err) {
+      // Fallback on error
+    }
+
+    // Fallback to pricing page
+    router.push('/pricing')
+  }
+
   const handleListOnEbay = async (findId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setPublishingFindId(findId)
@@ -568,7 +591,7 @@ export default function InventoryPage() {
         <div className="bg-amber/10 border border-amber/30 rounded p-4 text-sm text-amber space-y-2">
           <p className="font-medium">{planLimitError}</p>
           <button
-            onClick={() => router.push('/pricing')}
+            onClick={handleUpgradeToNester}
             className="text-xs underline hover:text-amber-900 transition-colors"
           >
             Upgrade plan →
@@ -662,7 +685,15 @@ export default function InventoryPage() {
                 {findsUsed} of {planLimit} finds used
               </span>
               {findsUsed >= planLimit && (
-                <span className="text-amber">●</span>
+                <>
+                  <span className="text-amber">●</span>
+                  <button
+                    onClick={handleUpgradeToNester}
+                    className="text-amber underline hover:text-amber-900 transition-colors"
+                  >
+                    upgrade →
+                  </button>
+                </>
               )}
             </div>
           )}

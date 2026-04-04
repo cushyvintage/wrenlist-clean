@@ -208,22 +208,28 @@ export default function TaxPage() {
       <div className="grid grid-cols-2 gap-6">
         <Panel title="income summary">
           <div className="p-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Vinted</span>
-              <span className="font-mono font-medium text-ink">£8,420</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">eBay UK</span>
-              <span className="font-mono font-medium text-ink">£18,640</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Depop</span>
-              <span className="font-mono font-medium text-ink">£6,280</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Other</span>
-              <span className="font-mono font-medium text-ink">£5,500</span>
-            </div>
+            {(['vinted', 'ebay', 'other'] as const).map((platform) => {
+              const platformRevenue = sells
+                .filter((s) => {
+                  const fields = s.platform_fields as Record<string, unknown> | null
+                  const hasVinted = !!fields?.['vinted']
+                  const hasEbay = !!fields?.['ebay']
+                  if (platform === 'vinted') return hasVinted
+                  if (platform === 'ebay') return hasEbay
+                  return !hasVinted && !hasEbay
+                })
+                .reduce((sum, s) => sum + (s.sold_price_gbp || 0), 0)
+              if (platformRevenue === 0) return null
+              return (
+                <div key={platform} className="flex justify-between">
+                  <span className="text-ink-lt">{platform === 'ebay' ? 'eBay UK' : platform === 'vinted' ? 'Vinted' : 'Other'}</span>
+                  <span className="font-mono font-medium text-ink">£{platformRevenue.toLocaleString()}</span>
+                </div>
+              )
+            })}
+            {sells.length === 0 && (
+              <p className="text-ink-lt text-xs">No sales recorded in this period</p>
+            )}
             <div className="flex justify-between border-t border-sage/14 pt-3 font-medium text-ink">
               <span>Total income</span>
               <span className="font-mono">£{revenue.toLocaleString()}</span>
@@ -233,22 +239,25 @@ export default function TaxPage() {
 
         <Panel title="expense summary">
           <div className="p-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Packaging & postage</span>
-              <span className="font-mono font-medium text-ink">£892</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Platform fees</span>
-              <span className="font-mono font-medium text-ink">£1,240</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Tools & software</span>
-              <span className="font-mono font-medium text-ink">£348</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-lt">Other</span>
-              <span className="font-mono font-medium text-ink">£367</span>
-            </div>
+            {(['packaging', 'postage', 'platform_fees', 'vehicle', 'other'] as const).map((cat) => {
+              const catTotal = expenses
+                .filter((e) => e.category === cat)
+                .reduce((sum, e) => sum + e.amount_gbp, 0)
+              if (catTotal === 0) return null
+              const labels: Record<string, string> = {
+                packaging: 'Packaging', postage: 'Postage', platform_fees: 'Platform fees',
+                vehicle: 'Vehicle', supplies: 'Supplies', other: 'Other'
+              }
+              return (
+                <div key={cat} className="flex justify-between">
+                  <span className="text-ink-lt">{labels[cat] ?? cat}</span>
+                  <span className="font-mono font-medium text-ink">£{catTotal.toLocaleString()}</span>
+                </div>
+              )
+            })}
+            {expenses.length === 0 && (
+              <p className="text-ink-lt text-xs">No expenses recorded in this period</p>
+            )}
             <div className="flex justify-between border-t border-sage/14 pt-3 font-medium text-ink">
               <span>Total expenses</span>
               <span className="font-mono">£{operatingExpenses.toLocaleString()}</span>

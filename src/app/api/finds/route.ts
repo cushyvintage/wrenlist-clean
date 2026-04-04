@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       const limit = planLimits[profile.plan] ?? null
 
       if (limit !== null && profile.finds_this_month >= limit) {
-        return ApiResponseHelper.badRequest('Monthly find limit reached. Upgrade your plan to add more finds.')
+        return ApiResponseHelper.error('Monthly find limit reached. Upgrade your plan to add more finds.', 402)
       }
     }
 
