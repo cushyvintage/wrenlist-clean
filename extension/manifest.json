@@ -58,7 +58,8 @@
   "externally_connectable": {
     "matches": [
       "*://*.wrenlist.com/*",
-      "*://localhost/*"
+      "*://localhost/*",
+      "*://*.vercel.app/*"
     ]
   },
   "host_permissions": [
