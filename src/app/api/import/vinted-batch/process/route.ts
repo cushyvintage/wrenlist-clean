@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
         // price: number, photos: string[], category: string (text), catalog_id: may be absent
         const condition = CONDITION_MAP[item.status as string] || 'good'
 
+        // Map Vinted status → Wrenlist find status
+        const vintedStatus = (item.status as string || '').toLowerCase()
+        const findStatus = vintedStatus === 'sold' ? 'sold'
+          : vintedStatus === 'hidden' ? 'draft'
+          : 'listed'
+
         // Category: prefer catalog_id mapping, fall back to text category
         let category = 'other'
         if (item.catalog_id && VINTED_TO_CATEGORY[item.catalog_id as number]) {
@@ -96,7 +102,7 @@ export async function POST(request: NextRequest) {
             asking_price_gbp: isNaN(askingPrice) ? null : askingPrice,
             photos,
             sku,
-            status: 'listed',
+            status: findStatus,
             platform_fields: {
               selectedPlatforms: ['vinted'],
               vinted: {
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
           platform_listing_url: `https://www.vinted.co.uk/items/${listingId}`,
           platform_category_id: String(item.catalog_id || item.vintedMetadata?.catalog_id || ''),
           listing_price: askingPrice,
-          status: 'listed',
+          status: findStatus,
         })
 
         // Mirror photos to Supabase Storage (non-blocking — never fails the item)

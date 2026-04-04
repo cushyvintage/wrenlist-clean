@@ -1086,7 +1086,17 @@ async function handleBatchImportVinted(message) {
                     needsLogin: true,
                 });
             }
-            listings = await collectVintedListings(client, limit, status, tld);
+            // Fetch all statuses: active (listed), sold, hidden (draft)
+            const [activeListings, soldListings, hiddenListings] = await Promise.allSettled([
+                collectVintedListings(client, limit, "active", tld),
+                collectVintedListings(client, Math.min(limit, 100), "sold", tld),
+                collectVintedListings(client, Math.min(limit, 100), "hidden", tld),
+            ]);
+            listings = [
+                ...(activeListings.status === "fulfilled" ? activeListings.value : []),
+                ...(soldListings.status === "fulfilled" ? soldListings.value : []),
+                ...(hiddenListings.status === "fulfilled" ? hiddenListings.value : []),
+            ];
             if (!listings.length) {
                 return withExtensionVersion({
                     success: false,
