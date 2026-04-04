@@ -43,7 +43,7 @@
 
   // src/background/shared/crosslistApi.ts
   var CROSSLIST_EXTENSION_VERSION = "3.7.8";
-  var DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
+  var DEFAULT_WRENLIST_BASE_URL = "https://app.wrenlist.com";
   async function getWrenlistBaseUrl() {
     try {
       const storage = await chrome.storage.sync.get(["wrenlistApiBase"]);
@@ -164736,7 +164736,7 @@ query CurrentUser {
 
   // src/background/index.ts
   var KEEP_ALIVE_INTERVAL_MS = 2e4;
-  var DEFAULT_WRENLIST_BASE_URL2 = "https://wrenlist.com";
+  var DEFAULT_WRENLIST_BASE_URL2 = "https://app.wrenlist.com";
   var ICON_PATH = "icons/icon128.png";
   (() => {
     if (typeof chrome === "undefined" || !chrome.runtime) {

@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check if user is authenticated
   async function checkAuth() {
     try {
-      const response = await fetch('https://wrenlist.com/api/auth/session', {
+      const response = await fetch('https://app.wrenlist.com/api/auth/me', {
         credentials: 'include',
         headers: {
           'Accept': 'application/json'
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const signInButton = document.getElementById('signInButton');
     signInButton.addEventListener('click', function() {
       chrome.tabs.create({
-        url: 'https://wrenlist.com/auth/login',
+        url: 'https://app.wrenlist.com/login',
         active: true
       });
     });
