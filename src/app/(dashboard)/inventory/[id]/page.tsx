@@ -303,7 +303,7 @@ export default function InventoryDetailPage() {
       const vintedListingId = vintedData?.listingId
       if (vintedListingId && typeof window !== 'undefined') {
         try {
-          const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+          const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
           const chrome = (window as any).chrome
           if (chrome?.runtime) {
             chrome.runtime.sendMessage(EXTENSION_ID, {
@@ -413,7 +413,7 @@ export default function InventoryDetailPage() {
                 try {
                   const vintedListingId = find.platform_fields?.vinted?.['listingId']
                   if (vintedListingId) {
-                    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+                    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
                     const chromeExt = (window as any).chrome
                     if (chromeExt?.runtime?.sendMessage) {
                       chromeExt.runtime.sendMessage(
@@ -498,7 +498,7 @@ export default function InventoryDetailPage() {
     setIsListingOnVinted(true)
     setVintedListResult(null)
 
-    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
     const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
     const hasExtension = !!(chromeExt?.runtime?.sendMessage)
 

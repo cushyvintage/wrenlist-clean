@@ -54,7 +54,7 @@ export default function PlatformConnectPage() {
   // Check Vinted session via the Wrenlist extension
   const checkVintedSession = async (): Promise<void> => {
     try {
-      const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+      const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
         setExtensionDetected(false)
         return
@@ -295,7 +295,7 @@ export default function PlatformConnectPage() {
   }
 
   const handleVintedImport = async () => {
-    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
     setVintedImportLoading(true)
     setVintedActionError(null)
     setVintedImportResult(null)
@@ -343,7 +343,7 @@ export default function PlatformConnectPage() {
   }
 
   const handleVintedSync = async () => {
-    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
     setVintedSyncLoading(true)
     setVintedActionError(null)
     setVintedSyncResult(null)

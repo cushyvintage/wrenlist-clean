@@ -655,7 +655,7 @@ export default function AddFindPage() {
         if (platform === 'vinted') {
           setError('Publishing to Vinted via extension...')
           try {
-            const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+            const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
             const result = await new Promise<any>((resolve, reject) => {
               const timeout = setTimeout(() => reject(new Error('Extension timed out')), 60000)
               // @ts-ignore — chrome is injected by browser extension
@@ -701,7 +701,7 @@ export default function AddFindPage() {
           }
           setError('Publishing to Shopify via extension...')
           try {
-            const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+            const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
             const result = await new Promise<any>((resolve, reject) => {
               const timeout = setTimeout(() => reject(new Error('Extension timed out — ensure you are logged into admin.shopify.com')), 60000)
               if (typeof chrome !== 'undefined' && chrome.runtime) {

@@ -32,7 +32,7 @@ export default function ImportPage() {
     setVintedLoading(true)
     setError(null)
     try {
-      const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+      const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
       const chrome = (window as any).chrome
       if (!chrome?.runtime) throw new Error('Wrenlist extension not installed — reload extension first')
 

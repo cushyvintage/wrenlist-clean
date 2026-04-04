@@ -469,7 +469,7 @@ export default function InventoryPage() {
     setBulkPublishing(true)
     setBulkPublishError(null)
 
-    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
     const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
     const hasExtension = !!(chromeExt?.runtime?.sendMessage)
 
