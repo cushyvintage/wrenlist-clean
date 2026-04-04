@@ -308,8 +308,8 @@ export default function PlatformConnectPage() {
       // Extension fetches listings AND posts them to /api/import/vinted-batch/process itself
       // We just fire-and-forget and wait for it to report back success/count
       const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success?: number; skipped?: number; errors?: number } }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — check Vinted is open and you are logged in' }), 120000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
+        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — check Vinted is open and you are logged in' }), 360000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 50, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) {
             resolve({ success: false, message: chrome.runtime.lastError.message })
