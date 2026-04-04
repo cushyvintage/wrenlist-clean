@@ -61,7 +61,7 @@ export default function PlatformConnectPage() {
       }
 
       const response = await new Promise<{ loggedIn: boolean; username?: string; tld?: string }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ loggedIn: false }), 3000)
+        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'get_vinted_session' }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) {
@@ -709,8 +709,8 @@ export default function PlatformConnectPage() {
 
       {/* Vinted */}
       <Panel>
-        {!vintedConnected ? (
-          // State A: Not connected
+        {!vintedConnected && !extensionDetected ? (
+          // State A: Not connected (no extension)
           <div>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
