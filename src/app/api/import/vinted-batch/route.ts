@@ -91,13 +91,14 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // Check if find already exists with this Vinted listing ID
+        // Check if find already exists with this Vinted listing ID (robust: JSON contains check)
         const { data: existing, error: existingError } = await supabase
           .from('finds')
           .select('id')
           .eq('user_id', user.id)
-          .filter('platform_fields->>vinted', 'ilike', `%"listingId":"${listing.id}"%`)
-          .single()
+          .or(`platform_fields->vinted->>listingId.eq.${listing.id},name.eq.${listing.title}`)
+          .limit(1)
+          .maybeSingle()
 
         if (existingError && existingError.code !== 'PGRST116') {
           // Real error (not "no rows found")
