@@ -155,19 +155,23 @@ export default function ListingsPage() {
             </Link>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-ink-lt mb-4">
-              {listings.length === 0
-                ? '📋 No listings yet — items you publish to Vinted and eBay appear here'
-                : 'No listings match your filters'}
-            </div>
-            {listings.length === 0 && (
-              <Link
-                href="/add-find"
-                className="text-sm font-medium text-sage hover:text-sage-dk"
-              >
-                add your first listing →
-              </Link>
+          <div className="bg-white border border-sage/14 rounded-lg">
+            {listings.length === 0 ? (
+              <div className="text-center py-12 px-6">
+                <p className="text-2xl mb-2">📋</p>
+                <p className="text-sage-dim text-sm mb-4">No listings yet</p>
+                <p className="text-xs text-ink-lt mb-6">Items you publish to Vinted and eBay appear here</p>
+                <Link
+                  href="/add-find"
+                  className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+                >
+                  Create your first listing
+                </Link>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-sage-dim">
+                No listings match your filters
+              </div>
             )}
           </div>
         ) : (

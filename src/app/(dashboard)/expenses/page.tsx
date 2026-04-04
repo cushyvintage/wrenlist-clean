@@ -191,8 +191,17 @@ export default function ExpensesPage() {
               <tbody className="divide-y divide-sage/14">
                 {expenses.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 px-4 text-center text-ink-lt">
-                      No expenses yet. Add one to get started.
+                    <td colSpan={6} className="py-12 px-4">
+                      <div className="text-center">
+                        <p className="text-2xl mb-2">💰</p>
+                        <p className="text-sage-dim text-sm mb-4">No expenses yet</p>
+                        <button
+                          onClick={() => setShowForm(true)}
+                          className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+                        >
+                          Add your first expense
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (

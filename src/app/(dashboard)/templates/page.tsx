@@ -204,9 +204,15 @@ export default function TemplatesPage() {
 
       {/* Empty State */}
       {!isLoading && templates.length === 0 && !error && (
-        <div className="text-center py-12 bg-cream-md border border-sage/14 rounded-md">
-          <p className="text-ink-lt text-sm">No templates yet</p>
-          <p className="text-xs text-sage-dim mt-1">Create your first template from the add-find form</p>
+        <div className="text-center py-12 px-6 bg-white border border-sage/14 rounded-md">
+          <p className="text-2xl mb-2">📋</p>
+          <p className="text-sage-dim text-sm mb-4">No templates yet</p>
+          <button
+            onClick={() => router.push('/add-find?saveAsTemplate=true')}
+            className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+          >
+            Create your first template
+          </button>
         </div>
       )}
 

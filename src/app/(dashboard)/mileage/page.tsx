@@ -232,7 +232,18 @@ export default function MileagePage() {
 
           {/* Empty state */}
           {mileages.length === 0 && (
-            <div className="text-center py-8 text-ink-lt">No mileage records yet. Log your first trip to get started.</div>
+            <Panel>
+              <div className="text-center py-12 px-6">
+                <p className="text-2xl mb-2">🚗</p>
+                <p className="text-sage-dim text-sm mb-4">No mileage records yet</p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+                >
+                  Log your first trip
+                </button>
+              </div>
+            </Panel>
           )}
         </>
       )}

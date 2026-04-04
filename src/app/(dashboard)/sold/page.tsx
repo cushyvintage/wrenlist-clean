@@ -143,16 +143,17 @@ export default function SoldHistoryPage() {
       {/* Empty state */}
       {!isLoading && items.length === 0 && (
         <Panel>
-          <div className="py-12 text-center">
-            <p className="text-ink mb-2">No items sold yet</p>
-            <p className="text-xs text-ink-lt mb-4">
-              Items you have sold appear here automatically when Wrenlist detects a sale, or you can mark items as sold yourself.
+          <div className="py-12 text-center px-6">
+            <p className="text-2xl mb-2">✓</p>
+            <p className="text-sage-dim text-sm mb-4">No items sold yet</p>
+            <p className="text-xs text-ink-lt mb-6">
+              Items appear here when you mark them as sold or when sales sync from your marketplaces.
             </p>
             <Link
               href="/inventory"
-              className="inline-block text-sm text-sage hover:text-sage-dk underline underline-offset-2"
+              className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
             >
-              → Go to inventory
+              Go to inventory
             </Link>
           </div>
         </Panel>

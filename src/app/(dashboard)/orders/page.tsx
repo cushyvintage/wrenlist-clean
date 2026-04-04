@@ -121,9 +121,10 @@ export default function OrdersPage() {
       {/* Orders Table */}
       {!isLoading && !error && (
         orders.length === 0 ? (
-          <div className="text-center py-12 text-ink-lt">
-            <p className="mb-1">✓ No orders yet — when items sell on eBay or Vinted, they appear here automatically</p>
-            <p className="text-xs mt-2">Orders sync from marketplace platforms every 15 minutes</p>
+          <div className="text-center py-12 px-6 bg-white border border-sage/14 rounded-lg">
+            <p className="text-2xl mb-2">💰</p>
+            <p className="text-sage-dim text-sm mb-1">No orders yet</p>
+            <p className="text-xs text-ink-lt">When items sell on eBay or Vinted, they appear here automatically</p>
           </div>
         ) : (
           <div className="border border-sage/14 rounded-lg overflow-hidden">

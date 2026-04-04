@@ -765,7 +765,7 @@ export default function AddFindPage() {
   return (
     <div className="min-h-screen bg-cream">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-sage/14 px-6 py-4">
+      <div className="sticky top-0 z-40 bg-white border-b border-sage/14 px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
             onClick={() => router.back()}
@@ -773,14 +773,14 @@ export default function AddFindPage() {
           >
             ← Back
           </button>
-          <h1 className="text-xl font-semibold text-ink">Add a find</h1>
-          <div className="w-16" />
+          <h1 className="text-lg sm:text-xl font-semibold text-ink">Add a find</h1>
+          <div className="w-12 sm:w-16" />
         </div>
       </div>
 
       {/* Template applied banner */}
       {templateAppliedBanner && (
-        <div className="max-w-7xl mx-auto px-6 py-3 mt-4 bg-sage/5 border border-sage/20 rounded-lg text-sm text-sage flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 mt-4 bg-sage/5 border border-sage/20 rounded-lg text-sm text-sage flex items-center justify-between">
           <span>✓ Template applied: <strong>{templateAppliedBanner}</strong></span>
           <button
             onClick={() => setTemplateAppliedBanner(null)}
@@ -793,17 +793,17 @@ export default function AddFindPage() {
 
       {/* Error message */}
       {error && (
-        <div className="max-w-7xl mx-auto px-6 py-4 mt-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 mt-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {error}
         </div>
       )}
 
       {/* Main layout */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 md:gap-8">
           {/* LEFT PANEL - Marketplace Selector */}
-          <div className="col-span-2">
-            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-4">
+          <div className="md:col-span-2">
+            <div className="bg-white rounded-lg border border-sage/14 p-6 md:sticky md:top-24 space-y-4">
               <TemplatePickerPopover onSelectTemplate={handleApplyTemplate} />
               <PlatformSelector
                 selectedPlatforms={formData.selectedPlatforms}
@@ -813,7 +813,7 @@ export default function AddFindPage() {
           </div>
 
           {/* CENTRE PANEL - Main Form */}
-          <div className="col-span-7 space-y-6">
+          <div className="md:col-span-7 space-y-6">
             {/* Auto-detected category banner */}
             {autoDetectedCategory && !formData.category && !dismissedAutoDetection && (
               <div className={`rounded-lg border p-4 flex items-center justify-between ${
@@ -1351,7 +1351,7 @@ export default function AddFindPage() {
 
               <div>
                 <label className="block text-xs text-sage-dim mb-2">Dimensions (L × W × H, cm)</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <input
                     type="number"
                     value={formData.shippingDimensions.length ?? ''}
@@ -1406,8 +1406,8 @@ export default function AddFindPage() {
           </div>
 
           {/* RIGHT PANEL - Internal Fields */}
-          <div className="col-span-3">
-            <div className="bg-white rounded-lg border border-sage/14 p-6 sticky top-24 space-y-6">
+          <div className="md:col-span-3">
+            <div className="bg-white rounded-lg border border-sage/14 p-6 md:sticky md:top-24 space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">SKU</label>
                 <div className="flex items-center gap-2">
@@ -1478,7 +1478,7 @@ export default function AddFindPage() {
         )}
 
         {showSaveAsTemplate && (
-          <div className="mt-8 pb-8 bg-white rounded-lg border border-sage/14 p-4">
+          <div className="mt-8 pb-8 bg-white rounded-lg border border-sage/14 p-4 sm:p-6">
             <SaveAsTemplateInput
               formData={formData}
               onSaveSuccess={() => {
@@ -1491,26 +1491,26 @@ export default function AddFindPage() {
       </div>
 
       {/* Action Bar */}
-      <div className="sticky bottom-0 bg-white border-t border-sage/14 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="sticky bottom-0 bg-white border-t border-sage/14 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           <button
             onClick={() => router.back()}
             className="text-sm text-sage-lt hover:text-sage transition-colors"
           >
             ← Back
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleSaveDraft}
               disabled={isLoading}
-              className="px-4 py-2 text-sm border border-sage/14 rounded hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none px-4 py-2 text-sm border border-sage/14 rounded hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Saving...' : 'Save draft'}
             </button>
             <button
               onClick={handlePublish}
               disabled={isLoading}
-              className="px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Publishing...' : 'Publish'}
             </button>
