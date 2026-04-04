@@ -68,26 +68,9 @@ export async function POST(request: NextRequest) {
         const catPrefix = category.slice(0, 3).toUpperCase()
         const sku = `VT-${catPrefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`
         // Photos: wardrobe returns full_size_url, catalog returns url
-        // Mirror to Supabase Storage so we don't hotlink Vinted CDN (URLs expire)
-        const rawPhotoUrls: string[] = item.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean) || []
-        const photos: string[] = []
-        for (const photoUrl of rawPhotoUrls.slice(0, 5)) {
-          try {
-            const imgRes = await fetch(photoUrl)
-            if (!imgRes.ok) { photos.push(photoUrl); continue }
-            const buffer = await imgRes.arrayBuffer()
-            const ext = photoUrl.split('.').pop()?.split('?')[0] || 'jpg'
-            const filename = `finds/${user.id}/${sku}-${photos.length}.${ext}`
-            const { error: uploadError } = await supabase.storage
-              .from('find-photos')
-              .upload(filename, buffer, { contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`, upsert: true })
-            if (uploadError) { photos.push(photoUrl); continue }
-            const { data: { publicUrl } } = supabase.storage.from('find-photos').getPublicUrl(filename)
-            photos.push(publicUrl)
-          } catch {
-            photos.push(photoUrl) // fall back to original URL
-          }
-        }
+        // Store raw Vinted URLs now — photo mirroring to Supabase Storage
+        // happens via separate backfill endpoint to avoid import timeout
+        const photos: string[] = item.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean).slice(0, 5) || []
         // Create find
         const { data: find, error: findError } = await supabase
           .from('finds')
