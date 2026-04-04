@@ -580,7 +580,7 @@ export default function InventoryPage() {
   }
 
   const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
-  const findsUsed = profile?.finds_this_month || 0
+  const findsUsed = finds.length
 
   return (
     <div className="space-y-6">
