@@ -496,6 +496,22 @@ export default function AddFindPage() {
     setError(null)
     setUploadProgress(0)
     try {
+      // Pre-flight: check plan limit before attempting save
+      const planCheck = await fetch('/api/finds?limit=1&offset=0&source_type=manual')
+      if (planCheck.ok) {
+        const planData = await planCheck.json()
+        const total = planData?.data?.pagination?.total ?? 0
+        const planLimits: Record<string, number | null> = { free: 5, nester: 10, picker: 50, trader: null }
+        const profileRes = await fetch('/api/profile')
+        if (profileRes.ok) {
+          const profile = await profileRes.json()
+          const plan = profile?.data?.plan ?? 'free'
+          const limit = planLimits[plan] ?? null
+          if (limit !== null && total >= limit) {
+            throw new Error(`You\'ve reached your ${limit}-find limit on the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan. Upgrade to add more finds.`)
+          }
+        }
+      }
       const response = await fetch('/api/finds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
