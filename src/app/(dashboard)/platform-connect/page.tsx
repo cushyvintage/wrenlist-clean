@@ -307,7 +307,7 @@ export default function PlatformConnectPage() {
 
       const extensionResponse = await new Promise<{ success: boolean; listings?: any[] }>((resolve) => {
         const timeout = setTimeout(() => resolve({ success: false }), 60000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200 }, (response) => {
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) {
             resolve({ success: false })
