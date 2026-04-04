@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { fetchApi } from '@/lib/api-utils'
 
 type SettingsTab = 'account' | 'workspace' | 'integrations' | 'billing' | 'legal'
 
@@ -23,6 +24,21 @@ interface PlatformConnection {
   lastSync?: string
 }
 
+interface ProfileResponse {
+  full_name?: string
+  plan?: string
+  stripe_customer_id?: string
+  finds_this_month?: number
+}
+
+interface AuthResponse {
+  user?: {
+    id: string
+    email: string
+    created_at: string
+  }
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
 
@@ -35,6 +51,59 @@ export default function SettingsPage() {
     fullName: 'Dominic Cushnan',
     avatar: null,
   })
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [saveSuccessful, setSaveSuccessful] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Load profile data on mount
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        setIsLoadingProfile(true)
+        const [profile, auth] = await Promise.all([
+          fetchApi<ProfileResponse>('/api/profiles/me'),
+          fetchApi<AuthResponse>('/api/auth/me'),
+        ])
+
+        setAccountData({
+          email: auth.user?.email || 'cushyvintage@example.com',
+          fullName: profile.full_name || 'Dominic Cushnan',
+          avatar: null,
+        })
+      } catch (error) {
+        console.error('Failed to load profile:', error)
+        // Keep defaults on error
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+
+    loadProfileData()
+  }, [])
+
+  const handleSaveAccountChanges = async () => {
+    try {
+      setIsSaving(true)
+      setSaveError(null)
+      setSaveSuccessful(false)
+
+      await fetchApi('/api/profiles/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: accountData.fullName }),
+      })
+
+      setSaveSuccessful(true)
+      setTimeout(() => setSaveSuccessful(false), 3000)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to save changes'
+      setSaveError(message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData>({
     businessName: 'Cushy Vintage',
@@ -116,6 +185,22 @@ export default function SettingsPage() {
               </p>
             </div>
 
+            {/* Success Banner */}
+            {saveSuccessful && (
+              <div className="flex gap-2 items-center px-4 py-3 bg-sage/10 border border-sage/40 rounded-sm">
+                <span>✓</span>
+                <p className="text-sm text-sage-dk">Changes saved</p>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {saveError && (
+              <div className="flex gap-2 items-center px-4 py-3 bg-red/10 border border-red/40 rounded-sm">
+                <span>✕</span>
+                <p className="text-sm text-red">{saveError}</p>
+              </div>
+            )}
+
             {/* Email (read-only) */}
             <div className="space-y-2">
               <label className="block text-xs uppercase tracking-wider font-medium text-sage-dim">
@@ -123,7 +208,7 @@ export default function SettingsPage() {
               </label>
               <input
                 type="email"
-                value={accountData.email}
+                value={isLoadingProfile ? 'Loading...' : accountData.email}
                 disabled
                 className="w-full px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt text-sm outline-none"
               />
@@ -143,7 +228,8 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setAccountData({ ...accountData, fullName: e.target.value })
                 }
-                className="w-full px-3 py-2 bg-white border border-sage/22 rounded-sm text-ink text-sm outline-none focus:border-sage transition-colors"
+                disabled={isLoadingProfile}
+                className="w-full px-3 py-2 bg-white border border-sage/22 rounded-sm text-ink text-sm outline-none focus:border-sage transition-colors disabled:bg-cream-md disabled:text-ink-lt"
               />
             </div>
 
@@ -162,9 +248,20 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Save Changes */}
+            <div className="border-t border-sage/14 pt-6">
+              <button
+                onClick={handleSaveAccountChanges}
+                disabled={isSaving || isLoadingProfile}
+                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save changes'}
+              </button>
+            </div>
+
             {/* Change Password */}
             <div className="border-t border-sage/14 pt-6">
-              <button className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors">
+              <button className="px-4 py-2 bg-cream-md border border-sage/22 text-ink-lt rounded-sm font-medium text-sm hover:bg-cream transition-colors">
                 Change password
               </button>
             </div>
