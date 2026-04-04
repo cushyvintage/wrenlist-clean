@@ -33,6 +33,24 @@ export async function POST(request: NextRequest) {
 
     if (!listings.length) return ApiResponseHelper.badRequest('No listings provided')
 
+    // DEBUG: return first item shape
+    const first = listings[0]
+    return NextResponse.json({
+      debug: true,
+      firstItem: {
+        id: first.id,
+        title: first.title,
+        price: first.price,
+        priceType: typeof first.price,
+        photosCount: first.photos?.length,
+        firstPhoto: first.photos?.[0],
+        firstPhotoType: typeof first.photos?.[0],
+        catalog_id: first.catalog_id,
+        category: first.category,
+        status: first.status,
+        keys: Object.keys(first),
+      }
+    })
     let imported = 0, skipped = 0, errors = 0
 
     for (const item of listings) {
