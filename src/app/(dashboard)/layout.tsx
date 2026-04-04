@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <Sidebar
         userInfo={{
-          name: user?.email?.split('@')[0] || 'User',
+          name: user?.full_name || user?.email?.split('@')[0] || 'User',
           plan: 'Nester',
         }}
       >
@@ -136,11 +136,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                   style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
                 >
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
+                  {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-xs">
                   <span className="font-medium" style={{ color: '#1E2E1C' }}>
-                    {user?.email?.split('@')[0] || 'User'}
+                    {user?.full_name || user?.email?.split('@')[0] || 'User'}
                   </span>
                   <span className="text-xs" style={{ color: '#6B7D6A' }}>
                     {user?.email}
@@ -159,7 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     style={{ borderBottomColor: 'rgba(61,92,58,.14)', borderBottomWidth: '1px' }}
                   >
                     <p className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
-                      {user?.email?.split('@')[0]}
+                      {user?.full_name || user?.email?.split('@')[0]}
                     </p>
                     <p className="text-xs" style={{ color: '#6B7D6A' }}>
                       {user?.email}
