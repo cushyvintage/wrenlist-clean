@@ -169,5 +169,44 @@ export function useMarketplaceImport() {
     }))
   }, [])
 
-  return { state, runImport, reset, setFetching, setDone, setError, runImportProgress }
+  const startPolling = useCallback((since: string, estimatedTotal: number): (() => void) => {
+    let isPolling = true
+    let pollCount = 0
+
+    const poll = async () => {
+      if (!isPolling) return
+
+      try {
+        const response = await fetch(`/api/import/vinted-progress?since=${encodeURIComponent(since)}`)
+        if (response.ok) {
+          const data = await response.json()
+          const count = data.data?.count ?? 0
+          runImportProgress(count, 0, 0, estimatedTotal)
+
+          // Continue polling while in importing phase and not at total yet
+          setState((prev) => {
+            if (prev.phase === 'importing' && count < estimatedTotal) {
+              pollCount++
+              if (isPolling && pollCount < 120) { // Max 120 polls (6 minutes at 3s interval)
+                setTimeout(poll, 3000)
+              }
+            }
+            return prev
+          })
+        }
+      } catch (error) {
+        console.debug('[Polling] Error fetching progress:', error)
+      }
+    }
+
+    // Start polling after short delay
+    setTimeout(poll, 3000)
+
+    // Return cleanup function
+    return () => {
+      isPolling = false
+    }
+  }, [runImportProgress])
+
+  return { state, runImport, reset, setFetching, setDone, setError, runImportProgress, startPolling }
 }

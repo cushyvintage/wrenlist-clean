@@ -301,47 +301,54 @@ export default function PlatformConnectPage() {
     vintedImport.reset()
 
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.connect) {
-        throw new Error('Extension not available')
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        throw new Error('Extension not available. Install the Wrenlist extension.')
       }
 
       vintedImport.setFetching('Fetching your Vinted listings...')
 
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timed out — Vinted took too long. Try again.')), 360000)
+      const since = new Date().toISOString()
+      let stopPolling: (() => void) | undefined
 
-        const port = chrome.runtime.connect(EXTENSION_ID, { name: 'batch_import_vinted' })
+      // Start polling for progress after a short delay (give extension time to start importing)
+      const pollingTimer = setTimeout(() => {
+        stopPolling = vintedImport.startPolling(since, 200)
+      }, 15000) // Start polling after 15s (fetching phase)
 
-        port.postMessage({ action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin })
-
-        port.onMessage.addListener((msg) => {
-          if (msg.type === 'progress') {
-            // Extension reporting progress
-            vintedImport.runImportProgress(msg.imported, msg.skipped, msg.errors, msg.total)
-          } else if (msg.type === 'fetching') {
-            vintedImport.setFetching(msg.message || 'Fetching your Vinted listings...')
-          } else if (msg.type === 'done') {
+      const extensionResponse = await new Promise<{
+        success: boolean
+        message?: string
+        results?: { success: number; skipped: number; errors: number; total: number }
+      }>((resolve) => {
+        const timeout = setTimeout(
+          () => resolve({ success: false, message: 'Timed out — Vinted took too long. Try again.' }),
+          360000
+        )
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin },
+          (response) => {
             clearTimeout(timeout)
-            const r = msg.results || { success: 0, skipped: 0, errors: 0, total: 0 }
-            vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
-            port.disconnect()
-            resolve()
-          } else if (msg.type === 'error') {
-            clearTimeout(timeout)
-            reject(new Error(msg.message || 'Import failed'))
-            port.disconnect()
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, message: chrome.runtime.lastError.message })
+            } else {
+              resolve(response || { success: false, message: 'No response from extension' })
+            }
           }
-        })
-
-        port.onDisconnect.addListener(() => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-          }
-          // If port disconnected without done/error, resolve gracefully
-          resolve()
-        })
+        )
       })
+
+      clearTimeout(pollingTimer)
+      if (stopPolling) {
+        stopPolling()
+      }
+
+      if (!extensionResponse.success) {
+        throw new Error(extensionResponse.message || 'Failed to import from Vinted')
+      }
+
+      const r = extensionResponse.results || { success: 0, skipped: 0, errors: 0, total: 0 }
+      vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
       vintedImport.setError(message)

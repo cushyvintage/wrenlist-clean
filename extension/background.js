@@ -164783,58 +164783,6 @@ query CurrentUser {
       }
     });
     chrome.runtime.onUpdateAvailable.addListener(() => chrome.runtime.reload());
-    chrome.runtime.onConnectExternal.addListener((port) => {
-      if (port.name !== "batch_import_vinted") return;
-      port.onMessage.addListener(async (message) => {
-        try {
-          const limit = 200;
-          const baseUrl = await getWrenlistBaseUrl2(message.wrenlistBaseUrl);
-          const tld = resolveTldFromMessage(message, "vinted") ?? "com";
-          const { client } = createVintedServices({ tld });
-          port.postMessage({ type: "fetching", message: "Fetching your Vinted listings..." });
-          await client.bootstrap();
-          const loggedIn = await client.checkLogin();
-          if (!loggedIn) {
-            port.postMessage({ type: "error", message: "Please log in to Vinted and try again." });
-            return;
-          }
-          const listings = await collectVintedListings(client, limit, "active", tld);
-          if (!listings.length) {
-            port.postMessage({ type: "done", results: { success: 0, skipped: 0, errors: 0, total: 0 } });
-            return;
-          }
-          const BATCH_SIZE = 20;
-          let totalImported = 0, totalSkipped = 0, totalErrors = 0;
-          port.postMessage({ type: "progress", imported: 0, skipped: 0, errors: 0, total: listings.length });
-          for (let i = 0; i < listings.length; i += BATCH_SIZE) {
-            const batch = listings.slice(i, i + BATCH_SIZE);
-            try {
-              const response = await fetch(`${baseUrl}/api/import/vinted-batch/process`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json", "X-Extension-Version": CROSSLIST_EXTENSION_VERSION },
-                body: JSON.stringify({ listings: batch }),
-              });
-              const data = await safeJson(response);
-              if (response.ok && data?.results) {
-                totalImported += data.results.success || 0;
-                totalSkipped += data.results.skipped || 0;
-                totalErrors += data.results.errors || 0;
-              } else {
-                totalErrors += batch.length;
-              }
-            } catch {
-              totalErrors += batch.length;
-            }
-            port.postMessage({ type: "progress", imported: totalImported, skipped: totalSkipped, errors: totalErrors, total: listings.length });
-          }
-          port.postMessage({ type: "done", results: { success: totalImported, skipped: totalSkipped, errors: totalErrors, total: listings.length } });
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : "Import failed";
-          port.postMessage({ type: "error", message: msg });
-        }
-      });
-    });
   })();
   async function dispatchExternalMessage(message) {
     const command = normalizeCommand(message);
