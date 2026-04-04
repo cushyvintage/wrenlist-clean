@@ -76,7 +76,7 @@ export default function DashboardPage() {
   }, [])
 
   // Use summary data for metrics
-  const activeFinds = summary?.listed_finds || 0
+  const activeFinds = summary ? (summary.total_finds - summary.sold_finds) : 0
   const monthlyRevenue = summary?.this_month_revenue || 0
   const avgMargin = summary?.gross_margin_pct || 0
   const avgDaysToSell = summary?.avg_days_to_sell || 0
@@ -106,7 +106,7 @@ export default function DashboardPage() {
           {getGreeting()}
         </h1>
         <p style={{ color: '#6B7D6A' }}>
-          You have {activeFinds} finds listed across all platforms
+          You have {activeFinds} active find{activeFinds !== 1 ? 's' : ''} in your inventory
         </p>
       </div>
 
@@ -122,7 +122,7 @@ export default function DashboardPage() {
           <StatCard
             label="Active finds"
             value={activeFinds}
-            delta={`${activeFinds} listed`}
+            delta={`${summary?.listed_finds || 0} listed`}
             suffix=""
           />
           <StatCard
