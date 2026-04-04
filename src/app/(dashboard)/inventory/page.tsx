@@ -952,7 +952,7 @@ export default function InventoryPage() {
                       <span className="text-lg">{getEmoji(find.category)}</span>
                       <div className="flex-1">
                         <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
-                          {find.name || 'Untitled'}
+                          {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
                         </div>
                         <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
                           {find.category}

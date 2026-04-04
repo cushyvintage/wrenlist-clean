@@ -244,12 +244,12 @@ export default function DashboardPage() {
             {finds.slice(0, 3).map((find) => (
               <div key={find.id} className="pb-3 border-b border-sage/14 last:border-0">
                 <p className="font-medium text-ink">
-                  {find.status === 'sold' ? 'Sold' : 'Added'} &ldquo;{find.name || 'Untitled item'}&rdquo;
+                  {find.status === 'sold' ? 'Sold' : 'Added'} &ldquo;{find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}&rdquo;
                 </p>
                 <p className="text-xs text-ink-lt mt-1">
                   {find.status === 'sold' && find.sold_at
                     ? `${new Date(find.sold_at).toLocaleDateString()} • £${find.sold_price_gbp}`
-                    : `${new Date(find.created_at).toLocaleDateString()} • ${find.source_name || find.source_type || ''}`}
+                    : [new Date(find.created_at).toLocaleDateString(), find.source_name || find.source_type || null].filter(Boolean).join(' • ')}
                 </p>
               </div>
             ))}
