@@ -47,12 +47,24 @@ export function InventoryRow({ find, onClick }: InventoryRowProps) {
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           {/* Thumbnail */}
-          <div className="w-8 h-8 bg-cream-dk rounded text-lg flex items-center justify-center flex-shrink-0">
-            {find.category === 'footwear' && '👟'}
-            {find.category === 'denim' && '👖'}
-            {find.category === 'workwear' && '🧥'}
-            {find.category === 'accessories' && '🕶'}
-            {!find.category && '📦'}
+          <div className="w-8 h-8 bg-cream-dk rounded flex-shrink-0 overflow-hidden flex items-center justify-center text-lg">
+            {find.photos && find.photos.length > 0 ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={find.photos[0]}
+                alt={find.name || 'Item'}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            ) : (
+              <>
+                {find.category === 'footwear' && '👟'}
+                {find.category === 'denim' && '👖'}
+                {find.category === 'workwear' && '🧥'}
+                {find.category === 'accessories' && '🕶'}
+                {find.category !== 'footwear' && find.category !== 'denim' && find.category !== 'workwear' && find.category !== 'accessories' && '📦'}
+              </>
+            )}
           </div>
 
           {/* Details */}
