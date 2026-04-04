@@ -37,16 +37,24 @@ export async function POST(request: NextRequest) {
 
     for (const item of listings) {
       try {
-        // Skip already imported (scoped to this user via finds join)
-        const { data: existing } = await supabase
+        // Skip already imported (scoped to this user)
+        const { data: existingPmd } = await supabase
           .from('product_marketplace_data')
-          .select('id, finds!inner(user_id)')
+          .select('find_id')
           .eq('marketplace', 'vinted')
           .eq('platform_listing_id', String(item.id))
-          .eq('finds.user_id', user.id)
           .maybeSingle()
 
-        if (existing) { skipped++; continue }
+        if (existingPmd?.find_id) {
+          // Verify the find belongs to this user
+          const { data: existingFind } = await supabase
+            .from('finds')
+            .select('id')
+            .eq('id', existingPmd.find_id)
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (existingFind) { skipped++; continue }
+        }
 
         const condition = CONDITION_MAP[item.status] || 'good'
         const category = item.catalog_id ? (VINTED_TO_CATEGORY[item.catalog_id] || 'other') : 'other'
