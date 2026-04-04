@@ -326,9 +326,16 @@ export default function PlatformConnectPage() {
       }
 
       // Map extension result format to our UI format
-      const imported = extensionResponse.results?.success ?? 0
-      const skipped = extensionResponse.results?.skipped ?? 0
-      setVintedImportResult({ imported, skipped, errors: extensionResponse.results?.errors ?? 0 })
+      // Extension returns { results: data.results } where data is our API response
+      // Our API wraps as ApiResponseHelper.success({ imported, skipped }) so check both shapes
+      const r = extensionResponse.results as any
+      const imported = r?.imported ?? r?.success ?? 0
+      const skipped = r?.skipped ?? 0
+      const errors = r?.errors ?? 0
+      // Also parse from the message string as fallback e.g. "Imported 200 items."
+      const msgMatch = extensionResponse.message?.match(/(\d+) items?/)
+      const msgCount = msgMatch ? parseInt(msgMatch[1]) : 0
+      setVintedImportResult({ imported: imported || msgCount, skipped, errors })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
       setVintedActionError(message)
