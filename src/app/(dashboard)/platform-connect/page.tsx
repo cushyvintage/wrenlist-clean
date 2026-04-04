@@ -308,8 +308,10 @@ export default function PlatformConnectPage() {
       // Extension fetches listings AND posts them to /api/import/vinted-batch/process itself
       // We just fire-and-forget and wait for it to report back success/count
       const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success?: number; skipped?: number; errors?: number } }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — check Vinted is open and you are logged in' }), 360000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 50, wrenlistBaseUrl: window.location.origin }, (response) => {
+        // Extension fetches from page 1 each time (no offset support) — limit controls how many to fetch.
+        // 200 items takes ~3-4 mins for large wardrobes. Timeout at 6 mins.
+        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — Vinted took too long to respond. Try again or check you\'re logged in to Vinted.' }), 360000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) {
             resolve({ success: false, message: chrome.runtime.lastError.message })
@@ -781,6 +783,12 @@ export default function PlatformConnectPage() {
             {vintedActionError && (
               <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm text-red-700">
                 {vintedActionError}
+              </div>
+            )}
+
+            {vintedImportLoading && (
+              <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm text-amber-800">
+                ⏳ Fetching your Vinted listings… this can take 2–4 minutes for large wardrobes. Don’t close this tab.
               </div>
             )}
 
