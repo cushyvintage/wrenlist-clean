@@ -103,6 +103,11 @@ export default function InventoryDetailPage() {
   const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [isListingOnEbay, setIsListingOnEbay] = useState(false)
   const [ebayListResult, setEbayListResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null }>>([])
+  const [isCrosslisting, setIsCrosslisting] = useState(false)
+  const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
+  const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
 
   // Fetch find details
   useEffect(() => {
@@ -156,6 +161,59 @@ export default function InventoryDetailPage() {
 
     if (id) fetchFind()
   }, [id])
+
+  // Fetch marketplace data from product_marketplace_data
+  const refreshMarketplaceData = useCallback(() => {
+    if (!id) return
+    fetch(`/api/finds/${id}/marketplace`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((result) => {
+        if (result?.data) setMarketplaceData(result.data)
+      })
+      .catch(() => {})
+  }, [id])
+
+  useEffect(() => {
+    refreshMarketplaceData()
+  }, [refreshMarketplaceData])
+
+  const handleCrosslist = async () => {
+    if (!find || crosslistTargets.length === 0) return
+    setIsCrosslisting(true)
+    setCrosslistResult(null)
+
+    try {
+      const res = await fetch('/api/crosslist/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findId: find.id, marketplaces: crosslistTargets }),
+      })
+      const data = await res.json()
+      const results = data.data?.results || {}
+
+      const succeeded = Object.entries(results).filter(([, r]: [string, any]) => r.ok).map(([m]) => m)
+      const failed = Object.entries(results).filter(([, r]: [string, any]) => !r.ok).map(([m, r]: [string, any]) => `${m}: ${r.error}`)
+
+      if (failed.length === 0) {
+        setCrosslistResult({ ok: true, message: `Published to ${succeeded.join(', ')}` })
+      } else if (succeeded.length > 0) {
+        setCrosslistResult({ ok: true, message: `Published to ${succeeded.join(', ')}. Failed: ${failed.join('; ')}` })
+      } else {
+        setCrosslistResult({ ok: false, message: failed.join('; ') })
+      }
+
+      setShowCrosslistPicker(false)
+      setCrosslistTargets([])
+      refreshMarketplaceData()
+    } catch (err) {
+      setCrosslistResult({ ok: false, message: err instanceof Error ? err.message : 'Crosslist failed' })
+    } finally {
+      setIsCrosslisting(false)
+    }
+  }
+
+  const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed').map((m) => m.marketplace))
+  const availableForCrosslist: Platform[] = (['ebay', 'shopify', 'vinted'] as Platform[]).filter((m) => !listedMarketplaces.has(m))
 
   const handleInputChange = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -654,11 +712,19 @@ export default function InventoryDetailPage() {
         isSyncing={isSyncing}
         isListingOnVinted={isListingOnVinted}
         isListingOnEbay={isListingOnEbay}
+        isCrosslisting={isCrosslisting}
+        showCrosslistPicker={showCrosslistPicker}
+        crosslistTargets={crosslistTargets}
+        availableForCrosslist={availableForCrosslist}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
         onSyncClick={handleSyncOrders}
         onListOnVintedClick={handleListOnVinted}
         onListOnEbayClick={handleListOnEbay}
+        onCrosslistClick={() => setShowCrosslistPicker(true)}
+        onCrosslistTargetToggle={(p) => setCrosslistTargets((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])}
+        onCrosslistConfirm={handleCrosslist}
+        onCrosslistCancel={() => { setShowCrosslistPicker(false); setCrosslistTargets([]) }}
       />
 
       {/* Vinted list result */}
@@ -690,6 +756,22 @@ export default function InventoryDetailPage() {
         >
           <span>{ebayListResult.ok ? '✓ ' : '✗ '}{ebayListResult.message}</span>
           <button onClick={() => setEbayListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* Crosslist result */}
+      {crosslistResult && (
+        <div
+          className="p-3 rounded text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: crosslistResult.ok ? 'rgba(61,92,58,.08)' : 'rgba(220,38,38,.08)',
+            borderWidth: '1px',
+            borderColor: crosslistResult.ok ? 'rgba(61,92,58,.2)' : 'rgba(220,38,38,.2)',
+            color: crosslistResult.ok ? '#3D5C3A' : '#DC2626',
+          }}
+        >
+          <span>{crosslistResult.ok ? '✓ ' : '✗ '}{crosslistResult.message}</span>
+          <button onClick={() => setCrosslistResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
 
@@ -832,8 +914,8 @@ export default function InventoryDetailPage() {
               </div>
             </div>
 
-            {/* Marketplaces */}
-            {Object.keys(find.platform_fields || {}).length > 0 && (
+            {/* Marketplaces — reads from product_marketplace_data */}
+            {marketplaceData.length > 0 && (
               <div
                 className="p-4 rounded"
                 style={{
@@ -846,19 +928,27 @@ export default function InventoryDetailPage() {
                   Listed On
                 </p>
                 <div className="space-y-2">
-                  {Object.entries(find.platform_fields || {}).map(([platform, data]: [string, any]) => (
-                    <div key={platform}>
-                      <p className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
-                        {platform}
-                      </p>
-                      {data?.url && (
+                  {marketplaceData.map((md) => (
+                    <div key={md.marketplace} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
+                          {md.marketplace}
+                        </p>
+                        <span
+                          className="text-xs capitalize"
+                          style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
+                        >
+                          {md.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      {md.platform_listing_url && (
                         <a
-                          href={data.url}
+                          href={md.platform_listing_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-sage underline underline-offset-1 hover:text-sage-dk transition"
                         >
-                          View listing →
+                          View →
                         </a>
                       )}
                     </div>

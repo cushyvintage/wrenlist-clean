@@ -171,6 +171,9 @@ export async function POST(request: NextRequest) {
       publishedAt: new Date().toISOString(),
     }
 
+    const listingId = publishResult.listingId || offerResult.offerId
+    const listingUrl = platformFields.ebay.url
+
     await supabase
       .from('finds')
       .update({
@@ -179,6 +182,20 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', findId)
       .eq('user_id', user.id)
+
+    // Also write to product_marketplace_data (canonical source)
+    await supabase.from('product_marketplace_data').upsert(
+      {
+        find_id: findId,
+        marketplace: 'ebay',
+        platform_listing_id: String(listingId),
+        platform_listing_url: listingUrl,
+        listing_price: inventoryItem.price,
+        status: 'listed',
+        fields: { offerId: offerResult.offerId, sku },
+      },
+      { onConflict: 'find_id,marketplace' }
+    )
 
     return ApiResponseHelper.success({
       success: true,

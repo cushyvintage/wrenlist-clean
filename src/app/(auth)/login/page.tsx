@@ -61,10 +61,16 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const callbackUrl = typeof window !== 'undefined' && window.location.hostname === 'app.wrenlist.com'
+        ? 'https://app.wrenlist.com/auth/callback'
+        : typeof window !== 'undefined' && window.location.hostname === 'wrenlist.com'
+        ? 'https://app.wrenlist.com/auth/callback'
+        : `${window.location.origin}/auth/callback`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       })
       if (error) throw error
