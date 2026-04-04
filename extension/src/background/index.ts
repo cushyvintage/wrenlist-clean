@@ -211,7 +211,7 @@ type ExternalMessage = Record<string, unknown>;
   });
 
   // Port-based messaging for long-running operations (e.g., batch import with progress)
-  chrome.runtime.onConnect.addListener((port) => {
+  chrome.runtime.onConnectExternal.addListener((port) => {
     if (port.name === "batch_import_vinted") {
       port.onMessage.addListener(async (message) => {
         try {

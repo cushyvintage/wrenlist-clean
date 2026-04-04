@@ -164783,7 +164783,7 @@ query CurrentUser {
       }
     });
     chrome.runtime.onUpdateAvailable.addListener(() => chrome.runtime.reload());
-    chrome.runtime.onConnect.addListener((port) => {
+    chrome.runtime.onConnectExternal.addListener((port) => {
       if (port.name !== "batch_import_vinted") return;
       port.onMessage.addListener(async (message) => {
         try {
