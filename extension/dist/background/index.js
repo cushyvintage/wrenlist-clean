@@ -208,20 +208,6 @@ const ICON_PATH = "icons/icon128.png";
                     sendResponse(withError(error));
                 });
                 return true;
-            case "vinted_debug_info":
-                void (async () => {
-                    try {
-                        const allCookies = await chrome.cookies.getAll({});
-                        const vintedCookies = allCookies.filter(c => c.domain.includes("vinted"));
-                        const tldCookie = vintedCookies.find(c => c.name === "v_uid" || c.name === "_vinted_session");
-                        const domain = tldCookie?.domain ?? "";
-                        const tld = domain.includes("co.uk") ? "co.uk" : domain.replace(/^\./, "").replace(/^.*?vinted\./, "") || "unknown";
-                        sendResponse({ success: true, cookiesFound: vintedCookies.length > 0, tld, version: EXTENSION_VERSION, lastError: null });
-                    } catch(e) {
-                        sendResponse({ success: false, lastError: e instanceof Error ? e.message : String(e) });
-                    }
-                })();
-                return true;
             case "sync_vinted_status":
                 // Handle sync requests from content script
                 void handleSyncVintedStatus(message).then(sendResponse).catch((error) => {
@@ -246,6 +232,28 @@ const ICON_PATH = "icons/icon128.png";
             case "ping":
                 // Extension detection ping from platform
                 sendResponse({ success: true, version: EXTENSION_VERSION });
+                return true;
+            case "vinted_debug_info":
+                // Vinted diagnostics
+                void (async () => {
+                    try {
+                        const allCookies = await chrome.cookies.getAll({});
+                        const vintedCookies = allCookies.filter(c => c.domain.includes("vinted"));
+                        const tldCookie = vintedCookies.find(c => c.name === "v_uid" || c.name === "_vinted_session");
+                        const domain = tldCookie?.domain ?? "";
+                        const tld = domain.includes("co.uk") ? "co.uk" : domain.includes("vinted.") ? domain.replace(/^.*?vinted\./, "") : "unknown";
+                        sendResponse({
+                            success: true,
+                            cookiesFound: vintedCookies.length > 0,
+                            tld,
+                            version: EXTENSION_VERSION,
+                            lastError: null,
+                        });
+                    }
+                    catch (e) {
+                        sendResponse({ success: false, lastError: e instanceof Error ? e.message : String(e) });
+                    }
+                })();
                 return true;
             default:
                 return false;
@@ -294,15 +302,6 @@ async function dispatchExternalMessage(message) {
         case "detect_shopify_store":
         case "detectshopifystore":
             return handleDetectShopifyStore();
-        case "vinted_debug_info":
-        case "vinteddebuginfo": {
-            const allCookies = await chrome.cookies.getAll({});
-            const vintedCookies = allCookies.filter(c => c.domain.includes("vinted"));
-            const tldCookie = vintedCookies.find(c => c.name === "v_uid" || c.name === "_vinted_session");
-            const domain = tldCookie?.domain ?? "";
-            const tld = domain.includes("co.uk") ? "co.uk" : domain.replace(/^\./, "").replace(/^.*?vinted\./, "") || "unknown";
-            return { success: true, cookiesFound: vintedCookies.length > 0, tld, version: EXTENSION_VERSION, lastError: null };
-        }
         case "batch_import_vinted":
         case "batchimportvinted":
             return handleBatchImportVinted(message);
@@ -347,6 +346,8 @@ async function dispatchExternalMessage(message) {
         case "fetch_crosslist_api":
         case "fetchcrosslistapi":
             return handleFetchCrosslistApi(message);
+        case "vinted_debug_info":
+            return handleVintedDebugInfo();
         default:
             throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);
     }
@@ -1652,4 +1653,23 @@ function resolvePositiveInteger(value, fallback, max) {
         return fallback;
     }
     return Math.min(Math.trunc(parsed), max);
+}
+async function handleVintedDebugInfo() {
+    try {
+        const allCookies = await chrome.cookies.getAll({});
+        const vintedCookies = allCookies.filter(c => c.domain.includes("vinted"));
+        const tldCookie = vintedCookies.find(c => c.name === "v_uid" || c.name === "_vinted_session");
+        const domain = tldCookie?.domain ?? "";
+        const tld = domain.includes("co.uk") ? "co.uk" : domain.includes("vinted.") ? domain.replace(/^.*?vinted\./, "") : "unknown";
+        return {
+            success: true,
+            cookiesFound: vintedCookies.length > 0,
+            tld,
+            version: EXTENSION_VERSION,
+            lastError: null,
+        };
+    }
+    catch (e) {
+        return { success: false, lastError: e instanceof Error ? e.message : String(e) };
+    }
 }

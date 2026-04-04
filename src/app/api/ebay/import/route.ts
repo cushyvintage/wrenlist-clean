@@ -5,16 +5,28 @@ import { getEbayClientForUser } from '@/lib/ebay-client'
 
 // Reverse map: eBay category ID → Wrenlist category
 const EBAY_TO_CATEGORY: Record<string, string> = {
-  '870': 'ceramics', '57902': 'ceramics',
-  '11700': 'glassware',
-  '267': 'books', '69400': 'books',
-  '281': 'jewellery', '10968': 'jewellery',
-  '11450': 'clothing', '15709': 'clothing',
-  '10033': 'homeware',
-  '11116': 'collectibles', '13956': 'collectibles',
-  '15273': 'medals',
-  '220': 'toys', '19068': 'toys',
+  '1': 'collectibles',
+  '18': 'clothing',
+  '63': 'homeware',
+  '260': 'collectibles',
+  '261': 'medals',
+  '267': 'books',
+  '281': 'jewellery',
+  '809': 'ceramics',
+  '870': 'ceramics',
+  '1059': 'homeware',
   '3197': 'furniture',
+  '10033': 'homeware',
+  '11232': 'homeware',
+  '11450': 'clothing',
+  '11700': 'glassware',
+  '11116': 'collectibles',
+  '13956': 'collectibles',
+  '15273': 'medals',
+  '15709': 'clothing',
+  '19068': 'toys',
+  '57902': 'ceramics',
+  '69400': 'books',
 }
 
 const CONDITION_MAP: Record<string, string> = {
@@ -132,6 +144,40 @@ export async function POST(request: NextRequest) {
               listing_price: price,
               status: 'listed',
             })
+          }
+
+          // Mirror photos to Supabase Storage (non-blocking)
+          const photos = product.imageUrls || []
+          if (photos.length > 0) {
+            void (async () => {
+              try {
+                const storedUrls: string[] = []
+                for (let i = 0; i < photos.length; i++) {
+                  const photoUrl = photos[i]
+                  if (!photoUrl) continue
+                  try {
+                    const imgRes = await fetch(photoUrl)
+                    if (!imgRes.ok) { storedUrls.push(photoUrl); continue }
+                    const buffer = await imgRes.arrayBuffer()
+                    const ext = photoUrl.split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg"
+                    const storagePath = `find-photos/${user.id}/${sku}-${i}.${ext}`
+                    const { error: uploadErr } = await supabase.storage
+                      .from("find-photos")
+                      .upload(storagePath, buffer, { contentType: `image/${ext === "jpg" ? "jpeg" : ext}`, upsert: true })
+                    if (uploadErr) { storedUrls.push(photoUrl); continue }
+                    const { data: { publicUrl } } = supabase.storage.from("find-photos").getPublicUrl(storagePath)
+                    storedUrls.push(publicUrl)
+                  } catch {
+                    storedUrls.push(photoUrl)
+                  }
+                }
+                if (storedUrls.length > 0) {
+                  await supabase.from("finds").update({ photos: storedUrls }).eq("id", find.id)
+                }
+              } catch {
+                // silent
+              }
+            })()
           }
 
           imported++
