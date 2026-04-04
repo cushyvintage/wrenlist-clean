@@ -10,7 +10,12 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 // Initialize with dummy credentials if not available (for build-time)
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      flowType: 'pkce',
+    },
+  }
 )
 
 // Validate credentials are available at runtime
