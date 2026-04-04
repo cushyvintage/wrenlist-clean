@@ -138,5 +138,24 @@ export function useMarketplaceImport() {
     }
   }, [])
 
-  return { state, runImport, reset }
+  const setFetching = useCallback((message: string) => {
+    setState({ phase: 'fetching', total: 0, imported: 0, skipped: 0, errors: 0, message })
+  }, [])
+
+  const setDone = useCallback((imported: number, skipped: number, errors: number, total: number) => {
+    setState({
+      phase: 'done',
+      total,
+      imported,
+      skipped,
+      errors,
+      message: `✓ ${imported} imported${skipped > 0 ? `, ${skipped} skipped` : ''}`,
+    })
+  }, [])
+
+  const setError = useCallback((message: string) => {
+    setState({ phase: 'error', total: 0, imported: 0, skipped: 0, errors: 0, message })
+  }, [])
+
+  return { state, runImport, reset, setFetching, setDone, setError }
 }

@@ -305,9 +305,12 @@ export default function PlatformConnectPage() {
         throw new Error('Extension not available')
       }
 
-      // Extension fetches Vinted listings
+      // Show fetching state immediately so progress bar appears
+      vintedImport.setFetching('Fetching your Vinted listings...')
+
+      // Extension fetches + imports Vinted listings server-side
       // 200 items takes ~3-4 mins for large wardrobes. Timeout at 6 mins.
-      const extensionResponse = await new Promise<{ success: boolean; message?: string; items?: any[] }>((resolve) => {
+      const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success: number; skipped: number; errors: number; total: number } }>((resolve) => {
         const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — Vinted took too long to respond. Try again or check you\'re logged in to Vinted.' }), 360000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
@@ -323,17 +326,12 @@ export default function PlatformConnectPage() {
         throw new Error(extensionResponse.message || 'Failed to import from Vinted')
       }
 
-      const items = extensionResponse.items || []
-      if (!items.length) {
-        throw new Error('No items to import')
-      }
-
-      // Use batched import hook
-      await vintedImport.runImport(items, 'vinted')
+      const r = extensionResponse.results || { success: 0, skipped: 0, errors: 0, total: 0 }
+      vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
+      vintedImport.setError(message)
       setVintedActionError(message)
-      vintedImport.reset()
     }
   }
 
