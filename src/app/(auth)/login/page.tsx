@@ -1,15 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/services/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Auto-trigger Google sign-in when redirected from marketing domain
+  useEffect(() => {
+    if (searchParams.get('google') === '1') {
+      handleGoogleSignIn()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,11 +70,14 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const callbackUrl = typeof window !== 'undefined' && window.location.hostname === 'app.wrenlist.com'
-        ? 'https://app.wrenlist.com/auth/callback'
-        : typeof window !== 'undefined' && window.location.hostname === 'wrenlist.com'
-        ? 'https://app.wrenlist.com/auth/callback'
-        : `${window.location.origin}/auth/callback`
+      // If on marketing domain, redirect to app subdomain to initiate OAuth
+      // This ensures the PKCE cookie is set on app.wrenlist.com where the callback lives
+      if (typeof window !== 'undefined' && window.location.hostname === 'wrenlist.com') {
+        window.location.href = 'https://app.wrenlist.com/login?google=1'
+        return
+      }
+
+      const callbackUrl = `${window.location.origin}/auth/callback`
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
