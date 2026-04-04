@@ -6,8 +6,10 @@ import type { Listing } from '@/types'
 
 /**
  * GET /api/listings
- * Fetch all marketplace listings for the authenticated user from product_marketplace_data
- * Joins with finds to get find details (name, photos, cost_gbp, asking_price_gbp, category, brand)
+ * Fetch all marketplace listings for the authenticated user
+ * Sources:
+ * 1. product_marketplace_data (extension-published listings) joined with finds
+ * 2. finds with status in ('listed', 'sold') not yet in product_marketplace_data
  * Query params: marketplace?, status?, search?, limit?, offset?
  */
 export async function GET(request: NextRequest) {
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
-    // Query product_marketplace_data joined with finds
+    // 1. Query product_marketplace_data joined with finds
     let query = supabase
       .from('product_marketplace_data')
       .select(`
@@ -63,17 +65,104 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    const { data, error, count } = await query.range(offset, offset + limit - 1)
+    const { data: marketplaceListings, error: marketplaceError } = await query
 
-    if (error) {
+    if (marketplaceError) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', error)
+        console.error('Supabase error:', marketplaceError)
       }
-      return ApiResponseHelper.internalError(error.message)
+      return ApiResponseHelper.internalError(marketplaceError.message)
     }
 
-    // Apply search filter in memory if needed (optional)
-    let filtered = data || []
+    // 2. Query finds with status in ('listed', 'sold')
+    const { data: allFinds, error: findsError } = await supabase
+      .from('finds')
+      .select(
+        'id, user_id, name, photos, cost_gbp, asking_price_gbp, category, brand, condition, description, status, platform_fields, created_at, updated_at'
+      )
+      .eq('user_id', user.id)
+      .in('status', ['listed', 'sold'])
+      .order('created_at', { ascending: false })
+
+    if (findsError) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Supabase error:', findsError)
+      }
+      return ApiResponseHelper.internalError(findsError.message)
+    }
+
+    // Get find IDs already in product_marketplace_data to avoid duplicates
+    const findIdsInMarketplaceData = new Set((marketplaceListings || []).map((item: any) => item.find_id))
+
+    // Filter out finds already in product_marketplace_data
+    const finds = (allFinds || []).filter((find: any) => !findIdsInMarketplaceData.has(find.id))
+
+    // 3. Map finds to ListingWithFind shape
+    const findListings = finds.map((find: any) => {
+      // Derive marketplace from platform_fields
+      let derivedMarketplace: string = 'vinted' // default
+      if (find.platform_fields && typeof find.platform_fields === 'object') {
+        const fields = find.platform_fields as Record<string, any>
+        // Try selectedPlatforms array first
+        const selectedPlatforms = fields.selectedPlatforms
+        if (Array.isArray(selectedPlatforms) && selectedPlatforms.length > 0) {
+          const firstPlatform = String(selectedPlatforms[0])
+          if (firstPlatform && ['vinted', 'ebay', 'etsy', 'shopify'].includes(firstPlatform)) {
+            derivedMarketplace = firstPlatform
+          }
+        } else {
+          // Fall back to first key in platform_fields
+          const keys = Object.keys(fields)
+          if (keys.length > 0) {
+            const firstKey = keys[0]
+            if (firstKey && ['vinted', 'ebay', 'etsy', 'shopify'].includes(firstKey)) {
+              derivedMarketplace = firstKey
+            }
+          }
+        }
+      }
+
+      return {
+        id: `find-${find.id}`,
+        find_id: find.id,
+        marketplace: derivedMarketplace as any, // Type cast to Platform
+        platform_listing_id: null,
+        platform_listing_url: null,
+        platform_category_id: null,
+        listing_price: find.asking_price_gbp,
+        fields: {},
+        status: find.status,
+        error_message: null,
+        last_synced_at: null,
+        created_at: find.created_at,
+        updated_at: find.updated_at,
+        finds: {
+          id: find.id,
+          name: find.name,
+          photos: find.photos || [],
+          cost_gbp: find.cost_gbp,
+          asking_price_gbp: find.asking_price_gbp,
+          category: find.category,
+          brand: find.brand,
+          condition: find.condition,
+        },
+      }
+    })
+
+    // 4. Merge both arrays
+    const allListings = [...(marketplaceListings || []), ...findListings]
+
+    // 5. Apply filters and search
+    let filtered = allListings
+
+    if (marketplace && marketplace !== 'all') {
+      filtered = filtered.filter((item: any) => item.marketplace === marketplace)
+    }
+
+    if (status && status !== 'all') {
+      filtered = filtered.filter((item: any) => item.status === status)
+    }
+
     if (search) {
       const searchLower = search.toLowerCase()
       filtered = filtered.filter((item: any) => {
@@ -85,12 +174,20 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Sort by created_at desc
+    filtered.sort((a: any, b: any) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+
+    // Apply pagination after filtering/sorting
+    const paginatedFiltered = filtered.slice(offset, offset + limit)
+
     return ApiResponseHelper.success({
-      data: filtered,
+      data: paginatedFiltered,
       pagination: {
         limit,
         offset,
-        total: count || 0,
+        total: filtered.length,
       },
     })
   } catch (error) {

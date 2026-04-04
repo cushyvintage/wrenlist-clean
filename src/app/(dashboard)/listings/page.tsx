@@ -148,7 +148,7 @@ export default function ListingsPage() {
           <div className="text-center py-12">
             <div className="text-red mb-4">{error}</div>
             <Link
-              href="/add-find"
+              href="/inventory"
               className="text-sm font-medium text-sage hover:text-sage-dk"
             >
               add your first listing →
@@ -162,7 +162,7 @@ export default function ListingsPage() {
                 <p className="text-sage-dim text-sm mb-4">No listings yet</p>
                 <p className="text-xs text-ink-lt mb-6">Items you publish to Vinted and eBay appear here</p>
                 <Link
-                  href="/add-find"
+                  href="/inventory"
                   className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
                 >
                   Create your first listing
