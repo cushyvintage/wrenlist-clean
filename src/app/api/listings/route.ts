@@ -182,14 +182,7 @@ export async function GET(request: NextRequest) {
     // Apply pagination after filtering/sorting
     const paginatedFiltered = filtered.slice(offset, offset + limit)
 
-    return ApiResponseHelper.success({
-      data: paginatedFiltered,
-      pagination: {
-        limit,
-        offset,
-        total: filtered.length,
-      },
-    })
+    return ApiResponseHelper.success(paginatedFiltered)
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/listings error:', error)
