@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update all finds
+    // Note: Vinted delist dispatch happens client-side in inventory detail page via extension messaging
+    // Bulk operations cannot reach the browser extension, so individual mark-sold actions are responsible for delist dispatch
     const { error: updateError } = await supabase
       .from('finds')
       .update(updateData)

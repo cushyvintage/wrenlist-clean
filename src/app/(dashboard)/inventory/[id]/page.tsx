@@ -407,6 +407,34 @@ export default function InventoryDetailPage() {
               } catch (e) {
                 console.error(`Failed to mark ${mp.marketplace} for delist:`, e)
               }
+
+              // Dispatch Vinted delist via extension immediately (non-fatal)
+              if (mp.marketplace === 'vinted' && typeof window !== 'undefined') {
+                try {
+                  const vintedListingId = find.platform_fields?.vinted?.['listingId']
+                  if (vintedListingId) {
+                    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+                    const chromeExt = (window as any).chrome
+                    if (chromeExt?.runtime?.sendMessage) {
+                      chromeExt.runtime.sendMessage(
+                        EXTENSION_ID,
+                        {
+                          action: 'delistlistingfrommarketplace',
+                          marketplace: 'vinted',
+                          listingId: vintedListingId,
+                        },
+                        (resp: any) => {
+                          if (chromeExt.runtime.lastError) {
+                            console.warn('Vinted delist dispatch failed:', chromeExt.runtime.lastError.message)
+                          }
+                        }
+                      )
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Failed to dispatch Vinted delist:', e instanceof Error ? e.message : String(e))
+                }
+              }
             }
           }
         }
