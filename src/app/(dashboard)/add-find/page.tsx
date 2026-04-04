@@ -646,128 +646,39 @@ export default function AddFindPage() {
 
       setUploadProgress(75)
 
-      // Publish to each selected marketplace
-      const publishResults: Record<string, { success: boolean; url?: string; error?: string }> = {}
+      // Publish to selected marketplaces via unified crosslist endpoint
+      if (formData.selectedPlatforms.length > 0) {
+        setError('Publishing to marketplaces...')
+        try {
+          const crosslistRes = await fetch('/api/crosslist/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              findId,
+              marketplaces: formData.selectedPlatforms,
+            }),
+          })
+          const crosslistData = await crosslistRes.json()
+          const results = crosslistData.data?.results || {}
 
-      for (const platform of formData.selectedPlatforms) {
-        if (platform === 'ebay') {
-          setError('Publishing to eBay...')
-          try {
-            const publishResp = await fetch('/api/ebay/publish', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ findId, marketplace: 'EBAY_GB' }),
-            })
-            const publishData = await publishResp.json()
-            if (!publishResp.ok) {
-              publishResults.ebay = { success: false, error: publishData.error || 'eBay publish failed' }
-            } else {
-              publishResults.ebay = { success: true, url: publishData.data?.listingUrl }
-            }
-          } catch {
-            publishResults.ebay = { success: false, error: 'eBay publish failed' }
+          const failures = Object.entries(results)
+            .filter(([, r]: [string, unknown]) => !(r as { ok: boolean }).ok)
+            .map(([p, r]: [string, unknown]) => `${p}: ${(r as { error?: string }).error}`)
+
+          if (failures.length > 0) {
+            setError(`Saved but publish failed — ${failures.join(', ')}. Check Platform Connect.`)
+            setIsLoading(false)
+            return
           }
-        }
-        if (platform === 'vinted') {
-          setError('Publishing to Vinted via extension...')
-          try {
-            const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
-            const result = await new Promise<any>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Extension timed out')), 60000)
-              // @ts-ignore — chrome is injected by browser extension
-              if (typeof chrome !== 'undefined' && chrome.runtime) {
-                chrome.runtime.sendMessage(EXTENSION_ID, {
-                  action: 'publish_vinted',
-                  find: {
-                    name: formData.title,
-                    description: formData.description,
-                    category: formData.category,
-                    condition: formData.condition,
-                    asking_price_gbp: formData.price,
-                    brand: formData.brand || null,
-                    photos: uploadedPhotoUrls, // Supabase Storage URLs
-                    platform_fields: {
-                      selectedPlatforms: formData.selectedPlatforms,
-                      vinted: formData.platformFields.vinted,
-                    }
-                  },
-                  findId,
-                }, (response: any) => {
-                  clearTimeout(timeout)
-                  if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
-                  else resolve(response)
-                })
-              } else {
-                clearTimeout(timeout)
-                reject(new Error('Wrenlist extension not installed. Please install it to publish to Vinted.'))
-              }
-            })
-            if (result?.ok) {
-              publishResults.vinted = { success: true, url: result.listingUrl }
-            } else {
-              publishResults.vinted = { success: false, error: result?.error || 'Vinted publish failed' }
-            }
-          } catch (e: any) {
-            publishResults.vinted = { success: false, error: e.message }
-          }
-        }
-        if (platform === 'shopify') {
-          if (!shopifyShopId) {
-            throw new Error('Connect your Shopify store in Platform Connect first')
-          }
-          setError('Publishing to Shopify via extension...')
-          try {
-            const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
-            const result = await new Promise<any>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Extension timed out — ensure you are logged into admin.shopify.com')), 60000)
-              if (typeof chrome !== 'undefined' && chrome.runtime) {
-                chrome.runtime.sendMessage(EXTENSION_ID, {
-                  action: 'publish_shopify',
-                  shopId: shopifyShopId,
-                  find: {
-                    name: formData.title,
-                    description: formData.description,
-                    category: formData.category,
-                    condition: formData.condition,
-                    asking_price_gbp: formData.price,
-                    cost_gbp: formData.costPrice,
-                    brand: formData.brand || null,
-                    sku: formData.sku || null,
-                    photos: uploadedPhotoUrls,
-                  },
-                  findId,
-                }, (response: any) => {
-                  clearTimeout(timeout)
-                  if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
-                  else resolve(response)
-                })
-              } else {
-                clearTimeout(timeout)
-                reject(new Error('Wrenlist extension not installed'))
-              }
-            })
-            if (result?.ok) {
-              publishResults.shopify = { success: true, url: result.listingUrl }
-            } else {
-              publishResults.shopify = { success: false, error: result?.error || 'Shopify publish failed' }
-            }
-          } catch (e: any) {
-            publishResults.shopify = { success: false, error: e.message }
-          }
+        } catch {
+          setError('Saved but crosslist request failed. You can retry from the inventory page.')
+          setIsLoading(false)
+          return
         }
       }
 
       setUploadProgress(100)
       setError(null)
-
-      // Surface any publish errors before redirecting
-      const failures = Object.entries(publishResults).filter(([, r]) => !r.success)
-      if (failures.length > 0) {
-        const msgs = failures.map(([p, r]) => `${p}: ${r.error}`).join(', ')
-        setError(`Saved but publish failed — ${msgs}. Check Platform Connect.`)
-        setIsLoading(false)
-        return
-      }
 
       router.push(`/inventory`)
     } catch (err) {

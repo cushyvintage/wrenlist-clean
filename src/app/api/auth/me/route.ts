@@ -12,6 +12,7 @@ export async function GET() {
         id: user.id,
         email: user.email,
         created_at: user.created_at,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       },
     })
   } catch (error) {

@@ -91,7 +91,9 @@ export default function DashboardPage() {
 
   const getGreeting = () => {
     const hour = new Date().getHours()
-    const firstName = user?.email?.split('@')[0]?.toUpperCase() || 'there'
+    const rawName = user?.full_name || user?.email?.split('@')[0] || 'there'
+    const firstWord = rawName.split(' ')[0] ?? rawName
+    const firstName = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase()
 
     if (hour < 12) return `Good morning, ${firstName}`
     if (hour < 18) return `Good afternoon, ${firstName}`

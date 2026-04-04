@@ -89,6 +89,127 @@ type ExternalMessage = Record<string, unknown>;
     }
   });
 
+  // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
+  const QUEUE_POLL_ALARM = "queue_poll";
+  const QUEUE_POLL_INTERVAL_MINUTES = 1;
+
+  chrome.alarms.create(QUEUE_POLL_ALARM, {
+    periodInMinutes: QUEUE_POLL_INTERVAL_MINUTES,
+  });
+
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name !== QUEUE_POLL_ALARM) return;
+
+    const baseUrl = await getWrenlistBaseUrl();
+
+    // --- Poll publish-queue ---
+    try {
+      const pubRes = await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+        credentials: "include",
+      });
+      if (pubRes.ok) {
+        const pubData = await pubRes.json();
+        const items = pubData.data ?? [];
+
+        for (const item of items) {
+          const mp = item.marketplace as SupportedMarketplace;
+          const find = item.find;
+          if (!find) continue;
+
+          console.log(`[QueuePoll] Publishing ${find.name} to ${mp}...`);
+
+          // Build CrosslistProduct from find data
+          const product: CrosslistProduct = {
+            id: find.id,
+            marketPlaceId: find.id,
+            title: find.name ?? "Untitled",
+            description: find.description ?? "",
+            price: find.asking_price_gbp ?? 0,
+            images: find.photos ?? [],
+            brand: find.brand ?? undefined,
+            condition: Condition.Good,
+            category: [],
+            tags: "",
+            shipping: { shippingWeight: undefined },
+            dynamicProperties: {},
+          };
+
+          const result = await publishToMarketplace(mp, product);
+
+          // Report back to Wrenlist API
+          try {
+            await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                find_id: item.find_id,
+                marketplace: mp,
+                platform_listing_id: result.product?.id ? String(result.product.id) : null,
+                platform_listing_url: result.product?.url ?? null,
+              }),
+            });
+          } catch (e) {
+            console.warn("[QueuePoll] Failed to report publish result:", e);
+          }
+
+          if (result.success) {
+            console.log(`[QueuePoll] Published ${find.name} to ${mp}`);
+          } else {
+            console.warn(`[QueuePoll] Failed to publish ${find.name} to ${mp}:`, result.message);
+          }
+        }
+      }
+    } catch (e) {
+      // Silently fail — user may not be logged in
+      console.debug("[QueuePoll] Publish queue poll failed:", e);
+    }
+
+    // --- Poll delist-queue ---
+    try {
+      const delRes = await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+        credentials: "include",
+      });
+      if (delRes.ok) {
+        const delData = await delRes.json();
+        const items = delData.data ?? [];
+
+        for (const item of items) {
+          const mp = item.marketplace as SupportedMarketplace;
+          const listingId = item.platform_listing_id;
+          if (!listingId) continue;
+
+          console.log(`[QueuePoll] Delisting ${listingId} from ${mp}...`);
+
+          const result = await delistFromMarketplace(mp, listingId);
+
+          // Report back to Wrenlist API
+          try {
+            await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                find_id: item.find_id,
+                marketplace: mp,
+              }),
+            });
+          } catch (e) {
+            console.warn("[QueuePoll] Failed to report delist result:", e);
+          }
+
+          if (result.success) {
+            console.log(`[QueuePoll] Delisted ${listingId} from ${mp}`);
+          } else {
+            console.warn(`[QueuePoll] Failed to delist ${listingId} from ${mp}:`, result.message);
+          }
+        }
+      }
+    } catch (e) {
+      console.debug("[QueuePoll] Delist queue poll failed:", e);
+    }
+  });
+
   chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
     if (!message || (!("action" in message) && !("type" in message))) {
       sendResponse(withError("Unknown action"));
