@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
+import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
 import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
@@ -867,6 +868,8 @@ export default function PlatformConnectPage() {
                 {vintedLoading ? 'Disconnecting...' : 'Disconnect'}
               </button>
             </div>
+
+            <VintedDebugPanel extensionId="nblnainobllgbjkdkpeodjpopkgnpfgb" />
           </div>
         )}
       </Panel>
