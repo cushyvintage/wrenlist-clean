@@ -19,7 +19,7 @@ type AuthedHandler = (
  * Returns 401 if not authenticated.
  */
 export function withAuth(handler: AuthedHandler) {
-  return async (req: NextRequest, context?: { params?: Record<string, string> }) => {
+  return async (req: NextRequest, context: { params?: Promise<Record<string, string>> | Record<string, string> } = {}) => {
     try {
       const user = await getServerUser()
 
@@ -27,7 +27,8 @@ export function withAuth(handler: AuthedHandler) {
         return ApiResponseHelper.unauthorized()
       }
 
-      return await handler(req, user, context?.params)
+      const params = context?.params instanceof Promise ? await context.params : context?.params
+      return await handler(req, user, params)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Internal server error'
       return ApiResponseHelper.error(message, 500)
