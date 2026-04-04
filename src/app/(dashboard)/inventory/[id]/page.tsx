@@ -101,6 +101,8 @@ export default function InventoryDetailPage() {
   const [incompleteFields, setIncompleteFields] = useState<string[]>([])
   const [isListingOnVinted, setIsListingOnVinted] = useState(false)
   const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [isListingOnEbay, setIsListingOnEbay] = useState(false)
+  const [ebayListResult, setEbayListResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   // Fetch find details
   useEffect(() => {
@@ -542,6 +544,55 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleListOnEbay = async () => {
+    if (!find) return
+    setIsListingOnEbay(true)
+    setEbayListResult(null)
+
+    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+    const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
+    const hasExtension = !!(chromeExt?.runtime?.sendMessage)
+
+    if (!hasExtension) {
+      setEbayListResult({ ok: false, message: 'Wrenlist extension not detected. Install it and open eBay in another tab.' })
+      setIsListingOnEbay(false)
+      return
+    }
+
+    try {
+      const payloadRes = await fetch(`/api/chrome-extension/ebay/product-payload/${id}`)
+      if (!payloadRes.ok) {
+        const data = await payloadRes.json()
+        throw new Error(data.message || 'Failed to build eBay payload')
+      }
+      const payloadData = await payloadRes.json()
+      const product = payloadData?.data?.product ?? payloadData?.product
+      if (!product) throw new Error('No product payload returned')
+
+      await new Promise<void>((resolve, reject) => {
+        chromeExt.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'publishtomarketplace', marketplace: 'ebay', product },
+          (resp: any) => {
+            if (chromeExt.runtime.lastError) {
+              reject(new Error(chromeExt.runtime.lastError.message))
+            } else if (!resp?.success && !resp?.ok) {
+              reject(new Error(resp?.error || 'Extension returned failure'))
+            } else {
+              resolve()
+            }
+          }
+        )
+      })
+
+      setEbayListResult({ ok: true, message: 'Sent to eBay — check the extension tab to confirm.' })
+    } catch (err) {
+      setEbayListResult({ ok: false, message: err instanceof Error ? err.message : 'Failed to list on eBay' })
+    } finally {
+      setIsListingOnEbay(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -602,10 +653,12 @@ export default function InventoryDetailPage() {
         isEditing={isEditing}
         isSyncing={isSyncing}
         isListingOnVinted={isListingOnVinted}
+        isListingOnEbay={isListingOnEbay}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
         onSyncClick={handleSyncOrders}
         onListOnVintedClick={handleListOnVinted}
+        onListOnEbayClick={handleListOnEbay}
       />
 
       {/* Vinted list result */}
@@ -621,6 +674,22 @@ export default function InventoryDetailPage() {
         >
           <span>{vintedListResult.ok ? '✓ ' : '✗ '}{vintedListResult.message}</span>
           <button onClick={() => setVintedListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* eBay list result */}
+      {ebayListResult && (
+        <div
+          className="p-3 rounded text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: ebayListResult.ok ? 'rgba(61,92,58,.08)' : 'rgba(220,38,38,.08)',
+            borderWidth: '1px',
+            borderColor: ebayListResult.ok ? 'rgba(61,92,58,.2)' : 'rgba(220,38,38,.2)',
+            color: ebayListResult.ok ? '#3D5C3A' : '#DC2626',
+          }}
+        >
+          <span>{ebayListResult.ok ? '✓ ' : '✗ '}{ebayListResult.message}</span>
+          <button onClick={() => setEbayListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
 

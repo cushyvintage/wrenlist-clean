@@ -9,10 +9,12 @@ interface InventoryItemHeaderProps {
   isEditing: boolean
   isSyncing: boolean
   isListingOnVinted?: boolean
+  isListingOnEbay?: boolean
   onMarkAsSoldClick: () => void
   onEditClick: () => void
   onSyncClick: () => Promise<void>
   onListOnVintedClick: () => void
+  onListOnEbayClick: () => void
 }
 
 export default function InventoryItemHeader({
@@ -20,10 +22,12 @@ export default function InventoryItemHeader({
   isEditing,
   isSyncing,
   isListingOnVinted = false,
+  isListingOnEbay = false,
   onMarkAsSoldClick,
   onEditClick,
   onSyncClick,
   onListOnVintedClick,
+  onListOnEbayClick,
 }: InventoryItemHeaderProps) {
   const router = useRouter()
 
@@ -94,6 +98,23 @@ export default function InventoryItemHeader({
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             {isListingOnVinted ? '⏳ Listing...' : '↗ List on Vinted'}
+          </button>
+        )}
+        {!isEditing && find.status !== 'sold' && (
+          <button
+            onClick={onListOnEbayClick}
+            disabled={isListingOnEbay}
+            className="px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-50"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(255,80,0,.3)',
+              backgroundColor: 'transparent',
+              color: '#E05200',
+            }}
+            onMouseEnter={(e) => !isListingOnEbay && (e.currentTarget.style.backgroundColor = 'rgba(255,80,0,.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            {isListingOnEbay ? '⏳ Listing...' : '↗ List on eBay'}
           </button>
         )}
         {!isEditing && (
