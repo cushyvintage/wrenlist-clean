@@ -6,6 +6,8 @@ import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
+import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
+import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
 
 interface EbayPolicy {
   id: string
@@ -22,6 +24,7 @@ interface EbayPolicies {
 export default function PlatformConnectPage() {
   const searchParams = useSearchParams()
   const ebay = useEbayConnection()
+  const vintedImport = useMarketplaceImport()
   const [pageError, setPageError] = useState<string | null>(null)
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
   const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
@@ -44,8 +47,6 @@ export default function PlatformConnectPage() {
   const [shopifyError, setShopifyError] = useState<string | null>(null)
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
-  const [vintedImportLoading, setVintedImportLoading] = useState(false)
-  const [vintedImportResult, setVintedImportResult] = useState<{ imported: number; skipped: number; errors: number } | null>(null)
   const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
   const [vintedActionError, setVintedActionError] = useState<string | null>(null)
@@ -296,20 +297,17 @@ export default function PlatformConnectPage() {
 
   const handleVintedImport = async () => {
     const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
-    setVintedImportLoading(true)
     setVintedActionError(null)
-    setVintedImportResult(null)
+    vintedImport.reset()
 
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
         throw new Error('Extension not available')
       }
 
-      // Extension fetches listings AND posts them to /api/import/vinted-batch/process itself
-      // We just fire-and-forget and wait for it to report back success/count
-      const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success?: number; skipped?: number; errors?: number } }>((resolve) => {
-        // Extension fetches from page 1 each time (no offset support) — limit controls how many to fetch.
-        // 200 items takes ~3-4 mins for large wardrobes. Timeout at 6 mins.
+      // Extension fetches Vinted listings
+      // 200 items takes ~3-4 mins for large wardrobes. Timeout at 6 mins.
+      const extensionResponse = await new Promise<{ success: boolean; message?: string; items?: any[] }>((resolve) => {
         const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — Vinted took too long to respond. Try again or check you\'re logged in to Vinted.' }), 360000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
@@ -325,22 +323,17 @@ export default function PlatformConnectPage() {
         throw new Error(extensionResponse.message || 'Failed to import from Vinted')
       }
 
-      // Map extension result format to our UI format
-      // Extension returns { results: data.results } where data is our API response
-      // Our API wraps as ApiResponseHelper.success({ imported, skipped }) so check both shapes
-      const r = extensionResponse.results as any
-      const imported = r?.imported ?? r?.success ?? 0
-      const skipped = r?.skipped ?? 0
-      const errors = r?.errors ?? 0
-      // Also parse from the message string as fallback e.g. "Imported 200 items."
-      const msgMatch = extensionResponse.message?.match(/(\d+) items?/)
-      const msgCount = msgMatch && msgMatch[1] ? parseInt(msgMatch[1]) : 0
-      setVintedImportResult({ imported: imported || msgCount, skipped, errors })
+      const items = extensionResponse.items || []
+      if (!items.length) {
+        throw new Error('No items to import')
+      }
+
+      // Use batched import hook
+      await vintedImport.runImport(items, 'vinted')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
       setVintedActionError(message)
-    } finally {
-      setVintedImportLoading(false)
+      vintedImport.reset()
     }
   }
 
@@ -793,15 +786,15 @@ export default function PlatformConnectPage() {
               </div>
             )}
 
-            {vintedImportLoading && (
+            {(vintedImport.state.phase === "fetching" || vintedImport.state.phase === "importing") && (
               <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm text-amber-800">
-                ⏳ Fetching your Vinted listings… this can take 2–4 minutes for large wardrobes. Don’t close this tab.
+                Fetching your Vinted listings... this can take 2-4 minutes for large wardrobes. Do not close this tab.
               </div>
             )}
 
-            {vintedImportResult && (
-              <div className="bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm text-green-700">
-                ✅ Imported {vintedImportResult.imported} new finds {vintedImportResult.skipped > 0 && `, ${vintedImportResult.skipped} already in Wrenlist`}
+            {vintedImport.state.phase !== "idle" && (
+              <div className="mb-4 p-3 bg-cream-md rounded border border-border">
+                <ImportProgressBar state={vintedImport.state} />
               </div>
             )}
 
@@ -815,14 +808,14 @@ export default function PlatformConnectPage() {
             <div className="flex gap-2 mb-4">
               <button
                 onClick={handleVintedImport}
-                disabled={vintedImportLoading || vintedSyncLoading}
+                disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' || vintedSyncLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
               >
-                {vintedImportLoading ? 'Importing...' : '📥 Import from Vinted'}
+                {vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' ? 'Importing...' : '📥 Import from Vinted'}
               </button>
               <button
                 onClick={handleVintedSync}
-                disabled={vintedImportLoading || vintedSyncLoading}
+                disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' || vintedSyncLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
               >
                 {vintedSyncLoading ? 'Syncing...' : '🔄 Sync status'}
