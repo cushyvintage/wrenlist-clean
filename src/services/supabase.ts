@@ -2,20 +2,17 @@
  * Supabase client initialization
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Initialize with dummy credentials if not available (for build-time)
-export const supabase = createClient(
+// Use createBrowserClient from @supabase/ssr so the PKCE code verifier
+// is stored in cookies (not localStorage), making it readable by the
+// server-side /auth/callback route handler.
+export const supabase = createBrowserClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      flowType: 'pkce',
-    },
-  }
+  supabaseAnonKey || 'placeholder-key'
 )
 
 // Validate credentials are available at runtime
