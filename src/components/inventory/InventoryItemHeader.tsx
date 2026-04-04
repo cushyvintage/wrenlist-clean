@@ -8,18 +8,22 @@ interface InventoryItemHeaderProps {
   find: Find
   isEditing: boolean
   isSyncing: boolean
+  isListingOnVinted?: boolean
   onMarkAsSoldClick: () => void
   onEditClick: () => void
   onSyncClick: () => Promise<void>
+  onListOnVintedClick: () => void
 }
 
 export default function InventoryItemHeader({
   find,
   isEditing,
   isSyncing,
+  isListingOnVinted = false,
   onMarkAsSoldClick,
   onEditClick,
   onSyncClick,
+  onListOnVintedClick,
 }: InventoryItemHeaderProps) {
   const router = useRouter()
 
@@ -73,6 +77,23 @@ export default function InventoryItemHeader({
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             Mark as Sold
+          </button>
+        )}
+        {!isEditing && find.status !== 'sold' && (
+          <button
+            onClick={onListOnVintedClick}
+            disabled={isListingOnVinted}
+            className="px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-50"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(0,102,153,.3)',
+              backgroundColor: 'transparent',
+              color: '#006699',
+            }}
+            onMouseEnter={(e) => !isListingOnVinted && (e.currentTarget.style.backgroundColor = 'rgba(0,102,153,.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            {isListingOnVinted ? '⏳ Listing...' : '↗ List on Vinted'}
           </button>
         )}
         {!isEditing && (

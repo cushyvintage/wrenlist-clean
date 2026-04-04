@@ -99,6 +99,8 @@ export default function InventoryDetailPage() {
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
   const [templateAppliedBanner, setTemplateAppliedBanner] = useState(false)
   const [incompleteFields, setIncompleteFields] = useState<string[]>([])
+  const [isListingOnVinted, setIsListingOnVinted] = useState(false)
+  const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   // Fetch find details
   useEffect(() => {
@@ -463,6 +465,55 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleListOnVinted = async () => {
+    if (!find) return
+    setIsListingOnVinted(true)
+    setVintedListResult(null)
+
+    const EXTENSION_ID = 'adipbheonmknmlhgafhdoaefcjbajhdk'
+    const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
+    const hasExtension = !!(chromeExt?.runtime?.sendMessage)
+
+    if (!hasExtension) {
+      setVintedListResult({ ok: false, message: 'Wrenlist extension not detected. Install it and open Vinted in another tab.' })
+      setIsListingOnVinted(false)
+      return
+    }
+
+    try {
+      const payloadRes = await fetch(`/api/chrome-extension/vinted/product-payload/${id}`)
+      if (!payloadRes.ok) {
+        const data = await payloadRes.json()
+        throw new Error(data.message || 'Failed to build Vinted payload')
+      }
+      const payloadData = await payloadRes.json()
+      const product = payloadData?.data?.product ?? payloadData?.product
+      if (!product) throw new Error('No product payload returned')
+
+      await new Promise<void>((resolve, reject) => {
+        chromeExt.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'publishtomarketplace', marketplace: 'vinted', product },
+          (resp: any) => {
+            if (chromeExt.runtime.lastError) {
+              reject(new Error(chromeExt.runtime.lastError.message))
+            } else if (!resp?.success && !resp?.ok) {
+              reject(new Error(resp?.error || 'Extension returned failure'))
+            } else {
+              resolve()
+            }
+          }
+        )
+      })
+
+      setVintedListResult({ ok: true, message: 'Sent to Vinted — check the extension tab to confirm.' })
+    } catch (err) {
+      setVintedListResult({ ok: false, message: err instanceof Error ? err.message : 'Failed to list on Vinted' })
+    } finally {
+      setIsListingOnVinted(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -522,10 +573,28 @@ export default function InventoryDetailPage() {
         find={find}
         isEditing={isEditing}
         isSyncing={isSyncing}
+        isListingOnVinted={isListingOnVinted}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
         onSyncClick={handleSyncOrders}
+        onListOnVintedClick={handleListOnVinted}
       />
+
+      {/* Vinted list result */}
+      {vintedListResult && (
+        <div
+          className="p-3 rounded text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: vintedListResult.ok ? 'rgba(61,92,58,.08)' : 'rgba(220,38,38,.08)',
+            borderWidth: '1px',
+            borderColor: vintedListResult.ok ? 'rgba(61,92,58,.2)' : 'rgba(220,38,38,.2)',
+            color: vintedListResult.ok ? '#3D5C3A' : '#DC2626',
+          }}
+        >
+          <span>{vintedListResult.ok ? '✓ ' : '✗ '}{vintedListResult.message}</span>
+          <button onClick={() => setVintedListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (
