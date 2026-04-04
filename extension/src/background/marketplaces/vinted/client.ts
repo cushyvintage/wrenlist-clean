@@ -627,7 +627,7 @@ export class VintedClient {
       }
 
       // Check if direct fetch returned a valid CSRF token
-      let match = html ? html.match(/"CSRF_TOKEN\\?":.*?\\?"([a-z\-0-9]+)\\?"/) : null;
+      let match = html ? html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/) : null;
       if (!match || match.length < 2) {
         // Fallback: open hidden tab (handles Cloudflare challenges)
         console.log("[Vinted] Direct fetch didn't return CSRF, trying tab refresh...");
@@ -635,7 +635,7 @@ export class VintedClient {
         if (!html) {
           throw new Error("Failed to fetch Vinted tokens via both direct fetch and tab refresh");
         }
-        match = html.match(/"CSRF_TOKEN\\?":.*?\\?"([a-z\-0-9]+)\\?"/);
+        match = html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/);
         if (!match || match.length < 2) {
           throw new Error("CSRF token not found in HTML response");
         }
@@ -643,7 +643,7 @@ export class VintedClient {
       this.csrfToken = match[1];
 
       // Extract anon_id using Crosslist pattern
-      match = html.match(/"anon_id\\":\\"([a-z\-0-9]+)\\"/);
+      match = html.match(/"anon_id":"([a-z0-9\-]+)"/);
       if (!match || match.length < 2) {
         throw new Error("Anon id not found in HTML response");
       }
@@ -651,7 +651,7 @@ export class VintedClient {
 
       // Extract uploadSessionId from HTML (Crosslist pattern)
       // This is embedded in the page's JSON data and used for temp_uuid + upload_session_id
-      const uploadMatch = html.match(/"uploadSessionId\\?":.*?\\?"([a-z\-0-9]+)\\?"/);
+      const uploadMatch = html.match(/"uploadSessionId":"([a-z0-9\-]+)"/);
       if (uploadMatch && uploadMatch[1]) {
         this.uploadSessionId = uploadMatch[1];
         console.log("[Vinted] Debug: Found uploadSessionId from HTML:", this.uploadSessionId);
@@ -668,7 +668,7 @@ export class VintedClient {
           });
           if (newItemResp.ok) {
             const newItemHtml = await newItemResp.text();
-            const newItemMatch = newItemHtml.match(/"uploadSessionId\\?":.*?\\?"([a-z\-0-9]+)\\?"/);
+            const newItemMatch = newItemHtml.match(/"uploadSessionId":"([a-z0-9\-]+)"/);
             if (newItemMatch && newItemMatch[1]) {
               this.uploadSessionId = newItemMatch[1];
               console.log("[Vinted] Debug: Found uploadSessionId from /items/new:", this.uploadSessionId);
