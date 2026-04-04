@@ -37,13 +37,14 @@ export async function POST(request: NextRequest) {
 
     for (const item of listings) {
       try {
-        // Skip already imported
+        // Skip already imported (scoped to this user via finds join)
         const { data: existing } = await supabase
           .from('product_marketplace_data')
-          .select('id')
+          .select('id, finds!inner(user_id)')
           .eq('marketplace', 'vinted')
           .eq('platform_listing_id', String(item.id))
-          .single()
+          .eq('finds.user_id', user.id)
+          .maybeSingle()
 
         if (existing) { skipped++; continue }
 
