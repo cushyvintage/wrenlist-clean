@@ -87,12 +87,27 @@ export async function GET() {
       })
     }
 
-    // 4. Price research nudge: items missing asking_price_gbp
+    // 4. Crosslisting nudge: lots of Vinted items but nothing on eBay
+    const vintedFinds = finds.filter((f) => f.source_name === 'Vinted' && f.status === 'listed')
+    const ebayFinds = finds.filter((f) => {
+      const pf = f.platform_fields as Record<string, unknown> | null
+      return pf && pf['ebay']
+    })
+
+    if (vintedFinds.length >= 20 && ebayFinds.length === 0) {
+      const highValue = vintedFinds.filter((f) => (f.asking_price_gbp ?? 0) >= 20)
+      return NextResponse.json({
+        insight: `You have ${vintedFinds.length} items on Vinted but nothing on eBay. Crosslisting your ${highValue.length} items priced £20+ could significantly boost revenue — eBay reaches a different buyer base.`,
+        type: 'tip',
+      })
+    }
+
+    // 4b. Price research nudge: items missing asking_price_gbp
     const unpriced = finds.filter((f) => !f.asking_price_gbp && f.status !== 'sold')
 
     if (unpriced.length > 0) {
       return NextResponse.json({
-        insight: `${unpriced.length} item${unpriced.length === 1 ? '' : 's'} ${unpriced.length === 1 ? 'is' : 'are'} missing prices. Use Price Research to set competitive prices.`,
+        insight: `${unpriced.length} item${unpriced.length === 1 ? ' is' : 's are'} missing prices. Use Price Research to set competitive prices.`,
         type: 'info',
       })
     }
