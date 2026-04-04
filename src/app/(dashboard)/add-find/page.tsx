@@ -72,7 +72,7 @@ interface FormData {
   sourcingTripId: string | null
 
   // Pricing overrides
-  platformPrices: Record<Platform, number | null>
+  platformPrices: Partial<Record<Platform, number | null>>
 }
 
 const CONDITIONS: { value: FindCondition; label: string }[] = [

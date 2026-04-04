@@ -57,7 +57,7 @@ export interface ListingFormData {
   internalNote: string
 
   // Pricing overrides
-  platformPrices: Record<Platform, number | null>
+  platformPrices: Partial<Record<Platform, number | null>>
 }
 
 export const DEFAULT_FORM_DATA: ListingFormData = {

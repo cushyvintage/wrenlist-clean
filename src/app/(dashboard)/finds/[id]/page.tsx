@@ -205,9 +205,9 @@ export default function FindDetailPage() {
                     <div key={listing.id} className="flex justify-between items-center p-3 bg-cream-md rounded">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">
-                          {listing.platform === 'ebay' ? '🛒' : listing.platform === 'vinted' ? '👚' : '🎨'}
+                          {listing.marketplace === 'ebay' ? '🛒' : listing.marketplace === 'vinted' ? '👚' : '🎨'}
                         </span>
-                        <span className="text-sm font-medium text-ink capitalize">{listing.platform}</span>
+                        <span className="text-sm font-medium text-ink capitalize">{listing.marketplace}</span>
                       </div>
                       <Badge status={listing.status as 'listed' | 'on_hold'} />
                     </div>

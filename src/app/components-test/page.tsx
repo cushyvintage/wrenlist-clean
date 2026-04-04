@@ -50,13 +50,10 @@ const mockFind: Find = {
 const mockListing: Partial<Listing> & { find?: Partial<Find> } = {
   id: '456',
   find_id: '123',
-  user_id: 'user_456',
-  platform: 'vinted',
-  status: 'live',
+  marketplace: 'vinted',
+  status: 'listed',
   find: mockFind as Find,
-  views: 42,
   platform_listing_id: 'vinted_123',
-  listed_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }

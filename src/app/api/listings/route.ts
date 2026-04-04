@@ -1,8 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
-import { CreateListingSchema, validateBody } from '@/lib/validation'
-import type { Listing } from '@/types'
 
 /**
  * GET /api/listings
@@ -191,61 +189,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/listings
- * Create a new listing for a find
- */
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
-    const supabase = await createSupabaseServerClient()
-    const body = await request.json()
-
-    // Validate request body
-    const validation = validateBody(CreateListingSchema, body)
-    if (!validation.success) {
-      return ApiResponseHelper.badRequest(validation.error)
-    }
-
-    const { find_id, ...listingData } = validation.data
-
-    // Verify find exists and belongs to user
-    const { data: find, error: findError } = await supabase
-      .from('finds')
-      .select('id')
-      .eq('id', find_id)
-      .eq('user_id', user.id)
-      .single()
-
-    if (findError || !find) {
-      return ApiResponseHelper.notFound()
-    }
-
-    // Create listing
-    const { data, error } = await supabase
-      .from('listings')
-      .insert([
-        {
-          find_id,
-          user_id: user.id,
-          ...listingData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .select('*')
-      .single()
-
-    if (error) {
-      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
-    }
-
-    return ApiResponseHelper.created(data as Listing)
-  } catch (error) {
-    if (process.env.NODE_ENV !== 'production')  { console.error('POST /api/listings error:', error) }    return ApiResponseHelper.internalError()
-  }
-}

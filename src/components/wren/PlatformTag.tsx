@@ -11,7 +11,7 @@
  * <PlatformTag platform="ebay" live={false} />
  */
 
-type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
+import type { Platform } from '@/types'
 
 interface PlatformTagProps {
   /** Platform name */
@@ -22,11 +22,17 @@ interface PlatformTagProps {
   label?: string
 }
 
-const platformConfig: Record<Platform, string> = {
+const platformConfig: Partial<Record<Platform, string>> = {
   vinted: 'Vinted',
   ebay: 'eBay UK',
   etsy: 'Etsy',
   shopify: 'Shopify',
+  depop: 'Depop',
+  poshmark: 'Poshmark',
+  mercari: 'Mercari',
+  facebook: 'Facebook',
+  whatnot: 'Whatnot',
+  grailed: 'Grailed',
 }
 
 export function PlatformTag({
@@ -34,7 +40,7 @@ export function PlatformTag({
   live = false,
   label,
 }: PlatformTagProps) {
-  const displayLabel = label || platformConfig[platform]
+  const displayLabel = label || platformConfig[platform] || platform
 
   return (
     <span

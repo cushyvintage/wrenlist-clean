@@ -48,7 +48,7 @@ interface FormData {
   sku: string
   costPrice: number | null
   internalNote: string
-  platformPrices: Record<Platform, number | null>
+  platformPrices: Partial<Record<Platform, number | null>>
 }
 
 const CONDITIONS: { value: FindCondition; label: string }[] = [

@@ -9,7 +9,7 @@ import type { Platform } from '@/types'
 /**
  * Allowlisted keys for each marketplace's platform fields
  */
-const ALLOWED_KEYS: Record<Platform, Set<string>> = {
+const ALLOWED_KEYS: Partial<Record<Platform, Set<string>>> = {
   vinted: new Set([
     'primaryColor',
     'secondaryColor',
@@ -45,6 +45,7 @@ export function validatePlatformFields(
   if (!raw) return {}
 
   const allowed = ALLOWED_KEYS[marketplace]
+  if (!allowed) return { ...raw } // No allowlist for this platform — pass through
   const cleaned: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(raw)) {

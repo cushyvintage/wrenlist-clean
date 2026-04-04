@@ -7,8 +7,7 @@ import { z } from 'zod'
 export const FindStatusEnum = z.enum(['draft', 'listed', 'on_hold', 'sold'])
 export const ConditionEnum = z.enum(['excellent', 'good', 'fair', 'poor'])
 export const SourceTypeEnum = z.enum(['house_clearance', 'charity_shop', 'car_boot', 'online_haul', 'flea_market', 'other'])
-export const PlatformEnum = z.enum(['vinted', 'ebay', 'etsy', 'shopify'])
-export const ListingStatusEnum = z.enum(['draft', 'live', 'sold', 'delisted'])
+export const PlatformEnum = z.enum(['vinted', 'ebay', 'etsy', 'shopify', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed'])
 
 // ============================================================================
 // FINDS (Products)
@@ -48,27 +47,6 @@ export const UpdateFindSchema = CreateFindSchema.partial()
 
 export type CreateFindInput = z.infer<typeof CreateFindSchema>
 export type UpdateFindInput = z.infer<typeof UpdateFindSchema>
-
-// ============================================================================
-// LISTINGS
-// ============================================================================
-
-export const CreateListingSchema = z.object({
-  find_id: z.string().uuid('Invalid find ID'),
-  platform: PlatformEnum,
-  platform_listing_id: z.string().optional().nullable(),
-  platform_url: z.string().url().optional().nullable(),
-  status: ListingStatusEnum.optional().default('draft'),
-  listed_at: z.string().datetime().optional().nullable(),
-  views: z.number().nonnegative().optional().default(0),
-  likes: z.number().nonnegative().optional().default(0),
-  messages: z.number().nonnegative().optional().default(0),
-})
-
-export const UpdateListingSchema = CreateListingSchema.partial()
-
-export type CreateListingInput = z.infer<typeof CreateListingSchema>
-export type UpdateListingInput = z.infer<typeof UpdateListingSchema>
 
 // ============================================================================
 // EXPENSES

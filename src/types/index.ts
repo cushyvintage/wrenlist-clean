@@ -27,8 +27,7 @@ export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
 export type FindCondition = 'excellent' | 'good' | 'fair'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 export type SupplierType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'flea_market' | 'online' | 'other'
-export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
-export type ListingStatus = 'draft' | 'live' | 'sold' | 'delisted'
+export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify' | 'depop' | 'poshmark' | 'mercari' | 'facebook' | 'whatnot' | 'grailed'
 export type MarketplaceDataStatus = 'not_listed' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
 
 export interface Profile {
@@ -158,24 +157,6 @@ export interface FindWithMargin extends Find {
   roi_pct: number | null
 }
 
-export interface Listing {
-  id: string
-  find_id: string
-  user_id: string
-  platform: Platform
-  platform_listing_id: string | null
-  status: ListingStatus
-  listed_at: string | null
-  delisted_at: string | null
-  views: number
-  created_at: string
-  updated_at: string
-}
-
-export interface FindWithListings extends FindWithMargin {
-  listings: Listing[]
-}
-
 export interface ProductMarketplaceData {
   id: string
   find_id: string
@@ -191,6 +172,9 @@ export interface ProductMarketplaceData {
   created_at: string
   updated_at: string
 }
+
+/** @deprecated Use ProductMarketplaceData — kept as alias for backwards compatibility */
+export type Listing = ProductMarketplaceData
 
 // ============================================================================
 // EXPENSES & MILEAGE (Phase 4 - Operations & Tax)
@@ -295,11 +279,17 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   other: 'Other',
 }
 
-export const PLATFORM_LABELS: Record<Platform, string> = {
+export const PLATFORM_LABELS: Partial<Record<Platform, string>> & Record<'vinted' | 'ebay' | 'etsy' | 'shopify', string> = {
   vinted: 'Vinted',
   ebay: 'eBay UK',
   etsy: 'Etsy',
   shopify: 'Shopify',
+  depop: 'Depop',
+  poshmark: 'Poshmark',
+  mercari: 'Mercari',
+  facebook: 'Facebook Marketplace',
+  whatnot: 'Whatnot',
+  grailed: 'Grailed',
 }
 
 export const CATEGORIES = [

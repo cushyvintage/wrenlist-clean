@@ -55,13 +55,7 @@ export default function OrdersPage() {
   }
 
   const formatPlatform = (marketplace: string): Platform => {
-    const map: Record<string, Platform> = {
-      vinted: 'vinted',
-      ebay: 'ebay',
-      etsy: 'etsy',
-      shopify: 'shopify',
-    }
-    return map[marketplace] || 'vinted'
+    return (marketplace as Platform) || 'vinted'
   }
 
   // Calculate totals

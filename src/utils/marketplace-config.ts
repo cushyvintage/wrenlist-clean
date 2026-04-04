@@ -3,7 +3,11 @@
  * Defines platform-specific features, fields, and requirements
  */
 
-export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
+/** Platforms with full marketplace config (fees, fields, shipping) */
+export type ConfiguredPlatform = 'vinted' | 'ebay' | 'etsy' | 'shopify'
+
+/** @deprecated Use ConfiguredPlatform for this module, or import Platform from @/types */
+export type Platform = ConfiguredPlatform
 
 export interface MarketplaceFeatures {
   id: Platform

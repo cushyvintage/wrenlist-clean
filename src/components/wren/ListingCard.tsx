@@ -41,7 +41,7 @@ export function ListingCard({
   if (!find) return null
 
   // Map listing status to badge status
-  const badgeStatus = listing.status === 'live' ? 'listed' : (listing.status as any)
+  const badgeStatus = listing.status as string
 
   return (
     <div className="bg-white border border-sage/14 rounded-md p-4 flex items-center gap-4 hover:bg-cream transition-colors">
@@ -60,10 +60,9 @@ export function ListingCard({
         <div className="text-xs text-ink-lt mt-1">
           {find.category}
           {find.sourced_at && ` · listed ${new Date(find.sourced_at).toLocaleDateString()}`}
-          {listing.views && ` · ${listing.views} views`}
         </div>
         <div className="flex gap-2 mt-2">
-          <PlatformTag platform={listing.platform as any} live={listing.status === 'live'} />
+          <PlatformTag platform={listing.marketplace} live={listing.status === 'listed'} />
         </div>
       </div>
 

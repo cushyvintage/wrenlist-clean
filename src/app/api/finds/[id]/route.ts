@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateFindSchema, validateBody } from '@/lib/validation'
-import type { Find, Listing } from '@/types'
+import type { Find } from '@/types'
 
 /**
  * GET /api/finds/[id]
@@ -39,29 +39,7 @@ export async function GET(
       return ApiResponseHelper.internalError()
     }
 
-    // Fetch related listings
-    const { data: listingsData, error: listingsError } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('find_id', id)
-      .eq('user_id', user.id)
-
-    if (listingsError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase listings error:', listingsError)
-      }
-    }
-
-    // Transform product_id to find_id for the frontend
-    const listings = (listingsData || []).map((listing: any) => ({
-      ...listing,
-      find_id: listing.product_id,
-    })) as Listing[]
-
-    return ApiResponseHelper.success({
-      ...find,
-      listings,
-    } as Find & { listings: Listing[] })
+    return ApiResponseHelper.success(find as Find)
   } catch (error) {
     console.error('GET /api/finds/[id] error:', error)
     return ApiResponseHelper.internalError()

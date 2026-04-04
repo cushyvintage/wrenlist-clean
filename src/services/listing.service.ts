@@ -238,6 +238,6 @@ export function calculateProfit(
   costPrice: number,
   platform: Platform
 ): number {
-  const finalPrice = calculateFinalPrice(salePrice, platform)
+  const finalPrice = calculateFinalPrice(salePrice, platform as 'vinted' | 'ebay' | 'etsy' | 'shopify')
   return finalPrice - costPrice
 }

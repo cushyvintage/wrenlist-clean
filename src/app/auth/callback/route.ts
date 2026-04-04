@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
       // Email is verified — check onboarding status
       const { data: profile } = await supabase
         .from('profiles')
-        .select('has_completed_onboarding')
+        .select('onboarding_completed')
         .eq('user_id', user.id)
         .single()
 
-      if (!profile?.has_completed_onboarding) {
+      if (!profile?.onboarding_completed) {
         // Not completed onboarding — go to onboarding
         const onboardingUrl = new URL('/onboarding', request.url)
         return NextResponse.redirect(onboardingUrl)
