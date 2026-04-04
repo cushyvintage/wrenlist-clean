@@ -137,6 +137,7 @@ export async function POST(req: NextRequest) {
           photos: [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          // Note: imports bypass plan limits (skip_limit_check not a DB field, handled at API level)
         }
 
         const { error: insertError } = await supabase

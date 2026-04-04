@@ -258,12 +258,17 @@ const getDaysListed = (find: Find): number => {
   return Math.floor((now.getTime() - listedDate.getTime()) / (1000 * 60 * 60 * 24))
 }
 
+const LIMIT = 50
+
 export default function InventoryPage() {
   const router = useRouter()
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [currentOffset, setCurrentOffset] = useState(0)
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [finds, setFinds] = useState<Find[]>(mockFinds)
+  const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -286,7 +291,19 @@ export default function InventoryPage() {
   }, [])
 
   /**
-   * Fetch profile and finds from API on mount
+   * Debounce search input (300ms)
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentOffset(0) // Reset to first page when search changes
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  /**
+   * Fetch profile and finds from API
    */
   useEffect(() => {
     async function fetchData() {
@@ -309,44 +326,44 @@ export default function InventoryPage() {
           setEbayConnected(ebayData.data?.connected || false)
         }
 
+        // Build query params
+        const params = new URLSearchParams()
+        params.set('limit', String(LIMIT))
+        params.set('offset', String(currentOffset))
+        if (debouncedSearch) {
+          params.set('search', debouncedSearch)
+        }
+        if (selectedStatus && selectedStatus !== 'all' && selectedStatus !== 'aging') {
+          params.set('status', selectedStatus)
+        }
+
         // Fetch finds
-        const findsRes = await fetch('/api/finds')
+        const findsRes = await fetch(`/api/finds?${params.toString()}`)
         if (!findsRes.ok) {
           throw new Error('Failed to fetch finds')
         }
         const result = await findsRes.json()
-        setFinds(unwrapApiResponse<Find[]>(result))
+        const response = result.data as { data: Find[]; pagination: { total: number } }
+        setFinds(response.data || [])
+        setTotalCount(response.pagination?.total || 0)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
         // Fall back to mock data
         setFinds(mockFinds)
+        setTotalCount(mockFinds.length)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [selectedStatus, debouncedSearch, currentOffset])
 
-  // Filter finds by status and search
-  const filteredFinds = finds.filter((find) => {
-    let statusMatch = false
-    if (selectedStatus === 'all') {
-      statusMatch = true
-    } else if (selectedStatus === 'aging') {
-      statusMatch = find.status === 'listed' && getDaysListed(find) >= 30
-    } else {
-      statusMatch = find.status === selectedStatus
-    }
-
-    const searchMatch =
-      searchQuery === '' ||
-      find.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (find.category && find.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (find.source_name && find.source_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    return statusMatch && searchMatch
-  })
+  // Filter finds by aging status (client-side for aging filter since it needs calculation)
+  const filteredFinds = selectedStatus === 'aging'
+    ? finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30)
+    : finds
 
   // Count aging items for badge
   const agingCount = finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30).length
@@ -375,6 +392,18 @@ export default function InventoryPage() {
   }
 
   const getEmoji = (category: string | null) => (category && categoryEmojis[category]) || categoryEmojis.default
+
+  const handlePrevPage = () => {
+    if (currentOffset >= LIMIT) {
+      setCurrentOffset(currentOffset - LIMIT)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentOffset + LIMIT < totalCount) {
+      setCurrentOffset(currentOffset + LIMIT)
+    }
+  }
 
   const handleAddFind = () => {
     if (!profile) {
@@ -580,7 +609,9 @@ export default function InventoryPage() {
   }
 
   const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
-  const findsUsed = finds.length
+  const findsUsed = totalCount
+  const totalPages = Math.ceil(totalCount / LIMIT)
+  const currentPage = Math.floor(currentOffset / LIMIT) + 1
 
   return (
     <div className="space-y-6">
@@ -682,7 +713,7 @@ export default function InventoryPage() {
               }}
             >
               <span>
-                {findsUsed} of {planLimit} finds used
+                {Math.min(findsUsed, planLimit)} of {planLimit} manual finds
               </span>
               {findsUsed >= planLimit && (
                 <>
@@ -903,153 +934,180 @@ export default function InventoryPage() {
 
       {/* Inventory table */}
       {!isLoading && (
-        <Panel className="overflow-x-auto">
-          <table className="w-full text-sm min-w-max">
-            <thead style={{ color: '#8A9E88' }}>
-              <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
-                <th className="text-left py-[10px] px-[18px] w-8">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.size === filteredFinds.length && filteredFinds.length > 0}
-                    onChange={toggleAllSelection}
-                    className="cursor-pointer"
-                  />
-                </th>
-                <th className="text-left py-[10px] px-[18px] min-w-[180px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
-                <th className="text-left py-[10px] px-[18px] min-w-[90px] text-[10px] uppercase tracking-[.08em] font-medium hidden md:table-cell">source</th>
-                <th className="text-right py-[10px] px-[10px] w-12 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
-                <th className="text-right py-[10px] px-[12px] w-14 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
-                <th className="text-right py-[10px] px-[12px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
-                <th className="text-left py-[10px] px-[12px] min-w-[160px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
-              </tr>
-            </thead>
-            <tbody>
-            {filteredFinds.map((find) => {
-              const margin = calculateMargin(find.cost_gbp, find.asking_price_gbp)
-              const daysListed = getDaysListed(find)
-              const isAged30 = find.status === 'listed' && daysListed >= 30
-              const isAged60 = find.status === 'listed' && daysListed >= 60
-              return (
-                <tr
-                  key={find.id}
-                  onClick={() => router.push(`/inventory/${find.id}`)}
-                  className="cursor-pointer transition-colors"
-                  style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <td className="py-[12px] px-[18px]">
+        <>
+          <Panel className="overflow-x-auto">
+            <table className="w-full text-sm min-w-max">
+              <thead style={{ color: '#8A9E88' }}>
+                <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                  <th className="text-left py-[10px] px-[18px] w-8">
                     <input
                       type="checkbox"
-                      checked={selectedItems.has(find.id)}
-                      onChange={() => toggleItemSelection(find.id)}
-                      onClick={(e) => e.stopPropagation()}
+                      checked={selectedItems.size === filteredFinds.length && filteredFinds.length > 0}
+                      onChange={toggleAllSelection}
                       className="cursor-pointer"
                     />
-                  </td>
-                  <td className="py-[12px] px-[18px]">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{getEmoji(find.category)}</span>
-                      <div className="flex-1">
-                        <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
-                          {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
-                        </div>
-                        <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
-                          {find.category}
+                  </th>
+                  <th className="text-left py-[10px] px-[18px] min-w-[180px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
+                  <th className="text-left py-[10px] px-[18px] min-w-[90px] text-[10px] uppercase tracking-[.08em] font-medium hidden md:table-cell">source</th>
+                  <th className="text-right py-[10px] px-[10px] w-12 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
+                  <th className="text-right py-[10px] px-[12px] w-14 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
+                  <th className="text-right py-[10px] px-[12px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
+                  <th className="text-left py-[10px] px-[12px] min-w-[160px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
+                </tr>
+              </thead>
+              <tbody>
+              {filteredFinds.map((find) => {
+                const margin = calculateMargin(find.cost_gbp, find.asking_price_gbp)
+                const daysListed = getDaysListed(find)
+                const isAged30 = find.status === 'listed' && daysListed >= 30
+                const isAged60 = find.status === 'listed' && daysListed >= 60
+                return (
+                  <tr
+                    key={find.id}
+                    onClick={() => router.push(`/inventory/${find.id}`)}
+                    className="cursor-pointer transition-colors"
+                    style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <td className="py-[12px] px-[18px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(find.id)}
+                        onChange={() => toggleItemSelection(find.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-[12px] px-[18px]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{getEmoji(find.category)}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
+                            {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
+                          </div>
+                          <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
+                            {find.category}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-[12px] px-[18px] text-[11px]" style={{ color: '#6B7D6A' }}>
-                    {find.source_name || ''}
-                  </td>
-                  <td className="py-[12px] px-[18px] font-mono text-[12px]" style={{ color: '#4A5E48' }}>
-                    £{find.cost_gbp}
-                  </td>
-                  <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
-                    {find.asking_price_gbp ? `£${find.asking_price_gbp}` : '—'}
-                  </td>
-                  <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
-                    {margin !== null ? `${margin}%` : '—'}
-                  </td>
-                  <td className="py-[12px] px-[12px]">
-                    {(find.platform_fields as any)?.ebay?.status === 'live' ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge status="listed" />
-                        {isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
-                            60d+ no sale
-                          </span>
-                        )}
-                        {isAged30 && !isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
-                            30d+ no sale
-                          </span>
-                        )}
-                        <a
-                          href={(find.platform_fields as any).ebay.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] underline underline-offset-2 transition-colors"
-                          style={{ color: '#5A7A57' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Live on eBay →
-                        </a>
-                      </div>
-                    ) : find.status === 'draft' ? (
-                      <div className="flex flex-col gap-2">
-                        <Badge status="draft" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push('/add-find')
-                          }}
-                          className="text-[11px] underline underline-offset-2 transition-colors text-left"
-                          style={{ color: '#5A7A57' }}
-                        >
-                          complete & list →
-                        </button>
-                        {ebayConnected && (
+                    </td>
+                    <td className="py-[12px] px-[18px] text-[11px]" style={{ color: '#6B7D6A' }}>
+                      {find.source_name || ''}
+                    </td>
+                    <td className="py-[12px] px-[18px] font-mono text-[12px]" style={{ color: '#4A5E48' }}>
+                      £{find.cost_gbp}
+                    </td>
+                    <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
+                      {find.asking_price_gbp ? `£${find.asking_price_gbp}` : '—'}
+                    </td>
+                    <td className="py-[12px] px-[18px] font-mono text-[12px] text-right" style={{ color: '#1E2E1C' }}>
+                      {margin !== null ? `${margin}%` : '—'}
+                    </td>
+                    <td className="py-[12px] px-[12px]">
+                      {(find.platform_fields as any)?.ebay?.status === 'live' ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge status="listed" />
+                          {isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                              60d+ no sale
+                            </span>
+                          )}
+                          {isAged30 && !isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                              30d+ no sale
+                            </span>
+                          )}
+                          <a
+                            href={(find.platform_fields as any).ebay.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] underline underline-offset-2 transition-colors"
+                            style={{ color: '#5A7A57' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Live on eBay →
+                          </a>
+                        </div>
+                      ) : find.status === 'draft' ? (
+                        <div className="flex flex-col gap-2">
+                          <Badge status="draft" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push('/add-find')
+                            }}
+                            className="text-[11px] underline underline-offset-2 transition-colors text-left"
+                            style={{ color: '#5A7A57' }}
+                          >
+                            complete & list →
+                          </button>
+                          {ebayConnected && (
+                            <button
+                              onClick={(e) => handleListOnEbay(find.id, e)}
+                              disabled={publishingFindId === find.id}
+                              className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50 text-left whitespace-nowrap"
+                              style={{ color: '#B5813A' }}
+                            >
+                              {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
+                            </button>
+                          )}
+                          {publishError[find.id] && (
+                            <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
+                          )}
+                        </div>
+                      ) : (find.platform_fields as any)?.ebay?.status === 'live_dup' ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge status="listed" />
+                          {isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                              60d+ no sale
+                            </span>
+                          )}
+                          {isAged30 && !isAged60 && (
+                            <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                              30d+ no sale
+                            </span>
+                          )}
+                          <a
+                            href={(find.platform_fields as any).ebay.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] underline underline-offset-2 transition-colors"
+                            style={{ color: '#5A7A57' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Live on eBay →
+                          </a>
+                        </div>
+                      ) : ebayConnected && find.status !== 'sold' ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
+                            {isAged60 && (
+                              <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
+                                60d+ no sale
+                              </span>
+                            )}
+                            {isAged30 && !isAged60 && (
+                              <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
+                                30d+ no sale
+                              </span>
+                            )}
+                          </div>
                           <button
                             onClick={(e) => handleListOnEbay(find.id, e)}
                             disabled={publishingFindId === find.id}
-                            className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50 text-left whitespace-nowrap"
-                            style={{ color: '#B5813A' }}
+                            className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50"
+                            style={{ color: '#5A7A57' }}
                           >
                             {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
                           </button>
-                        )}
-                        {publishError[find.id] && (
-                          <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
-                        )}
-                      </div>
-                    ) : (find.platform_fields as any)?.ebay?.status === 'live_dup' ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge status="listed" />
-                        {isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
-                            60d+ no sale
-                          </span>
-                        )}
-                        {isAged30 && !isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
-                            30d+ no sale
-                          </span>
-                        )}
-                        <a
-                          href={(find.platform_fields as any).ebay.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] underline underline-offset-2 transition-colors"
-                          style={{ color: '#5A7A57' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Live on eBay →
-                        </a>
-                      </div>
-                    ) : ebayConnected && find.status !== 'sold' ? (
-                      <div className="flex flex-col gap-2">
+                          {publishError[find.id] && (
+                            <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
+                          )}
+                        </div>
+                      ) : (
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
                           {isAged60 && (
@@ -1063,40 +1121,62 @@ export default function InventoryPage() {
                             </span>
                           )}
                         </div>
-                        <button
-                          onClick={(e) => handleListOnEbay(find.id, e)}
-                          disabled={publishingFindId === find.id}
-                          className="text-[11px] underline underline-offset-2 transition-colors disabled:opacity-50"
-                          style={{ color: '#5A7A57' }}
-                        >
-                          {publishingFindId === find.id ? 'Listing...' : 'List on eBay →'}
-                        </button>
-                        {publishError[find.id] && (
-                          <div className="text-[10px] text-red-600 mt-1">{publishError[find.id]}</div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge status={find.status as 'listed' | 'on_hold' | 'sold'} />
-                        {isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-red-100 text-red-700">
-                            60d+ no sale
-                          </span>
-                        )}
-                        {isAged30 && !isAged60 && (
-                          <span className="inline-block px-2 py-1 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">
-                            30d+ no sale
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-            </tbody>
-          </table>
-        </Panel>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              </tbody>
+            </table>
+          </Panel>
+
+          {/* Pagination controls */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between py-4 px-6 bg-[#F5F0E8] rounded border" style={{ borderColor: 'rgba(61,92,58,.22)' }}>
+              <div className="text-sm" style={{ color: '#6B7D6A' }}>
+                {totalCount === 1 ? '1 find' : `${totalCount} finds`}
+                {planLimit !== null && totalCount > planLimit && (
+                  <span style={{ color: '#B5813A' }}> (unlimited on Nester)</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentOffset === 0}
+                  className="px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'transparent',
+                    borderWidth: '1px',
+                    borderColor: 'rgba(61,92,58,.22)',
+                    color: '#6B7D6A',
+                  }}
+                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm font-medium" style={{ color: '#6B7D6A' }}>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentOffset + LIMIT >= totalCount}
+                  className="px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'transparent',
+                    borderWidth: '1px',
+                    borderColor: 'rgba(61,92,58,.22)',
+                    color: '#6B7D6A',
+                  }}
+                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Empty state */}

@@ -9,7 +9,7 @@ import type { Find } from '@/types'
 /**
  * GET /api/finds
  * Fetch all finds for the authenticated user
- * Query params: status?, source_type?, limit?, offset?
+ * Query params: status?, source_type?, search?, limit?, offset?
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,12 +22,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const sourceType = searchParams.get('source_type')
+    const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     let query = supabase
       .from('finds')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -37,6 +38,11 @@ export async function GET(request: NextRequest) {
 
     if (sourceType && sourceType !== 'all') {
       query = query.eq('source_type', sourceType)
+    }
+
+    if (search) {
+      // Search by name or category
+      query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%,source_name.ilike.%${search}%`)
     }
 
     const { data, error, count } = await query.range(offset, offset + limit - 1)
@@ -101,14 +107,15 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest(validation.error)
     }
 
-    // Check plan limits
+    // Check plan limits (skip if skip_limit_check flag is set, used for imports)
+    const skipLimitCheck = (body as any).skip_limit_check === true
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan, finds_this_month')
       .eq('user_id', user.id)
       .single()
 
-    if (profile) {
+    if (profile && !skipLimitCheck) {
       const planLimits: Record<string, number | null> = {
         free: 10,
         nester: 100,
@@ -165,8 +172,8 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.internalError()
     }
 
-    // Increment finds_this_month on profile
-    if (profile) {
+    // Increment finds_this_month on profile (skip if import)
+    if (profile && !skipLimitCheck) {
       await supabase
         .from('profiles')
         .update({ finds_this_month: profile.finds_this_month + 1 })
