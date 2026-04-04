@@ -73,7 +73,7 @@ export async function POST(
       return ApiResponseHelper.badRequest('marketplace is required')
     }
 
-    const validMarketplaces: Platform[] = ['vinted', 'ebay', 'etsy', 'shopify']
+    const validMarketplaces: Platform[] = ['vinted', 'ebay', 'etsy', 'shopify', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed']
     if (!validMarketplaces.includes(body.marketplace)) {
       return ApiResponseHelper.badRequest(
         `Invalid marketplace. Must be one of: ${validMarketplaces.join(', ')}`

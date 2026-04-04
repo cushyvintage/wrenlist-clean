@@ -4,7 +4,9 @@ import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import type { Platform } from '@/types'
 
-const SUPPORTED_MARKETPLACES: Platform[] = ['ebay', 'shopify', 'vinted']
+// eBay and Shopify publish via API; all others queue for extension
+const API_MARKETPLACES = new Set(['ebay', 'shopify'])
+const SUPPORTED_MARKETPLACES: Platform[] = ['ebay', 'shopify', 'vinted', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed', 'etsy']
 
 interface MarketplaceResult {
   ok: boolean
@@ -62,6 +64,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   for (const marketplace of marketplaces) {
     try {
       if (marketplace === 'ebay') {
+        // eBay — direct API publish
         const res = await fetch(`${baseUrl}/api/ebay/publish`, {
           method: 'POST',
           headers: {
@@ -77,6 +80,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results.ebay = { ok: false, error: data.error || data.data?.message || 'eBay publish failed' }
         }
       } else if (marketplace === 'shopify') {
+        // Shopify — direct API publish
         const res = await fetch(`${baseUrl}/api/shopify/publish`, {
           method: 'POST',
           headers: {
@@ -91,14 +95,14 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         } else {
           results.shopify = { ok: false, error: data.error || 'Shopify publish failed' }
         }
-      } else if (marketplace === 'vinted') {
-        // Queue for extension — upsert needs_publish row
+      } else {
+        // All other marketplaces — queue for extension via publish-queue
         const { error: queueError } = await supabase
           .from('product_marketplace_data')
           .upsert(
             {
               find_id: findId,
-              marketplace: 'vinted',
+              marketplace,
               status: 'needs_publish',
               updated_at: new Date().toISOString(),
             },
@@ -106,9 +110,9 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           )
 
         if (queueError) {
-          results.vinted = { ok: false, error: `Failed to queue: ${queueError.message}` }
+          results[marketplace] = { ok: false, error: `Failed to queue: ${queueError.message}` }
         } else {
-          results.vinted = { ok: true, listingUrl: undefined }
+          results[marketplace] = { ok: true, listingUrl: undefined }
         }
       }
     } catch (err) {
