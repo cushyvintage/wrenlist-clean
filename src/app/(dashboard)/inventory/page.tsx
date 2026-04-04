@@ -1046,7 +1046,21 @@ export default function InventoryPage() {
                     </td>
                     <td className="py-[12px] px-[18px]">
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{getEmoji(find.category)}</span>
+                        {find.photos && find.photos.length > 0 ? (
+                          <img
+                            src={find.photos[0]}
+                            alt={find.name || 'item'}
+                            className="w-10 h-10 rounded object-cover flex-shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                              if (fallback) fallback.style.display = 'block'
+                            }}
+                          />
+                        ) : null}
+                        <span className="text-lg flex-shrink-0" style={{ display: !find.photos || find.photos.length === 0 ? 'block' : 'none' }}>
+                          {getEmoji(find.category)}
+                        </span>
                         <div className="flex-1">
                           <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
                             {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}

@@ -51,7 +51,17 @@ export default function PlatformConnectPage() {
   const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
   const [vintedActionError, setVintedActionError] = useState<string | null>(null)
+  const [showDebug, setShowDebug] = useState(false)
 
+
+  // Check if debug panel should show (development or ?debug=1 param)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      setShowDebug(true)
+    } else {
+      setShowDebug(new URLSearchParams(window.location.search).has('debug'))
+    }
+  }, [])
 
   // Check Vinted session via the Wrenlist extension
   const checkVintedSession = async (): Promise<void> => {
@@ -808,7 +818,10 @@ export default function PlatformConnectPage() {
 
             {(vintedImport.state.phase === "fetching" || vintedImport.state.phase === "importing") && (
               <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm text-amber-800">
-                Fetching your Vinted listings... this can take 2-4 minutes for large wardrobes. Do not close this tab.
+                {vintedImport.state.phase === "fetching"
+                  ? "Fetching your Vinted listings from Vinted — this takes 1–2 minutes. Do not close this tab."
+                  : `Importing into Wrenlist — ${vintedImport.state.imported} of ${vintedImport.state.total} done. Do not close this tab.`
+                }
               </div>
             )}
 
@@ -869,7 +882,7 @@ export default function PlatformConnectPage() {
               </button>
             </div>
 
-            <VintedDebugPanel extensionId="nblnainobllgbjkdkpeodjpopkgnpfgb" />
+            {showDebug && <VintedDebugPanel extensionId="nblnainobllgbjkdkpeodjpopkgnpfgb" />}
           </div>
         )}
       </Panel>

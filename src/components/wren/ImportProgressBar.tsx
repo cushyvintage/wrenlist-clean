@@ -49,7 +49,7 @@ export function ImportProgressBar({ state }: ImportProgressBarProps) {
       {/* Done summary */}
       {state.phase === 'done' && (
         <div className="text-xs text-green-700 font-medium">
-          ✓ {state.imported} imported{state.skipped > 0 ? `, ${state.skipped} skipped` : ''}
+          ✓ {state.imported} imported{state.skipped > 0 ? `, ${state.skipped} already in Wrenlist` : ''}
           {state.errors > 0 && `, ${state.errors} error${state.errors !== 1 ? 's' : ''}`}
         </div>
       )}
