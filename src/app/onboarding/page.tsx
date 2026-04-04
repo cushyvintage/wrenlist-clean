@@ -1,288 +1,262 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/services/supabase'
-
-type OnboardingStep = 'welcome' | 'marketplace' | 'first-find'
-
-interface ExtensionStatus {
-  installed: boolean
-  version?: string
-}
+import { useAuthContext } from '@/contexts/AuthContext'
+import { unwrapApiResponse } from '@/lib/api-utils'
+import type { Profile } from '@/types'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [step, setStep] = useState<OnboardingStep>('welcome')
-  const [firstName, setFirstName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [extensionStatus, setExtensionStatus] = useState<ExtensionStatus>({ installed: false })
+  const { user } = useAuthContext()
+  const [step, setStep] = useState(1)
+  const [displayName, setDisplayName] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Check if user is authenticated and has completed onboarding
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          router.push('/login')
-          return
-        }
-
-        // Get profile to check onboarding status and name
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('has_completed_onboarding, full_name')
-          .eq('user_id', user.id)
-          .single()
-
-        if (profile?.has_completed_onboarding) {
-          router.push('/dashboard')
-          return
-        }
-
-        if (profile?.full_name) {
-          const firstPart = profile.full_name.split(' ')[0]
-          setFirstName(firstPart)
-        }
-      } catch (err) {
-        console.error('Error checking user:', err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkUser()
-  }, [router])
-
-  // Check for extension
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkExtension = () => {
-        try {
-          chrome.runtime.sendMessage(
-            'YOUR_EXTENSION_ID',
-            { action: 'ping' },
-            (response) => {
-              if (response && response.success) {
-                setExtensionStatus({ installed: true, version: response.version })
-              }
-            }
-          )
-        } catch (err) {
-          setExtensionStatus({ installed: false })
-        }
-      }
-
-      checkExtension()
-    }
+    document.title = 'Get Started | Wrenlist'
   }, [])
 
-  const handleSkipMarketplace = () => {
-    setStep('first-find')
+  // Fetch current profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/profiles')
+        const result = await res.json()
+        const profile = unwrapApiResponse<Profile>(result)
+        setDisplayName(profile.full_name || '')
+      } catch (err) {
+        console.error('Failed to fetch profile:', err)
+      }
+    }
+
+    if (user) {
+      fetchProfile()
+    }
+  }, [user])
+
+  const handleContinue = () => {
+    setStep(step + 1)
   }
 
-  const handleCompleteOnboarding = async () => {
-    setIsSaving(true)
+  const handleSkip = () => {
+    setStep(step + 1)
+  }
+
+  const handleComplete = async () => {
+    setIsLoading(true)
     setError(null)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      // Update display name if changed
+      if (displayName.trim()) {
+        const updateRes = await fetch('/api/profiles', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name: displayName.trim() }),
+        })
 
-      await supabase
-        .from('profiles')
-        .update({ has_completed_onboarding: true })
-        .eq('user_id', user.id)
+        if (!updateRes.ok) {
+          throw new Error('Failed to update profile')
+        }
+      }
 
+      // Mark onboarding as complete
+      const onboardRes = await fetch('/api/profiles/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!onboardRes.ok) {
+        throw new Error('Failed to complete onboarding')
+      }
+
+      // Redirect to dashboard
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete onboarding')
-      setIsSaving(false)
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setError(msg)
+      setIsLoading(false)
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage mx-auto mb-4"></div>
-        <p className="text-ink-lt">Setting up your account...</p>
-      </div>
-    )
-  }
+  const progressPercent = (step / 3) * 100
 
   return (
-    <div>
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
-        <p className="text-ink-lt text-sm">The operating system for thrifters</p>
+    <div className="min-h-screen bg-cream flex flex-col">
+      {/* Progress Bar */}
+      <div className="h-1 bg-sage/20">
+        <div
+          className="h-full bg-sage transition-all duration-300"
+          style={{ width: `${progressPercent}%` }}
+        />
       </div>
 
-      {/* Progress indicator */}
-      <div className="mb-10 flex items-center justify-center gap-2">
-        {(['welcome', 'marketplace', 'first-find'] as const).map((s, idx) => (
-          <div key={s} className="flex items-center">
-            <div
-              className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                step === s
-                  ? 'bg-sage'
-                  : (['welcome', 'marketplace', 'first-find'].indexOf(step) > idx ? 'bg-sage/30' : 'bg-sage/10')
-              }`}
-            />
-            {idx < 2 && <div className="w-8 h-px mx-1.5 bg-sage/10" />}
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl">
+          {/* Step Indicator */}
+          <div className="mb-8 text-center">
+            <p className="text-sm text-sage mb-4">Step {step} of 3</p>
+            <h1 className="text-3xl font-bold text-ink mb-2">
+              {step === 1 && 'Connect a Platform'}
+              {step === 2 && 'Add Your First Find'}
+              {step === 3 && 'You\'re All Set!'}
+            </h1>
+            <p className="text-sage text-lg">
+              {step === 1 && 'Start selling on your favourite marketplace'}
+              {step === 2 && 'Create your first product listing'}
+              {step === 3 && 'Complete your profile'}
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Step: Welcome */}
-      {step === 'welcome' && (
-        <div className="bg-white border border-sage/14 rounded-lg p-8">
-          <h2 className="text-2xl font-serif text-ink mb-3">
-            Welcome{firstName ? `, ${firstName}` : ''}
-          </h2>
-          <p className="text-ink-lt text-sm mb-8 leading-relaxed">
-            Track your finds, price with confidence, list everywhere at once.
-          </p>
+          {/* Step Content */}
+          <div className="bg-white rounded-lg border-2 border-sage/30 p-8 mb-8">
+            {step === 1 && (
+              <div className="space-y-6">
+                <p className="text-sage mb-6">
+                  Connect your marketplace account to start listing items.
+                </p>
 
-          <button
-            onClick={() => setStep('marketplace')}
-            className="w-full px-4 py-2.5 bg-sage text-white hover:bg-sage-dk rounded font-medium transition-colors"
-          >
-            Let's set you up →
-          </button>
-        </div>
-      )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Vinted Card */}
+                  <a
+                    href="/platform-connect"
+                    className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
+                  >
+                    <div className="text-3xl mb-3">🎨</div>
+                    <h3 className="font-semibold text-ink mb-2">Vinted</h3>
+                    <p className="text-sm text-sage">Fast, mobile-first marketplace for second-hand items</p>
+                    <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
+                      Connect
+                      <span className="ml-2">→</span>
+                    </div>
+                  </a>
 
-      {/* Step: Marketplace Connect */}
-      {step === 'marketplace' && (
-        <div className="bg-white border border-sage/14 rounded-lg p-8">
-          <h2 className="text-2xl font-serif text-ink mb-2">Connect a <span className="italic">marketplace</span></h2>
-          <p className="text-ink-lt text-sm mb-6">
-            Link where you sell to automatically sync your listings and track sales.
-          </p>
-
-          <div className="space-y-3 mb-6">
-            {/* Vinted */}
-            <div className="p-4 border border-sage/14 rounded hover:bg-cream/50 transition cursor-pointer">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 flex items-center justify-center text-lg">👚</div>
-                <div className="font-medium text-ink">Vinted</div>
+                  {/* eBay Card */}
+                  <a
+                    href="/platform-connect"
+                    className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
+                  >
+                    <div className="text-3xl mb-3">🏪</div>
+                    <h3 className="font-semibold text-ink mb-2">eBay UK</h3>
+                    <p className="text-sm text-sage">Global marketplace with auction and fixed-price listings</p>
+                    <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
+                      Connect
+                      <span className="ml-2">→</span>
+                    </div>
+                  </a>
+                </div>
               </div>
-              <p className="text-xs text-ink-lt">
-                Requires the Wrenlist{' '}
-                <a
-                  href="https://chromewebstore.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sage hover:text-sage-dk"
+            )}
+
+            {step === 2 && (
+              <div className="space-y-6">
+                <p className="text-sage mb-6">
+                  Create or import your first product listing to get started.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Create New Find */}
+                  <a
+                    href="/add-find"
+                    className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
+                  >
+                    <div className="text-3xl mb-3">➕</div>
+                    <h3 className="font-semibold text-ink mb-2">Create New Find</h3>
+                    <p className="text-sm text-sage">List a new item from scratch</p>
+                    <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
+                      Start
+                      <span className="ml-2">→</span>
+                    </div>
+                  </a>
+
+                  {/* Bulk Import */}
+                  <a
+                    href="/bulk-upload"
+                    className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
+                  >
+                    <div className="text-3xl mb-3">📤</div>
+                    <h3 className="font-semibold text-ink mb-2">Import Listings</h3>
+                    <p className="text-sm text-sage">Upload multiple items via CSV</p>
+                    <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
+                      Import
+                      <span className="ml-2">→</span>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-6">
+                <p className="text-sage mb-6">
+                  Add a display name so buyers know who they're buying from.
+                </p>
+
+                <div>
+                  <label htmlFor="displayName" className="block text-sm font-medium text-ink mb-2">
+                    Display Name
+                  </label>
+                  <input
+                    id="displayName"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="e.g. CushyVintage"
+                    className="w-full px-4 py-3 border-2 border-sage/30 rounded-lg focus:outline-none focus:border-sage focus:ring-2 focus:ring-sage/20 text-ink placeholder-sage/50"
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 justify-between">
+            {step < 3 && (
+              <>
+                <button
+                  onClick={handleSkip}
+                  className="px-6 py-3 text-sage hover:text-ink transition-colors font-medium"
                 >
-                  browser extension
-                </a>
-              </p>
-            </div>
+                  Skip
+                </button>
+                <button
+                  onClick={handleContinue}
+                  className="px-8 py-3 bg-sage text-cream rounded-lg hover:bg-sage-dark transition-colors font-medium"
+                >
+                  Continue
+                </button>
+              </>
+            )}
 
-            {/* eBay */}
-            <div className="p-4 border border-sage/14 rounded hover:bg-cream/50 transition cursor-pointer opacity-60">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 flex items-center justify-center text-lg">🛒</div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink">eBay</span>
-                  <span className="px-2 py-0.5 text-xs font-semibold text-amber bg-amber-50 rounded">
-                    coming soon
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-ink-lt">Connect with OAuth to sync your eBay listings</p>
-            </div>
-
-            {/* Etsy */}
-            <div className="p-4 border border-sage/14 rounded hover:bg-cream/50 transition cursor-pointer opacity-60">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 flex items-center justify-center text-lg">🎨</div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink">Etsy</span>
-                  <span className="px-2 py-0.5 text-xs font-semibold text-amber bg-amber-50 rounded">
-                    coming soon
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-ink-lt">Connect to reach vintage enthusiasts on Etsy</p>
-            </div>
-
-            {/* Shopify */}
-            <div className="p-4 border border-sage/14 rounded hover:bg-cream/50 transition cursor-pointer opacity-60">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 flex items-center justify-center text-lg">🏪</div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink">Shopify</span>
-                  <span className="px-2 py-0.5 text-xs font-semibold text-amber bg-amber-50 rounded">
-                    coming soon
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-ink-lt">Crosslist to your own Shopify store</p>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('welcome')}
-              className="flex-1 px-4 py-2 border border-sage/14 rounded font-medium text-ink hover:bg-cream transition"
-            >
-              ← Back
-            </button>
-            <button
-              onClick={handleSkipMarketplace}
-              className="flex-1 px-4 py-2 text-sage hover:text-sage-dk font-medium transition"
-            >
-              I'll connect later →
-            </button>
+            {step === 3 && (
+              <>
+                <button
+                  onClick={handleSkip}
+                  className="px-6 py-3 text-sage hover:text-ink transition-colors font-medium"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleComplete}
+                  disabled={isLoading}
+                  className="px-8 py-3 bg-sage text-cream rounded-lg hover:bg-sage-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Completing...' : 'Get Started'}
+                </button>
+              </>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Step: First Find */}
-      {step === 'first-find' && (
-        <div className="bg-white border border-sage/14 rounded-lg p-8">
-          <h2 className="text-2xl font-serif text-ink mb-3">You're all <span className="italic">set.</span></h2>
-          <p className="text-ink-lt text-sm mb-8">
-            Add your first find to start tracking your inventory and pricing.
-          </p>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/add-find')}
-              className="flex-1 px-4 py-2.5 bg-sage text-white hover:bg-sage-dk rounded font-medium transition-colors"
-            >
-              Add my first find →
-            </button>
-            <button
-              onClick={handleCompleteOnboarding}
-              disabled={isSaving}
-              className="flex-1 px-4 py-2.5 border border-sage/14 text-ink hover:bg-cream rounded font-medium transition-colors disabled:opacity-50"
-            >
-              {isSaving ? 'Loading...' : 'Explore dashboard →'}
-            </button>
-          </div>
-
-          {/* Back button */}
-          <button
-            onClick={() => setStep('marketplace')}
-            className="w-full mt-3 px-4 py-2 text-sage hover:text-sage-dk font-medium text-sm transition"
-          >
-            ← Back
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   )
 }

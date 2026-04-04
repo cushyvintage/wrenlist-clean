@@ -94,6 +94,49 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(dashUrl)
   }
 
+  // If user is authenticated and NOT on onboarding page, check if they've completed onboarding
+  // Skip check for onboarding page itself, API routes, and static assets
+  if (
+    session &&
+    !pathname.startsWith('/onboarding') &&
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/_next') &&
+    !pathname.startsWith('/auth') &&
+    pathname !== '/favicon.ico'
+  ) {
+    try {
+      // Fetch user profile to check onboarding_completed
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (supabaseUrl && anonKey) {
+        const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${session.user.id}&select=onboarding_completed`, {
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
+
+        if (profileRes.ok) {
+          const profiles = await profileRes.json()
+          if (profiles.length > 0) {
+            const profile = profiles[0]
+            // If onboarding not completed, redirect to onboarding page
+            if (profile.onboarding_completed === false) {
+              const onboardingUrl = new URL('/onboarding', req.url)
+              return NextResponse.redirect(onboardingUrl)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Log error but don't block navigation on fetch failures
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Onboarding check error:', error)
+      }
+    }
+  }
+
   return res
 }
 

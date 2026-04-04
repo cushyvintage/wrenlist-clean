@@ -39,6 +39,7 @@ export interface Profile {
   stripe_customer_id: string | null
   finds_this_month: number
   finds_reset_at: string
+  onboarding_completed: boolean
   created_at: string
   updated_at: string
 }

@@ -30,3 +30,34 @@ export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/profiles error:', error) }    return ApiResponseHelper.internalError()
   }
 }
+
+/**
+ * PATCH /api/profiles
+ * Update the authenticated user's profile
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getServerUser()
+    if (!user) {
+      return ApiResponseHelper.unauthorized()
+    }
+
+    const body = await request.json()
+    const supabase = await createSupabaseServerClient()
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(body)
+      .eq('user_id', user.id)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError('Failed to update profile')
+    }
+
+    return ApiResponseHelper.success({ data })
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production')  { console.error('PATCH /api/profiles error:', error) }    return ApiResponseHelper.internalError()
+  }
+}
