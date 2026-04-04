@@ -301,33 +301,47 @@ export default function PlatformConnectPage() {
     vintedImport.reset()
 
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.connect) {
         throw new Error('Extension not available')
       }
 
-      // Show fetching state immediately so progress bar appears
       vintedImport.setFetching('Fetching your Vinted listings...')
 
-      // Extension fetches + imports Vinted listings server-side
-      // 200 items takes ~3-4 mins for large wardrobes. Timeout at 6 mins.
-      const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success: number; skipped: number; errors: number; total: number } }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — Vinted took too long to respond. Try again or check you\'re logged in to Vinted.' }), 360000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError) {
-            resolve({ success: false, message: chrome.runtime.lastError.message })
-          } else {
-            resolve(response || { success: false, message: 'No response from extension' })
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timed out — Vinted took too long. Try again.')), 360000)
+
+        const port = chrome.runtime.connect(EXTENSION_ID, { name: 'batch_import_vinted' })
+
+        port.postMessage({ action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin })
+
+        port.onMessage.addListener((msg) => {
+          if (msg.type === 'progress') {
+            // Extension reporting progress
+            vintedImport.runImportProgress(msg.imported, msg.skipped, msg.errors, msg.total)
+          } else if (msg.type === 'fetching') {
+            vintedImport.setFetching(msg.message || 'Fetching your Vinted listings...')
+          } else if (msg.type === 'done') {
+            clearTimeout(timeout)
+            const r = msg.results || { success: 0, skipped: 0, errors: 0, total: 0 }
+            vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
+            port.disconnect()
+            resolve()
+          } else if (msg.type === 'error') {
+            clearTimeout(timeout)
+            reject(new Error(msg.message || 'Import failed'))
+            port.disconnect()
           }
         })
+
+        port.onDisconnect.addListener(() => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          }
+          // If port disconnected without done/error, resolve gracefully
+          resolve()
+        })
       })
-
-      if (!extensionResponse.success) {
-        throw new Error(extensionResponse.message || 'Failed to import from Vinted')
-      }
-
-      const r = extensionResponse.results || { success: 0, skipped: 0, errors: 0, total: 0 }
-      vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
       vintedImport.setError(message)

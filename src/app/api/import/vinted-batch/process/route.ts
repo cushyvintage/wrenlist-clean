@@ -53,11 +53,15 @@ export async function POST(request: NextRequest) {
         const catPrefix = category.slice(0, 3).toUpperCase()
         const sku = `VT-${catPrefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`
 
-        // Extract photo URLs (raw Vinted CDN — backfill will mirror to Storage later)
+        // Extract photo URLs (raw Vinted CDN — will mirror to Storage after insert)
         const photos: string[] = (item.photos || [])
-          .map((p: any) => p.full_size_url || p.url)
+          .map((p: any) => typeof p === 'string' ? p : (p.full_size_url || p.url || ''))
           .filter(Boolean)
           .slice(0, 5)
+
+        const askingPrice = typeof item.price === 'number'
+          ? item.price
+          : parseFloat(item.price?.amount || String(item.price_numeric || 0))
 
         const { data: find, error: findError } = await supabase
           .from('finds')
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
             category,
             brand: brand !== 'no brand' ? brand : null,
             condition,
-            asking_price_gbp: parseFloat(item.price?.amount || String(item.price_numeric || 0)),
+            asking_price_gbp: askingPrice,
             photos,
             sku,
             status: 'listed',
@@ -83,15 +87,57 @@ export async function POST(request: NextRequest) {
 
         if (findError || !find) { errors++; continue }
 
+        const listingPrice = typeof item.price === 'number'
+          ? item.price
+          : parseFloat(item.price?.amount || String(item.price_numeric || 0))
+
         await supabase.from('product_marketplace_data').insert({
           find_id: find.id,
           marketplace: 'vinted',
           platform_listing_id: String(item.id),
           platform_listing_url: `https://www.vinted.co.uk/items/${item.id}`,
           platform_category_id: String(item.catalog_id || ''),
-          listing_price: parseFloat(item.price?.amount || item.price_numeric || '0'),
+          listing_price: listingPrice,
           status: 'listed',
         })
+
+        // Mirror photos to Supabase Storage (non-blocking)
+        if (photos && photos.length > 0) {
+          try {
+            const storedUrls: string[] = []
+            for (let i = 0; i < photos.length; i++) {
+              const photoUrl = photos[i]
+              if (!photoUrl) { continue }
+              try {
+                const imgRes = await fetch(photoUrl)
+                if (!imgRes.ok) { storedUrls.push(photoUrl); continue }
+                const buffer = await imgRes.arrayBuffer()
+                const ext = photoUrl.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg'
+                const path = `find-photos/${user.id}/${sku}-${i}.${ext}`
+
+                const { error: uploadErr } = await supabase.storage
+                  .from('find-photos')
+                  .upload(path, buffer, { contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`, upsert: true })
+
+                if (uploadErr) { storedUrls.push(photoUrl); continue }
+
+                const { data: { publicUrl } } = supabase.storage
+                  .from('find-photos')
+                  .getPublicUrl(path)
+
+                storedUrls.push(publicUrl)
+              } catch {
+                storedUrls.push(photoUrl)
+              }
+            }
+
+            if (storedUrls.length > 0) {
+              await supabase.from('finds').update({ photos: storedUrls }).eq('id', find.id)
+            }
+          } catch {
+            // Photo mirror failed — leave raw URLs in place
+          }
+        }
 
         imported++
       } catch { errors++ }

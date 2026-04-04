@@ -157,5 +157,17 @@ export function useMarketplaceImport() {
     setState({ phase: 'error', total: 0, imported: 0, skipped: 0, errors: 0, message })
   }, [])
 
-  return { state, runImport, reset, setFetching, setDone, setError }
+  const runImportProgress = useCallback((imported: number, skipped: number, errors: number, total: number) => {
+    setState((prev) => ({
+      ...prev,
+      phase: 'importing',
+      imported,
+      skipped,
+      errors,
+      total: total || prev.total,
+      message: `Importing ${imported} of ${total || prev.total}...`,
+    }))
+  }, [])
+
+  return { state, runImport, reset, setFetching, setDone, setError, runImportProgress }
 }
