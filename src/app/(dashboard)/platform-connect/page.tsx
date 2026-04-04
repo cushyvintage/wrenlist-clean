@@ -305,35 +305,28 @@ export default function PlatformConnectPage() {
         throw new Error('Extension not available')
       }
 
-      const extensionResponse = await new Promise<{ success: boolean; listings?: any[] }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false }), 60000)
+      // Extension fetches listings AND posts them to /api/import/vinted-batch/process itself
+      // We just fire-and-forget and wait for it to report back success/count
+      const extensionResponse = await new Promise<{ success: boolean; message?: string; results?: { success?: number; skipped?: number; errors?: number } }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ success: false, message: 'Timed out — check Vinted is open and you are logged in' }), 120000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'batch_import_vinted', limit: 200, wrenlistBaseUrl: window.location.origin }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) {
-            resolve({ success: false })
+            resolve({ success: false, message: chrome.runtime.lastError.message })
           } else {
-            resolve(response || { success: false })
+            resolve(response || { success: false, message: 'No response from extension' })
           }
         })
       })
 
-      if (!extensionResponse.success || !extensionResponse.listings) {
-        throw new Error('Failed to fetch Vinted listings from extension')
+      if (!extensionResponse.success) {
+        throw new Error(extensionResponse.message || 'Failed to import from Vinted')
       }
 
-      // Send listings to backend for import
-      const apiResponse = await fetch('/api/import/vinted-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listings: extensionResponse.listings }),
-      })
-
-      if (!apiResponse.ok) {
-        throw new Error('Failed to import listings')
-      }
-
-      const result = await apiResponse.json()
-      setVintedImportResult(result.data)
+      // Map extension result format to our UI format
+      const imported = extensionResponse.results?.success ?? 0
+      const skipped = extensionResponse.results?.skipped ?? 0
+      setVintedImportResult({ imported, skipped, errors: extensionResponse.results?.errors ?? 0 })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
       setVintedActionError(message)
