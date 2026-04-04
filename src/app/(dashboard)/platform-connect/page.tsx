@@ -72,7 +72,7 @@ export default function PlatformConnectPage() {
         return
       }
 
-      const response = await new Promise<{ loggedIn: boolean; username?: string; tld?: string }>((resolve) => {
+      const response = await new Promise<{ loggedIn: boolean; username?: string; userId?: string; tld?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'get_vinted_session' }, (response) => {
           clearTimeout(timeout)
@@ -88,6 +88,20 @@ export default function PlatformConnectPage() {
       if (response.loggedIn && response.username) {
         setVintedConnected(true)
         setVintedUsername(response.username)
+
+        // Save Vinted connection to database for persistence
+        try {
+          await fetch('/api/vinted/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vintedUsername: response.username,
+              vintedUserId: response.userId || response.username, // Fallback to username if userId missing
+            }),
+          })
+        } catch {
+          // Silently fail — username display still works from extension state
+        }
       } else {
         setVintedConnected(false)
       }

@@ -75,6 +75,21 @@ export async function POST(request: NextRequest) {
           category = VINTED_TO_CATEGORY[item.vintedMetadata.catalog_id as number] ?? 'other'
         }
 
+        // If still "other", try text-based fallback from item.category
+        if (category === 'other' && item.category) {
+          const cat = String(item.category).toLowerCase()
+          if (cat.includes('ceram') || cat.includes('potter') || cat.includes('china') || cat.includes('porcelain')) category = 'ceramics'
+          else if (cat.includes('glass')) category = 'glassware'
+          else if (cat.includes('book') || cat.includes('fiction') || cat.includes('novel')) category = 'books'
+          else if (cat.includes('jewel') || cat.includes('ring') || cat.includes('necklace') || cat.includes('bracelet')) category = 'jewellery'
+          else if (cat.includes('cloth') || cat.includes('dress') || cat.includes('shirt') || cat.includes('trouser') || cat.includes('jean')) category = 'clothing'
+          else if (cat.includes('furniture') || cat.includes('chair') || cat.includes('table') || cat.includes('shelf')) category = 'furniture'
+          else if (cat.includes('toy') || cat.includes('game') || cat.includes('puzzle')) category = 'toys'
+          else if (cat.includes('medal') || cat.includes('militaria') || cat.includes('badge')) category = 'medals'
+          else if (cat.includes('collect') || cat.includes('antique') || cat.includes('vintage')) category = 'collectibles'
+          else if (cat.includes('home') || cat.includes('decor') || cat.includes('kitchen') || cat.includes('linen') || cat.includes('textile')) category = 'homeware'
+        }
+
         const brand = (item.brand_title || item.brand || null) as string | null
         const catPrefix = category.slice(0, 3).toUpperCase()
         const sku = `VT-${catPrefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`
