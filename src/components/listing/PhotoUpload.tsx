@@ -118,7 +118,7 @@ function SortablePhoto({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group rounded overflow-hidden border ${selectionMode ? '' : 'touch-none'} ${
+      className={`relative group rounded overflow-hidden border ${
         isSelected ? 'border-sage ring-2 ring-sage/40' : 'border-sage/14'
       } ${isNew ? 'animate-fadeIn' : ''}`}
       {...(selectionMode ? {} : attributes)}
@@ -309,6 +309,17 @@ export default function PhotoUpload({
   // Duplicate detection
   const fingerprintsRef = useRef<Map<number, string>>(new Map())
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null)
+  const prevLengthRef = useRef(photoPreviews.length)
+  useEffect(() => {
+    if (photoPreviews.length < prevLengthRef.current) {
+      // Photos were removed — clear stale fingerprints
+      fingerprintsRef.current.clear()
+    }
+    prevLengthRef.current = photoPreviews.length
+  }, [photoPreviews.length])
+
+  // Computed processing guard — disables mutation buttons while any operation runs
+  const isProcessing = removingBgIndex !== null || enhancingIndex !== null || watermarkingIndex !== null || watermarkingAll
 
   // New photo animation tracking
   const [newIndices, setNewIndices] = useState<Set<number>>(new Set())
@@ -321,7 +332,7 @@ export default function PhotoUpload({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -378,9 +389,9 @@ export default function PhotoUpload({
         const processed = await removeBackground(photos[index]!)
         const updatedPhotos = [...photos]
         updatedPhotos[index] = processed
+        const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
           if (i === index) {
-            URL.revokeObjectURL(p)
             return URL.createObjectURL(processed)
           }
           return p
@@ -391,6 +402,7 @@ export default function PhotoUpload({
           onAddPhotos(updatedPhotos)
           if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
         }
+        URL.revokeObjectURL(oldPreview)
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setBgRemovalError(`Background removal failed: ${msg}`)
@@ -411,9 +423,9 @@ export default function PhotoUpload({
         const enhanced = await autoEnhance(photos[index]!)
         const updatedPhotos = [...photos]
         updatedPhotos[index] = enhanced
+        const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
           if (i === index) {
-            URL.revokeObjectURL(p)
             return URL.createObjectURL(enhanced)
           }
           return p
@@ -424,6 +436,7 @@ export default function PhotoUpload({
           onAddPhotos(updatedPhotos)
           if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
         }
+        URL.revokeObjectURL(oldPreview)
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setEnhanceError(`Enhance failed: ${msg}`)
@@ -444,9 +457,9 @@ export default function PhotoUpload({
         const watermarked = await addWatermark(photos[index]!, watermarkText.trim())
         const updatedPhotos = [...photos]
         updatedPhotos[index] = watermarked
+        const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
           if (i === index) {
-            URL.revokeObjectURL(p)
             return URL.createObjectURL(watermarked)
           }
           return p
@@ -457,6 +470,7 @@ export default function PhotoUpload({
           onAddPhotos(updatedPhotos)
           if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
         }
+        URL.revokeObjectURL(oldPreview)
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setWatermarkError(`Watermark failed: ${msg}`)
@@ -472,12 +486,12 @@ export default function PhotoUpload({
     setWatermarkingAll(true)
     setWatermarkError(null)
     try {
+      const oldPreviews = [...photoPreviews]
       const updatedPhotos = [...photos]
       const newPreviews = [...photoPreviews]
       for (let i = 0; i < photos.length; i++) {
         const watermarked = await addWatermark(photos[i]!, watermarkText.trim())
         updatedPhotos[i] = watermarked
-        URL.revokeObjectURL(newPreviews[i]!)
         newPreviews[i] = URL.createObjectURL(watermarked)
       }
       if (onReplacePhotos) {
@@ -488,6 +502,8 @@ export default function PhotoUpload({
           if (onUpdatePhoto) onUpdatePhoto(i, newPreviews[i]!)
         }
       }
+      // Revoke old URLs AFTER state update
+      oldPreviews.forEach(url => URL.revokeObjectURL(url))
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error'
       setWatermarkError(`Watermark all failed: ${msg}`)
@@ -520,9 +536,9 @@ export default function PhotoUpload({
       if (editingIndex === null) return
       const updatedPhotos = [...photos]
       updatedPhotos[editingIndex] = file
+      const oldPreview = photoPreviews[editingIndex]!
       const newPreviews = photoPreviews.map((p, i) => {
         if (i === editingIndex) {
-          URL.revokeObjectURL(p)
           return URL.createObjectURL(file)
         }
         return p
@@ -533,6 +549,7 @@ export default function PhotoUpload({
         onAddPhotos(updatedPhotos)
         if (onUpdatePhoto) onUpdatePhoto(editingIndex, newPreviews[editingIndex]!)
       }
+      URL.revokeObjectURL(oldPreview)
       setEditingIndex(null)
     },
     [editingIndex, photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
@@ -739,7 +756,7 @@ export default function PhotoUpload({
                   {/* Bg removal */}
                   <button
                     type="button"
-                    disabled={removingBgIndex === idx}
+                    disabled={isProcessing}
                     onClick={() => handleRemoveBackground(idx)}
                     className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
                   >
@@ -752,7 +769,7 @@ export default function PhotoUpload({
                   {/* Enhance */}
                   <button
                     type="button"
-                    disabled={enhancingIndex === idx}
+                    disabled={isProcessing}
                     onClick={() => handleEnhance(idx)}
                     className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
                   >
@@ -765,7 +782,7 @@ export default function PhotoUpload({
                   {/* Watermark */}
                   <button
                     type="button"
-                    disabled={watermarkingIndex === idx}
+                    disabled={isProcessing}
                     onClick={() => {
                       if (!showWatermarkInput) {
                         setShowWatermarkInput(true)
@@ -798,7 +815,7 @@ export default function PhotoUpload({
                 {photos.length >= 2 && (
                   <button
                     type="button"
-                    disabled={watermarkingAll || !watermarkText.trim()}
+                    disabled={isProcessing || !watermarkText.trim()}
                     onClick={handleWatermarkAll}
                     className="text-xs px-3 py-1.5 border border-sage/20 rounded hover:bg-cream-md transition-colors disabled:opacity-50 flex items-center gap-1"
                   >
