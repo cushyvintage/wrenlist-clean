@@ -66,22 +66,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Map find to eBay inventory format
-    // eBay condition enums vary by category — use safe universal values
-    // Most collectible/vintage categories only accept USED or NEW
-    const conditionMap: Record<string, string> = {
-      excellent: 'USED_EXCELLENT',
-      good: 'USED_GOOD',
-      fair: 'USED_ACCEPTABLE',
-      poor: 'FOR_PARTS_OR_NOT_WORKING',
-      new_with_tags: 'NEW',
-      new_without_tags: 'NEW',
+    // Condition ID mapping: Wrenlist condition → preferred eBay condition IDs (most specific first)
+    const conditionPreference: Record<string, string[]> = {
+      excellent: ['3000', '2750', '1500'],   // Used, Very Good Refurb, New Other
+      good: ['3000', '2750'],                // Used, Very Good Refurb
+      fair: ['3000'],                        // Used
+      poor: ['7000', '3000'],                // For Parts, Used
+      new_with_tags: ['1000', '1500'],       // New, New Other
+      new_without_tags: ['1500', '1000'],    // New Other, New
     }
-    // Fallback: if the specific condition isn't accepted, retry with generic USED
-    const FALLBACK_CONDITION = 'USED'
 
-    const ebayCondition = conditionMap[find.condition] || 'USED'
     const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
-    const sku = `${baseSku}-v4`
+    const sku = `${baseSku}-v5`
 
     if (!find.photos || find.photos.length === 0) {
       return ApiResponseHelper.badRequest('At least one photo is required to publish to eBay. Please add photos and try again.')
@@ -102,6 +98,24 @@ export async function POST(request: NextRequest) {
       if (suggested) categoryId = suggested
     } catch {
       // Fall back to hardcoded map
+    }
+
+    // Resolve condition: query eBay for valid conditions for this category, pick the best match
+    const preferredConditions = conditionPreference[find.condition] || ['3000']
+    let ebayCondition = 'USED_EXCELLENT' // safe default
+    try {
+      const mktId = (marketplace || 'EBAY_GB') as string
+      const validIds = await ebayClient.getValidConditions(String(categoryId), mktId)
+      const matchedId = preferredConditions.find(id => validIds.includes(id)) || validIds[0]
+      // Map condition ID back to enum for the inventory API
+      const idToEnum: Record<string, string> = {
+        '1000': 'NEW', '1500': 'NEW_OTHER', '2000': 'MANUFACTURER_REFURBISHED',
+        '2500': 'SELLER_REFURBISHED', '2750': 'LIKE_NEW', '3000': 'USED_EXCELLENT',
+        '7000': 'FOR_PARTS_OR_NOT_WORKING',
+      }
+      if (matchedId) ebayCondition = idToEnum[matchedId] || 'USED_EXCELLENT'
+    } catch {
+      // Fall back to USED_EXCELLENT
     }
 
     const inventoryItem = {
@@ -177,7 +191,7 @@ export async function POST(request: NextRequest) {
       if (error instanceof Error && error.message.includes('invalid item condition')) {
         // Condition not accepted for this category — retry with generic USED
         try { await ebayClient.deleteOffer(offerResult.offerId) } catch { /* ignore */ }
-        inventoryItem.condition = FALLBACK_CONDITION
+        inventoryItem.condition = 'USED_EXCELLENT'
         await ebayClient.createInventoryItem(inventoryItem.sku, inventoryItem)
         offerResult = await ebayClient.createOffer(offer)
         publishResult = await ebayClient.publishOffer(offerResult.offerId)

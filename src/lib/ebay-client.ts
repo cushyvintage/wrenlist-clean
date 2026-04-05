@@ -273,6 +273,32 @@ export class eBayClient {
   }
 
   /**
+   * Get valid condition IDs for a category from eBay Metadata API
+   */
+  async getValidConditions(categoryId: string, marketplaceId = 'EBAY_GB'): Promise<string[]> {
+    try {
+      const response = await undiciFetch(
+        `${this.baseUrl}/sell/metadata/v1/marketplace/${marketplaceId}/get_item_condition_policies?filter=categoryId:{${categoryId}}`,
+        {
+          headers: new UndiciHeaders({
+            'Authorization': `Bearer ${this.getAccessToken()}`,
+            'Accept': 'application/json',
+          }),
+        }
+      )
+      if (!response.ok) return []
+      const data = await response.json() as any
+      const policies = data.itemConditionPolicies || []
+      if (policies.length > 0 && policies[0].itemConditions) {
+        return policies[0].itemConditions.map((c: any) => c.conditionId).filter(Boolean)
+      }
+      return []
+    } catch {
+      return []
+    }
+  }
+
+  /**
    * Get category suggestions from eBay Taxonomy API based on item title
    * Returns the best matching leaf category ID for EBAY_GB (tree 3)
    */
@@ -340,24 +366,13 @@ export class eBayClient {
     item: eBayInventoryItem
   ): Promise<{ success: boolean; inventoryItemId?: string; error?: string }> {
     try {
-      // Map condition strings to eBay condition IDs (universally accepted across categories)
-      const conditionIdMap: Record<string, string> = {
-        'NEW': '1000', 'LIKE_NEW': '1500', 'NEW_OTHER': '1500',
-        'NEW_WITH_TAGS': '1000', 'NEW_WITHOUT_TAGS': '1500',
-        'USED_EXCELLENT': '3000', 'USED_VERY_GOOD': '3000',
-        'USED_GOOD': '3000', 'USED_ACCEPTABLE': '3000',
-        'USED': '3000', 'FOR_PARTS_OR_NOT_WORKING': '7000',
-      }
-      const condId = conditionIdMap[item.condition || 'USED'] || '3000'
-
       const payload = {
         product: {
           title: item.title,
           description: item.description || '',
           imageUrls: item.images || [],
         },
-        condition: item.condition || 'USED',
-        conditionId: condId,
+        condition: item.condition || 'USED_EXCELLENT',
         availability: {
           shipToLocationAvailability: {
             quantity: item.quantity,
