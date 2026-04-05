@@ -120,7 +120,7 @@ function SortablePhoto({
       className={`relative group rounded overflow-hidden border ${selectionMode ? '' : 'touch-none'} ${
         isSelected ? 'border-sage ring-2 ring-sage/40' : 'border-sage/14'
       } ${isNew ? 'animate-fadeIn' : ''}`}
-      {...attributes}
+      {...(selectionMode ? {} : attributes)}
       {...(selectionMode ? {} : listeners)}
       onDoubleClick={(e) => {
         e.preventDefault()
