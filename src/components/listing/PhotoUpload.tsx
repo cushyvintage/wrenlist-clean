@@ -57,6 +57,25 @@ interface PhotoUploadProps {
   maxPhotos?: number
 }
 
+/**
+ * Get a File object for a photo at the given index.
+ * If the photos array has a File at that index, use it.
+ * Otherwise fetch from the preview URL (for DB-loaded photos).
+ */
+async function getPhotoFile(
+  photos: File[],
+  photoPreviews: string[],
+  index: number
+): Promise<File> {
+  if (photos[index]) return photos[index]
+  const url = photoPreviews[index]
+  if (!url) throw new Error(`No photo at index ${index}`)
+  const res = await fetch(url)
+  const blob = await res.blob()
+  const ext = blob.type.split('/')[1] || 'jpg'
+  return new File([blob], `photo-${index}.${ext}`, { type: blob.type })
+}
+
 /** 6-dot drag handle SVG (2x3 grid) */
 function DragHandleIcon() {
   return (
@@ -382,12 +401,15 @@ export default function PhotoUpload({
   // --- Background removal ---
   const handleRemoveBackground = useCallback(
     async (index: number) => {
-      if (index < 0 || index >= photos.length) return
+      if (index < 0 || index >= photoPreviews.length) return
       setRemovingBgIndex(index)
       setBgRemovalError(null)
       try {
-        const processed = await removeBackground(photos[index]!)
+        const photoFile = await getPhotoFile(photos, photoPreviews, index)
+        const processed = await removeBackground(photoFile)
         const updatedPhotos = [...photos]
+        // Pad array if needed (DB photos may not have File entries)
+        while (updatedPhotos.length < photoPreviews.length) updatedPhotos.push(new File([], ''))
         updatedPhotos[index] = processed
         const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
@@ -416,12 +438,14 @@ export default function PhotoUpload({
   // --- Auto-enhance ---
   const handleEnhance = useCallback(
     async (index: number) => {
-      if (index < 0 || index >= photos.length) return
+      if (index < 0 || index >= photoPreviews.length) return
       setEnhancingIndex(index)
       setEnhanceError(null)
       try {
-        const enhanced = await autoEnhance(photos[index]!)
+        const photoFile = await getPhotoFile(photos, photoPreviews, index)
+        const enhanced = await autoEnhance(photoFile)
         const updatedPhotos = [...photos]
+        while (updatedPhotos.length < photoPreviews.length) updatedPhotos.push(new File([], ''))
         updatedPhotos[index] = enhanced
         const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
@@ -450,12 +474,14 @@ export default function PhotoUpload({
   // --- Watermark ---
   const handleWatermark = useCallback(
     async (index: number) => {
-      if (index < 0 || index >= photos.length || !watermarkText.trim()) return
+      if (index < 0 || index >= photoPreviews.length || !watermarkText.trim()) return
       setWatermarkingIndex(index)
       setWatermarkError(null)
       try {
-        const watermarked = await addWatermark(photos[index]!, watermarkText.trim())
+        const photoFile = await getPhotoFile(photos, photoPreviews, index)
+        const watermarked = await addWatermark(photoFile, watermarkText.trim())
         const updatedPhotos = [...photos]
+        while (updatedPhotos.length < photoPreviews.length) updatedPhotos.push(new File([], ''))
         updatedPhotos[index] = watermarked
         const oldPreview = photoPreviews[index]!
         const newPreviews = photoPreviews.map((p, i) => {
@@ -482,15 +508,17 @@ export default function PhotoUpload({
   )
 
   const handleWatermarkAll = useCallback(async () => {
-    if (!watermarkText.trim() || photos.length === 0) return
+    if (!watermarkText.trim() || photoPreviews.length === 0) return
     setWatermarkingAll(true)
     setWatermarkError(null)
     try {
       const oldPreviews = [...photoPreviews]
       const updatedPhotos = [...photos]
+      while (updatedPhotos.length < photoPreviews.length) updatedPhotos.push(new File([], ''))
       const newPreviews = [...photoPreviews]
-      for (let i = 0; i < photos.length; i++) {
-        const watermarked = await addWatermark(photos[i]!, watermarkText.trim())
+      for (let i = 0; i < photoPreviews.length; i++) {
+        const photoFile = await getPhotoFile(photos, photoPreviews, i)
+        const watermarked = await addWatermark(photoFile, watermarkText.trim())
         updatedPhotos[i] = watermarked
         newPreviews[i] = URL.createObjectURL(watermarked)
       }
@@ -535,6 +563,7 @@ export default function PhotoUpload({
     (file: File) => {
       if (editingIndex === null) return
       const updatedPhotos = [...photos]
+      while (updatedPhotos.length < photoPreviews.length) updatedPhotos.push(new File([], ''))
       updatedPhotos[editingIndex] = file
       const oldPreview = photoPreviews[editingIndex]!
       const newPreviews = photoPreviews.map((p, i) => {
@@ -859,10 +888,10 @@ export default function PhotoUpload({
       )}
 
       {/* Crop modal */}
-      {editingIndex !== null && photos[editingIndex] && (
+      {editingIndex !== null && photoPreviews[editingIndex] && (
         <PhotoCropModal
-          photo={photos[editingIndex]}
-          preview={photoPreviews[editingIndex]!}
+          photo={photos[editingIndex] || new File([], `photo-${editingIndex}.jpg`)}
+          preview={photoPreviews[editingIndex]}
           onApply={handleCropApply}
           onCancel={() => setEditingIndex(null)}
         />
