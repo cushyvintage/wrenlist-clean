@@ -77,7 +77,9 @@ export async function POST(request: NextRequest) {
 
     const categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
     const ebayCondition = conditionMap[find.condition] || 'USED'
-    const sku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
+    // Use sku with a version suffix to avoid stale inventory items with wrong categories
+    const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
+    const sku = `${baseSku}-v2`
 
     if (!find.photos || find.photos.length === 0) {
       return ApiResponseHelper.badRequest('At least one photo is required to publish to eBay. Please add photos and try again.')
