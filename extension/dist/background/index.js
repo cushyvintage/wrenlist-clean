@@ -9,26 +9,15 @@ import { ShopifyMapper } from "./marketplaces/shopify/mapper.js";
 const KEEP_ALIVE_INTERVAL_MS = 20_000;
 const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
 const ICON_PATH = "icons/icon128.png";
-// Map Wrenlist categories to Shopify taxonomy category IDs
-// See: https://shopify.dev/docs/api/admin-graphql/unstable/enums/ProductTaxonomyCategoryAttribute
-const SHOPIFY_CATEGORY_MAP = {
-    ceramics: ["537"], // Home & Garden > Kitchen & Dining > Tableware > Plates (gid://shopify/TaxonomyCategory/537)
-    glassware: ["525"], // Home & Garden > Kitchen & Dining > Glassware
-    books: ["1"], // Arts & Entertainment > Books
-    jewellery: ["200"], // Apparel & Accessories > Jewelry
-    clothing: ["166"], // Apparel & Accessories > Clothing
-    homeware: ["536"], // Home & Garden > Kitchen & Dining > Tableware
-    furniture: ["436"], // Home & Garden > Furniture
-    toys: ["1253"], // Toys & Games
-    collectibles: ["25"], // Arts & Entertainment > Collectibles
-    jugs: ["537"], // Home & Garden > Kitchen & Dining > Tableware > Plates (closest)
-    art: ["11"], // Arts & Entertainment > Art
-};
+// Shopify taxonomy category IDs need to be looked up from Shopify's actual
+// taxonomy API. For now, we skip category mapping and rely on customProductType
+// for organisation. Category can be set manually in Shopify admin or via
+// platform_category_id in product_marketplace_data.
 function mapCategoryToShopify(category) {
-    if (!category)
-        return [];
-    const mapped = SHOPIFY_CATEGORY_MAP[category.toLowerCase()];
-    return mapped ?? [];
+    // Return empty — category mapping requires valid Shopify taxonomy node IDs
+    // which vary by store. Users can set platform_category_id per-item.
+    void category;
+    return [];
 }
 const PRODUCT_TYPE_MAP = {
     ceramics: "Vintage Ceramics",
