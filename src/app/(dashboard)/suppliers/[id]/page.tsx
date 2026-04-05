@@ -15,13 +15,13 @@ const typeLabel: Record<SupplierType, string> = {
   other: 'Other',
 }
 
-const typeEmoji: Record<SupplierType, string> = {
-  house_clearance: '🏠',
-  charity_shop: '🏪',
-  car_boot: '🚗',
-  flea_market: '🎪',
-  online: '💻',
-  other: '📍',
+const typeColor: Record<SupplierType, string> = {
+  house_clearance: 'bg-amber-50 text-amber-700',
+  charity_shop: 'bg-green-50 text-green-700',
+  car_boot: 'bg-blue-50 text-blue-700',
+  flea_market: 'bg-purple-50 text-purple-700',
+  online: 'bg-indigo-50 text-indigo-700',
+  other: 'bg-gray-50 text-gray-700',
 }
 
 export default function SupplierDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
@@ -159,7 +159,9 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
         <div className="border-b border-sage/14 pb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-start gap-4">
-              <div className="text-4xl">{typeEmoji[supplier.type]}</div>
+              <div className={`w-10 h-10 rounded flex items-center justify-center text-xs font-semibold ${typeColor[supplier.type]}`}>
+                {typeLabel[supplier.type]?.substring(0, 2).toUpperCase()}
+              </div>
               <div>
                 <h1 className="font-serif text-2xl italic text-ink">{supplier.name}</h1>
                 <div className="text-sm text-sage-dim mt-1">{typeLabel[supplier.type]}</div>
@@ -189,7 +191,7 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
             {supplier.location && (
               <div>
                 <div className="text-xs text-sage-dim font-medium">Location</div>
-                <div className="text-ink mt-1">📍 {supplier.location}</div>
+                <div className="text-ink mt-1">{supplier.location}</div>
               </div>
             )}
             {supplier.contact_name && (

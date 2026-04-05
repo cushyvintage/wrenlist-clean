@@ -16,14 +16,6 @@ const typeLabel: Record<SupplierType, string> = {
   other: 'Other',
 }
 
-const typeEmoji: Record<SupplierType, string> = {
-  house_clearance: '🏠',
-  charity_shop: '🏪',
-  car_boot: '🚗',
-  flea_market: '🎪',
-  online: '💻',
-  other: '📍',
-}
 
 const typeColor: Record<SupplierType, string> = {
   house_clearance: 'bg-amber-50 text-amber-700',
@@ -126,8 +118,10 @@ export default function SuppliersPage() {
         </div>
 
         <div className="max-w-2xl mx-auto py-16 px-6 text-center">
-          <div className="text-5xl mb-4">🏪</div>
-          <h2 className="text-xl font-medium text-ink mb-2">Your suppliers</h2>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#EDE8DE' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 10L5 3h14l2 7" stroke="#8A9E88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M3 10v10h18V10" stroke="#8A9E88" strokeWidth="1.5" /><path d="M9 20v-6h6v6" stroke="#8A9E88" strokeWidth="1.5" /></svg>
+          </div>
+          <h2 className="text-xl text-ink mb-2" style={{ fontFamily: 'var(--serif, Georgia, serif)' }}>Your suppliers</h2>
           <p className="text-sage-dim text-sm leading-relaxed mb-8">
             These are the places you buy stock from — charity shops, car boots, house clearances, dealers, online sources. Add them once, rate them, and track what you've spent there.
           </p>
@@ -328,7 +322,7 @@ export default function SuppliersPage() {
                   : 'bg-sage/10 text-sage hover:bg-sage/20'
               }`}
             >
-              {typeEmoji[type]} {typeLabel[type]}
+              {typeLabel[type]}
             </button>
           ))}
         </div>
@@ -346,8 +340,10 @@ export default function SuppliersPage() {
         <>
           {filtered.length === 0 && (suppliers?.length ?? 0) === 0 ? (
             <div className="py-12 px-6 text-center bg-white border border-sage/14 rounded-lg">
-              <p className="text-2xl mb-2">🏪</p>
-              <p className="text-sage-dim text-sm mb-4">No suppliers yet</p>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#EDE8DE' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#8A9E88" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              </div>
+              <p className="text-ink text-sm mb-4">No suppliers yet</p>
               <button
                 onClick={() => setShowAddForm(true)}
                 className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
@@ -368,8 +364,8 @@ export default function SuppliersPage() {
                 >
                   {/* Type Badge + Name */}
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="text-2xl flex-shrink-0">
-                      {typeEmoji[supplier.type]}
+                    <div className={`w-8 h-8 rounded flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${typeColor[supplier.type]}`}>
+                      {typeLabel[supplier.type]?.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <Link
@@ -387,7 +383,7 @@ export default function SuppliersPage() {
                   {/* Location */}
                   {supplier.location && (
                     <div className="text-xs text-ink-lt mb-3 pl-9">
-                      📍 {supplier.location}
+                      {supplier.location}
                     </div>
                   )}
 
