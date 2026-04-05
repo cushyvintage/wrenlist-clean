@@ -4,6 +4,13 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/wren/Badge'
 import type { Find, Platform } from '@/types'
 
+interface MarketplaceDataItem {
+  marketplace: string
+  status: string
+  platform_listing_url: string | null
+  platform_listing_id: string | null
+}
+
 interface InventoryItemHeaderProps {
   find: Find
   isEditing: boolean
@@ -14,11 +21,14 @@ interface InventoryItemHeaderProps {
   showCrosslistPicker?: boolean
   crosslistTargets?: Platform[]
   availableForCrosslist?: Platform[]
+  marketplaceData?: MarketplaceDataItem[]
   onMarkAsSoldClick: () => void
   onEditClick: () => void
   onSyncClick: () => Promise<void>
   onListOnVintedClick: () => void
   onListOnEbayClick: () => void
+  onDelistVintedClick?: () => Promise<void>
+  onRelistVintedClick?: () => Promise<void>
   onCrosslistClick?: () => void
   onCrosslistTargetToggle?: (platform: Platform) => void
   onCrosslistConfirm?: () => void
@@ -39,17 +49,24 @@ export default function InventoryItemHeader({
   showCrosslistPicker = false,
   crosslistTargets = [],
   availableForCrosslist = [],
+  marketplaceData = [],
   onMarkAsSoldClick,
   onEditClick,
   onSyncClick,
   onListOnVintedClick,
   onListOnEbayClick,
+  onDelistVintedClick,
+  onRelistVintedClick,
   onCrosslistClick,
   onCrosslistTargetToggle,
   onCrosslistConfirm,
   onCrosslistCancel,
 }: InventoryItemHeaderProps) {
   const router = useRouter()
+
+  const vintedData = marketplaceData.find((m) => m.marketplace === 'vinted')
+  const vintedIsListed = vintedData?.status === 'listed'
+  const vintedNeedsDelist = vintedData?.status === 'needs_delist' || vintedData?.status === 'delisted'
 
   return (
     <div
@@ -121,6 +138,42 @@ export default function InventoryItemHeader({
             {isCrosslisting ? '⏳ Publishing...' : '↗ Crosslist'}
           </button>
         )}
+        {/* Pause Vinted button */}
+        {!isEditing && find.status === 'listed' && vintedIsListed && (
+          <button
+            onClick={onDelistVintedClick}
+            className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(0,102,153,.3)',
+              backgroundColor: 'transparent',
+              color: '#006699',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,102,153,.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            ⏸ Pause Vinted
+          </button>
+        )}
+
+        {/* Relist Vinted button */}
+        {!isEditing && find.status === 'listed' && vintedNeedsDelist && (
+          <button
+            onClick={onRelistVintedClick}
+            className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(0,102,153,.3)',
+              backgroundColor: 'transparent',
+              color: '#006699',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,102,153,.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            ▶ Relist on Vinted
+          </button>
+        )}
+
         {/* Crosslist picker dropdown */}
         {showCrosslistPicker && (
           <div

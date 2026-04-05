@@ -16,8 +16,11 @@ export default function MarkAsSoldModal({
   onCancel,
   isLoading = false,
 }: MarkAsSoldModalProps) {
-  const [price, setPrice] = useState('')
-  const [date, setDate] = useState('')
+  const initialPrice = find.asking_price_gbp != null ? String(find.asking_price_gbp) : ''
+  const initialDate = new Date().toISOString().split('T')[0]
+
+  const [price, setPrice] = useState<string>(initialPrice)
+  const [date, setDate] = useState<string>(initialDate)
 
   const handleSubmit = async () => {
     await onConfirm(price, date)
@@ -50,7 +53,6 @@ export default function MarkAsSoldModal({
             <input
               type="number"
               step="0.01"
-              placeholder={find.asking_price_gbp?.toString() || '0.00'}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded border"

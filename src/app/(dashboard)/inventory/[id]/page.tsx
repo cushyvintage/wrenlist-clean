@@ -508,6 +508,9 @@ export default function InventoryDetailPage() {
           setFind(findData.data)
         }
       }
+
+      // Reload marketplace data to show updated status
+      refreshMarketplaceData()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to mark as sold'
       setError(message)
@@ -651,6 +654,61 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleDelistFromVinted = async () => {
+    if (!find) return
+    setIsListingOnVinted(true)
+    setVintedListResult(null)
+
+    try {
+      const vintedPmd = marketplaceData.find((m) => m.marketplace === 'vinted')
+      if (!vintedPmd) {
+        setVintedListResult({ ok: false, message: 'Vinted listing not found' })
+        setIsListingOnVinted(false)
+        return
+      }
+
+      // Mark PMD as needs_delist
+      const pmdRes = await fetch(`/api/finds/${id}/marketplace`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketplace: 'vinted', status: 'needs_delist' }),
+      })
+
+      if (!pmdRes.ok) {
+        throw new Error('Failed to queue delist')
+      }
+
+      // Dispatch to extension immediately
+      if (typeof window !== 'undefined') {
+        const chromeExt = (window as any).chrome
+        if (chromeExt?.runtime?.sendMessage) {
+          chromeExt.runtime.sendMessage(
+            'nblnainobllgbjkdkpeodjpopkgnpfgb',
+            {
+              action: 'delistlistingfrommarketplace',
+              marketplace: 'vinted',
+              listingId: vintedPmd.platform_listing_id,
+            },
+            () => { /* non-fatal */ }
+          )
+        }
+      }
+
+      // Reload marketplace data
+      refreshMarketplaceData()
+      setVintedListResult({ ok: true, message: 'Delist queued — extension will remove from Vinted shortly.' })
+    } catch (err) {
+      setVintedListResult({ ok: false, message: err instanceof Error ? err.message : 'Failed to delist from Vinted' })
+    } finally {
+      setIsListingOnVinted(false)
+    }
+  }
+
+  const handleRelistOnVinted = async () => {
+    // Reuse the existing handleListOnVinted logic
+    await handleListOnVinted()
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -716,11 +774,14 @@ export default function InventoryDetailPage() {
         showCrosslistPicker={showCrosslistPicker}
         crosslistTargets={crosslistTargets}
         availableForCrosslist={availableForCrosslist}
+        marketplaceData={marketplaceData}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
         onSyncClick={handleSyncOrders}
         onListOnVintedClick={handleListOnVinted}
         onListOnEbayClick={handleListOnEbay}
+        onDelistVintedClick={handleDelistFromVinted}
+        onRelistVintedClick={handleRelistOnVinted}
         onCrosslistClick={() => setShowCrosslistPicker(true)}
         onCrosslistTargetToggle={(p) => setCrosslistTargets((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])}
         onCrosslistConfirm={handleCrosslist}
