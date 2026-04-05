@@ -79,7 +79,6 @@ export const GET = withAuth(async (_req, user) => {
       : {}),
   }))
 
-  // @ts-expect-error temporary debug
   return NextResponse.json({ data: queue, _debug: { findIds, userId: user.id, findsFound: finds?.length ?? 0, findError: findError?.message ?? null } })
 })
 
