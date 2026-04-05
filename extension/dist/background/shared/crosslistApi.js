@@ -150,9 +150,9 @@ export async function getProductMedia(productId, imageLimit = 16, cropSquare = f
         return [];
     }
 }
-export async function getProductMediaForMarketplace(productId, marketplace) {
+export async function getProductMediaForMarketplace(productId, marketplace, baseUrlOverride) {
     try {
-        const baseUrl = await getWrenlistBaseUrl();
+        const baseUrl = baseUrlOverride ? baseUrlOverride.replace(/\/+$/, "") : await getWrenlistBaseUrl();
         const response = await fetch(`${baseUrl}/api/products/${productId}/media?marketplace=${marketplace}`, {
             credentials: "include",
         });

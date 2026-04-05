@@ -1032,6 +1032,17 @@ export class VintedClient {
             const text = await res.text();
             if (!res.ok) {
                 console.error("[Vinted] postListing failed", res.status, text);
+                // Telemetry: send error to Wrenlist for visibility
+                try {
+                    const { getWrenlistBaseUrl } = await import("../../shared/crosslistApi.js");
+                    const baseUrl = await getWrenlistBaseUrl();
+                    fetch(`${baseUrl}/api/debug/relist-log`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ status: res.status, response: text, payload }),
+                    }).catch(() => {});
+                } catch { /* silent */ }
                 // Check if the response contains a CAPTCHA URL (DataDome bot protection)
                 try {
                     const errorData = JSON.parse(text);
