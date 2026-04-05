@@ -150,6 +150,20 @@ export async function getProductMedia(productId, imageLimit = 16, cropSquare = f
         return [];
     }
 }
+export async function fetchPublicUrlsAsFiles(imageUrls, limit = 5) {
+    const urls = imageUrls.slice(0, limit);
+    const results = await Promise.allSettled(urls.map(async (url, i) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const ext = url.split('?')[0].split('.').pop() || 'jpg';
+        const name = url.split('/').pop()?.split('?')[0] || `photo-${i + 1}.${ext}`;
+        return new File([blob], name, { type: blob.type || 'image/jpeg' });
+    }));
+    return results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value);
+}
 export async function getProductMediaForMarketplace(productId, marketplace, baseUrlOverride) {
     try {
         const baseUrl = baseUrlOverride ? baseUrlOverride.replace(/\/+$/, "") : await getWrenlistBaseUrl();

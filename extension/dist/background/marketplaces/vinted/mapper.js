@@ -1,4 +1,4 @@
-import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequests, getProductMediaForMarketplace, fetchPublicUrlsAsFiles, } from "../../shared/crosslistApi.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 const COLOR_LOOKUP = [
     { id: 1, code: "BLACK", alias: "black" },
@@ -541,7 +541,10 @@ export class VintedMapper {
                 : Promise.resolve(null),
             needCatalogResolution ? this.vintedClient.fetchCatalogs() : Promise.resolve([]),
             this.mapBrand(product.brand),
-            getProductMediaForMarketplace(product.id, "vinted"),
+            // Use public Supabase URLs directly (no auth needed) — fall back to API proxy
+            (product.images?.length > 0
+                ? fetchPublicUrlsAsFiles(product.images, 5)
+                : getProductMediaForMarketplace(product.id, "vinted")),
         ]);
         // Determine final catalog ID - prefer direct ID, then numeric category, then resolved
         let finalCatalogId = null;
