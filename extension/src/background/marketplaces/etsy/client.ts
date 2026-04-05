@@ -224,64 +224,107 @@ export class EtsyClient {
         };
       }
 
+      // Open tab in background (active: false) so user isn't interrupted
       const tab = await chrome.tabs.create({
         url: ETSY_CREATE_LISTING_URL,
-        active: true,
+        active: false,
       });
 
       if (!tab.id) {
         return { success: false, message: "Failed to open Etsy listing page" };
       }
 
-      // Wait for the React app to fully render
-      await this.waitForPageReady(tab.id, "#listing-title-input", 15000);
+      const tabId = tab.id;
 
-      const formData = this.buildFormData(product);
+      try {
+        // Wait for the React app to fully render
+        await this.waitForPageReady(tabId, "#listing-title-input", 15000);
 
-      // Step 1: Upload images first (they take time to process)
-      if (formData.imageUrls.length > 0 || formData.coverUrl) {
-        await this.uploadImages(tab.id, formData.coverUrl, formData.imageUrls);
-      }
+        const formData = this.buildFormData(product);
 
-      // Step 2: Fill all text fields, selects, and radios
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: fillEtsyListingForm,
-        args: [formData],
-      });
+        // Step 1: Upload images first (they take time to process)
+        if (formData.imageUrls.length > 0 || formData.coverUrl) {
+          await this.uploadImages(tabId, formData.coverUrl, formData.imageUrls);
+        }
 
-      const execResult = result?.[0]?.result as {
-        success: boolean;
-        message?: string;
-      };
+        // Step 2: Fill all text fields, selects, and radios
+        const result = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: fillEtsyListingForm,
+          args: [formData],
+        });
 
-      if (!execResult?.success) {
-        return {
-          success: false,
-          message: execResult?.message || "Failed to fill Etsy listing form",
+        const execResult = result?.[0]?.result as {
+          success: boolean;
+          message?: string;
         };
+
+        if (!execResult?.success) {
+          // Close tab on failure
+          await chrome.tabs.remove(tabId).catch(() => {});
+          return {
+            success: false,
+            message: execResult?.message || "Failed to fill Etsy listing form",
+          };
+        }
+
+        // Step 3: Select category via search typeahead
+        if (formData.categorySearch) {
+          await this.selectCategory(tabId, formData.categorySearch);
+        }
+
+        // Step 4: Select the first delivery profile
+        await this.selectDeliveryProfile(tabId);
+
+        // Step 5: Click Publish and handle confirmation dialog
+        await wait(1000);
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickPublishButton,
+        });
+
+        // Step 6: Handle Etsy's publish confirmation dialog
+        await wait(2000);
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickPublishConfirmation,
+        });
+
+        // Step 7: Wait for publish to complete and capture the listing URL
+        // After publishing, Etsy redirects to the listing page or manager
+        await wait(5000);
+
+        // Try to extract the listing ID from the tab URL after redirect
+        let listingId: string | undefined;
+        let listingUrl: string | undefined;
+        try {
+          const updatedTab = await chrome.tabs.get(tabId);
+          const tabUrl = updatedTab?.url || "";
+          // Etsy redirects to /listing/{id} or listing-editor/{id}
+          const idMatch = tabUrl.match(/listing[/-](?:editor\/)?(\d+)/);
+          if (idMatch?.[1]) {
+            listingId = idMatch[1];
+            listingUrl = this.getProductUrl(listingId);
+          }
+        } catch {
+          // Tab may have already been closed
+        }
+
+        await chrome.tabs.remove(tabId).catch(() => {});
+
+        return {
+          success: true,
+          message: "Listing published on Etsy.",
+          product: {
+            id: listingId || product.id,
+            url: listingUrl || ETSY_CREATE_LISTING_URL,
+          },
+        };
+      } catch (error) {
+        // Clean up tab on error
+        await chrome.tabs.remove(tabId).catch(() => {});
+        throw error;
       }
-
-      // Step 3: Select category via search typeahead
-      if (formData.categorySearch) {
-        await this.selectCategory(tab.id, formData.categorySearch);
-      }
-
-      // Step 4: Click Publish
-      await wait(1000);
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: clickPublishButton,
-      });
-
-      return {
-        success: true,
-        message: "Listing published on Etsy.",
-        product: {
-          id: product.id,
-          url: ETSY_CREATE_LISTING_URL,
-        },
-      };
     } catch (error) {
       console.error("[Etsy] Publish error:", error);
       return {
@@ -311,50 +354,67 @@ export class EtsyClient {
       }
 
       const editUrl = `${ETSY_EDIT_LISTING_URL}/${marketplaceId}/edit`;
-      const tab = await chrome.tabs.create({ url: editUrl, active: true });
+      const tab = await chrome.tabs.create({ url: editUrl, active: false });
 
       if (!tab.id) {
         return { success: false, message: "Failed to open Etsy edit page" };
       }
 
-      await this.waitForPageReady(tab.id, "#listing-title-input", 15000);
+      const tabId = tab.id;
 
-      const formData = this.buildFormData(product);
+      try {
+        await this.waitForPageReady(tabId, "#listing-title-input", 15000);
 
-      // Fill form fields (existing values will be overwritten)
-      const result = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: fillEtsyListingForm,
-        args: [formData],
-      });
+        const formData = this.buildFormData(product);
 
-      const execResult = result?.[0]?.result as {
-        success: boolean;
-        message?: string;
-      };
+        const result = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: fillEtsyListingForm,
+          args: [formData],
+        });
 
-      if (!execResult?.success) {
-        return {
-          success: false,
-          message: execResult?.message || "Failed to fill Etsy edit form",
+        const execResult = result?.[0]?.result as {
+          success: boolean;
+          message?: string;
         };
+
+        if (!execResult?.success) {
+          await chrome.tabs.remove(tabId).catch(() => {});
+          return {
+            success: false,
+            message: execResult?.message || "Failed to fill Etsy edit form",
+          };
+        }
+
+        // Click Save / Publish
+        await wait(1000);
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickPublishButton,
+        });
+
+        // Handle confirmation dialog
+        await wait(2000);
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickPublishConfirmation,
+        });
+
+        await wait(3000);
+        await chrome.tabs.remove(tabId).catch(() => {});
+
+        return {
+          success: true,
+          message: "Listing updated on Etsy.",
+          product: {
+            id: marketplaceId,
+            url: this.getProductUrl(marketplaceId),
+          },
+        };
+      } catch (error) {
+        await chrome.tabs.remove(tabId).catch(() => {});
+        throw error;
       }
-
-      // Click Save / Publish
-      await wait(1000);
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: clickPublishButton,
-      });
-
-      return {
-        success: true,
-        message: "Listing updated on Etsy.",
-        product: {
-          id: marketplaceId,
-          url: this.getProductUrl(marketplaceId),
-        },
-      };
     } catch (error) {
       console.error("[Etsy] Update error:", error);
       return {
@@ -428,9 +488,40 @@ export class EtsyClient {
         };
       }
 
+      // Fallback 3: browser automation — open the listing edit page and deactivate
+      try {
+        const editUrl = `${ETSY_EDIT_LISTING_URL}/${marketplaceId}/edit`;
+        const tab = await chrome.tabs.create({ url: editUrl, active: false });
+        if (tab.id) {
+          await this.waitForPageReady(tab.id, "#listing-title-input", 10000);
+          // Look for a Deactivate button on the edit page
+          const deactivateResult = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+              const buttons = Array.from(document.querySelectorAll("button, a"));
+              const deactivateBtn = buttons.find(
+                (b) => b.textContent?.trim()?.toLowerCase()?.includes("deactivate"),
+              ) as HTMLElement | undefined;
+              if (deactivateBtn) {
+                deactivateBtn.click();
+                return { success: true };
+              }
+              return { success: false };
+            },
+          });
+          await wait(2000);
+          await chrome.tabs.remove(tab.id).catch(() => {});
+          if (deactivateResult?.[0]?.result?.success) {
+            return { success: true, message: "Listing deactivated on Etsy." };
+          }
+        }
+      } catch {
+        // Browser automation fallback failed
+      }
+
       return {
         success: false,
-        message: `Etsy deactivation returned ${resp.status}. Please deactivate from Etsy dashboard.`,
+        message: `Etsy deactivation failed. Please deactivate from Etsy dashboard.`,
       };
     } catch (error) {
       console.error("[Etsy] Delist error:", error);
@@ -694,6 +785,45 @@ export class EtsyClient {
     // Wait for category selection to register and dependent fields to appear
     await wait(2000);
   }
+
+  /**
+   * Select the first available delivery profile.
+   * Clicks "Select profile" to open the overlay, then clicks "Apply" on the first profile.
+   * If no profiles exist, this is a no-op (user needs to create one in Etsy settings).
+   */
+  private async selectDeliveryProfile(tabId: number): Promise<void> {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async () => {
+        // Click "Select profile" button to open the overlay
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const selectBtn = buttons.find(
+          (b) => b.textContent?.trim() === "Select profile",
+        );
+        if (!selectBtn) return; // No delivery profile section — might already be set
+
+        selectBtn.click();
+
+        // Wait for the overlay to appear
+        await new Promise((r) => setTimeout(r, 1500));
+
+        // Find the overlay and click "Apply" on the first profile
+        const overlay = document.getElementById("shipping-profile-overlay");
+        if (!overlay || overlay.offsetHeight === 0) return;
+
+        const applyBtn = Array.from(
+          overlay.querySelectorAll("button"),
+        ).find((b) => b.textContent?.trim() === "Apply");
+
+        if (applyBtn) {
+          applyBtn.click();
+        }
+      },
+    });
+
+    // Wait for the profile to be applied
+    await wait(1500);
+  }
 }
 
 // ─── Injected functions (run in page context) ──────────────────────
@@ -706,6 +836,26 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
   success: boolean;
   message?: string;
 } {
+  // Inline helper — this function runs in page context via executeScript,
+  // so it cannot reference any functions defined outside this closure.
+  function setNativeValue(
+    element: HTMLInputElement | HTMLTextAreaElement,
+    value: string,
+  ): void {
+    const proto =
+      element instanceof HTMLTextAreaElement
+        ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype;
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+    if (nativeSetter) {
+      nativeSetter.call(element, value);
+    } else {
+      element.value = value;
+    }
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
   try {
     const filled: string[] = [];
 
@@ -841,31 +991,6 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
 }
 
 /**
- * Set a value on a React-controlled input/textarea using the native setter.
- * React overrides the .value setter, so we need to use Object.getOwnPropertyDescriptor
- * to call the native HTMLInputElement setter, then dispatch an input event.
- */
-function setNativeValue(
-  element: HTMLInputElement | HTMLTextAreaElement,
-  value: string,
-): void {
-  const proto =
-    element instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
-
-  const nativeSetter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
-  if (nativeSetter) {
-    nativeSetter.call(element, value);
-  } else {
-    element.value = value;
-  }
-
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-/**
  * Click the Publish button (or Save as draft if Publish is disabled).
  * Scrolls the button into view first.
  */
@@ -913,6 +1038,41 @@ function clickPublishButton(): { success: boolean; message?: string } {
       success: false,
       message:
         error instanceof Error ? error.message : "Unknown publish error",
+    };
+  }
+}
+
+/**
+ * Handle Etsy's publish confirmation dialog.
+ * After clicking the main Publish button, Etsy shows a modal asking
+ * to confirm the $0.20 listing fee. This clicks the "Publish" button
+ * inside that confirmation dialog.
+ */
+function clickPublishConfirmation(): { success: boolean; message?: string } {
+  try {
+    // The confirmation dialog has a "Publish" button inside a modal
+    const buttons = Array.from(document.querySelectorAll("button"));
+
+    // Look for a Publish button inside a dialog/overlay (not the main footer one)
+    const confirmBtn = buttons.find((b) => {
+      const text = b.textContent?.trim();
+      if (text !== "Publish") return false;
+      // The confirmation button is inside a modal/overlay, not the sticky footer
+      const parent = b.closest('[class*="overlay"], [class*="modal"], [class*="dialog"], [role="dialog"]');
+      return !!parent;
+    });
+
+    if (confirmBtn) {
+      confirmBtn.click();
+      return { success: true, message: "Confirmed publish" };
+    }
+
+    // Fallback: if no modal found, the first Publish click might have worked directly
+    return { success: true, message: "No confirmation dialog found (may have published directly)" };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

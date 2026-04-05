@@ -47,6 +47,49 @@ const PRODUCT_TYPE_MAP: Record<string, string> = {
   art: "Art & Prints",
 };
 
+// Facebook Marketplace category IDs (scraped from facebook.com/marketplace/create/item)
+const FACEBOOK_CATEGORY_MAP: Record<string, string> = {
+  ceramics: "307201127289111",     // Antique and collectible home goods
+  glassware: "585516622131197",    // Home decor
+  books: "298538951209945",        // Books
+  jewellery: "3151136201666261",   // Jewellery
+  clothing: "2730276503872246",    // Clothing, shoes and accessories
+  homeware: "3299126870312336",    // Home and kitchen
+  furniture: "685207502348028",    // Furniture
+  toys: "852990988564103",        // Toys and games
+  collectibles: "694812561109098", // Antiques and collectibles
+  jugs: "307201127289111",        // Antique and collectible home goods
+  art: "230517141491149",         // Arts and crafts
+};
+
+function mapCategoryToFacebook(category?: string | null, platformCategoryId?: string | null): string[] {
+  if (platformCategoryId) return [platformCategoryId];
+  if (!category) return ["684964985564453"]; // Miscellaneous
+  const id = FACEBOOK_CATEGORY_MAP[category.toLowerCase()];
+  return [id ?? "684964985564453"];
+}
+
+// Depop category mapping — 3-part arrays: [root, group, productType]
+// For non-clothing items, use "everything-else" root
+const DEPOP_CATEGORY_MAP: Record<string, string[]> = {
+  ceramics: ["everything-else", "home", "ceramics"],
+  glassware: ["everything-else", "home", "glassware"],
+  books: ["everything-else", "books-magazines", "non-fiction"],
+  jewellery: ["womenswear", "jewellery", "necklaces"],
+  clothing: ["womenswear", "tops", "t-shirts"],
+  homeware: ["everything-else", "home", "home-accessories"],
+  furniture: ["everything-else", "home", "furniture"],
+  toys: ["everything-else", "vintage", "vintage-homeware"],
+  collectibles: ["everything-else", "vintage", "vintage-homeware"],
+  jugs: ["everything-else", "home", "ceramics"],
+  art: ["everything-else", "art", "prints"],
+};
+
+function mapCategoryToDepop(category?: string | null): string[] {
+  if (!category) return ["everything-else", "home", "home-accessories"];
+  return DEPOP_CATEGORY_MAP[category.toLowerCase()] ?? ["everything-else", "home", "home-accessories"];
+}
+
 function mapProductType(category?: string | null): string {
   if (!category) return "";
   return PRODUCT_TYPE_MAP[category.toLowerCase()] ?? "";
@@ -178,9 +221,13 @@ type ExternalMessage = Record<string, unknown>;
             : mapCategoryToShopify(find.category);
           const weightGrams = find.shipping_weight_grams ?? find.weight_grams;
 
-          // Use raw Wrenlist category for most marketplaces; Shopify needs its own mapping
+          // Map category per marketplace
           const productCategory = mp === "shopify"
             ? shopifyCategory
+            : mp === "facebook"
+            ? mapCategoryToFacebook(find.category, item.platform_category_id)
+            : mp === "depop"
+            ? mapCategoryToDepop(find.category)
             : find.category ? [find.category] : [];
 
           const product: Product = {
@@ -197,18 +244,41 @@ type ExternalMessage = Record<string, unknown>;
             color: find.colour ?? undefined,
             size: find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
+            quantity: 1,
+            acceptOffers: true,
             shipping: {
+              shippingType: "OwnLabel",
               shippingWeight: weightGrams
-                ? { value: weightGrams, unit: "Grams" }
+                ? {
+                    value: weightGrams,
+                    unit: "Grams",
+                    inGrams: weightGrams,
+                    inOunces: Math.round(weightGrams * 0.03527 * 100) / 100,
+                  }
                 : undefined,
+              shippingAddress: {
+                city: "London",
+                country: "UK",
+                lat: 51.5074,
+                lng: -0.1278,
+              },
+              domesticShipping: 4,
+              sellerPays: false,
+              allowLocalPickup: true,
             },
             dynamicProperties: {
               productType: mapProductType(find.category),
             },
           };
 
-          // Pass settings (e.g. shopifyShopUrl) from the queue item
-          const publishOptions = item.settings ? { settings: item.settings } : {};
+          // Pass settings with TLD overrides for UK marketplaces
+          const publishOptions = {
+            settings: {
+              ...(item.settings ?? {}),
+              depopTld: "co.uk",
+              facebookTld: "co.uk",
+            },
+          };
           const result = await publishToMarketplace(mp, product, publishOptions);
 
           // Report back to Wrenlist API

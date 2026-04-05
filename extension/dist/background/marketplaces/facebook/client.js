@@ -164,14 +164,14 @@ export class FacebookClient {
         const trimmed = text.replace("for (;;);", "");
         return JSON.parse(trimmed);
     }
-    async fetchCarriers(categoryId, weight, price) {
+    async fetchCarriers(categoryId, weight, price, currency = "USD") {
         await this.ensureSession();
         const variables = {
             params: {
                 eligibility_params: {
                     category_id: categoryId,
                     item_price: {
-                        currency: "USD",
+                        currency,
                         price: `${Math.round(price * 1000)}`,
                     },
                 },

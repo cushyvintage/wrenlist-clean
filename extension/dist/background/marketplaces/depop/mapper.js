@@ -228,11 +228,12 @@ export class DepopMapper {
         const countryCode = TLD_COUNTRY_CODES[this.tld] ?? "US";
         const addressLabel = COUNTRY_LABELS[countryCode] ?? COUNTRY_LABELS["US"] ?? "United States";
         const categoryRoot = product.category[0]?.toLowerCase() ?? "menswear";
+        const isUK = countryCode === "GB";
         const payload = {
             address: addressLabel,
             countryCode,
-            geoLat: 39.3812661305678,
-            geoLng: -97.9222112121185,
+            geoLat: isUK ? 51.5074 : 39.3812661305678,
+            geoLng: isUK ? -0.1278 : -97.9222112121185,
             brand: (await this.mapBrand(product.brand)) ?? "unbranded",
             colour: this.mapColors(product),
             condition: this.mapCondition(product.condition),

@@ -46,6 +46,7 @@ export interface FacebookMapperDeps {
     categoryId: string,
     weight: ShippingInfo["shippingWeight"],
     price: number,
+    currency?: string,
   ) => Promise<FacebookCarrierOption[]>;
 }
 
@@ -233,10 +234,15 @@ export class FacebookMapper {
       };
     }
 
+    const addressCountry = product.shipping.shippingAddress?.country ?? "US";
+    const prepaidCurrency =
+      this.currencyFallback[addressCountry as keyof typeof this.currencyFallback] ??
+      "USD";
     const carriers = await this.deps.fetchCarriers(
       product.category[0],
       shipping.shippingWeight,
       product.price,
+      prepaidCurrency,
     );
 
     if (!carriers.length) {

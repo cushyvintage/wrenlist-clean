@@ -172,7 +172,10 @@ export class FacebookMapper {
                 internalErrors: "Package too heavy",
             };
         }
-        const carriers = await this.deps.fetchCarriers(product.category[0], shipping.shippingWeight, product.price);
+        const addressCountry = product.shipping.shippingAddress?.country ?? "US";
+        const prepaidCurrency = this.currencyFallback[addressCountry] ??
+            "USD";
+        const carriers = await this.deps.fetchCarriers(product.category[0], shipping.shippingWeight, product.price, prepaidCurrency);
         if (!carriers.length) {
             throw {
                 success: false,

@@ -258,6 +258,7 @@ export class FacebookClient {
     categoryId: string,
     weight: ShippingInfo["shippingWeight"],
     price: number,
+    currency = "USD",
   ): Promise<FacebookCarrierOption[]> {
     await this.ensureSession();
     const variables = {
@@ -265,7 +266,7 @@ export class FacebookClient {
         eligibility_params: {
           category_id: categoryId,
           item_price: {
-            currency: "USD",
+            currency,
             price: `${Math.round(price * 1000)}`,
           },
         },
