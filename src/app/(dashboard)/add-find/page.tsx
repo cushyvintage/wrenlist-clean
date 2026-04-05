@@ -863,7 +863,7 @@ export default function AddFindPage() {
                 onSetMain={handleSetMainPhoto}
                 onBulkRemove={handleBulkRemovePhotos}
                 onUpdatePhoto={handleUpdatePhoto}
-                maxPhotos={10}
+                selectedPlatforms={formData.selectedPlatforms}
               />
             </div>
 

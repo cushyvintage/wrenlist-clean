@@ -28,6 +28,20 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+/** Max photos allowed per marketplace platform */
+const PLATFORM_PHOTO_LIMITS: Record<string, number> = {
+  vinted: 20,
+  ebay: 24,
+  etsy: 10,
+  depop: 4,
+  poshmark: 16,
+  mercari: 12,
+  facebook: 10,
+  shopify: 250,
+  whatnot: 10,
+  grailed: 20,
+}
+
 interface PhotoUploadProps {
   photos: File[]
   photoPreviews: string[]
@@ -38,6 +52,7 @@ interface PhotoUploadProps {
   onSetMain?: (index: number) => void
   onBulkRemove?: (indices: number[]) => void
   uploadingIndices?: number[]
+  selectedPlatforms?: string[]
   maxPhotos?: number
 }
 
@@ -221,8 +236,26 @@ export default function PhotoUpload({
   onSetMain,
   onBulkRemove,
   uploadingIndices,
-  maxPhotos = 10,
+  selectedPlatforms,
+  maxPhotos: maxPhotosProp,
 }: PhotoUploadProps) {
+  // Compute effective max from selected platforms (use lowest limit)
+  const maxPhotos = useMemo(() => {
+    if (maxPhotosProp !== undefined) return maxPhotosProp
+    if (!selectedPlatforms || selectedPlatforms.length === 0) return 20
+    const limits = selectedPlatforms
+      .map((p) => PLATFORM_PHOTO_LIMITS[p])
+      .filter((v): v is number => v !== undefined)
+    return limits.length > 0 ? Math.min(...limits) : 20
+  }, [maxPhotosProp, selectedPlatforms])
+
+  // Platform limit hints for display
+  const platformLimitHints = useMemo(() => {
+    if (!selectedPlatforms || selectedPlatforms.length === 0) return null
+    return selectedPlatforms
+      .filter((p) => PLATFORM_PHOTO_LIMITS[p] !== undefined)
+      .map((p) => ({ name: p.charAt(0).toUpperCase() + p.slice(1), max: PLATFORM_PHOTO_LIMITS[p]! }))
+  }, [selectedPlatforms])
   // Background removal
   const [removingBgIndex, setRemovingBgIndex] = useState<number | null>(null)
   const [bgRemovalError, setBgRemovalError] = useState<string | null>(null)
@@ -514,17 +547,24 @@ export default function PhotoUpload({
         <div className="space-y-3">
           {/* Photo count indicator */}
           <div className="flex items-center justify-between">
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                isAtMax
-                  ? 'bg-sage/15 text-sage'
-                  : isNearMax
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'text-sage-dim'
-              }`}
-            >
-              {photoCount}/{maxPhotos} photos
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  isAtMax
+                    ? 'bg-sage/15 text-sage'
+                    : isNearMax
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'text-sage-dim'
+                }`}
+              >
+                {photoCount}/{maxPhotos} photos
+              </span>
+              {platformLimitHints && platformLimitHints.length > 0 && (
+                <span className="text-xs text-sage-dim">
+                  ({platformLimitHints.map((p) => `${p.name}: ${p.max}`).join(' · ')})
+                </span>
+              )}
+            </div>
             {/* Bulk select toggle */}
             {onBulkRemove && photoPreviews.length >= 2 && (
               <div className="flex items-center gap-2">
