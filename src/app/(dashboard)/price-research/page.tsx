@@ -35,7 +35,7 @@ function SourceBadge({ source }: { source: 'live' | 'ai_estimate' }) {
   if (source === 'live') {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">
-        sold data
+        live listings
       </span>
     )
   }
@@ -62,12 +62,14 @@ function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
         </div>
         <div className="text-sm text-ink">
           <span className="font-medium">{data.avg_days_to_sell.toFixed(1)}</span>{' '}
-          <span className="text-ink-lt">days ago</span>
+          <span className="text-ink-lt">{data.source === 'live' ? 'avg days listed' : 'avg days to sell'}</span>
         </div>
       </div>
       {data.sample_listings.length > 0 && (
         <div className="border-t border-border pt-4">
-          <h4 className="text-xs font-medium text-ink-lt mb-3">recent sales</h4>
+          <h4 className="text-xs font-medium text-ink-lt mb-3">
+            {data.source === 'live' ? 'current listings' : 'estimated sales'}
+          </h4>
           <div className="space-y-2">
             {data.sample_listings.map((listing, idx) => (
               <div key={idx} className="text-xs">
@@ -85,7 +87,12 @@ function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
                 )}
                 <div className="flex justify-between text-ink-lt mt-1">
                   <span>{listing.condition}</span>
-                  <span>£{listing.price} · {listing.days_ago}d ago</span>
+                  <span>
+                    £{listing.price}
+                    {listing.days_ago > 0 && (
+                      <> · {listing.days_ago}d {data.source === 'live' ? 'listed' : 'ago'}</>
+                    )}
+                  </span>
                 </div>
               </div>
             ))}
@@ -171,7 +178,7 @@ export default function PriceResearchPage() {
             <div className="space-y-4">
               <SearchForm />
               <p className="text-center text-sm text-ink-lt">
-                search for an item to see real eBay sold prices and Vinted estimates
+                search for an item to see real eBay listing prices and Vinted estimates
               </p>
             </div>
           </Panel>
