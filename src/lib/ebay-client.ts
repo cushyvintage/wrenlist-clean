@@ -498,10 +498,10 @@ export class eBayClient {
   }
 
   /**
-   * End an offer (delist the listing)
+   * Withdraw a published offer (delist the listing from eBay)
    */
   async endOffer(offerId: string): Promise<any> {
-    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/end_item`, {
+    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}/withdraw`, {
       method: 'POST',
       headers: new UndiciHeaders({
         'Content-Type': 'application/json',
