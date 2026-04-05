@@ -1,5 +1,5 @@
 import type {
-  CrosslistProduct,
+  Product,
   MarketplaceListingResult,
 } from "../types.js";
 import { createDepopServices } from "../marketplaces/depop/index.js";
@@ -87,7 +87,7 @@ export async function checkMarketplaceLogin(
 
 export async function updateMarketplaceListing(
   marketplace: SupportedMarketplace,
-  product: CrosslistProduct,
+  product: Product,
   options: PublishOptions = {},
 ): Promise<ListingActionResult> {
   try {
@@ -192,7 +192,7 @@ export async function fetchMarketplaceListing({
   marketplace,
   id,
   ...options
-}: ListingRequest): Promise<CrosslistProduct | null> {
+}: ListingRequest): Promise<Product | null> {
   const tld = resolveTld(marketplace, options);
   switch (marketplace) {
     case "grailed":
@@ -223,7 +223,7 @@ export async function fetchMarketplaceListing({
   }
 }
 
-async function updateGrailedListing(product: CrosslistProduct, tld: string) {
+async function updateGrailedListing(product: Product, tld: string) {
   const listingId = product.marketplaceId ?? product.marketPlaceId;
   if (!listingId) {
     throw new Error("Missing Grailed listing id.");
@@ -234,7 +234,7 @@ async function updateGrailedListing(product: CrosslistProduct, tld: string) {
   return services.client.updateListing(listingId, payload);
 }
 
-async function updateDepopListing(product: CrosslistProduct, tld: string) {
+async function updateDepopListing(product: Product, tld: string) {
   if (!product.marketplaceUrl) {
     throw new Error("Missing Depop marketplace URL.");
   }
@@ -244,7 +244,7 @@ async function updateDepopListing(product: CrosslistProduct, tld: string) {
   return services.client.updateListing(product.marketplaceUrl, payload);
 }
 
-async function updateMercariListing(product: CrosslistProduct) {
+async function updateMercariListing(product: Product) {
   const listingId = product.marketplaceId ?? product.marketPlaceId;
   if (!listingId) {
     throw new Error("Missing Mercari listing id.");
@@ -255,7 +255,7 @@ async function updateMercariListing(product: CrosslistProduct) {
   return services.client.updateListing(listingId, payload);
 }
 
-async function updateVintedListing(product: CrosslistProduct, tld: string) {
+async function updateVintedListing(product: Product, tld: string) {
   const listingId = product.marketplaceId ?? product.marketPlaceId;
   if (!listingId) {
     throw new Error("Missing Vinted listing id.");
@@ -280,7 +280,7 @@ async function updateVintedListing(product: CrosslistProduct, tld: string) {
 }
 
 async function updateShopifyListing(
-  product: CrosslistProduct,
+  product: Product,
   options: PublishOptions,
 ) {
   const shopUrl = resolveShopifyUrl(options.settings);
@@ -299,7 +299,7 @@ async function updateShopifyListing(
   return services.client.updateListing(payload);
 }
 
-async function updateWhatnotListing(product: CrosslistProduct, tld: string) {
+async function updateWhatnotListing(product: Product, tld: string) {
   const services = createWhatnotServices(tld);
   const payload = await services.mapProductForUpdate(product);
   return services.client.updateListing(payload);

@@ -1,8 +1,8 @@
 import { Condition } from "../../shared/enums.js";
 import {
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
-import type { CrosslistProduct, ShippingInfo } from "../../types.js";
+} from "../../shared/api.js";
+import type { Product, ShippingInfo } from "../../types.js";
 import type { WhatnotClient } from "./client.js";
 
 interface ProductAttribute {
@@ -113,7 +113,7 @@ export class WhatnotMapper {
     private readonly tld: string,
   ) {}
 
-  public async map(product: CrosslistProduct): Promise<WhatnotListingInput> {
+  public async map(product: Product): Promise<WhatnotListingInput> {
     const media = await getProductMediaForMarketplace(product.id, "whatnot");
     const uploads = media.length ? await this.deps.uploadImages(media) : [];
     if (!uploads.length) {
@@ -238,7 +238,7 @@ export class WhatnotMapper {
   }
 
   public async mapForUpdate(
-    product: CrosslistProduct,
+    product: Product,
   ): Promise<WhatnotListingInput> {
     const payload = await this.map(product);
     delete payload.uuid;

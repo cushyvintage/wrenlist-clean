@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { GrailedClient } from "./client.js";
 import { GrailedMapper } from "./mapper.js";
 
@@ -13,7 +13,7 @@ export function createGrailedServices(config: GrailedConfig) {
   return {
     client,
     mapper,
-    async mapProduct(product: CrosslistProduct) {
+    async mapProduct(product: Product) {
       return mapper.map(product);
     },
   };

@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { DepopClient } from "./client.js";
 import { DepopMapper } from "./mapper.js";
 
@@ -13,7 +13,7 @@ export function createDepopServices(config: DepopConfig) {
   return {
     client,
     mapper,
-    async mapProduct(product: CrosslistProduct) {
+    async mapProduct(product: Product) {
       return mapper.map(product);
     },
   };

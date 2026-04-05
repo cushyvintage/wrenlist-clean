@@ -1,7 +1,7 @@
 import {
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
-import type { CrosslistProduct } from "../../types.js";
+} from "../../shared/api.js";
+import type { Product } from "../../types.js";
 import { mercariBrands } from "../../data/index.js";
 import type { MercariClient, MercariListingPayload } from "./client.js";
 
@@ -66,7 +66,7 @@ export class MercariMapper {
     return index === -1 ? undefined : index + 1;
   }
 
-  private mapCondition(condition: CrosslistProduct["condition"]): number {
+  private mapCondition(condition: Product["condition"]): number {
     switch (condition) {
       case "NewWithTags":
         return 1;
@@ -107,7 +107,7 @@ export class MercariMapper {
     return brand?.id ?? 0;
   }
 
-  private getZipCode(product: CrosslistProduct): string {
+  private getZipCode(product: Product): string {
     const zip = product.shipping?.shippingAddress?.zipCode;
     if (!zip) {
       throw {
@@ -130,7 +130,7 @@ export class MercariMapper {
   }
 
   public async buildPayload(
-    product: CrosslistProduct,
+    product: Product,
     options: BuildPayloadOptions = {},
   ): Promise<MercariListingPayload> {
     const priceCents = Math.round(product.price * 100);

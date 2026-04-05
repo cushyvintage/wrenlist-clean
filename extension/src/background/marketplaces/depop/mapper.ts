@@ -2,9 +2,9 @@ import { depopBrands } from "../../data/index.js";
 import {
   chunkConcurrentRequestsWithRetry,
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import type { DepopClient } from "./client.js";
 
 const TLD_CURRENCIES: Record<string, string> = {
@@ -223,7 +223,7 @@ export class DepopMapper {
     }
   }
 
-  private mapColors(product: CrosslistProduct): string[] {
+  private mapColors(product: Product): string[] {
     const mapped: Array<string | null> = [
       this.mapColor(product.color),
       this.mapColor(product.color2 as string),
@@ -248,7 +248,7 @@ export class DepopMapper {
     return mapped ? [mapped] : [];
   }
 
-  public async map(product: CrosslistProduct): Promise<Record<string, any>> {
+  public async map(product: Product): Promise<Record<string, any>> {
     const currency = TLD_CURRENCIES[this.tld] ?? "USD";
     const countryCode = TLD_COUNTRY_CODES[this.tld] ?? "US";
     const addressLabel =

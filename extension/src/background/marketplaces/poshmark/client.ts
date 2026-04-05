@@ -2,9 +2,9 @@ import {
   checkAlreadyExecuted,
   getLoggingInfo,
   log,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import {
   getPoshmarkBrandSearchUrl,
   getPoshmarkCreateListingUrl,
@@ -141,7 +141,7 @@ export class PoshmarkClient {
     return body.id as string;
   }
 
-  public async postListing(product: CrosslistProduct): Promise<ListingActionResult> {
+  public async postListing(product: Product): Promise<ListingActionResult> {
     await this.ensureSession();
     const draftId = await this.createDraft();
     const payload = await this.mapper.map(product, draftId);
@@ -166,7 +166,7 @@ export class PoshmarkClient {
   }
 
   public async updateListing(
-    product: CrosslistProduct,
+    product: Product,
   ): Promise<ListingActionResult> {
     await this.ensureSession();
     const listingId = product.marketplaceId ?? product.marketPlaceId;
@@ -423,7 +423,7 @@ export class PoshmarkClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.ensureSession();
     const listing = await this.getPoshmarkListing(id);
     if (!listing) {
@@ -441,7 +441,7 @@ export class PoshmarkClient {
     return Boolean(cookie);
   }
 
-  private convertPoshmarkProductInfo(listing: PoshmarkListing): CrosslistProduct {
+  private convertPoshmarkProductInfo(listing: PoshmarkListing): Product {
     const mapColor = (value?: string | null): string | undefined => {
       if (!value) return undefined;
       if (value === "Gray" || value === "eGrey") return Color.Gray;
@@ -451,7 +451,7 @@ export class PoshmarkClient {
     const availability =
       listing.inventory?.status === "not_for_sale" ? "NotForSale" : "ForSale";
 
-    const product: CrosslistProduct = {
+    const product: Product = {
       id: listing.id,
       marketPlaceId: listing.id,
       title: listing.title,

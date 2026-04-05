@@ -2,8 +2,8 @@ import {
   checkAlreadyExecuted,
   getLoggingInfo,
   log,
-} from "../../shared/crosslistApi.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+} from "../../shared/api.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
 import { countries } from "../../data/index.js";
 
@@ -343,7 +343,7 @@ export class GrailedClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     const response = await fetch(`${GRAILED_LISTINGS_ENDPOINT}/${id}`);
 
     if (response.status !== 200) {
@@ -379,7 +379,7 @@ export class GrailedClient {
         : null;
     const color = normalizedColor && isColor(normalizedColor) ? normalizedColor : null;
 
-    const listing: CrosslistProduct = {
+    const listing: Product = {
       id,
       marketPlaceId: id,
       title: data?.title ?? null,
@@ -402,7 +402,7 @@ export class GrailedClient {
       marketplaceUrl: this.getProductUrl(id),
       cover: data?.photos?.[0]?.url ?? null,
       coverSmall: data?.photos?.[0]?.url ?? null,
-    } as unknown as CrosslistProduct;
+    } as unknown as Product;
 
     const origin =
       data?.traits?.find((trait: any) => trait.name === "country_of_origin")

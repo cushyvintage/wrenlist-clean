@@ -1,6 +1,6 @@
 /**
  * Shopify GraphQL documents used by the marketplace client.
- * These will be filled in as we port the legacy Crosslist worker logic.
+ * These will be filled in as we implement as needed.
  */
 export interface ShopifyGraphqlDocuments {
   adminProductDetails: string;

@@ -2,9 +2,9 @@ import {
   checkAlreadyExecuted,
   getLoggingInfo,
   log,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import type {
-  CrosslistProduct,
+  Product,
   MarketplaceListingResult,
   ShippingInfo,
 } from "../../types.js";
@@ -50,7 +50,7 @@ export class FacebookClient {
     uploadImage: this.uploadImage.bind(this),
     fetchCarriers: this.fetchCarriers.bind(this),
   });
-  public mapProduct(product: CrosslistProduct) {
+  public mapProduct(product: Product) {
     return this.mapper.map(product);
   }
 
@@ -101,7 +101,7 @@ export class FacebookClient {
     );
   }
 
-  public async postListing(product: CrosslistProduct): Promise<ListingActionResult> {
+  public async postListing(product: Product): Promise<ListingActionResult> {
     await this.ensureSession();
     await this.storeCategories();
 
@@ -118,7 +118,7 @@ export class FacebookClient {
   }
 
   public async updateListing(
-    product: CrosslistProduct,
+    product: Product,
   ): Promise<ListingActionResult> {
     await this.ensureSession();
     const payload = await this.mapper.map(product);
@@ -450,7 +450,7 @@ export class FacebookClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.ensureSession();
 
     const params = new URLSearchParams();
@@ -531,7 +531,7 @@ export class FacebookClient {
         default:
           return "Good";
       }
-    })() as CrosslistProduct["condition"];
+    })() as Product["condition"];
 
     const color = colorAttr?.value?.trim();
     const size = sizeAttr?.value?.trim();

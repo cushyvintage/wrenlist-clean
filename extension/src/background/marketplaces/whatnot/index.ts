@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { WhatnotClient } from "./client.js";
 import {
   WhatnotMapper,
@@ -9,10 +9,10 @@ export interface WhatnotServices {
   client: WhatnotClient;
   mapper: WhatnotMapper;
   mapProduct: (
-    product: CrosslistProduct,
+    product: Product,
   ) => Promise<WhatnotListingInput>;
   mapProductForUpdate: (
-    product: CrosslistProduct,
+    product: Product,
   ) => Promise<WhatnotListingInput>;
 }
 

@@ -3,9 +3,9 @@ import {
   checkAlreadyExecuted,
   getLoggingInfo,
   log,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition } from "../../shared/enums.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import {
   ADD_LISTING_PHOTO_MUTATION,
   CREATE_LISTING_MUTATION,
@@ -359,7 +359,7 @@ export class WhatnotClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     const response = await this.graphql<{
       data: {
         categories?: unknown;
@@ -386,7 +386,7 @@ export class WhatnotClient {
         ? await this.getShippingWeight(categoryId, shippingProfileId)
         : undefined;
 
-    return this.mapListingToCrosslist(listing, shippingWeight);
+    return this.mapListingToProduct(listing, shippingWeight);
   }
 
   public async getShippingProfiles(categoryId: string) {
@@ -443,16 +443,16 @@ export class WhatnotClient {
   private async getShippingWeight(categoryId: string, profileId: string) {
     const profiles = await this.getShippingProfiles(categoryId);
     const match = profiles?.find((profile: any) => profile.id === profileId);
-    return this.convertToCrosslistWeight(
+    return this.convertToStandardWeight(
       match?.weightAmount,
       match?.weightScale,
     );
   }
 
-  private mapListingToCrosslist(
+  private mapListingToProduct(
     listing: any,
     shippingWeight?: { value: number; unit: string } | undefined,
-  ): CrosslistProduct {
+  ): Product {
     const categoryId = listing.product?.category?.id ?? null;
     const attributeValue = (predicate: (key: string) => boolean) =>
       listing.listingAttributeValues?.find((attr: any) =>
@@ -548,7 +548,7 @@ export class WhatnotClient {
     return `${WHATNOT_DOMAIN}/listing/${id}`;
   }
 
-  private convertToCrosslistWeight(
+  private convertToStandardWeight(
     amount?: number,
     scale?: string,
   ): { value: number; unit: string } | undefined {

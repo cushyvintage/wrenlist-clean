@@ -1,6 +1,6 @@
 import { Condition } from "./enums.js";
 
-// Removed CROSSLIST_DOMAIN - no longer using crosslist.com
+// Wrenlist extension API utilities
 export const EXTENSION_VERSION = "1.2.0";
 const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
 
@@ -151,7 +151,7 @@ export async function log(
   tld?: string,
   marketplaceProductId?: string,
 ): Promise<void> {
-  // Logging removed - no longer using crosslist.com
+  // Logging stub - can be wired to Wrenlist API if needed
   // Logs can be added to Wrenlist API if needed in the future
 }
 
@@ -163,7 +163,7 @@ export async function logFilled(
   payload?: unknown,
   errorMessage?: string,
 ): Promise<void> {
-  // Logging removed - no longer using crosslist.com
+  // Logging stub - can be wired to Wrenlist API if needed
   // Logs can be added to Wrenlist API if needed in the future
 }
 
@@ -172,7 +172,7 @@ export async function getLoggingInfo(
   marketplace: string,
   tld?: string,
 ): Promise<unknown> {
-  // Logging removed - no longer using crosslist.com
+  // Logging stub - can be wired to Wrenlist API if needed
   // Always return { isLogged: false } to allow operations to proceed
   return { isLogged: false };
 }

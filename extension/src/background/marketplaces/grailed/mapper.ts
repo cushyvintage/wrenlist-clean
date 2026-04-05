@@ -2,9 +2,9 @@ import { countries } from "../../data/index.js";
 import {
   chunkConcurrentRequests,
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import type { GrailedClient } from "./client.js";
 
 interface GrailedBrand {
@@ -113,7 +113,7 @@ export class GrailedMapper {
   }
 
   private buildShippingMatrix(
-    product: CrosslistProduct,
+    product: Product,
     addressCountryCode: string,
   ): GrailedShippingConfig {
     const domestic = product.shipping.domesticShipping ?? 0;
@@ -151,7 +151,7 @@ export class GrailedMapper {
     };
   }
 
-  public async map(product: CrosslistProduct): Promise<Record<string, unknown>> {
+  public async map(product: Product): Promise<Record<string, unknown>> {
     const addresses =
       await this.grailedClient.getPostalAddressForAuthenticatedUser();
 

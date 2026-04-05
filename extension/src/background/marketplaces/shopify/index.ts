@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { ShopifyClient } from "./client.js";
 import {
   ShopifyMapper,
@@ -10,10 +10,10 @@ export interface ShopifyServices {
   client: ShopifyClient;
   mapper: ShopifyMapper;
   mapProduct: (
-    product: CrosslistProduct,
+    product: Product,
   ) => Promise<ShopifyCreatePayload>;
   mapProductForEdit: (
-    product: CrosslistProduct,
+    product: Product,
   ) => Promise<ShopifyUpdatePayload>;
 }
 

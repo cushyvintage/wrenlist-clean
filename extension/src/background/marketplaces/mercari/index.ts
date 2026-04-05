@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { MercariClient } from "./client.js";
 import { MercariMapper, type BuildPayloadOptions } from "./mapper.js";
 
@@ -6,7 +6,7 @@ export interface MercariServices {
   client: MercariClient;
   mapper: MercariMapper;
   mapProduct: (
-    product: CrosslistProduct,
+    product: Product,
     options?: BuildPayloadOptions,
   ) => Promise<import("./client.js").MercariListingPayload>;
 }

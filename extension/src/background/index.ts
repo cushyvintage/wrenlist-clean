@@ -1,5 +1,5 @@
-import type { CrosslistProduct, VintedImportMetadata } from "./types.js";
-import { EXTENSION_VERSION } from "./shared/crosslistApi.js";
+import type { Product, VintedImportMetadata } from "./types.js";
+import { EXTENSION_VERSION } from "./shared/api.js";
 import {
   delistFromMarketplace,
   publishToMarketplace,
@@ -118,8 +118,8 @@ type ExternalMessage = Record<string, unknown>;
 
           console.log(`[QueuePoll] Publishing ${find.name} to ${mp}...`);
 
-          // Build CrosslistProduct from find data
-          const product: CrosslistProduct = {
+          // Build Product from find data
+          const product: Product = {
             id: find.id,
             marketPlaceId: find.id,
             title: find.name ?? "Untitled",
@@ -308,8 +308,9 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     case "publishtomarketplace":
     case "publish_to_marketplace":
       return handlePublishCommand(message);
-    case "crosslist_to_shopify":
-      return handleCrosslistToShopify(message);
+    case "publish_to_shopify":
+    case "crosslist_to_shopify": // legacy compat
+      return handlePublishToShopify(message);
     case "updatelistingonmarketplace":
     case "update_marketplace_listing":
     case "updatemarketplacelisting":
@@ -383,9 +384,11 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     case "fetch_vinted_api":
     case "fetchvintedapi":
       return handleFetchVintedApi(message);
-    case "fetch_crosslist_api":
-    case "fetchcrosslistapi":
-      return handleFetchCrosslistApi(message);
+    case "fetch_wrenlist_api":
+    case "fetchwrenlistapi":
+    case "fetch_crosslist_api": // legacy compat
+    case "fetchcrosslistapi": // legacy compat
+      return handleFetchWrenlistApi(message);
     case "vinted_debug_info":
       return handleVintedDebugInfo();
     default:
@@ -433,7 +436,7 @@ async function handleDelistCommand(message: ExternalMessage) {
   );
 }
 
-async function handleCrosslistToShopify(message: ExternalMessage) {
+async function handlePublishToShopify(message: ExternalMessage) {
   try {
     const productId = (message.productId as string | undefined);
     const shopId = (message.shopId as string | undefined);
@@ -492,8 +495,8 @@ async function handleCrosslistToShopify(message: ExternalMessage) {
       getLocationId: () => shopifyClient.getLocationId(),
     });
 
-    // Build CrosslistProduct from payload
-    const crosslistProduct: CrosslistProduct = {
+    // Build Product from payload
+    const product: Product = {
       id: payloadData.data.product.id,
       marketPlaceId: payloadData.data.product.id,
       title: payloadData.data.product.title,
@@ -511,7 +514,7 @@ async function handleCrosslistToShopify(message: ExternalMessage) {
     };
 
     // Map to Shopify payload
-    const shopifyPayload = await mapper.map(crosslistProduct);
+    const shopifyPayload = await mapper.map(product);
 
     // Publish to Shopify
     const result = await shopifyClient.postListing(shopifyPayload);
@@ -1100,12 +1103,12 @@ function resolveMarketplace(message: ExternalMessage): SupportedMarketplace {
   return marketplace as SupportedMarketplace;
 }
 
-function resolveProduct(message: ExternalMessage): CrosslistProduct {
+function resolveProduct(message: ExternalMessage): Product {
   const product =
-    (message.product as CrosslistProduct | undefined) ??
-    (message.productData as CrosslistProduct | undefined) ??
-    (message.payload as CrosslistProduct | undefined) ??
-    (message.data as CrosslistProduct | undefined);
+    (message.product as Product | undefined) ??
+    (message.productData as Product | undefined) ??
+    (message.payload as Product | undefined) ??
+    (message.data as Product | undefined);
 
   if (!product) {
     throw new Error("Product payload is required");
@@ -1823,7 +1826,7 @@ async function collectVintedListings(
       try {
         const detail = await client.getListing(product.marketplaceId);
         if (!detail) continue;
-        const listing = mapCrosslistProductToBatch(
+        const listing = mapProductToBatch(
           detail,
           product.marketplaceUrl ?? client.getProductUrl(product.marketplaceId),
           status,
@@ -1857,7 +1860,7 @@ async function collectVintedListingsByIds(
         console.warn(`[Batch Import] Listing ${idString} not found or inaccessible`);
         continue;
       }
-      const listing = mapCrosslistProductToBatch(
+      const listing = mapProductToBatch(
         detail,
         client.getProductUrl(idString),
         status,
@@ -1888,8 +1891,8 @@ const VINTED_TLD_CURRENCY_MAP: Record<string, string> = {
   com: "USD",
 };
 
-function mapCrosslistProductToBatch(
-  product: CrosslistProduct,
+function mapProductToBatch(
+  product: Product,
   url: string,
   status: string,
   tld: string,
@@ -1995,7 +1998,7 @@ async function handleFetchVintedApi(message: ExternalMessage) {
   }
 }
 
-async function handleFetchCrosslistApi(message: ExternalMessage) {
+async function handleFetchWrenlistApi(message: ExternalMessage) {
   const url = message.url as string | undefined;
   const method = (message.method as string | undefined) ?? "GET";
 
@@ -2004,8 +2007,8 @@ async function handleFetchCrosslistApi(message: ExternalMessage) {
     throw new Error("URL is required");
   }
 
-  if (!url.startsWith("https://app.crosslist.com/api/")) {
-    throw new Error("Only Crosslist API URLs (https://app.crosslist.com/api/*) are allowed");
+  if (!url.startsWith("https://app.wrenlist.com/api/")) {
+    throw new Error("Only Wrenlist API URLs (https://app.wrenlist.com/api/*) are allowed");
   }
 
   // Only allow GET requests (read-only)

@@ -3,9 +3,9 @@ import {
   getLoggingInfo,
   log,
   wait,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct, MarketplaceListingResult, VintedImportMetadata } from "../../types.js";
+import type { Product, MarketplaceListingResult, VintedImportMetadata } from "../../types.js";
 import { buildVintedUrls, VINTED_RULE_IDS } from "./constants.js";
 
 interface VintedPhotoResponse {
@@ -214,7 +214,7 @@ export class VintedClient {
         .map((entry) => `"${entry.brand}";v="${entry.version}"`)
         .join("; ");
 
-      // Get cf_clearance cookie for Cloudflare bypass (matching Crosslist's _setApiHeaders approach)
+      // Get cf_clearance cookie for Cloudflare bypass (for Cloudflare bypass)
       let cfClearanceHeader: { header: string; operation: any; value: string } | null = null;
       try {
         const domain = `vinted.${this.tld}`;
@@ -642,14 +642,14 @@ export class VintedClient {
       }
       this.csrfToken = match[1];
 
-      // Extract anon_id using Crosslist pattern
+      // Extract anon_id from page HTML
       match = html.match(/"anon_id":"([a-z0-9\-]+)"/);
       if (!match || match.length < 2) {
         throw new Error("Anon id not found in HTML response");
       }
       this.anonId = match[1];
 
-      // Extract uploadSessionId from HTML (Crosslist pattern)
+      // Extract uploadSessionId from HTML (from page HTML)
       // This is embedded in the page's JSON data and used for temp_uuid + upload_session_id
       const uploadMatch = html.match(/"uploadSessionId":"([a-z0-9\-]+)"/);
       if (uploadMatch && uploadMatch[1]) {
@@ -748,7 +748,7 @@ export class VintedClient {
         console.log("[Vinted] Debug: Context around anon_id:", context);
       }
 
-      // Extract user_id using Crosslist pattern (exact pattern from working crosslist extension)
+      // Extract user_id from page HTML 
       // Only try HTML parsing if we didn't get username from cookie
       // This regex has two alternatives with OR: 
       // 1. Matches "user_id":123 or "userId":123
@@ -1007,7 +1007,7 @@ export class VintedClient {
 
   /**
    * Refresh the uploadSessionId by fetching the /items/new page.
-   * Crosslist does this before each publish to get a fresh session.
+   * Extension does this before each publish to get a fresh session.
    * Falls back to a random UUID if the page doesn't contain one.
    */
   public async refreshUploadSessionId(): Promise<string> {
@@ -1110,7 +1110,7 @@ export class VintedClient {
 
       return response.package_sizes as VintedPackageSize[];
     } catch (error) {
-      // Match Crosslist's approach: log error and return empty array instead of throwing.
+      // Log error and return empty array instead of throwing.
       // The mapper has hardcoded weight-to-code fallbacks and will use default package size.
       console.error("[Vinted] fetchAvailablePackageSizes failed for catalog", catalogId, error);
       return [];
@@ -1326,7 +1326,7 @@ export class VintedClient {
     }
 
     if (!response.item) {
-      // Check for CAPTCHA URL in response (matches Crosslist approach)
+      // Check for CAPTCHA URL in response 
       if (response.url && response.url.includes("captcha")) {
         return {
           success: false,
@@ -1638,7 +1638,7 @@ export class VintedClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.setTokens();
     const response = await fetch(`${this.apiUrl}/item_upload/items/${id}`, {
       headers: {
@@ -1784,7 +1784,7 @@ export class VintedClient {
       marketplaceUrl: this.getProductUrl(id),
       // Include full Vinted metadata for cross-marketplace support
       vintedMetadata,
-    } as CrosslistProduct;
+    } as Product;
   }
 
   private packageSizeIdToWeight(id: number | null | undefined) {

@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import { VintedClient } from "./client.js";
 import { VintedMapper } from "./mapper.js";
 
@@ -13,7 +13,7 @@ export function createVintedServices(config: VintedConfig) {
   return {
     client,
     mapper,
-    async mapProduct(product: CrosslistProduct) {
+    async mapProduct(product: Product) {
       return mapper.map(product);
     },
   };

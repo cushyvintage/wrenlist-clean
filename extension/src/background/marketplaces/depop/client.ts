@@ -11,7 +11,7 @@ import {
   DEPOP_PRODUCTS_V2,
   DEPOP_SHOP_PRODUCTS,
 } from "./constants.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 import { countries } from "../../data/index.js";
 
@@ -297,7 +297,7 @@ export class DepopClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.ensureSession();
 
     const response = await fetch(
@@ -374,7 +374,7 @@ export class DepopClient {
       dynamicProperties: product.source?.length
         ? { Source: product.source[0].id }
         : {},
-    } as CrosslistProduct;
+    } as Product;
   }
 
   public async checkLogin(): Promise<boolean> {

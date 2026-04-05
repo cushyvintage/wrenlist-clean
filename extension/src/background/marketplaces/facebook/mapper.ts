@@ -2,8 +2,8 @@ import {
   chunkConcurrentRequests,
   getProductMedia,
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
-import type { CrosslistProduct, ShippingInfo } from "../../types.js";
+} from "../../shared/api.js";
+import type { Product, ShippingInfo } from "../../types.js";
 
 const VEHICLE_CATEGORY_ID = "807311116002614";
 
@@ -91,7 +91,7 @@ export class FacebookMapper {
     return photoIds;
   }
 
-  private mapCondition(condition: CrosslistProduct["condition"]) {
+  private mapCondition(condition: Product["condition"]) {
     switch (condition) {
       case "NewWithTags":
       case "NewWithoutTags":
@@ -108,7 +108,7 @@ export class FacebookMapper {
     }
   }
 
-  private mapVehicleCondition(condition: CrosslistProduct["condition"]) {
+  private mapVehicleCondition(condition: Product["condition"]) {
     switch (condition) {
       case "NewWithTags":
       case "NewWithoutTags":
@@ -174,7 +174,7 @@ export class FacebookMapper {
       throw {
         success: false,
         message:
-          "Please enter valid shipping address details under your Crosslist account settings.",
+          "Please enter valid shipping address details under your Wrenlist account settings.",
         type: "validation",
         internalErrors: "Lat/lng not available",
       };
@@ -185,7 +185,7 @@ export class FacebookMapper {
     };
   }
 
-  private buildDeliveryTypes(product: CrosslistProduct) {
+  private buildDeliveryTypes(product: Product) {
     const shipping = product.shipping as ShippingInfo & {
       allowLocalPickup?: boolean;
       doorPickup?: boolean;
@@ -213,7 +213,7 @@ export class FacebookMapper {
 
   private async applyPrepaidShipping(
     payload: Record<string, any>,
-    product: CrosslistProduct,
+    product: Product,
   ) {
     const shipping = product.shipping as ShippingInfo & {
       sellerPays?: boolean;
@@ -243,7 +243,7 @@ export class FacebookMapper {
       throw {
         success: false,
         message:
-          "There were no shipping carriers found for your region, please change shipping to local pickup only or ship your own in your Crosslist settings.",
+          "There were no shipping carriers found for your region, please change shipping to local pickup only or ship your own in your Wrenlist settings.",
         type: "validation",
         internalErrors: "No shipping carriers found",
       };
@@ -313,7 +313,7 @@ export class FacebookMapper {
 
   private applyOwnLabelShipping(
     payload: Record<string, any>,
-    product: CrosslistProduct,
+    product: Product,
   ) {
     const shipping = product.shipping as ShippingInfo & {
       sellerPays?: boolean;
@@ -373,7 +373,7 @@ export class FacebookMapper {
       : (shipping.domesticShipping ?? 0).toString();
   }
 
-  private buildVehiclePayload(product: CrosslistProduct) {
+  private buildVehiclePayload(product: Product) {
     const data: Record<string, unknown> = {
       fuelType: "",
       isKM: false,
@@ -402,7 +402,7 @@ export class FacebookMapper {
     return JSON.stringify(data);
   }
 
-  public async map(product: CrosslistProduct) {
+  public async map(product: Product) {
     const attributeData: Record<string, any> = {
       vt_attributes_free_form: {} as Record<string, string>,
       vt_attributes_normalized: {} as Record<string, string>,

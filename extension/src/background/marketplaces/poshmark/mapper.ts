@@ -1,9 +1,9 @@
 import {
   chunkConcurrentRequests,
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition } from "../../shared/enums.js";
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 
 const TLD_CURRENCIES: Record<string, string> = {
   "co.uk": "GBP",
@@ -254,7 +254,7 @@ export class PoshmarkMapper {
     }
   }
 
-  private mapColors(product: CrosslistProduct) {
+  private mapColors(product: Product) {
     const colors: string[] = [];
     const primary = this.mapColor(product.color);
     const secondary = this.mapColor(product.color2);
@@ -263,7 +263,7 @@ export class PoshmarkMapper {
     return colors;
   }
 
-  private mapStyleTags(product: CrosslistProduct) {
+  private mapStyleTags(product: Product) {
     const styles = product.styleTags ?? [];
     const mapped = styles
       .map((style) => STYLE_MAP[style])
@@ -273,7 +273,7 @@ export class PoshmarkMapper {
   }
 
   public async map(
-    product: CrosslistProduct,
+    product: Product,
     listingId: string,
   ): Promise<PoshmarkPostPayload> {
     const uploads = await this.mapImages(product.id, listingId);

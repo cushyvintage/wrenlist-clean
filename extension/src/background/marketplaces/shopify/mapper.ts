@@ -1,7 +1,7 @@
 import {
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
-import type { CrosslistProduct } from "../../types.js";
+} from "../../shared/api.js";
+import type { Product } from "../../types.js";
 
 const PRODUCT_OPTIONS = [
   { name: "Size", position: 1 },
@@ -64,7 +64,7 @@ export interface ShopifyMapperDeps {
 export class ShopifyMapper {
   constructor(private readonly deps: ShopifyMapperDeps) {}
 
-  public async map(product: CrosslistProduct): Promise<ShopifyCreatePayload> {
+  public async map(product: Product): Promise<ShopifyCreatePayload> {
     const mediaFiles = await getProductMediaForMarketplace(product.id, "shopify");
     if (!mediaFiles.length) {
       throw new Error("Shopify requires at least one product image.");
@@ -85,7 +85,7 @@ export class ShopifyMapper {
   }
 
   public async mapForEdit(
-    product: CrosslistProduct,
+    product: Product,
   ): Promise<ShopifyUpdatePayload> {
     const locationId = await this.deps.getLocationId();
     const { productOptions, metafields } = this.buildOptionData(product);
@@ -114,7 +114,7 @@ export class ShopifyMapper {
     };
   }
 
-  private buildOptionData(product: CrosslistProduct) {
+  private buildOptionData(product: Product) {
     const productOptions: Array<{
       name: string;
       position: number;
@@ -149,7 +149,7 @@ export class ShopifyMapper {
   }
 
   private buildProductInput(
-    product: CrosslistProduct,
+    product: Product,
     productOptions: Array<{ name: string; position: number; values: Array<{ name: string }> }>,
     locationId: string,
     metafields: Array<Record<string, unknown>>,
@@ -208,7 +208,7 @@ export class ShopifyMapper {
   }
 
   private buildProductInputForEdit(
-    product: CrosslistProduct,
+    product: Product,
     productOptions: Array<{ name: string; position: number; values: Array<{ name: string }> }>,
     locationId: string,
     metafields: Array<Record<string, unknown>>,

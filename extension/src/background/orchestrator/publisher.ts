@@ -1,4 +1,4 @@
-import type { CrosslistProduct } from "../types.js";
+import type { Product } from "../types.js";
 import { createDepopServices } from "../marketplaces/depop/index.js";
 import { createEtsyServices } from "../marketplaces/etsy/index.js";
 import { createFacebookServices } from "../marketplaces/facebook/index.js";
@@ -23,7 +23,7 @@ import {
 
 export async function publishToMarketplace(
   marketplace: SupportedMarketplace,
-  product: CrosslistProduct,
+  product: Product,
   options: PublishOptions = {},
 ): Promise<ListingActionResult> {
   try {
@@ -101,7 +101,7 @@ async function withAuthRetry(
   return result;
 }
 
-async function publishViaGrailed(product: CrosslistProduct, tld: string) {
+async function publishViaGrailed(product: Product, tld: string) {
   const services = createGrailedServices({ tld });
   return withAuthRetry("grailed", async () => {
     const payload = await services.mapProduct(product);
@@ -109,14 +109,14 @@ async function publishViaGrailed(product: CrosslistProduct, tld: string) {
   });
 }
 
-async function publishViaPoshmark(product: CrosslistProduct, tld: string) {
+async function publishViaPoshmark(product: Product, tld: string) {
   const services = createPoshmarkServices({ tld });
   return withAuthRetry("poshmark", async () => {
     return services.client.postListing(product);
   });
 }
 
-async function publishViaDepop(product: CrosslistProduct, tld: string) {
+async function publishViaDepop(product: Product, tld: string) {
   const services = createDepopServices({ tld });
   return withAuthRetry("depop", async () => {
     const payload = await services.mapProduct(product);
@@ -124,7 +124,7 @@ async function publishViaDepop(product: CrosslistProduct, tld: string) {
   });
 }
 
-async function publishViaMercari(product: CrosslistProduct) {
+async function publishViaMercari(product: Product) {
   const services = createMercariServices();
   return withAuthRetry("mercari", async () => {
     const payload = await services.mapProduct(product);
@@ -132,7 +132,7 @@ async function publishViaMercari(product: CrosslistProduct) {
   });
 }
 
-async function publishViaVinted(product: CrosslistProduct, tld: string) {
+async function publishViaVinted(product: Product, tld: string) {
   const services = createVintedServices({ tld });
   await services.client.bootstrap();
   let payload = await services.mapProduct(product);
@@ -147,7 +147,7 @@ async function publishViaVinted(product: CrosslistProduct, tld: string) {
   return result;
 }
 
-async function publishViaFacebook(product: CrosslistProduct, tld: string) {
+async function publishViaFacebook(product: Product, tld: string) {
   const services = createFacebookServices(tld);
   await services.client.bootstrap();
   let result = await services.client.postListing(product);
@@ -159,7 +159,7 @@ async function publishViaFacebook(product: CrosslistProduct, tld: string) {
 }
 
 async function publishViaShopify(
-  product: CrosslistProduct,
+  product: Product,
   options: PublishOptions,
 ) {
   const shopUrl = resolveShopifyUrl(options.settings);
@@ -184,7 +184,7 @@ async function publishViaShopify(
   return result;
 }
 
-async function publishViaWhatnot(product: CrosslistProduct, tld: string) {
+async function publishViaWhatnot(product: Product, tld: string) {
   const services = createWhatnotServices(tld);
   return withAuthRetry("whatnot", async () => {
     const payload = await services.mapProduct(product);
@@ -255,9 +255,9 @@ async function delistViaWhatnot(id: string, tld: string) {
   return withAuthRetry("whatnot", () => services.client.delistListing(id));
 }
 
-async function publishViaEtsy(product: CrosslistProduct) {
+async function publishViaEtsy(product: Product) {
   const services = createEtsyServices();
-  return services.client.crosslistProduct(product);
+  return services.client.publishProduct(product);
 }
 
 async function delistViaEtsy(_id: string) {

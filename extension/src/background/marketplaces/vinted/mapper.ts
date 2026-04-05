@@ -1,9 +1,9 @@
 import {
   chunkConcurrentRequests,
   getProductMediaForMarketplace,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct } from "../../types.js";
+import type { Product } from "../../types.js";
 import type { VintedClient } from "./client.js";
 
 interface VintedUploadedPhoto {
@@ -324,7 +324,7 @@ export class VintedMapper {
 
   /**
    * Get package size ID for a specific category by fetching available options from Vinted.
-   * This matches Crosslist's approach - always calculate from weight using available options,
+   * This matches the extension's approach - always calculate from weight using available options,
    * never trust pre-computed IDs as they may not be valid for the target category.
    */
   private async getPackageSizeForCategory(
@@ -348,7 +348,7 @@ export class VintedMapper {
       availableSizes.map(p => ({ id: p.id, code: p.code })));
 
     // If no sizes available (API failed or returned empty), use hardcoded defaults.
-    // Matches Crosslist's _packageSizeIdToWeight mapping: {1:500g, 2:1000g, 3:2000g, 8:5000g, 9:10000g, 10:20000g}
+    // Standard _packageSizeIdToWeight mapping: {1:500g, 2:1000g, 3:2000g, 8:5000g, 9:10000g, 10:20000g}
     if (availableSizes.length === 0) {
       if (!weight || (!weight.inGrams && !weight.inOunces)) {
         console.warn('[Vinted Mapper] No package sizes from API and no weight — using default 2 (Medium)');
@@ -389,7 +389,7 @@ export class VintedMapper {
         };
       }
 
-      // Match weight to code, then find ID from available options (Crosslist approach)
+      // Match weight to code, then find ID from available options (extension approach)
       // Order matters: check from smallest to largest
       const weightToCode: Array<{ maxGrams: number; code: string }> = [
         { maxGrams: 500, code: "SMALL" },
@@ -556,7 +556,7 @@ export class VintedMapper {
    * Returns validation result and pre-computed values to avoid duplicate API calls
    */
   private async validateProduct(
-    product: CrosslistProduct
+    product: Product
   ): Promise<{ 
     valid: boolean; 
     errors: string[];
@@ -663,7 +663,7 @@ export class VintedMapper {
     };
   }
 
-  public async map(product: CrosslistProduct) {
+  public async map(product: Product) {
     // Preflight validation (also pre-fetches catalogId, brand, and media)
     const validation = await this.validateProduct(product);
     if (!validation.valid) {
@@ -707,7 +707,7 @@ export class VintedMapper {
     const conditionId = CONDITION_MAP[product.condition];
 
     // Get uploadSessionId from the Vinted client (fetched from /items/new page)
-    // Crosslist uses this for both temp_uuid and top-level upload_session_id
+    // Extension uses this for both temp_uuid and top-level upload_session_id
     const uploadSessionId = await this.vintedClient.refreshUploadSessionId();
     const tempUuid = uploadSessionId;
 
@@ -737,7 +737,7 @@ export class VintedMapper {
 
     console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'type:', typeof catalogId);
     
-    // Build payload matching Vinted's expected structure (aligned with Crosslist's working format)
+    // Build payload matching Vinted's expected structure (aligned with Vinted's expected format)
     const payload: Record<string, any> = {
       item: {
         id: null,

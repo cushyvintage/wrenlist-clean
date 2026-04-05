@@ -114,7 +114,7 @@ export interface ShippingInfo {
   };
 }
 
-export interface CrosslistProduct {
+export interface Product {
   id: string;
   marketPlaceId?: string;
   marketplaceId?: string;

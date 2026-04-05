@@ -1,7 +1,7 @@
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import { Condition } from "../../shared/enums.js";
 import { ETSY_BASE_URL, ETSY_LISTINGS_MANAGER_URL, ETSY_SESSION_COOKIE } from "./constants.js";
-import { log, wait } from "../../shared/crosslistApi.js";
+import { log, wait } from "../../shared/api.js";
 
 interface EtsyListingSummary {
   listing_id: number;
@@ -130,7 +130,7 @@ export class EtsyClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     const shopId = await this.getShopId();
 
     const resp = await fetch(
@@ -184,12 +184,12 @@ export class EtsyClient {
   }
 
   /**
-   * Crosslist a product to Etsy via form-fill
+   * Publish a product to Etsy via form-fill
    * Opens the Etsy listing creation page and fills in product details
    * User can review and submit from there
    */
-  public async crosslistProduct(
-    product: CrosslistProduct,
+  public async publishProduct(
+    product: Product,
   ): Promise<ListingActionResult> {
     try {
       // Check if user is logged in

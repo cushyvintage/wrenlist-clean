@@ -12,7 +12,7 @@ import {
   UPLOAD_TEMP_LISTING_PHOTOS_HASH,
   USER_ITEMS_QUERY,
 } from "./constants.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 
 export interface MercariListingPayload {
@@ -455,7 +455,7 @@ export class MercariClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.ensureSession();
     const response = await fetch(MERCARI_API, {
       method: "POST",
@@ -481,7 +481,7 @@ export class MercariClient {
     const color1 = this.mapMercariIdToColor(item.colors?.[0]?.id);
     const color2 = this.mapMercariIdToColor(item.colors?.[1]?.id);
 
-    const product: CrosslistProduct = {
+    const product: Product = {
       id,
       marketPlaceId: id,
       title: item.name ?? "",

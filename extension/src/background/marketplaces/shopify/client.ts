@@ -1,8 +1,8 @@
 import {
   chunkConcurrentRequestsWithRetry,
-} from "../../shared/crosslistApi.js";
+} from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import type { CrosslistProduct, MarketplaceListingResult } from "../../types.js";
+import type { Product, MarketplaceListingResult } from "../../types.js";
 import {
   ADMIN_PRODUCT_DETAILS_QUERY,
   CREATE_METAFIELD_DEFINITION_MUTATION,
@@ -478,7 +478,7 @@ export class ShopifyClient {
 
     if (response.status !== 200) {
       throw new Error(
-        "Please enter a valid Shopify admin shop URL in your Crosslist settings.",
+        "Please enter a valid Shopify admin shop URL in your Wrenlist settings.",
       );
     }
 
@@ -509,7 +509,7 @@ export class ShopifyClient {
     };
   }
 
-  public async getListing(id: string): Promise<CrosslistProduct | null> {
+  public async getListing(id: string): Promise<Product | null> {
     await this.startSession();
     const response = await fetch(
       `${this.graphqlUrl}?operation=AdminProductDetails&type=query`,
@@ -611,7 +611,7 @@ export class ShopifyClient {
     return `${this.adminDomain}/products/${id}`;
   }
 
-  private mapShopifyProduct(product: any, id: string): CrosslistProduct {
+  private mapShopifyProduct(product: any, id: string): Product {
     const firstVariant = product.variants?.edges?.[0]?.node ?? {};
     const images =
       product.images?.edges?.map((edge: any) => edge.node?.src) ?? [];
@@ -641,7 +641,7 @@ export class ShopifyClient {
       cover: images[0],
       coverSmall: images[0],
       shipping: {
-        shippingWeight: this.weightToCrosslistWeight(
+        shippingWeight: this.weightToStandardWeight(
           firstVariant.weight,
           firstVariant.weightUnit,
         ),
@@ -682,7 +682,7 @@ export class ShopifyClient {
     return undefined;
   }
 
-  private weightToCrosslistWeight(
+  private weightToStandardWeight(
     weight?: number,
     unit?: string,
   ): { value: number; unit: string } | undefined {
