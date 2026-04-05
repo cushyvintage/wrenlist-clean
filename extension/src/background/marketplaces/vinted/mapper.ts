@@ -646,12 +646,6 @@ export class VintedMapper {
         errors.push("Product has no images in the database. Please add at least 1 image URL to the product.");
       } else if (!media || media.length === 0) {
         errors.push(`Product has ${imageUrls.length} image URL(s) but failed to fetch them. Check that image URLs are accessible.`);
-      } else {
-        // Check if brand is well-known (not "NO LABEL")
-        const isWellKnownBrand = brand.id !== 425886 && brand.id !== null;
-        if (isWellKnownBrand && media.length < 3) {
-          errors.push("Well-known brands require at least 3 images");
-        }
       }
     }
 

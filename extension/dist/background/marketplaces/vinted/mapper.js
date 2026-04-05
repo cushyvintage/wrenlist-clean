@@ -578,11 +578,8 @@ export class VintedMapper {
             }
         }
         else {
-            // Check if brand is well-known (not "NO LABEL")
-            const isWellKnownBrand = brand.id !== 425886 && brand.id !== null;
-            if (isWellKnownBrand && media.length < 3) {
-                errors.push("Well-known brands require at least 3 images");
-            }
+            // Has existing Vinted photo IDs — skip image count checks.
+            // The original listing already passed Vinted validation with these photos.
         }
         // Validate shipping info for package size
         if (!product.shipping?.shippingWeight) {
