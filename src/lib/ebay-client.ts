@@ -366,11 +366,21 @@ export class eBayClient {
     item: eBayInventoryItem
   ): Promise<{ success: boolean; inventoryItemId?: string; error?: string }> {
     try {
+      // Build product aspects from item metadata
+      const aspects: Record<string, string[]> = {}
+      if (item.brand) aspects['Brand'] = [item.brand]
+      // Add required aspects with sensible defaults for vintage items
+      if (!aspects['Material']) aspects['Material'] = ['Pottery']
+      if (!aspects['Type']) aspects['Type'] = ['Decorative']
+      if (!aspects['Original/Reproduction']) aspects['Original/Reproduction'] = ['Original']
+      if (!aspects['Country/Region of Manufacture']) aspects['Country/Region of Manufacture'] = ['United Kingdom']
+
       const payload = {
         product: {
           title: item.title,
           description: item.description || '',
           imageUrls: item.images || [],
+          aspects,
         },
         condition: item.condition || 'USED_EXCELLENT',
         availability: {
