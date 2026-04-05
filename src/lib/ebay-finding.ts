@@ -83,7 +83,7 @@ export async function searchSoldItems(
     'sortOrder': 'EndTimeSoonest',
   })
 
-  const url = `https://svcs.ebay.co.uk/services/search/FindingService/v1?${params.toString()}`
+  const url = `https://svcs.ebay.com/services/search/FindingService/v1?${params.toString()}`
 
   try {
     const response = await fetch(url)
@@ -92,7 +92,17 @@ export async function searchSoldItems(
       return null
     }
 
-    const data = (await response.json()) as FindingApiResponse
+    const data = (await response.json()) as FindingApiResponse & {
+      errorMessage?: Array<{ error: Array<{ message: string[] }> }>
+    }
+
+    // Handle top-level errors (e.g. rate limiting)
+    if (data.errorMessage) {
+      const msg = data.errorMessage[0]?.error?.[0]?.message?.[0]
+      console.error('eBay Finding API top-level error:', msg ?? JSON.stringify(data.errorMessage))
+      return null
+    }
+
     const result = data.findCompletedItemsResponse?.[0]
 
     if (!result || result.ack?.[0] !== 'Success') {
