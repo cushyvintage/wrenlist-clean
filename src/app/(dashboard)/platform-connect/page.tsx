@@ -10,6 +10,7 @@ import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
 import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { useExtensionInfo, EXTENSION_ID } from '@/hooks/useExtensionInfo'
 
 const IMPORT_LIMIT = 200
 
@@ -51,6 +52,7 @@ export default function PlatformConnectPage() {
   const [shopifyError, setShopifyError] = useState<string | null>(null)
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
+  const extensionInfo = useExtensionInfo()
   const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
   const [vintedActionError, setVintedActionError] = useState<string | null>(null)
@@ -59,6 +61,14 @@ export default function PlatformConnectPage() {
   const [existingCount, setExistingCount] = useState(0)
   const [importCountLoading, setImportCountLoading] = useState(false)
 
+
+  // Sync extension info from hook into local state
+  useEffect(() => {
+    if (extensionInfo.detected !== null) {
+      setExtensionDetected(extensionInfo.detected)
+      setExtensionVersion(extensionInfo.version)
+    }
+  }, [extensionInfo.detected, extensionInfo.version])
 
   // Check if debug panel should show (development or ?debug=1 param)
   useEffect(() => {
@@ -520,7 +530,7 @@ export default function PlatformConnectPage() {
               connected
             </div>
           </div>
-          <div className="text-xs text-ink-lt">Chrome · v2.1.4 · Required for Vinted and Shopify crosslisting</div>
+          <div className="text-xs text-ink-lt">Chrome{extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting</div>
         </div>
         <button className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition flex-shrink-0">
           Extension settings →

@@ -1,7 +1,7 @@
 import { Condition } from "./enums.js";
 
 // Removed CROSSLIST_DOMAIN - no longer using crosslist.com
-export const EXTENSION_VERSION = "1.1.0";
+export const EXTENSION_VERSION = "1.2.0";
 const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
 
 async function getWrenlistBaseUrl(): Promise<string> {
