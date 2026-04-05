@@ -13,7 +13,8 @@ import { ImportHeader } from '@/components/import/ImportHeader'
 import { ImportItemList } from '@/components/import/ImportItemList'
 import type { ImportableItem, PlatformStatuses } from '@/components/import/types'
 
-const IMPORT_LIMIT = 200
+// No hard cap — fetch all listings from the marketplace
+const IMPORT_LIMIT = Infinity
 
 export default function ImportPage() {
   const searchParams = useSearchParams()
@@ -69,6 +70,8 @@ export default function ImportPage() {
       loadEbayInventory()
     } else if (selectedPlatform === 'vinted') {
       loadVintedListings()
+    } else if (selectedPlatform === 'shopify') {
+      loadShopifyListings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPlatform, platforms])
@@ -153,7 +156,7 @@ export default function ImportPage() {
           )
           chrome.runtime.sendMessage(
             EXTENSION_ID,
-            { action: 'get_vinted_listings', page, perPage: 96, status: 'active' },
+            { action: 'get_vinted_listings', page, perPage: 96, status: 'all' },
             (resp) => {
               clearTimeout(timeout)
               if (chrome.runtime.lastError) {
@@ -206,6 +209,121 @@ export default function ImportPage() {
     }
   }
 
+  // --- Shopify (fetch via extension) ---
+  async function loadShopifyListings() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setFetchError('Wrenlist extension required for Shopify import. Install it from the Chrome Web Store.')
+      return
+    }
+
+    const shopifyStatus = platforms?.shopify
+    const storeDomain = shopifyStatus?.storeDomain
+    if (!storeDomain) {
+      setFetchError('Shopify store domain not configured. Connect Shopify in Platform Connect first.')
+      return
+    }
+
+    setIsFetching(true)
+    setFetchedCount(0)
+
+    try {
+      // Get already-imported Shopify IDs
+      const importedData = await fetchApi<{ importedIds: string[] }>(
+        '/api/import/marketplace-imported?marketplace=shopify'
+      )
+      const importedSet = new Set(importedData.importedIds)
+
+      // Progressive cursor-based fetch
+      let cursor: string | undefined
+      const allItems: ImportableItem[] = []
+
+      while (allItems.length < IMPORT_LIMIT) {
+        const response = await new Promise<{
+          success: boolean
+          products?: Array<{
+            marketplaceId: string
+            title: string
+            price: string | number | null
+            coverImage: string | null
+            marketplaceUrl: string | null
+            status: string
+          }>
+          nextPage?: string | null
+          username?: string
+          message?: string
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: 'Timed out fetching Shopify listings' }),
+            30000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            {
+              action: 'get_marketplace_listings',
+              marketplace: 'shopify',
+              params: {
+                page: cursor,
+                perPage: 50,
+                userSettings: { shopifyShopUrl: storeDomain },
+              },
+            },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
+            }
+          )
+        })
+
+        if (!response.success) {
+          if (allItems.length === 0) {
+            setFetchError(response.message || 'Failed to fetch Shopify listings')
+            setIsFetching(false)
+            return
+          }
+          break
+        }
+
+        const products = response.products || []
+        if (products.length === 0) break
+
+        for (const p of products) {
+          if (allItems.length >= IMPORT_LIMIT) break
+          const id = String(p.marketplaceId)
+          const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+          allItems.push({
+            id,
+            platform: 'shopify',
+            title: p.title || 'Untitled',
+            price,
+            photo: p.coverImage,
+            listingId: id,
+            listingUrl: p.marketplaceUrl,
+            alreadyImported: importedSet.has(id),
+            checked: !importedSet.has(id),
+          })
+        }
+
+        setFetchedCount(allItems.length)
+        setItems([...allItems])
+        setTotalCount(allItems.length)
+
+        cursor = response.nextPage ?? undefined
+        if (!cursor) break
+      }
+
+      setItems(allItems)
+      setTotalCount(allItems.length)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to fetch Shopify listings')
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
   // --- Item selection ---
   const toggleItem = useCallback((id: string) => {
     setItems((prev) =>
@@ -251,6 +369,8 @@ export default function ImportPage() {
       await handleEbayImport()
     } else if (selectedPlatform === 'vinted') {
       await handleVintedImport()
+    } else if (selectedPlatform === 'shopify') {
+      await handleShopifyImport()
     }
   }
 
@@ -349,6 +469,59 @@ export default function ImportPage() {
     } catch (err) {
       clearTimeout(pollingTimer)
       if (stopPolling) stopPolling()
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleShopifyImport() {
+    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing Shopify listings...')
+
+    let imported = 0
+    let skipped = 0
+    let errors = 0
+
+    try {
+      for (const item of selected) {
+        try {
+          const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
+            '/api/import/marketplace-item',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                marketplace: 'shopify',
+                marketplaceProductId: item.id,
+                productData: {
+                  title: item.title,
+                  price: item.price,
+                  coverImage: item.photo,
+                  marketplaceUrl: item.listingUrl,
+                },
+                url: item.listingUrl,
+              }),
+            }
+          )
+
+          if (result.skipped) {
+            skipped++
+          } else {
+            imported++
+          }
+        } catch {
+          errors++
+        }
+
+        vintedImport.runImportProgress(imported, skipped, errors, selected.length)
+      }
+
+      vintedImport.setDone(imported, skipped, errors, selected.length)
+
+      // Refresh list
+      await loadShopifyListings()
+    } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
   }

@@ -18,6 +18,7 @@ export interface PlatformStatus {
   connected: boolean
   username: string | null
   shopName?: string | null
+  storeDomain?: string | null
 }
 
 export interface PlatformStatuses {

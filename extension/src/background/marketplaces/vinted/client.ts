@@ -1573,7 +1573,7 @@ export class VintedClient {
         return {
           marketplaceId: item.id.toString(),
           title: item.title,
-          price: parseFloat(item.price),
+          price: parseFloat(item.price?.amount ?? item.price) || 0,
           coverImage: item.photos?.[0]?.thumbnails?.[0]?.url ?? "",
           created: created.toISOString(),
           marketplaceUrl: this.getProductUrl(item.id),

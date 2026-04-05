@@ -41,6 +41,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       shopify: {
         connected: !!shopifyResult.data,
         shopName: shopifyResult.data?.shop_name ?? null,
+        storeDomain: shopifyResult.data?.store_domain ?? null,
       },
       etsy: {
         connected: false,
