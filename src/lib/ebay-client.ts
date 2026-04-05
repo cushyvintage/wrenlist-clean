@@ -273,6 +273,34 @@ export class eBayClient {
   }
 
   /**
+   * Get category suggestions from eBay Taxonomy API based on item title
+   * Returns the best matching leaf category ID for EBAY_GB (tree 3)
+   */
+  async getCategorySuggestion(query: string): Promise<string | null> {
+    try {
+      const treeId = this.config.marketplaceId === 'EBAY_GB' ? '3' : '0'
+      const response = await undiciFetch(
+        `${this.baseUrl}/commerce/taxonomy/v1/category_tree/${treeId}/get_category_suggestions?q=${encodeURIComponent(query)}`,
+        {
+          headers: new UndiciHeaders({
+            'Authorization': `Bearer ${this.getAccessToken()}`,
+            'Accept': 'application/json',
+          }),
+        }
+      )
+      if (!response.ok) return null
+      const data = await response.json() as any
+      const suggestions = data.categorySuggestions || []
+      if (suggestions.length > 0) {
+        return suggestions[0].category?.categoryId || null
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Make authenticated API request
    */
   async apiRequest(

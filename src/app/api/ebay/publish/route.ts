@@ -75,14 +75,29 @@ export async function POST(request: NextRequest) {
       new_without_tags: 'NEW_WITHOUT_TAGS',
     }
 
-    const categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
     const ebayCondition = conditionMap[find.condition] || 'USED'
-    // Use sku with a version suffix to avoid stale inventory items with wrong categories
     const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
-    const sku = `${baseSku}-v2`
+    const sku = `${baseSku}-v3`
 
     if (!find.photos || find.photos.length === 0) {
       return ApiResponseHelper.badRequest('At least one photo is required to publish to eBay. Please add photos and try again.')
+    }
+
+    // Get eBay client (will throw if not connected)
+    let ebayClient
+    try {
+      ebayClient = await getEbayClientForUser(user.id, supabase, marketplace as 'EBAY_GB' | 'EBAY_US')
+    } catch (e) {
+      return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect in Platform Connect.')
+    }
+
+    // Get category: try eBay's own suggestion API first, fall back to hardcoded map
+    let categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
+    try {
+      const suggested = await ebayClient.getCategorySuggestion(find.name || find.category)
+      if (suggested) categoryId = suggested
+    } catch {
+      // Fall back to hardcoded map
     }
 
     const inventoryItem = {
@@ -108,14 +123,6 @@ export async function POST(request: NextRequest) {
         categoryId,
         message: 'Dry run - no changes made',
       })
-    }
-
-    // Get eBay client (will throw if not connected)
-    let ebayClient
-    try {
-      ebayClient = await getEbayClientForUser(user.id, supabase, marketplace as 'EBAY_GB' | 'EBAY_US')
-    } catch (e) {
-      return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect in Platform Connect.')
     }
 
     // Create inventory item (throw if fails — only swallow if already exists)
