@@ -143,54 +143,99 @@ export class ShopifyClient {
   }
 
   private async refreshTokens(): Promise<string> {
-    return new Promise(async (resolve) => {
-      const tab = await chrome.tabs.create({
+    let tab: chrome.tabs.Tab | undefined;
+
+    const cleanup = async (tabId?: number) => {
+      if (tabId) {
+        try {
+          await chrome.tabs.remove(tabId);
+        } catch {
+          // Tab already closed — ignore
+        }
+      }
+    };
+
+    try {
+      tab = await chrome.tabs.create({
         url: this.adminDomain,
         active: false,
       });
 
       if (!tab?.id) {
-        resolve("");
-        return;
+        return "";
       }
 
-      let done = false;
-      const timeout = setTimeout(async () => {
-        done = true;
-        await chrome.tabs.remove(tab.id!);
-        resolve("");
-      }, 40_000);
-
+      const tabId = tab.id;
       const readDom = () => document.documentElement.outerHTML;
 
-      const listener = async (
-        tabId: number,
-        changeInfo: chrome.tabs.TabChangeInfo,
-      ) => {
-        if (done || changeInfo.status !== "complete" || tabId !== tab.id) {
-          return;
-        }
+      // Wait for the tab to finish loading, then poll for CSRF token
+      const html = await new Promise<string>((resolve) => {
+        let done = false;
+        const maxAttempts = 6; // 6 × 3s = 18s max wait
 
-        let html = "";
-        do {
-          if (done) return;
-          await new Promise((r) => setTimeout(r, 5000));
-          const result = await chrome.scripting.executeScript({
-            target: { tabId },
-            func: readDom,
-          });
-          html = result?.[0]?.result ?? "";
-        } while (!html.includes("_csrfToken"));
+        const timeoutId = setTimeout(() => {
+          if (!done) {
+            done = true;
+            chrome.tabs.onUpdated.removeListener(listener);
+            cleanup(tabId);
+            resolve("");
+          }
+        }, 20_000);
 
-        done = true;
-        await chrome.tabs.remove(tab.id!);
-        chrome.tabs.onUpdated.removeListener(listener);
-        clearTimeout(timeout);
-        resolve(html);
-      };
+        const listener = async (
+          updatedTabId: number,
+          changeInfo: chrome.tabs.TabChangeInfo,
+        ) => {
+          if (done || changeInfo.status !== "complete" || updatedTabId !== tabId) {
+            return;
+          }
 
-      chrome.tabs.onUpdated.addListener(listener);
-    });
+          // Poll for CSRF token in page HTML
+          let attempts = 0;
+          while (!done && attempts < maxAttempts) {
+            attempts++;
+            await new Promise((r) => setTimeout(r, 3000));
+            if (done) return;
+
+            try {
+              const result = await chrome.scripting.executeScript({
+                target: { tabId },
+                func: readDom,
+              });
+              const pageHtml = result?.[0]?.result ?? "";
+
+              if (pageHtml.includes("_csrfToken") || pageHtml.includes("csrfToken")) {
+                done = true;
+                chrome.tabs.onUpdated.removeListener(listener);
+                clearTimeout(timeoutId);
+                await cleanup(tabId);
+                resolve(pageHtml);
+                return;
+              }
+            } catch {
+              // Tab may have been closed — bail
+              break;
+            }
+          }
+
+          // Exhausted attempts
+          if (!done) {
+            done = true;
+            chrome.tabs.onUpdated.removeListener(listener);
+            clearTimeout(timeoutId);
+            await cleanup(tabId);
+            resolve("");
+          }
+        };
+
+        chrome.tabs.onUpdated.addListener(listener);
+      });
+
+      return html;
+    } catch {
+      await cleanup(tab?.id);
+      return "";
+    }
   }
 
   public async getLocationId(): Promise<string> {
