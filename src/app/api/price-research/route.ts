@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchSoldItems, SoldItemsStats } from '@/lib/ebay-finding'
+import { searchSoldItems, EbayListingStats } from '@/lib/ebay-finding'
 
 interface SampleListing {
   title: string
@@ -60,7 +60,7 @@ interface GptPriceResponse {
   }
 }
 
-function ebayStatsToSummary(stats: SoldItemsStats): string {
+function ebayStatsToSummary(stats: EbayListingStats): string {
   return `Real eBay UK sold data (${stats.total_found} items): avg £${stats.avg_price}, range £${stats.min_price}–£${stats.max_price}, avg ${stats.avg_days_to_sell} days ago.`
 }
 

@@ -1,44 +1,22 @@
 import { config } from './config'
 
-// eBay Finding API types
-interface FindingSearchItem {
-  itemId: string[]
-  title: string[]
-  viewItemURL: string[]
-  sellingStatus: Array<{
-    currentPrice: Array<{ __value__: string; '@currencyId': string }>
-    sellingState: string[]
-  }>
-  listingInfo: Array<{
-    endTime: string[]
-  }>
-  condition?: Array<{
-    conditionDisplayName: string[]
-  }>
-}
-
-interface FindingApiResponse {
-  findCompletedItemsResponse: Array<{
-    ack: string[]
-    searchResult: Array<{
-      '@count': string
-      item?: FindingSearchItem[]
-    }>
-    errorMessage?: Array<{
-      error: Array<{ message: string[] }>
-    }>
-  }>
-}
-
-export interface SoldItem {
+// eBay Browse API types
+interface BrowseItemSummary {
+  itemId: string
   title: string
-  price: number
+  price: { value: string; currency: string }
   condition: string
-  endDate: Date
-  url: string
+  itemWebUrl: string
+  itemCreationDate?: string
 }
 
-export interface SoldItemsStats {
+interface BrowseSearchResponse {
+  total: number
+  itemSummaries?: BrowseItemSummary[]
+  errors?: Array<{ message: string }>
+}
+
+export interface EbayListingStats {
   avg_price: number
   min_price: number
   max_price: number
@@ -53,124 +31,156 @@ export interface SoldItemsStats {
   }>
 }
 
+let cachedAppToken: { token: string; expiresAt: number } | null = null
+
 /**
- * Search eBay UK for completed/sold items using the Finding API.
- * Only requires EBAY_CLIENT_ID (no user OAuth needed).
+ * Get an eBay application access token (client_credentials grant).
+ * Cached until expiry.
+ */
+async function getAppToken(): Promise<string | null> {
+  const { clientId, clientSecret } = config.ebay
+  if (!clientId || !clientSecret) return null
+
+  // Return cached token if still valid (with 5 min buffer)
+  if (cachedAppToken && Date.now() < cachedAppToken.expiresAt - 300_000) {
+    return cachedAppToken.token
+  }
+
+  try {
+    const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope',
+    })
+
+    if (!response.ok) {
+      console.error(`eBay app token error: ${response.status}`)
+      return null
+    }
+
+    const data = (await response.json()) as {
+      access_token: string
+      expires_in: number
+    }
+
+    cachedAppToken = {
+      token: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+    }
+
+    return data.access_token
+  } catch (err) {
+    console.error('Failed to get eBay app token:', err)
+    return null
+  }
+}
+
+/**
+ * Search eBay UK for current listings using the Browse API.
+ * Uses application-level auth (no user OAuth needed).
+ * Returns real listing data with prices in GBP.
  */
 export async function searchSoldItems(
   keywords: string,
   options?: { limit?: number }
-): Promise<SoldItemsStats | null> {
-  const clientId = config.ebay.clientId
-  if (!clientId) {
-    console.warn('EBAY_CLIENT_ID not set — skipping real eBay data')
+): Promise<EbayListingStats | null> {
+  const token = await getAppToken()
+  if (!token) {
+    console.warn('No eBay app token — skipping real eBay data')
     return null
   }
 
-  const limit = options?.limit ?? 50
+  const limit = Math.min(options?.limit ?? 30, 50)
 
   const params = new URLSearchParams({
-    'OPERATION-NAME': 'findCompletedItems',
-    'SERVICE-VERSION': '1.13.0',
-    'SECURITY-APPNAME': clientId,
-    'RESPONSE-DATA-FORMAT': 'JSON',
-    'REST-PAYLOAD': '',
-    'keywords': keywords,
-    'GLOBAL-ID': 'EBAY-GB',
-    'paginationInput.entriesPerPage': String(limit),
-    'itemFilter(0).name': 'SoldItemsOnly',
-    'itemFilter(0).value': 'true',
-    'sortOrder': 'EndTimeSoonest',
+    q: keywords,
+    limit: String(limit),
+    filter: 'buyingOptions:{FIXED_PRICE},itemLocationCountry:GB',
   })
 
-  const url = `https://svcs.ebay.com/services/search/FindingService/v1?${params.toString()}`
+  const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?${params.toString()}`
 
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_GB',
+      },
+    })
+
     if (!response.ok) {
-      console.error(`eBay Finding API error: ${response.status}`)
+      const text = await response.text()
+      console.error(`eBay Browse API error: ${response.status} — ${text.slice(0, 200)}`)
       return null
     }
 
-    const data = (await response.json()) as FindingApiResponse & {
-      errorMessage?: Array<{ error: Array<{ message: string[] }> }>
-    }
+    const data = (await response.json()) as BrowseSearchResponse
 
-    // Handle top-level errors (e.g. rate limiting)
-    if (data.errorMessage) {
-      const msg = data.errorMessage[0]?.error?.[0]?.message?.[0]
-      console.error('eBay Finding API top-level error:', msg ?? JSON.stringify(data.errorMessage))
+    if (data.errors) {
+      console.error('eBay Browse API errors:', data.errors[0]?.message)
       return null
     }
 
-    const result = data.findCompletedItemsResponse?.[0]
+    const items = data.itemSummaries
+    if (!items || items.length === 0) return null
 
-    if (!result || result.ack?.[0] !== 'Success') {
-      const errorMsg = result?.errorMessage?.[0]?.error?.[0]?.message?.[0]
-      console.error('eBay Finding API failed:', errorMsg ?? 'Unknown error')
-      return null
-    }
-
-    const items = result.searchResult?.[0]?.item
-    if (!items || items.length === 0) {
-      return null
-    }
-
-    // Parse sold items
+    // Parse items — filter to GBP only
     const now = new Date()
-    const soldItems: SoldItem[] = []
-    for (const item of items) {
-      const title = item.title?.[0]
-      const url = item.viewItemURL?.[0]
-      const priceStr = item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__
-      const endTimeStr = item.listingInfo?.[0]?.endTime?.[0]
-      if (!title || !url || !priceStr || !endTimeStr) continue
-      soldItems.push({
-        title,
-        price: parseFloat(priceStr),
-        condition: item.condition?.[0]?.conditionDisplayName?.[0] ?? 'Used',
-        endDate: new Date(endTimeStr),
-        url,
-      })
-    }
+    const msPerDay = 1000 * 60 * 60 * 24
 
-    // Filter out any zero/negative prices
-    const validItems = soldItems.filter((item) => item.price > 0)
-    if (validItems.length === 0) return null
+    const listings = items
+      .filter((item) => item.price?.currency === 'GBP' && parseFloat(item.price.value) > 0)
+      .map((item) => {
+        const createdDate = item.itemCreationDate ? new Date(item.itemCreationDate) : null
+        const daysListed = createdDate
+          ? Math.max(0, Math.round((now.getTime() - createdDate.getTime()) / msPerDay))
+          : 0
+
+        return {
+          title: item.title,
+          price: parseFloat(item.price.value),
+          condition: item.condition ?? 'Used',
+          daysListed,
+          url: item.itemWebUrl,
+        }
+      })
+
+    if (listings.length === 0) return null
 
     // Compute stats
-    const prices = validItems.map((item) => item.price)
+    const prices = listings.map((l) => l.price)
     const avg_price = Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) / 100
     const min_price = Math.min(...prices)
     const max_price = Math.max(...prices)
 
-    // Days since sold (approximate — we don't know list date, only end date)
-    const msPerDay = 1000 * 60 * 60 * 24
-    const getDaysAgo = (item: SoldItem) =>
-      Math.max(0, Math.round((now.getTime() - item.endDate.getTime()) / msPerDay))
+    const totalDays = listings.reduce((sum, l) => sum + l.daysListed, 0)
+    const avg_days_to_sell = Math.round((totalDays / listings.length) * 10) / 10
 
-    const totalDaysAgo = validItems.reduce((sum, item) => sum + getDaysAgo(item), 0)
-    const avg_days_to_sell = Math.round((totalDaysAgo / validItems.length) * 10) / 10
-
-    // Take up to 5 most recent as samples
-    const samples = validItems.slice(0, 5).map((item) => ({
-      title: item.title,
-      price: item.price,
-      condition: item.condition,
-      days_ago: getDaysAgo(item),
-      url: item.url,
-    }))
+    // Take up to 5 as samples, sorted by price ascending
+    const samples = [...listings]
+      .sort((a, b) => a.price - b.price)
+      .slice(0, 5)
+      .map((l) => ({
+        title: l.title,
+        price: l.price,
+        condition: l.condition,
+        days_ago: l.daysListed,
+        url: l.url,
+      }))
 
     return {
       avg_price,
       min_price,
       max_price,
       avg_days_to_sell,
-      total_found: validItems.length,
+      total_found: data.total,
       sample_listings: samples,
     }
   } catch (err) {
-    console.error('eBay Finding API request failed:', err)
+    console.error('eBay Browse API request failed:', err)
     return null
   }
 }
