@@ -75,6 +75,12 @@ export const NavIcons: Record<string, React.ReactNode> = {
       <path d="M2 2h10v10H2zM5 5h4M5 7h4M5 9h2" stroke="currentColor" {...s} />
     </svg>
   ),
+  import: (
+    <svg viewBox="0 0 14 14" fill="none">
+      <path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" {...s} />
+      <path d="M2 11h10" stroke="currentColor" {...s} />
+    </svg>
+  ),
   scanner: (
     <svg viewBox="0 0 14 14" fill="none">
       <rect x="1" y="3" width="12" height="8" rx="1" stroke="currentColor" {...s} />
