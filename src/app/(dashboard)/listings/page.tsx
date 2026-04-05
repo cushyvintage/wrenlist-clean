@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { ProductMarketplaceData, Platform } from '@/types'
@@ -404,9 +405,19 @@ export default function ListingsPage() {
                   />
                 </div>
 
-                {/* Thumbnail + Category Emoji */}
-                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0">
-                  {getCategoryEmoji(group.find?.category || undefined)}
+                {/* Thumbnail */}
+                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+                  {group.find?.photos?.[0] ? (
+                    <Image
+                      src={group.find.photos[0]}
+                      alt={group.find.name || ''}
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getCategoryEmoji(group.find?.category || undefined)
+                  )}
                 </div>
 
                 {/* Details */}
