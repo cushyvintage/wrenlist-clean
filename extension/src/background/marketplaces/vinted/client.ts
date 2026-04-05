@@ -874,68 +874,23 @@ export class VintedClient {
         }
       }
       
-      // Try API to get actual login name (cookie value is numeric ID, not display name)
+      // Try public API to resolve numeric user ID to actual login name
       const usernameIsNumericId = this.username && /^\d+$/.test(this.username);
-      if (usernameIsNumericId || (!this.username && (!match || (!match[1] && !match[2])))) {
-        console.log("[Vinted] Debug: Trying API fallback for username");
-        const apiEndpoints = [
-          `${this.apiUrl}/users/me`,
-          `${this.apiUrl}/user`,
-          `${this.apiUrl}/users/current`,
-          `${this.apiUrl}/users/self`,
-          `${this.apiUrl}/account`,
-        ];
-        
-        for (const endpoint of apiEndpoints) {
-          try {
-            console.log("[Vinted] Debug: Trying API endpoint:", endpoint);
-            const userResponse = await fetch(endpoint, {
-              headers: {
-                Accept: "application/json, text/plain, */*",
-                "X-Csrf-Token": this.csrfToken,
-                "X-Anon-Id": this.anonId,
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-            });
-            
-            console.log("[Vinted] Debug: API response status:", userResponse.status);
-            
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              console.log("[Vinted] Debug: API response data keys:", Object.keys(userData));
-              // Try various response structures — prefer login (display name) over numeric id
-              if (userData?.user?.login) {
-                this.username = userData.user.login;
-                console.log("[Vinted] Debug: Found username via API (user.login):", this.username);
-                break;
-              } else if (userData?.user?.id) {
-                this.username = userData.user.id.toString();
-                console.log("[Vinted] Debug: Found username via API (user.id):", this.username);
-                break;
-              } else if (userData?.login) {
-                this.username = userData.login;
-                console.log("[Vinted] Debug: Found username via API (login):", this.username);
-                break;
-              } else if (userData?.id) {
-                this.username = userData.id.toString();
-                console.log("[Vinted] Debug: Found username via API (id):", this.username);
-                break;
-              } else if (userData?.account?.login) {
-                this.username = userData.account.login;
-                console.log("[Vinted] Debug: Found username via API (account.login):", this.username);
-                break;
-              } else if (userData?.account?.id) {
-                this.username = userData.account.id.toString();
-                console.log("[Vinted] Debug: Found username via API (account.id):", this.username);
-                break;
-              }
+      if (usernameIsNumericId) {
+        console.log("[Vinted] Debug: Resolving numeric ID to login via public API");
+        try {
+          const userResponse = await fetch(`${this.apiUrl}/users/${this.username}`, {
+            headers: { Accept: "application/json" },
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData?.user?.login) {
+              console.log("[Vinted] Debug: Resolved login:", userData.user.login);
+              this.username = userData.user.login;
             }
-          } catch (apiError) {
-            console.log("[Vinted] Debug: API endpoint failed:", endpoint, apiError);
-            // Try next endpoint
-            continue;
           }
+        } catch (apiError) {
+          console.log("[Vinted] Debug: Public user API failed:", apiError);
         }
       }
       
