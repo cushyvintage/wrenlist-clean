@@ -32,7 +32,7 @@ import { CSS } from '@dnd-kit/utilities'
 const PLATFORM_PHOTO_LIMITS: Record<string, number> = {
   vinted: 20,
   ebay: 24,
-  etsy: 10,
+  etsy: 20,
   depop: 4,
   poshmark: 16,
   mercari: 12,
