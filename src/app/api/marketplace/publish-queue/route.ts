@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
@@ -29,11 +30,17 @@ export const GET = withAuth(async (_req, user) => {
     return ApiResponseHelper.success([])
   }
 
-  // Enrich with find data
+  // Enrich with find data using service role (bypasses RLS — safe since
+  // product_marketplace_data RLS already verified user ownership)
   const findIds = [...new Set(items.map((d) => d.find_id))]
-  const { data: finds } = await supabase
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { data: finds } = await supabaseAdmin
     .from('finds')
     .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams')
+    .eq('user_id', user.id)
     .in('id', findIds)
 
   const findsMap: Record<string, Record<string, unknown>> = {}
