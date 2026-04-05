@@ -1,52 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
-
-// Reverse map: Vinted catalog ID → Wrenlist category
-const VINTED_TO_CATEGORY: Record<number, string> = {
-  // Ceramics / Pottery / China
-  1940: 'ceramics', 1941: 'ceramics', 1942: 'ceramics', 1943: 'ceramics',
-  1958: 'ceramics', 1959: 'ceramics', 1960: 'ceramics',
-  1944: 'ceramics', 1945: 'ceramics', 1946: 'ceramics',
-  3856: 'teapots', 3857: 'jugs',
-
-  // Glassware
-  2005: 'glassware', 2006: 'glassware', 2007: 'glassware', 2008: 'glassware',
-  2009: 'glassware', 2010: 'glassware', 2011: 'glassware',
-
-  // Books
-  2317: 'books', 2318: 'books', 2319: 'books', 2320: 'books',
-  2321: 'books', 2322: 'books', 2323: 'books', 2997: 'books',
-  2998: 'books', 2999: 'books', 3000: 'books',
-
-  // Jewellery
-  21: 'jewellery', 163: 'jewellery', 164: 'jewellery', 165: 'jewellery',
-  166: 'jewellery', 2038: 'jewellery', 2039: 'jewellery', 2040: 'jewellery',
-
-  // Clothing
-  4: 'clothing', 5: 'clothing', 6: 'clothing', 7: 'clothing',
-  2050: 'clothing', 2051: 'clothing', 2052: 'clothing',
-
-  // Homeware / Home decor
-  1920: 'homeware', 1921: 'homeware', 1922: 'homeware', 1923: 'homeware',
-  1924: 'homeware', 1925: 'homeware', 1926: 'homeware', 1927: 'homeware',
-  1928: 'homeware', 1929: 'homeware', 1930: 'homeware', 1931: 'homeware',
-  1932: 'homeware', 1933: 'homeware', 1934: 'homeware', 1935: 'homeware',
-  1936: 'homeware', 1937: 'homeware', 1938: 'homeware', 1939: 'homeware',
-
-  // Collectibles / Antiques
-  3823: 'collectibles', 3824: 'collectibles', 3825: 'collectibles',
-  3826: 'collectibles', 3827: 'collectibles',
-
-  // Medals / Militaria
-  167: 'medals', 168: 'medals',
-
-  // Toys
-  1499: 'toys', 1500: 'toys', 1501: 'toys',
-
-  // Furniture
-  3154: 'furniture', 3155: 'furniture', 3156: 'furniture',
-}
+import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 
 // Map Vinted status string → Wrenlist condition
 const CONDITION_MAP: Record<string, string> = {
@@ -93,8 +48,8 @@ export async function POST(request: NextRequest) {
 
         // Map condition
         const condition = CONDITION_MAP[item.status] || 'good'
-        // catalog_id may be absent in wardrobe list response — default to 'other'
-        const category = item.catalog_id ? (VINTED_TO_CATEGORY[item.catalog_id] || 'other') : 'other'
+        // catalog_id may be absent in wardrobe list response — uses comprehensive lookup
+        const category = lookupVintedCategory(item.catalog_id)
         // Wardrobe endpoint uses `brand` field, catalog endpoint uses `brand_title`
         const brand = item.brand_title || item.brand || null
         // Generate SKU early — needed for photo filenames
