@@ -47,6 +47,10 @@ export default function PlatformConnectPage() {
   const [shopifyError, setShopifyError] = useState<string | null>(null)
   const [etsyConnected, setEtsyConnected] = useState(false)
   const [etsyLoading, setEtsyLoading] = useState(false)
+  const [facebookConnected, setFacebookConnected] = useState(false)
+  const [facebookLoading, setFacebookLoading] = useState(false)
+  const [depopConnected, setDepopConnected] = useState(false)
+  const [depopLoading, setDepopLoading] = useState(false)
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
   const extensionInfo = useExtensionInfo()
@@ -146,6 +150,40 @@ export default function PlatformConnectPage() {
       setEtsyConnected(response.loggedIn)
     } catch {
       setEtsyConnected(false)
+    }
+  }
+
+  const checkFacebookSession = async (): Promise<void> => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+      const response = await new Promise<{ loggedIn: boolean }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'facebook' }, (response) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError) resolve({ loggedIn: false })
+          else resolve(response || { loggedIn: false })
+        })
+      })
+      setFacebookConnected(response.loggedIn)
+    } catch {
+      setFacebookConnected(false)
+    }
+  }
+
+  const checkDepopSession = async (): Promise<void> => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+      const response = await new Promise<{ loggedIn: boolean }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'depop' }, (response) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError) resolve({ loggedIn: false })
+          else resolve(response || { loggedIn: false })
+        })
+      })
+      setDepopConnected(response.loggedIn)
+    } catch {
+      setDepopConnected(false)
     }
   }
 
@@ -312,10 +350,14 @@ export default function PlatformConnectPage() {
     fetchShopifyStatus()
   }, [])
 
-  // Check Etsy login on mount
+  // Check Etsy, Facebook, Depop login on mount
   useEffect(() => {
     setEtsyLoading(true)
     void checkEtsySession().finally(() => setEtsyLoading(false))
+    setFacebookLoading(true)
+    void checkFacebookSession().finally(() => setFacebookLoading(false))
+    setDepopLoading(true)
+    void checkDepopSession().finally(() => setDepopLoading(false))
   }, [])
 
   const handleShopifyConnect = async (e: React.FormEvent) => {
@@ -931,6 +973,110 @@ export default function PlatformConnectPage() {
         {etsyConnected && (
           <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
             Etsy crosslisting uses browser automation — the extension opens the Etsy listing form, fills all fields, uploads images, selects the category, and clicks Publish. No API key needed.
+          </div>
+        )}
+      </Panel>
+
+      {/* Facebook Marketplace */}
+      <Panel>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-shrink-0">
+            <MarketplaceIcon platform="facebook" size="lg" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-sm text-ink">
+                {facebookConnected ? 'Facebook Marketplace — Connected' : 'Facebook Marketplace'}
+              </div>
+            </div>
+            <div className="text-xs text-ink-lt">
+              {facebookLoading ? 'Checking login...' : facebookConnected
+                ? 'Local pickup listings via browser automation'
+                : 'Log in to facebook.com, then click Check connection'}
+            </div>
+          </div>
+          <Badge status={facebookConnected ? 'listed' : 'draft'} label={facebookConnected ? 'connected' : 'not connected'} />
+        </div>
+
+        {!facebookConnected && (
+          <div className="flex gap-2">
+            <a
+              href="https://www.facebook.com/marketplace"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
+            >
+              Log in to Facebook →
+            </a>
+            <button
+              onClick={async () => {
+                setFacebookLoading(true)
+                await checkFacebookSession()
+                setFacebookLoading(false)
+              }}
+              disabled={facebookLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+            >
+              {facebookLoading ? 'Checking...' : 'Check connection'}
+            </button>
+          </div>
+        )}
+
+        {facebookConnected && (
+          <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
+            Facebook Marketplace UK uses local pickup only. The extension scrapes session tokens from facebook.com and posts listings via their internal GraphQL API.
+          </div>
+        )}
+      </Panel>
+
+      {/* Depop */}
+      <Panel>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-shrink-0">
+            <MarketplaceIcon platform="depop" size="lg" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-sm text-ink">
+                {depopConnected ? 'Depop — Connected' : 'Depop'}
+              </div>
+            </div>
+            <div className="text-xs text-ink-lt">
+              {depopLoading ? 'Checking login...' : depopConnected
+                ? 'Crosslist your finds to Depop via REST API'
+                : 'Log in to depop.com, then click Check connection'}
+            </div>
+          </div>
+          <Badge status={depopConnected ? 'listed' : 'draft'} label={depopConnected ? 'connected' : 'not connected'} />
+        </div>
+
+        {!depopConnected && (
+          <div className="flex gap-2">
+            <a
+              href="https://www.depop.com/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
+            >
+              Log in to Depop →
+            </a>
+            <button
+              onClick={async () => {
+                setDepopLoading(true)
+                await checkDepopSession()
+                setDepopLoading(false)
+              }}
+              disabled={depopLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+            >
+              {depopLoading ? 'Checking...' : 'Check connection'}
+            </button>
+          </div>
+        )}
+
+        {depopConnected && (
+          <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
+            Depop uses cookie-based authentication. The extension reads your Depop session from the browser and posts listings via their REST API with presigned S3 image uploads.
           </div>
         )}
       </Panel>
