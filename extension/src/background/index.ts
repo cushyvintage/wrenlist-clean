@@ -180,7 +180,7 @@ type ExternalMessage = Record<string, unknown>;
           const shopifyCategory = item.platform_category_id
             ? [item.platform_category_id]
             : mapCategoryToShopify(find.category);
-          const weightGrams = find.shipping_weight_grams;
+          const weightGrams = find.shipping_weight_grams ?? find.weight_grams;
 
           const product: Product = {
             id: find.id,
