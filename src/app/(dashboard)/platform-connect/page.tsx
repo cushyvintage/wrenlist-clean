@@ -7,12 +7,8 @@ import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
 import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
-import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
-import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionInfo, EXTENSION_ID } from '@/hooks/useExtensionInfo'
-
-const IMPORT_LIMIT = 200
 
 interface EbayPolicy {
   id: string
@@ -29,7 +25,6 @@ interface EbayPolicies {
 export default function PlatformConnectPage() {
   const searchParams = useSearchParams()
   const ebay = useEbayConnection()
-  const vintedImport = useMarketplaceImport()
   const [pageError, setPageError] = useState<string | null>(null)
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
   const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
@@ -59,9 +54,6 @@ export default function PlatformConnectPage() {
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
   const [vintedActionError, setVintedActionError] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
-  const [showImportConfirm, setShowImportConfirm] = useState(false)
-  const [existingCount, setExistingCount] = useState(0)
-  const [importCountLoading, setImportCountLoading] = useState(false)
 
 
   // Sync extension info from hook into local state
@@ -381,89 +373,6 @@ export default function PlatformConnectPage() {
       setPageError('Failed to disconnect Shopify')
     } finally {
       setShopifyLoading(false)
-    }
-  }
-
-  const handleVintedImportStart = async () => {
-    setImportCountLoading(true)
-    setVintedActionError(null)
-
-    try {
-      const response = await fetch('/api/vinted/listing-count')
-      if (response.ok) {
-        const data = await response.json()
-        setExistingCount(data.data.existingCount)
-        setShowImportConfirm(true)
-      } else {
-        throw new Error('Failed to fetch existing count')
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to check existing finds'
-      setVintedActionError(message)
-    } finally {
-      setImportCountLoading(false)
-    }
-  }
-
-  const handleVintedImportConfirm = async () => {
-    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
-    setShowImportConfirm(false)
-    setVintedActionError(null)
-    vintedImport.reset()
-
-    try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        throw new Error('Extension not available. Install the Wrenlist extension.')
-      }
-
-      vintedImport.setFetching('Fetching your Vinted listings...')
-
-      const since = new Date().toISOString()
-      let stopPolling: (() => void) | undefined
-
-      // Start polling for progress after a short delay (give extension time to start importing)
-      const pollingTimer = setTimeout(() => {
-        stopPolling = vintedImport.startPolling(since, IMPORT_LIMIT)
-      }, 15000) // Start polling after 15s (fetching phase)
-
-      const extensionResponse = await new Promise<{
-        success: boolean
-        message?: string
-        results?: { success: number; skipped: number; errors: number; total: number }
-      }>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ success: false, message: 'Timed out — Vinted took too long. Try again.' }),
-          360000
-        )
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          { action: 'batch_import_vinted', limit: IMPORT_LIMIT, wrenlistBaseUrl: window.location.origin },
-          (response) => {
-            clearTimeout(timeout)
-            if (chrome.runtime.lastError) {
-              resolve({ success: false, message: chrome.runtime.lastError.message })
-            } else {
-              resolve(response || { success: false, message: 'No response from extension' })
-            }
-          }
-        )
-      })
-
-      clearTimeout(pollingTimer)
-      if (stopPolling) {
-        stopPolling()
-      }
-
-      if (!extensionResponse.success) {
-        throw new Error(extensionResponse.message || 'Failed to import from Vinted')
-      }
-
-      const r = extensionResponse.results || { success: 0, skipped: 0, errors: 0, total: 0 }
-      vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to import from Vinted'
-      vintedImport.setError(message)
-      setVintedActionError(message)
     }
   }
 
@@ -919,71 +828,26 @@ export default function PlatformConnectPage() {
               </div>
             )}
 
-            {(vintedImport.state.phase === "fetching" || vintedImport.state.phase === "importing") && (
-              <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm text-amber-800">
-                {vintedImport.state.phase === "fetching"
-                  ? "Fetching your Vinted listings from Vinted — this takes 1–2 minutes. Do not close this tab."
-                  : `Importing into Wrenlist — ${vintedImport.state.imported} of ${vintedImport.state.total} done. Do not close this tab.`
-                }
-              </div>
-            )}
-
-            {vintedImport.state.phase !== "idle" && (
-              <div className="mb-4 p-3 bg-cream-md rounded border border-border">
-                <ImportProgressBar state={vintedImport.state} />
-              </div>
-            )}
-
             {vintedSyncResult && (
               <div className="bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm text-green-700">
-                ✅ Synced status: {vintedSyncResult.updated} item{vintedSyncResult.updated !== 1 ? 's' : ''} updated
+                Synced status: {vintedSyncResult.updated} item{vintedSyncResult.updated !== 1 ? 's' : ''} updated
                 {vintedSyncResult.failed > 0 && `, ${vintedSyncResult.failed} failed`}
               </div>
             )}
 
-            {showImportConfirm && (
-              <div className="p-4 bg-cream-md border border-sage/30 rounded mb-4">
-                <h4 className="font-medium text-sm text-ink mb-3">Import from Vinted</h4>
-                <p className="text-sm text-ink-lt mb-4">
-                  This will fetch up to <strong>{IMPORT_LIMIT}</strong> of your active Vinted listings and add them to Wrenlist.
-                </p>
-                <div className="p-3 bg-white border border-border rounded mb-4 text-sm">
-                  <div className="text-ink-lt mb-1">You currently have:</div>
-                  <div className="text-lg font-medium text-ink">{existingCount} find{existingCount !== 1 ? 's' : ''}</div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleVintedImportConfirm}
-                    disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing'}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
-                  >
-                    {vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' ? 'Importing...' : 'Import all'}
-                  </button>
-                  <button
-                    onClick={() => setShowImportConfirm(false)}
-                    disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing'}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="flex gap-2 mb-4">
-              <button
-                onClick={handleVintedImportStart}
-                disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' || vintedSyncLoading || importCountLoading || showImportConfirm}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+              <a
+                href="/import?platform=vinted"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition text-center"
               >
-                {importCountLoading ? 'Checking...' : vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' ? 'Importing...' : '📥 Import from Vinted'}
-              </button>
+                Import listings →
+              </a>
               <button
                 onClick={handleVintedSync}
-                disabled={vintedImport.state.phase === 'fetching' || vintedImport.state.phase === 'importing' || vintedSyncLoading}
+                disabled={vintedSyncLoading}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
               >
-                {vintedSyncLoading ? 'Syncing...' : '🔄 Sync status'}
+                {vintedSyncLoading ? 'Syncing...' : 'Sync status'}
               </button>
             </div>
 

@@ -45,11 +45,23 @@ const CONDITION_MAP: Record<string, string> = {
 /**
  * POST /api/ebay/import
  * Fetches eBay inventory and imports items as finds.
+ * Optionally accepts { skus: string[] } to import only specific items.
  */
 export async function POST(request: NextRequest) {
   try {
     const user = await getServerUser()
     if (!user) return ApiResponseHelper.unauthorized()
+
+    // Parse optional selective SKUs from request body
+    let selectedSkus: Set<string> | null = null
+    try {
+      const body = await request.json()
+      if (body?.skus && Array.isArray(body.skus) && body.skus.length > 0) {
+        selectedSkus = new Set(body.skus as string[])
+      }
+    } catch {
+      // No body or invalid JSON — import all (backward compatible)
+    }
 
     const supabase = await createSupabaseServerClient()
 
@@ -79,6 +91,9 @@ export async function POST(request: NextRequest) {
         try {
           const sku = item.sku
           if (!sku) { skipped++; continue }
+
+          // Skip if selective import and this SKU not selected
+          if (selectedSkus && !selectedSkus.has(sku)) { skipped++; continue }
 
           // Check if already imported
           const { data: existing } = await supabase

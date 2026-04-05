@@ -54,25 +54,25 @@ function mapCategoryToFacebook(category, platformCategoryId) {
     const id = FACEBOOK_CATEGORY_MAP[category.toLowerCase()];
     return [id ?? "684964985564453"];
 }
-// Depop category mapping — 3-part arrays: [root, group, productType]
-// For non-clothing items, use "everything-else" root
+// Depop API product types — discovered from real Depop listings via userProductView API
+// Note: "decor-home-accesories" is Depop's actual spelling (missing 's')
 const DEPOP_CATEGORY_MAP = {
-    ceramics: ["everything-else", "home", "ceramics"],
-    glassware: ["everything-else", "home", "glassware"],
-    books: ["everything-else", "books-magazines", "non-fiction"],
+    ceramics: ["everything-else", "home", "dinnerware"],
+    glassware: ["everything-else", "home", "decor-home-accesories"],
+    books: ["everything-else", "books-and-magazine", "books"],
     jewellery: ["womenswear", "jewellery", "necklaces"],
     clothing: ["womenswear", "tops", "t-shirts"],
-    homeware: ["everything-else", "home", "home-accessories"],
-    furniture: ["everything-else", "home", "furniture"],
-    toys: ["everything-else", "vintage", "vintage-homeware"],
-    collectibles: ["everything-else", "vintage", "vintage-homeware"],
-    jugs: ["everything-else", "home", "ceramics"],
-    art: ["everything-else", "art", "prints"],
+    homeware: ["everything-else", "home", "decor-home-accesories"],
+    furniture: ["everything-else", "home", "decor-home-accesories"],
+    toys: ["everything-else", "home", "decor-home-accesories"],
+    collectibles: ["everything-else", "home", "dinnerware"],
+    jugs: ["everything-else", "home", "dinnerware"],
+    art: ["everything-else", "home", "decor-home-accesories"],
 };
 function mapCategoryToDepop(category) {
     if (!category)
-        return ["everything-else", "home", "home-accessories"];
-    return DEPOP_CATEGORY_MAP[category.toLowerCase()] ?? ["everything-else", "home", "home-accessories"];
+        return ["everything-else", "home", "decor-home-accesories"];
+    return DEPOP_CATEGORY_MAP[category.toLowerCase()] ?? ["everything-else", "home", "decor-home-accesories"];
 }
 function mapProductType(category) {
     if (!category)
@@ -211,7 +211,8 @@ function mapCondition(condition) {
                         quantity: 1,
                         acceptOffers: true,
                         shipping: {
-                            shippingType: "OwnLabel",
+                            // Facebook UK only supports local pickup; others use OwnLabel shipping
+                            shippingType: mp === "facebook" ? "Pickup" : "OwnLabel",
                             shippingWeight: weightGrams
                                 ? {
                                     value: weightGrams,
@@ -226,7 +227,7 @@ function mapCondition(condition) {
                                 lat: 51.5074,
                                 lng: -0.1278,
                             },
-                            domesticShipping: 4,
+                            domesticShipping: mp === "facebook" ? 0 : 4,
                             sellerPays: false,
                             allowLocalPickup: true,
                         },
@@ -560,6 +561,9 @@ async function dispatchExternalMessage(message) {
         case "fetch_vinted_api":
         case "fetchvintedapi":
             return handleFetchVintedApi(message);
+        case "get_vinted_listings":
+        case "getvintedlistings":
+            return handleGetVintedListings(message);
         case "fetch_wrenlist_api":
         case "fetchwrenlistapi":
             return handleFetchWrenlistApi(message);
@@ -1720,6 +1724,58 @@ async function safeJson(response) {
     }
     catch {
         return null;
+    }
+}
+/**
+ * Fetches Vinted wardrobe listings for preview (no import).
+ * Returns paginated listing summaries so the import page can display them
+ * and let the user select which ones to import.
+ */
+async function handleGetVintedListings(message) {
+    try {
+        const tld = resolveTldFromMessage(message, "vinted") ?? "com";
+        const { client } = createVintedServices({ tld });
+        await client.bootstrap();
+        const loggedIn = await client.checkLogin();
+        if (!loggedIn) {
+            return withExtensionVersion({
+                success: false,
+                message: "Please log in to your Vinted account and try again.",
+                needsLogin: true,
+                listings: [],
+                total: 0,
+            });
+        }
+        const page = String(message.page ?? "1");
+        const perPage = resolvePositiveInteger(message.perPage, 96, 96);
+        const status = message.status?.toLowerCase() ?? "active";
+        const result = await client.getListings(page, perPage, undefined, false, status);
+        const products = result.products ?? [];
+        const listings = products.map((p) => ({
+            id: p.marketplaceId,
+            title: p.title,
+            price: p.price,
+            photo: p.coverImage || null,
+            url: p.marketplaceUrl || null,
+            isSold: p.isSold ?? false,
+            isHidden: p.isHidden ?? false,
+        }));
+        return withExtensionVersion({
+            success: true,
+            listings,
+            total: result.pagination?.total_entries ?? listings.length,
+            page: result.pagination?.current_page ?? 1,
+            totalPages: result.pagination?.total_pages ?? 1,
+            username: result.username ?? null,
+        });
+    }
+    catch (error) {
+        return withExtensionVersion({
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to fetch Vinted listings",
+            listings: [],
+            total: 0,
+        });
     }
 }
 async function collectVintedListings(client, limit, status, tld) {
