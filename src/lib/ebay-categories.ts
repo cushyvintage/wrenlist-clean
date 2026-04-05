@@ -7,19 +7,20 @@
  */
 export const EBAY_CATEGORY_MAP: Record<string, string> = {
   // Dom's primary stock (from SOUL.md)
-  ceramics: '262392',       // Decorative Pottery, Ceramics & Glass Collector Plates (leaf)
-  glassware: '262393',      // Decorative Glass → Vases (leaf under Pottery, Ceramics & Glass)
-  books: '171228',          // Antiquarian & Collectable Books (leaf)
-  jewellery: '10968',       // Vintage & Antique Jewellery (leaf)
+  // Verified eBay UK leaf categories (from Sell > Category selection)
+  ceramics: '38277',        // Pottery, Ceramics & Glass > Plates (leaf)
+  glassware: '38228',       // Pottery, Ceramics & Glass > Glass > Vases (leaf)
+  books: '29223',           // Books, Comics & Magazines > Antiquarian & Collectable (leaf)
+  jewellery: '10968',       // Jewellery & Watches > Vintage & Antique Jewellery (leaf)
   jewelry: '10968',         // US spelling alias
-  clothing: '175759',       // Vintage Clothing (leaf)
-  homeware: '20697',        // Decorative Ornaments & Figures (leaf)
+  clothing: '175759',       // Clothes, Shoes & Accessories > Vintage (leaf)
+  homeware: '20697',        // Collectables > Decorative Ornaments & Figures (leaf)
   home: '20697',
-  collectibles: '262392',   // Decorative Collector Plates (leaf) — default for collectibles
-  medals: '4003',           // Medals & Ribbons (leaf under Militaria)
-  toys: '19016',            // Vintage & Classic Toys (leaf)
-  furniture: '20091',       // Antique Furniture (leaf)
-  // Fallback — eBay "Other" under Collectables
-  other: '562',             // Other Collectables (leaf)
+  collectibles: '38277',    // Default collectibles to Pottery Plates (Dom's primary stock)
+  medals: '4003',           // Collectables > Militaria > Medals (leaf)
+  toys: '19016',            // Toys & Games > Vintage & Classic Toys (leaf)
+  furniture: '20091',       // Antiques > Antique Furniture (leaf)
+  // Fallback
+  other: '562',             // Collectables > Other Collectables (leaf)
   default: '562',
 }
