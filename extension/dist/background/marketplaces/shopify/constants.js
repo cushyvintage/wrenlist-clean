@@ -125,11 +125,13 @@ export const ADMIN_PRODUCT_DETAILS_QUERY = `
   }
 `;
 export const GET_LOCATION_QUERY = `
-  query ShopifyLocations {
-    merchantLocations(first: 1) {
+  query ShopifyLocations($locationsFirst: Int!) {
+    merchantLocations: locations(first: $locationsFirst) {
       edges {
         node {
           id
+          isActive
+          name
         }
       }
     }

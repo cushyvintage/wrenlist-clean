@@ -136,7 +136,7 @@ export class ShopifyClient {
             credentials: "include",
             body: JSON.stringify({
                 operationName: "ShopifyLocations",
-                variables: {},
+                variables: { locationsFirst: 250 },
                 query: GET_LOCATION_QUERY,
             }),
         });
