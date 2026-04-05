@@ -117,7 +117,7 @@ function SortablePhoto({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group rounded overflow-hidden border touch-none ${
+      className={`relative group rounded overflow-hidden border ${selectionMode ? '' : 'touch-none'} ${
         isSelected ? 'border-sage ring-2 ring-sage/40' : 'border-sage/14'
       } ${isNew ? 'animate-fadeIn' : ''}`}
       {...attributes}
