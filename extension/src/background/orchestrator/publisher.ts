@@ -260,12 +260,8 @@ async function publishViaEtsy(product: Product) {
   return services.client.publishProduct(product);
 }
 
-async function delistViaEtsy(_id: string) {
-  // Etsy delisting via form-fill is not automated.
-  // User must delete from Etsy dashboard.
-  return {
-    success: false,
-    message: "Etsy delisting must be done manually from Etsy dashboard",
-  };
+async function delistViaEtsy(id: string) {
+  const services = createEtsyServices();
+  return services.client.delistProduct(id);
 }
 

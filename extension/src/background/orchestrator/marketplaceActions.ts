@@ -110,7 +110,7 @@ export async function updateMarketplaceListing(
       case "whatnot":
         return updateWhatnotListing(product, tld);
       case "etsy":
-        throw new Error("Etsy update is not yet supported.");
+        return updateEtsyListing(product);
       default:
         throw new Error(`${marketplace} is not supported`);
     }
@@ -303,6 +303,16 @@ async function updateWhatnotListing(product: Product, tld: string) {
   const services = createWhatnotServices(tld);
   const payload = await services.mapProductForUpdate(product);
   return services.client.updateListing(payload);
+}
+
+async function updateEtsyListing(product: Product) {
+  const listingId = product.marketplaceId ?? product.marketPlaceId;
+  if (!listingId) {
+    throw new Error("Missing Etsy listing id.");
+  }
+
+  const services = createEtsyServices();
+  return services.client.updateProduct(listingId, product);
 }
 
 function normalizeUsername(

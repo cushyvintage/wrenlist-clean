@@ -759,8 +759,9 @@ export class VintedClient {
                     // Cookie access might fail, continue to next method
                 }
             }
-            // If still not found, try API call as fallback
-            if (!this.username && (!match || (!match[1] && !match[2]))) {
+            // Try API to get actual login name (cookie value is numeric ID, not display name)
+            const usernameIsNumericId = this.username && /^\d+$/.test(this.username);
+            if (usernameIsNumericId || (!this.username && (!match || (!match[1] && !match[2])))) {
                 console.log("[Vinted] Debug: Trying API fallback for username");
                 const apiEndpoints = [
                     `${this.apiUrl}/users/me`,
@@ -785,10 +786,20 @@ export class VintedClient {
                         if (userResponse.ok) {
                             const userData = await userResponse.json();
                             console.log("[Vinted] Debug: API response data keys:", Object.keys(userData));
-                            // Try various response structures
-                            if (userData?.user?.id) {
+                            // Try various response structures — prefer login (display name) over numeric id
+                            if (userData?.user?.login) {
+                                this.username = userData.user.login;
+                                console.log("[Vinted] Debug: Found username via API (user.login):", this.username);
+                                break;
+                            }
+                            else if (userData?.user?.id) {
                                 this.username = userData.user.id.toString();
                                 console.log("[Vinted] Debug: Found username via API (user.id):", this.username);
+                                break;
+                            }
+                            else if (userData?.login) {
+                                this.username = userData.login;
+                                console.log("[Vinted] Debug: Found username via API (login):", this.username);
                                 break;
                             }
                             else if (userData?.id) {
@@ -796,14 +807,9 @@ export class VintedClient {
                                 console.log("[Vinted] Debug: Found username via API (id):", this.username);
                                 break;
                             }
-                            else if (userData?.user_id) {
-                                this.username = userData.user_id.toString();
-                                console.log("[Vinted] Debug: Found username via API (user_id):", this.username);
-                                break;
-                            }
-                            else if (userData?.userId) {
-                                this.username = userData.userId.toString();
-                                console.log("[Vinted] Debug: Found username via API (userId):", this.username);
+                            else if (userData?.account?.login) {
+                                this.username = userData.account.login;
+                                console.log("[Vinted] Debug: Found username via API (account.login):", this.username);
                                 break;
                             }
                             else if (userData?.account?.id) {

@@ -645,15 +645,17 @@ async function handleGetVintedSession() {
     
     // Now create a Vinted client with the detected TLD and bootstrap it
     const { client } = createVintedServices({ tld });
-    
+
     try {
       await client.bootstrap();
       const isLoggedIn = await client.checkLogin();
-      
+      // Use the actual username from the client (login field) if available, fall back to cookie value
+      const actualUsername = client.getUsername() || username;
+
       return {
         success: true,
         loggedIn: isLoggedIn,
-        username: isLoggedIn ? username : undefined,
+        username: isLoggedIn ? actualUsername : undefined,
         tld,
         extensionVersion: EXTENSION_VERSION,
       };

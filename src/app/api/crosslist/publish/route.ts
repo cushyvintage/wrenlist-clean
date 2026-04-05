@@ -13,6 +13,7 @@ interface MarketplaceResult {
   ok: boolean
   listingUrl?: string
   error?: string
+  alreadyListed?: boolean
 }
 
 /**
@@ -82,7 +83,20 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results.ebay = { ok: false, error: data.error || data.data?.message || 'eBay publish failed' }
         }
       } else {
-        // All other marketplaces — queue for extension via publish-queue
+        // Check if already listed — don't re-queue to avoid duplicates
+        const { data: existing } = await supabase
+          .from('product_marketplace_data')
+          .select('status, platform_listing_url')
+          .eq('find_id', findId)
+          .eq('marketplace', marketplace)
+          .single()
+
+        if (existing?.status === 'listed') {
+          results[marketplace] = { ok: true, listingUrl: existing.platform_listing_url ?? undefined, alreadyListed: true }
+          continue
+        }
+
+        // Queue for extension via publish-queue (only if not already listed)
         const { error: queueError } = await supabase
           .from('product_marketplace_data')
           .upsert(
