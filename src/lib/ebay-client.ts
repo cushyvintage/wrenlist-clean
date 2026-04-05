@@ -263,9 +263,10 @@ export class eBayClient {
   async fetchUsername(): Promise<string | null> {
     if (!this.tokens?.accessToken) return null
 
-    // Try Identity API
+    // Try Identity API (uses apiz.ebay.com, not api.ebay.com)
+    const identityBase = this.baseUrl.replace('://api.', '://apiz.')
     try {
-      const response = await undiciFetch(`${this.baseUrl}/commerce/identity/v1/user/`, {
+      const response = await undiciFetch(`${identityBase}/commerce/identity/v1/user/`, {
         headers: new UndiciHeaders({
           'Authorization': `Bearer ${this.tokens.accessToken}`,
           'Accept': 'application/json',
