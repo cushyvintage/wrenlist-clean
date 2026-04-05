@@ -19,7 +19,7 @@ interface SidebarProps {
 export function Sidebar({ children, className = '', userInfo }: SidebarProps) {
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen w-[210px] flex flex-col overflow-y-auto ${className}`}
+      className={`fixed left-0 top-0 h-screen w-[210px] flex-col overflow-y-auto hidden md:flex ${className}`}
       style={{ backgroundColor: '#1E2E1C' }}
     >
       {/* Logo / branding area */}
