@@ -1,4 +1,4 @@
-import { checkAlreadyExecuted, getLoggingInfo, log, wait, } from "../../shared/crosslistApi.js";
+import { checkAlreadyExecuted, getLoggingInfo, log, wait, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 import { buildVintedUrls, VINTED_RULE_IDS } from "./constants.js";
 export class VintedClient {
@@ -139,7 +139,7 @@ export class VintedClient {
             const headerValue = brands
                 .map((entry) => `"${entry.brand}";v="${entry.version}"`)
                 .join("; ");
-            // Get cf_clearance cookie for Cloudflare bypass (matching Crosslist's _setApiHeaders approach)
+            // Get cf_clearance cookie for Cloudflare bypass (for Cloudflare bypass)
             let cfClearanceHeader = null;
             try {
                 const domain = `vinted.${this.tld}`;
@@ -540,13 +540,13 @@ export class VintedClient {
                 }
             }
             this.csrfToken = match[1];
-            // Extract anon_id using Crosslist pattern
+            // Extract anon_id from page HTML
             match = html.match(/"anon_id":"([a-z0-9\-]+)"/);
             if (!match || match.length < 2) {
                 throw new Error("Anon id not found in HTML response");
             }
             this.anonId = match[1];
-            // Extract uploadSessionId from HTML (Crosslist pattern)
+            // Extract uploadSessionId from HTML (from page HTML)
             // This is embedded in the page's JSON data and used for temp_uuid + upload_session_id
             const uploadMatch = html.match(/"uploadSessionId":"([a-z0-9\-]+)"/);
             if (uploadMatch && uploadMatch[1]) {
@@ -640,7 +640,7 @@ export class VintedClient {
                 const context = html.substring(contextStart, contextEnd);
                 console.log("[Vinted] Debug: Context around anon_id:", context);
             }
-            // Extract user_id using Crosslist pattern (exact pattern from working crosslist extension)
+            // Extract user_id from page HTML 
             // Only try HTML parsing if we didn't get username from cookie
             // This regex has two alternatives with OR: 
             // 1. Matches "user_id":123 or "userId":123
@@ -886,7 +886,7 @@ export class VintedClient {
     }
     /**
      * Refresh the uploadSessionId by fetching the /items/new page.
-     * Crosslist does this before each publish to get a fresh session.
+     * Extension does this before each publish to get a fresh session.
      * Falls back to a random UUID if the page doesn't contain one.
      */
     async refreshUploadSessionId() {
@@ -942,15 +942,6 @@ export class VintedClient {
             credentials: "include",
             body: form,
         }).then((res) => res.json());
-        if (!response?.id) {
-            console.error('[Vinted] uploadImage failed, response:', JSON.stringify(response));
-            fetch("https://app.wrenlist.com/api/debug/relist-log", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ event: "uploadImage_failed", response, fileName: file.name, fileSize: file.size }),
-            }).catch(() => {});
-        }
         return response;
     }
     async fetchBrands(keyword) {
@@ -989,7 +980,7 @@ export class VintedClient {
             return response.package_sizes;
         }
         catch (error) {
-            // Match Crosslist's approach: log error and return empty array instead of throwing.
+            // Log error and return empty array instead of throwing.
             // The mapper has hardcoded weight-to-code fallbacks and will use default package size.
             console.error("[Vinted] fetchAvailablePackageSizes failed for catalog", catalogId, error);
             return [];
@@ -1041,13 +1032,6 @@ export class VintedClient {
             const text = await res.text();
             if (!res.ok) {
                 console.error("[Vinted] postListing failed", res.status, text);
-                // Telemetry: send error to Wrenlist for visibility
-                fetch("https://app.wrenlist.com/api/debug/relist-log", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ event: "postListing_failed", status: res.status, response: text, payload }),
-                }).catch(() => {});
                 // Check if the response contains a CAPTCHA URL (DataDome bot protection)
                 try {
                     const errorData = JSON.parse(text);
@@ -1175,7 +1159,7 @@ export class VintedClient {
             };
         }
         if (!response.item) {
-            // Check for CAPTCHA URL in response (matches Crosslist approach)
+            // Check for CAPTCHA URL in response 
             if (response.url && response.url.includes("captcha")) {
                 return {
                     success: false,

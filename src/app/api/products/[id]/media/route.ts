@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerUser } from '@/lib/supabase-server'
-import { getFind } from '@/services/products.service'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 type RouteParams = Promise<{ id: string }>
 
@@ -28,14 +27,20 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
   const { id } = await params
 
   try {
-    const user = await getServerUser()
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const find = await getFind(id, user.id)
+    const { data: find, error: findError } = await supabase
+      .from('finds')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
 
-    if (!find) {
+    if (findError || !find) {
       return NextResponse.json({ error: 'Find not found' }, { status: 404 })
     }
 

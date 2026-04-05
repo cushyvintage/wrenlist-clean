@@ -1,4 +1,4 @@
-import { chunkConcurrentRequestsWithRetry, checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequestsWithRetry, checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/api.js";
 import { Condition } from "../../shared/enums.js";
 import { ADD_LISTING_PHOTO_MUTATION, CREATE_LISTING_MUTATION, CURRENT_USER_QUERY, GENERATE_MEDIA_UPLOAD_URLS_MUTATION, GET_MY_LIVESTREAMS_QUERY, GET_PRODUCT_ATTRIBUTES_QUERY, GET_SHIPPING_PROFILES_QUERY, SELLER_BULK_LISTING_ACTION_MUTATION, SELLER_HUB_INVENTORY_EDIT_QUERY, SELLER_HUB_INVENTORY_QUERY, UPDATE_LISTING_MUTATION, WHATNOT_DOMAIN, WHATNOT_GRAPHQL_API, } from "./constants.js";
 export class WhatnotClient {
@@ -243,7 +243,7 @@ export class WhatnotClient {
         const shippingWeight = categoryId && shippingProfileId
             ? await this.getShippingWeight(categoryId, shippingProfileId)
             : undefined;
-        return this.mapListingToCrosslist(listing, shippingWeight);
+        return this.mapListingToProduct(listing, shippingWeight);
     }
     async getShippingProfiles(categoryId) {
         const response = await this.graphql("GetShippingProfiles", GET_SHIPPING_PROFILES_QUERY, { categoryId });
@@ -285,9 +285,9 @@ export class WhatnotClient {
     async getShippingWeight(categoryId, profileId) {
         const profiles = await this.getShippingProfiles(categoryId);
         const match = profiles?.find((profile) => profile.id === profileId);
-        return this.convertToCrosslistWeight(match?.weightAmount, match?.weightScale);
+        return this.convertToStandardWeight(match?.weightAmount, match?.weightScale);
     }
-    mapListingToCrosslist(listing, shippingWeight) {
+    mapListingToProduct(listing, shippingWeight) {
         const categoryId = listing.product?.category?.id ?? null;
         const attributeValue = (predicate) => listing.listingAttributeValues?.find((attr) => predicate(attr.attribute?.key ?? ""))?.value;
         const rawCondition = attributeValue((key) => key.includes("condition"));
@@ -370,7 +370,7 @@ export class WhatnotClient {
     getProductUrl(id) {
         return `${WHATNOT_DOMAIN}/listing/${id}`;
     }
-    convertToCrosslistWeight(amount, scale) {
+    convertToStandardWeight(amount, scale) {
         if (amount == null || !scale) {
             return undefined;
         }

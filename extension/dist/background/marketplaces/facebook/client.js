@@ -1,4 +1,4 @@
-import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/crosslistApi.js";
+import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/api.js";
 import { FACEBOOK_BASE_URL, FACEBOOK_CATEGORY_CACHE_KEY, FACEBOOK_CATEGORY_PAGE_URL, FACEBOOK_CREATE_MUTATION_NAME, FACEBOOK_CREATE_URL, FACEBOOK_DOC_IDS, FACEBOOK_GRAPHQL_URL, FACEBOOK_IMAGE_UPLOAD_URL, FACEBOOK_SELLING_QUERY_NAME, FACEBOOK_SELLING_URL, } from "./constants.js";
 import { FacebookMapper } from "./mapper.js";
 export class FacebookClient {
@@ -23,22 +23,22 @@ export class FacebookClient {
     }
     async ensureSession(force = false) {
         if (!force && (await this.areParametersCached())) {
-            this.user = (await this.getCachedParam("crosslist_facebook_actorid")) ?? "";
-            this.aParam = (await this.getCachedParam("crosslist_facebook_a")) ?? "";
+            this.user = (await this.getCachedParam("wrenlist_fb_actorid")) ?? "";
+            this.aParam = (await this.getCachedParam("wrenlist_fb_a")) ?? "";
             this.cometReq =
-                (await this.getCachedParam("crosslist_facebook_cometreq")) ?? "";
+                (await this.getCachedParam("wrenlist_fb_cometreq")) ?? "";
             this.fbDtsg =
-                (await this.getCachedParam("crosslist_facebook_dtsg")) ?? "";
+                (await this.getCachedParam("wrenlist_fb_dtsg")) ?? "";
             this.targetId =
-                (await this.getCachedParam("crosslist_facebook_targetid")) ?? "";
+                (await this.getCachedParam("wrenlist_fb_targetid")) ?? "";
             return;
         }
         const html = await this.getHtml();
-        this.user = await this.extractAndCache("crosslist_facebook_actorid", /"actorId"\s*:\s*"([0-9]*)"/, html);
-        this.aParam = await this.extractAndCache("crosslist_facebook_a", /__a=([0-9]*)/, html);
-        this.cometReq = await this.extractAndCache("crosslist_facebook_cometreq", /comet_req=([0-9]*)/, html);
-        this.fbDtsg = await this.extractAndCache("crosslist_facebook_dtsg", /"DTSGInitialData",\s*\[\s*\]\s*,\s*{\s*"token":\s*"(.*?)"/, html);
-        this.targetId = await this.extractAndCache("crosslist_facebook_targetid", /__typename":.*?"Marketplace",.*?"id":.*?"([0-9]+)"/, html);
+        this.user = await this.extractAndCache("wrenlist_fb_actorid", /"actorId"\s*:\s*"([0-9]*)"/, html);
+        this.aParam = await this.extractAndCache("wrenlist_fb_a", /__a=([0-9]*)/, html);
+        this.cometReq = await this.extractAndCache("wrenlist_fb_cometreq", /comet_req=([0-9]*)/, html);
+        this.fbDtsg = await this.extractAndCache("wrenlist_fb_dtsg", /"DTSGInitialData",\s*\[\s*\]\s*,\s*{\s*"token":\s*"(.*?)"/, html);
+        this.targetId = await this.extractAndCache("wrenlist_fb_targetid", /__typename":.*?"Marketplace",.*?"id":.*?"([0-9]+)"/, html);
     }
     async postListing(product) {
         await this.ensureSession();
@@ -516,11 +516,11 @@ export class FacebookClient {
     }
     async areParametersCached() {
         const keys = [
-            "crosslist_facebook_actorid",
-            "crosslist_facebook_a",
-            "crosslist_facebook_cometreq",
-            "crosslist_facebook_dtsg",
-            "crosslist_facebook_targetid",
+            "wrenlist_fb_actorid",
+            "wrenlist_fb_a",
+            "wrenlist_fb_cometreq",
+            "wrenlist_fb_dtsg",
+            "wrenlist_fb_targetid",
         ];
         const values = await chrome.storage.local.get(keys);
         return keys.every((key) => Boolean(values[key]));

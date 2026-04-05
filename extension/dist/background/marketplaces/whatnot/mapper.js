@@ -1,5 +1,5 @@
 import { Condition } from "../../shared/enums.js";
-import { getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { getProductMediaForMarketplace, } from "../../shared/api.js";
 export class WhatnotMapper {
     deps;
     tld;

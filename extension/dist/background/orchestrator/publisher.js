@@ -204,7 +204,7 @@ async function delistViaWhatnot(id, tld) {
 }
 async function publishViaEtsy(product) {
     const services = createEtsyServices();
-    return services.client.crosslistProduct(product);
+    return services.client.publishProduct(product);
 }
 async function delistViaEtsy(_id) {
     // Etsy delisting via form-fill is not automated.

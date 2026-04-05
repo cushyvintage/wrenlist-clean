@@ -1,5 +1,5 @@
 import { countries } from "../../data/index.js";
-import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/api.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
 const FALLBACK_BRAND = {
     id: 31752,

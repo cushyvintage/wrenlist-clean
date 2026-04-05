@@ -1,5 +1,5 @@
 import { depopBrands } from "../../data/index.js";
-import { chunkConcurrentRequestsWithRetry, getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequestsWithRetry, getProductMediaForMarketplace, } from "../../shared/api.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
 const TLD_CURRENCIES = {
     "co.uk": "GBP",

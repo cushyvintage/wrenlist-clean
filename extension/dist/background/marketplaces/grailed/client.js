@@ -1,4 +1,4 @@
-import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/crosslistApi.js";
+import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/api.js";
 import { Color, Condition, isColor } from "../../shared/enums.js";
 import { countries } from "../../data/index.js";
 const GRAILED_MEDIA_UPLOAD_URL = "https://grailed-media.s3.amazonaws.com/";

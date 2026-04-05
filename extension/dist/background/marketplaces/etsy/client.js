@@ -1,6 +1,6 @@
 import { Condition } from "../../shared/enums.js";
 import { ETSY_BASE_URL, ETSY_LISTINGS_MANAGER_URL, ETSY_SESSION_COOKIE } from "./constants.js";
-import { wait } from "../../shared/crosslistApi.js";
+import { wait } from "../../shared/api.js";
 export class EtsyClient {
     baseUrl;
     shopId = null;
@@ -115,11 +115,11 @@ export class EtsyClient {
         };
     }
     /**
-     * Crosslist a product to Etsy via form-fill
+     * Publish a product to Etsy via form-fill
      * Opens the Etsy listing creation page and fills in product details
      * User can review and submit from there
      */
-    async crosslistProduct(product) {
+    async publishProduct(product) {
         try {
             // Check if user is logged in
             const isLoggedIn = await this.checkLogin();

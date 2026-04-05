@@ -1,4 +1,4 @@
-import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/crosslistApi.js";
+import { checkAlreadyExecuted, getLoggingInfo, log, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 import { getPoshmarkBrandSearchUrl, getPoshmarkCreateListingUrl, getPoshmarkDomain, getPoshmarkMetaCatalogUrl, getPoshmarkPostsUrl, POSHMARK_APP_VERSION, POSHMARK_PM_VERSION, } from "./constants.js";
 import { PoshmarkMapper, } from "./mapper.js";

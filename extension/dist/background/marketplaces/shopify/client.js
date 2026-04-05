@@ -1,4 +1,4 @@
-import { chunkConcurrentRequestsWithRetry, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequestsWithRetry, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 import { ADMIN_PRODUCT_DETAILS_QUERY, CREATE_METAFIELD_DEFINITION_MUTATION, CREATE_PRODUCT_MUTATION, GET_LOCATION_QUERY, GET_METAFIELD_DEFINITIONS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_SAVE_UPDATE_MUTATION, SHOPIFY_UPLOAD_IMAGE_URL, UPDATE_PRODUCT_MUTATION, UPLOAD_MEDIA_MUTATION, getShopifyAdminDomain, getShopifyGraphqlUrl, } from "./constants.js";
 export class ShopifyClient {
@@ -344,7 +344,7 @@ export class ShopifyClient {
             }),
         });
         if (response.status !== 200) {
-            throw new Error("Please enter a valid Shopify admin shop URL in your Crosslist settings.");
+            throw new Error("Please enter a valid Shopify admin shop URL in your Wrenlist settings.");
         }
         const json = await response.json();
         const edges = json?.data?.products?.edges ?? [];
@@ -471,7 +471,7 @@ export class ShopifyClient {
             cover: images[0],
             coverSmall: images[0],
             shipping: {
-                shippingWeight: this.weightToCrosslistWeight(firstVariant.weight, firstVariant.weightUnit),
+                shippingWeight: this.weightToStandardWeight(firstVariant.weight, firstVariant.weightUnit),
             },
             marketplaceUrl: this.getProductUrl(id),
             dynamicProperties: {},
@@ -506,7 +506,7 @@ export class ShopifyClient {
         }
         return undefined;
     }
-    weightToCrosslistWeight(weight, unit) {
+    weightToStandardWeight(weight, unit) {
         if (weight == null || !unit) {
             return undefined;
         }

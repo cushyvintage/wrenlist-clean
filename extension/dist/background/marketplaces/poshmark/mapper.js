@@ -1,4 +1,4 @@
-import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/api.js";
 import { Condition } from "../../shared/enums.js";
 const TLD_CURRENCIES = {
     "co.uk": "GBP",

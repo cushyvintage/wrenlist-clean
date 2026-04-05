@@ -1,4 +1,4 @@
-import { getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { getProductMediaForMarketplace, } from "../../shared/api.js";
 import { mercariBrands } from "../../data/index.js";
 const MAX_PRICE_CENTS = 200_000;
 const MIN_PRICE_CENTS = 1;

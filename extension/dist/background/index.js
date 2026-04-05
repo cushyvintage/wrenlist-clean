@@ -1,4 +1,4 @@
-import { EXTENSION_VERSION } from "./shared/crosslistApi.js";
+import { EXTENSION_VERSION } from "./shared/api.js";
 import { delistFromMarketplace, publishToMarketplace, } from "./orchestrator/publisher.js";
 import { checkMarketplaceLogin, fetchMarketplaceListing, fetchMarketplaceListings, updateMarketplaceListing, } from "./orchestrator/marketplaceActions.js";
 import { normalizeError } from "./orchestrator/utils.js";
@@ -89,7 +89,7 @@ const ICON_PATH = "icons/icon128.png";
                     if (!find)
                         continue;
                     console.log(`[QueuePoll] Publishing ${find.name} to ${mp}...`);
-                    // Build CrosslistProduct from find data
+                    // Build Product from find data
                     const product = {
                         id: find.id,
                         marketPlaceId: find.id,
@@ -104,7 +104,9 @@ const ICON_PATH = "icons/icon128.png";
                         shipping: { shippingWeight: undefined },
                         dynamicProperties: {},
                     };
-                    const result = await publishToMarketplace(mp, product);
+                    // Pass settings (e.g. shopifyShopUrl) from the queue item
+                    const publishOptions = item.settings ? { settings: item.settings } : {};
+                    const result = await publishToMarketplace(mp, product, publishOptions);
                     // Report back to Wrenlist API
                     try {
                         await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
@@ -268,8 +270,8 @@ async function dispatchExternalMessage(message) {
         case "publishtomarketplace":
         case "publish_to_marketplace":
             return handlePublishCommand(message);
-        case "crosslist_to_shopify":
-            return handleCrosslistToShopify(message);
+        case "publish_to_shopify":
+            return handlePublishToShopify(message);
         case "updatelistingonmarketplace":
         case "update_marketplace_listing":
         case "updatemarketplacelisting":
@@ -343,9 +345,9 @@ async function dispatchExternalMessage(message) {
         case "fetch_vinted_api":
         case "fetchvintedapi":
             return handleFetchVintedApi(message);
-        case "fetch_crosslist_api":
-        case "fetchcrosslistapi":
-            return handleFetchCrosslistApi(message);
+        case "fetch_wrenlist_api":
+        case "fetchwrenlistapi":
+            return handleFetchWrenlistApi(message);
         case "vinted_debug_info":
             return handleVintedDebugInfo();
         default:
@@ -353,10 +355,6 @@ async function dispatchExternalMessage(message) {
     }
 }
 async function handlePublishCommand(message) {
-    // Persist wrenlistBaseUrl to storage so crosslistApi.js picks it up
-    if (message.wrenlistBaseUrl && message.wrenlistBaseUrl.startsWith("http")) {
-        chrome.storage.sync.set({ wrenlistApiBase: message.wrenlistBaseUrl.replace(/\/+$/, "") }).catch(() => {});
-    }
     const marketplace = resolveMarketplace(message);
     const product = resolveProduct(message);
     return withExtensionVersion(await publishToMarketplace(marketplace, product, {
@@ -385,7 +383,7 @@ async function handleDelistCommand(message) {
         tld: resolveTldFromMessage(message, marketplace),
     }));
 }
-async function handleCrosslistToShopify(message) {
+async function handlePublishToShopify(message) {
     try {
         const productId = message.productId;
         const shopId = message.shopId;
@@ -427,8 +425,8 @@ async function handleCrosslistToShopify(message) {
             uploadImages: (files) => shopifyClient.uploadImages(files),
             getLocationId: () => shopifyClient.getLocationId(),
         });
-        // Build CrosslistProduct from payload
-        const crosslistProduct = {
+        // Build Product from payload
+        const product = {
             id: payloadData.data.product.id,
             marketPlaceId: payloadData.data.product.id,
             title: payloadData.data.product.title,
@@ -445,7 +443,7 @@ async function handleCrosslistToShopify(message) {
             dynamicProperties: {},
         };
         // Map to Shopify payload
-        const shopifyPayload = await mapper.map(crosslistProduct);
+        const shopifyPayload = await mapper.map(product);
         // Publish to Shopify
         const result = await shopifyClient.postListing(shopifyPayload);
         if (result.success && result.product) {
@@ -1135,11 +1133,81 @@ async function handleBatchImportVinted(message) {
             }
             return withExtensionVersion(result);
         }
-        // Photo mirroring is handled server-side on import (mirrorPhotosToStorage in process/route.ts)
+        // --- Photo mirror phase: fetch CDN URLs with cookies and upload to Wrenlist ---
+        console.log("[Batch Import] Starting photo mirror phase...");
+        const photoUploadErrors = [];
+        const PHOTO_BATCH_SIZE = 5;
+        for (let i = 0; i < listings.length; i += PHOTO_BATCH_SIZE) {
+            const batch = listings.slice(i, i + PHOTO_BATCH_SIZE);
+            await Promise.allSettled(batch.map(async (listing) => {
+                try {
+                    // Look up the find by Vinted listing ID to get the find ID
+                    const findRes = await fetch(`${baseUrl}/api/import/find-by-vinted-id?listingId=${listing.id}`, {
+                        credentials: "include",
+                    });
+                    if (!findRes.ok)
+                        return;
+                    const findData = await safeJson(findRes);
+                    const findId = findData?.data?.findId;
+                    if (!findId)
+                        return;
+                    // Get photos from vintedMetadata or listing.photos
+                    const photoUrls = listing.vintedMetadata?.photos
+                        ?.map((p) => p.full_size_url || p.url)
+                        .filter(Boolean) || listing.photos?.slice(0, 5) || [];
+                    if (!photoUrls.length)
+                        return;
+                    // Fetch each photo and convert to base64
+                    const photoData = [];
+                    for (let j = 0; j < Math.min(photoUrls.length, 5); j++) {
+                        try {
+                            const imgRes = await fetch(photoUrls[j], { credentials: "include" });
+                            if (!imgRes.ok)
+                                continue;
+                            const buffer = await imgRes.arrayBuffer();
+                            const bytes = new Uint8Array(buffer);
+                            let binary = "";
+                            for (let k = 0; k < bytes.byteLength; k++) {
+                                binary += String.fromCharCode(bytes[k]);
+                            }
+                            const base64 = btoa(binary);
+                            const ext = photoUrls[j]
+                                .split(".")
+                                .pop()
+                                ?.split("?")[0]
+                                ?.toLowerCase() || "jpg";
+                            photoData.push({ data: base64, ext, index: j });
+                        }
+                        catch {
+                            // Skip failed photos
+                        }
+                    }
+                    if (!photoData.length)
+                        return;
+                    // Upload to Wrenlist
+                    const uploadRes = await fetch(`${baseUrl}/api/finds/${findId}/photos`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ photos: photoData }),
+                    });
+                    if (!uploadRes.ok) {
+                        photoUploadErrors.push(`Failed to upload photos for listing ${listing.id}`);
+                    }
+                }
+                catch (error) {
+                    photoUploadErrors.push(`Error processing photos for listing ${listing.id}: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }));
+        }
+        if (photoUploadErrors.length > 0) {
+            console.warn("[Batch Import] Photo upload errors:", photoUploadErrors);
+        }
         return withExtensionVersion({
             success: true,
             message: data?.message ?? `Imported ${data?.results?.success ?? listings.length} items.`,
             results: data?.results ?? null,
+            photoUploadWarnings: photoUploadErrors.length > 0 ? photoUploadErrors : undefined,
         });
     }
     catch (error) {
@@ -1455,7 +1523,7 @@ async function collectVintedListings(client, limit, status, tld) {
                 const detail = await client.getListing(product.marketplaceId);
                 if (!detail)
                     continue;
-                const listing = mapCrosslistProductToBatch(detail, product.marketplaceUrl ?? client.getProductUrl(product.marketplaceId), status, tld);
+                const listing = mapProductToBatch(detail, product.marketplaceUrl ?? client.getProductUrl(product.marketplaceId), status, tld);
                 listings.push(listing);
             }
             catch (error) {
@@ -1476,7 +1544,7 @@ async function collectVintedListingsByIds(client, listingIds, status, tld) {
                 console.warn(`[Batch Import] Listing ${idString} not found or inaccessible`);
                 continue;
             }
-            const listing = mapCrosslistProductToBatch(detail, client.getProductUrl(idString), status, tld);
+            const listing = mapProductToBatch(detail, client.getProductUrl(idString), status, tld);
             listings.push(listing);
         }
         catch (error) {
@@ -1500,7 +1568,7 @@ const VINTED_TLD_CURRENCY_MAP = {
     ca: "CAD",
     com: "USD",
 };
-function mapCrosslistProductToBatch(product, url, status, tld) {
+function mapProductToBatch(product, url, status, tld) {
     const id = (product.marketplaceId ?? product.marketPlaceId ?? product.id)?.toString() ?? crypto.randomUUID();
     const price = typeof product.price === "number"
         ? product.price
@@ -1588,15 +1656,15 @@ async function handleFetchVintedApi(message) {
         });
     }
 }
-async function handleFetchCrosslistApi(message) {
+async function handleFetchWrenlistApi(message) {
     const url = message.url;
     const method = message.method ?? "GET";
     // Validate URL
     if (!url) {
         throw new Error("URL is required");
     }
-    if (!url.startsWith("https://app.crosslist.com/api/")) {
-        throw new Error("Only Crosslist API URLs (https://app.crosslist.com/api/*) are allowed");
+    if (!url.startsWith("https://app.wrenlist.com/api/")) {
+        throw new Error("Only Wrenlist API URLs (https://app.wrenlist.com/api/*) are allowed");
     }
     // Only allow GET requests (read-only)
     if (method.toUpperCase() !== "GET") {

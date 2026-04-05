@@ -24,6 +24,7 @@ export interface ListingActionResult {
   stats?: { checked: number; updated: number; unchanged: number; failed: number };
   error?: string;
   isAutoSync?: boolean;
+  photoUploadWarnings?: string[];
 }
 
 export interface PublishOptions {

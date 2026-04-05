@@ -1,4 +1,4 @@
-import { chunkConcurrentRequests, getProductMedia, getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequests, getProductMedia, getProductMediaForMarketplace, } from "../../shared/api.js";
 const VEHICLE_CATEGORY_ID = "807311116002614";
 const SUPPORTED_COLORS = [
     "Red",
@@ -129,7 +129,7 @@ export class FacebookMapper {
             typeof address.lng !== "number") {
             throw {
                 success: false,
-                message: "Please enter valid shipping address details under your Crosslist account settings.",
+                message: "Please enter valid shipping address details under your Wrenlist account settings.",
                 type: "validation",
                 internalErrors: "Lat/lng not available",
             };
@@ -176,7 +176,7 @@ export class FacebookMapper {
         if (!carriers.length) {
             throw {
                 success: false,
-                message: "There were no shipping carriers found for your region, please change shipping to local pickup only or ship your own in your Crosslist settings.",
+                message: "There were no shipping carriers found for your region, please change shipping to local pickup only or ship your own in your Wrenlist settings.",
                 type: "validation",
                 internalErrors: "No shipping carriers found",
             };

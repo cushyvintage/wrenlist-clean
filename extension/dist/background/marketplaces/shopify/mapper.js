@@ -1,4 +1,4 @@
-import { getProductMediaForMarketplace, } from "../../shared/crosslistApi.js";
+import { getProductMediaForMarketplace, } from "../../shared/api.js";
 const PRODUCT_OPTIONS = [
     { name: "Size", position: 1 },
     { name: "Color", position: 2 },

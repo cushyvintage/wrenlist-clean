@@ -1,4 +1,4 @@
-import { chunkConcurrentRequests, getProductMediaForMarketplace, fetchPublicUrlsAsFiles, } from "../../shared/crosslistApi.js";
+import { chunkConcurrentRequests, getProductMediaForMarketplace, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
 const COLOR_LOOKUP = [
     { id: 1, code: "BLACK", alias: "black" },
@@ -287,7 +287,7 @@ export class VintedMapper {
     }
     /**
      * Get package size ID for a specific category by fetching available options from Vinted.
-     * This matches Crosslist's approach - always calculate from weight using available options,
+     * This matches the extension's approach - always calculate from weight using available options,
      * never trust pre-computed IDs as they may not be valid for the target category.
      */
     async getPackageSizeForCategory(catalogId, weight, shippingType) {
@@ -304,7 +304,7 @@ export class VintedMapper {
         const availableSizes = await this.vintedClient.fetchAvailablePackageSizes(catalogId.toString());
         console.log('[Vinted Mapper] Available package sizes for catalog', catalogId, ':', availableSizes.map(p => ({ id: p.id, code: p.code })));
         // If no sizes available (API failed or returned empty), use hardcoded defaults.
-        // Matches Crosslist's _packageSizeIdToWeight mapping: {1:500g, 2:1000g, 3:2000g, 8:5000g, 9:10000g, 10:20000g}
+        // Standard _packageSizeIdToWeight mapping: {1:500g, 2:1000g, 3:2000g, 8:5000g, 9:10000g, 10:20000g}
         if (availableSizes.length === 0) {
             if (!weight || (!weight.inGrams && !weight.inOunces)) {
                 console.warn('[Vinted Mapper] No package sizes from API and no weight — using default 2 (Medium)');
@@ -349,7 +349,7 @@ export class VintedMapper {
                     internalErrors: "Package too heavy",
                 };
             }
-            // Match weight to code, then find ID from available options (Crosslist approach)
+            // Match weight to code, then find ID from available options (extension approach)
             // Order matters: check from smallest to largest
             const weightToCode = [
                 { maxGrams: 500, code: "SMALL" },
@@ -541,10 +541,7 @@ export class VintedMapper {
                 : Promise.resolve(null),
             needCatalogResolution ? this.vintedClient.fetchCatalogs() : Promise.resolve([]),
             this.mapBrand(product.brand),
-            // Use public Supabase URLs directly (no auth needed) — fall back to API proxy
-            (product.images?.length > 0
-                ? fetchPublicUrlsAsFiles(product.images, 5)
-                : getProductMediaForMarketplace(product.id, "vinted")),
+            getProductMediaForMarketplace(product.id, "vinted"),
         ]);
         // Determine final catalog ID - prefer direct ID, then numeric category, then resolved
         let finalCatalogId = null;
@@ -567,7 +564,7 @@ export class VintedMapper {
             console.warn('[Vinted Mapper] Could not resolve catalog ID for category:', product.category[0], '— user will pick on Vinted');
         }
         // Check images - at least 1 required, 3+ for well-known brands
-        // If vintedMetadata has existing photo IDs, skip image fetch validation entirely
+        // Skip fetch validation if vintedMetadata has existing photo IDs (reused directly)
         const hasExistingVintedPhotos = product.vintedMetadata?.photos?.length > 0;
         const imageUrls = product.images || [];
         const hasImageUrls = Array.isArray(imageUrls) && imageUrls.length > 0;
@@ -576,13 +573,8 @@ export class VintedMapper {
                 errors.push("Product has no images in the database. Please add at least 1 image URL to the product.");
             }
             else if (!media || media.length === 0) {
-                // Product has image URLs but media endpoint failed to fetch them
                 errors.push(`Product has ${imageUrls.length} image URL(s) but failed to fetch them. Check that image URLs are accessible.`);
             }
-        }
-        else {
-            // Has existing Vinted photo IDs — skip image count checks.
-            // The original listing already passed Vinted validation with these photos.
         }
         // Validate shipping info for package size
         if (!product.shipping?.shippingWeight) {
@@ -638,7 +630,7 @@ export class VintedMapper {
         }
         const conditionId = CONDITION_MAP[product.condition];
         // Get uploadSessionId from the Vinted client (fetched from /items/new page)
-        // Crosslist uses this for both temp_uuid and top-level upload_session_id
+        // Extension uses this for both temp_uuid and top-level upload_session_id
         const uploadSessionId = await this.vintedClient.refreshUploadSessionId();
         const tempUuid = uploadSessionId;
         // Calculate package size from weight using available options for this category.
@@ -663,7 +655,7 @@ export class VintedMapper {
             console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
         }
         console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'type:', typeof catalogId);
-        // Build payload matching Vinted's expected structure (aligned with Crosslist's working format)
+        // Build payload matching Vinted's expected structure (aligned with Vinted's expected format)
         const payload = {
             item: {
                 id: null,
@@ -673,7 +665,7 @@ export class VintedMapper {
                     ? product.title
                     : `${product.title[0]}${product.title.slice(1).toLowerCase()}`,
                 description: product.description,
-                brand_id: product.dynamicProperties?.vintedBrandId || brand.id,
+                brand_id: brand.id,
                 brand: brand.title,
                 size_id: product.size?.[0] ? parseInt(String(product.size[0]), 10) : null,
                 catalog_id: catalogId,
@@ -690,6 +682,7 @@ export class VintedMapper {
                     international: null,
                 },
                 color_ids: colorIds,
+                // If vintedMetadata has existing photo IDs, reuse them directly (avoids re-upload)
                 // Always upload fresh photos — existing Vinted photo IDs cannot be reused across listings
                 assigned_photos: await this.mapPhotos(validation.media, tempUuid),
                 measurement_length: null,
@@ -734,16 +727,6 @@ export class VintedMapper {
                     code: "language_book",
                     ids: [6435], // English
                 });
-            }
-        }
-        // Consume pre-stored item_attributes from relist payload
-        if (product.dynamicProperties?.vintedItemAttributes?.length > 0) {
-            for (const attr of product.dynamicProperties.vintedItemAttributes) {
-                // Don't duplicate codes already added (e.g. language_book from ISBN lookup)
-                const alreadyAdded = payload.item.item_attributes.some(a => a.code === attr.code);
-                if (!alreadyAdded) {
-                    payload.item.item_attributes.push(attr);
-                }
             }
         }
         if (product.dynamicProperties?.["Content rating"]) {
