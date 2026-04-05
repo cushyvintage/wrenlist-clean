@@ -67,10 +67,13 @@ async function getPhotoFile(
   photoPreviews: string[],
   index: number
 ): Promise<File> {
-  if (photos[index]) return photos[index]
+  // Only use the File if it has actual content (not a placeholder)
+  if (photos[index] && photos[index].size > 0) return photos[index]
   const url = photoPreviews[index]
   if (!url) throw new Error(`No photo at index ${index}`)
+  // For blob: URLs, fetch directly. For remote URLs, fetch via proxy-friendly path.
   const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch photo: ${res.status}`)
   const blob = await res.blob()
   const ext = blob.type.split('/')[1] || 'jpg'
   return new File([blob], `photo-${index}.${ext}`, { type: blob.type })
@@ -777,103 +780,71 @@ export default function PhotoUpload({
             </div>
           )}
 
-          {/* Tool buttons */}
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2 justify-end">
-              {photoPreviews.map((_, idx) => (
-                <div key={idx} className="flex items-center gap-1">
-                  {/* Bg removal */}
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => handleRemoveBackground(idx)}
-                    className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
-                  >
-                    {removingBgIndex === idx ? (
-                      <><Loader2 className="w-3 h-3 animate-spin" />Removing...</>
-                    ) : (
-                      <>🪄 {idx + 1}</>
-                    )}
-                  </button>
-                  {/* Enhance */}
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => handleEnhance(idx)}
-                    className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
-                  >
-                    {enhancingIndex === idx ? (
-                      <><Loader2 className="w-3 h-3 animate-spin" />Enhancing...</>
-                    ) : (
-                      <>✨ {idx + 1}</>
-                    )}
-                  </button>
-                  {/* Watermark */}
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => {
-                      if (!showWatermarkInput) {
-                        setShowWatermarkInput(true)
-                      } else {
-                        handleWatermark(idx)
-                      }
-                    }}
-                    className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer underline underline-offset-2 flex items-center gap-1"
-                  >
-                    {watermarkingIndex === idx ? (
-                      <><Loader2 className="w-3 h-3 animate-spin" />Marking...</>
-                    ) : (
-                      <>💧 {idx + 1}</>
-                    )}
-                  </button>
-                </div>
-              ))}
+          {/* Processing indicator */}
+          {isProcessing && (
+            <div className="flex items-center gap-2 text-xs text-sage py-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>
+                {removingBgIndex !== null && `Removing background from photo ${removingBgIndex + 1}...`}
+                {enhancingIndex !== null && `Enhancing photo ${enhancingIndex + 1}...`}
+                {watermarkingIndex !== null && `Watermarking photo ${watermarkingIndex + 1}...`}
+                {watermarkingAll && 'Watermarking all photos...'}
+              </span>
             </div>
+          )}
 
-            {/* Watermark input + watermark all */}
-            {showWatermarkInput && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={watermarkText}
-                  onChange={(e) => setWatermarkText(e.target.value)}
-                  placeholder="Watermark text"
-                  className="flex-1 text-xs px-2 py-1.5 border border-sage/20 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/40"
-                />
-                {photos.length >= 2 && (
-                  <button
-                    type="button"
-                    disabled={isProcessing || !watermarkText.trim()}
-                    onClick={handleWatermarkAll}
-                    className="text-xs px-3 py-1.5 border border-sage/20 rounded hover:bg-cream-md transition-colors disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {watermarkingAll ? (
-                      <><Loader2 className="w-3 h-3 animate-spin" />Watermarking...</>
-                    ) : (
-                      'Watermark all'
-                    )}
-                  </button>
+          {/* Batch tools toolbar */}
+          {!selectionMode && photoPreviews.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-sage-dim">Tools:</span>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => setShowWatermarkInput(!showWatermarkInput)}
+                className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 transition-colors"
+              >
+                💧 Watermark all
+              </button>
+            </div>
+          )}
+
+          {/* Watermark input */}
+          {showWatermarkInput && (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={watermarkText}
+                onChange={(e) => setWatermarkText(e.target.value)}
+                placeholder="Watermark text"
+                onKeyDown={(e) => { if (e.key === 'Enter' && watermarkText.trim()) handleWatermarkAll() }}
+                className="flex-1 text-xs px-2 py-1.5 border border-sage/20 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/40"
+              />
+              <button
+                type="button"
+                disabled={isProcessing || !watermarkText.trim()}
+                onClick={handleWatermarkAll}
+                className="text-xs px-3 py-1.5 bg-sage text-white rounded hover:bg-sage/90 transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                {watermarkingAll ? (
+                  <><Loader2 className="w-3 h-3 animate-spin" />Applying...</>
+                ) : (
+                  'Apply'
                 )}
-                <button
-                  type="button"
-                  onClick={() => setShowWatermarkInput(false)}
-                  className="text-xs text-sage-dim hover:text-sage"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowWatermarkInput(false)}
+                className="text-xs text-sage-dim hover:text-sage px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Hint text */}
-          <div className="flex items-start gap-2 text-xs text-sage-dim">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 mt-0.5">
-              <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
-              <path d="M6 5v4M6 3.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-            <span>First photo is your main listing image. Drag to reorder. Click 🔍 to preview.</span>
-          </div>
+          <p className="text-xs text-sage-dim">
+            Hover photos for tools: 🔍 preview · ⭐ set main · ✂ crop · ✕ remove. Drag to reorder.
+          </p>
         </div>
       )}
 
