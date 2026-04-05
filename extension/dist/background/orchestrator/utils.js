@@ -15,7 +15,13 @@ export function resolveTld(marketplace, options = {}) {
 export function resolveShopifyUrl(settings) {
     const value = settings?.[SHOPIFY_SHOP_URL_KEY];
     if (typeof value === "string" && value.trim().length > 0) {
-        return value.trim();
+        // Normalize: strip ".myshopify.com" suffix and any protocol/paths
+        // e.g. "pyedpp-i5.myshopify.com" → "pyedpp-i5"
+        let shopId = value.trim();
+        shopId = shopId.replace(/^https?:\/\//, "");
+        shopId = shopId.replace(/\.myshopify\.com\/?$/, "");
+        shopId = shopId.replace(/\/$/, "");
+        return shopId;
     }
     return undefined;
 }
