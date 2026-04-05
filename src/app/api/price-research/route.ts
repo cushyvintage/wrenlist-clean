@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { searchSoldItems, SoldItemsStats } from '@/lib/ebay-finding'
+
+interface SampleListing {
+  title: string
+  price: number
+  condition: string
+  days_ago: number
+  url?: string
+}
+
+interface PlatformData {
+  avg_price: number
+  min_price: number
+  max_price: number
+  avg_days_to_sell: number
+  source: 'live' | 'ai_estimate'
+  sample_listings: SampleListing[]
+}
 
 interface PriceResearchResponse {
+  vinted: PlatformData
+  ebay: PlatformData
+  recommendation: {
+    suggested_price: number
+    best_platform: string
+    reasoning: string
+  }
+}
+
+interface GptPriceResponse {
   vinted: {
     avg_price: number
     min_price: number
@@ -13,7 +41,7 @@ interface PriceResearchResponse {
       days_ago: number
     }>
   }
-  ebay: {
+  ebay?: {
     avg_price: number
     min_price: number
     max_price: number
@@ -32,90 +60,139 @@ interface PriceResearchResponse {
   }
 }
 
-export async function POST(request: NextRequest) {
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { error: 'Price research not configured' },
-      { status: 503 }
-    )
-  }
+function ebayStatsToSummary(stats: SoldItemsStats): string {
+  return `Real eBay UK sold data (${stats.total_found} items): avg £${stats.avg_price}, range £${stats.min_price}–£${stats.max_price}, avg ${stats.avg_days_to_sell} days ago.`
+}
 
+export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json()
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Query is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    const prompt = `You are a UK vintage marketplace price analyst with knowledge of sold prices on Vinted and eBay UK.
+    // 1. Try real eBay sold data
+    const ebayStats = await searchSoldItems(query)
+
+    // 2. Call GPT-4o for Vinted estimates + recommendation
+    // If we have real eBay data, feed it into the prompt so recommendation is grounded
+    const hasOpenAI = !!process.env.OPENAI_API_KEY
+    let gptData: GptPriceResponse | null = null
+
+    if (hasOpenAI) {
+      const ebayContext = ebayStats
+        ? `\n\nIMPORTANT: I already have real eBay UK sold data for this item: ${ebayStatsToSummary(ebayStats)}\nDo NOT include an "ebay" key in your response. Only provide "vinted" and "recommendation". Base your recommendation on the real eBay data I provided plus your Vinted estimates.`
+        : ''
+
+      const ebayJsonShape = ebayStats
+        ? ''
+        : `"ebay": { "avg_price": number, "min_price": number, "max_price": number, "avg_days_to_sell": number, "sample_listings": [{"title": string, "price": number, "condition": string, "days_ago": number}] },\n  `
+
+      const prompt = `You are a UK vintage marketplace price analyst.
 For the item: "${query}"
 Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 {
   "vinted": { "avg_price": number, "min_price": number, "max_price": number, "avg_days_to_sell": number, "sample_listings": [{"title": string, "price": number, "condition": string, "days_ago": number}] },
-  "ebay": { "avg_price": number, "min_price": number, "max_price": number, "avg_days_to_sell": number, "sample_listings": [{"title": string, "price": number, "condition": string, "days_ago": number}] },
-  "recommendation": { "suggested_price": number, "best_platform": string, "reasoning": string }
+  ${ebayJsonShape}"recommendation": { "suggested_price": number, "best_platform": string, "reasoning": string }
 }
-Provide 3-5 sample listings per platform. Base prices on realistic UK market data. All prices in GBP.`
+Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data. All prices in GBP.${ebayContext}`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 2000,
+            response_format: { type: 'json_object' },
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        })
 
-    if (!response.ok) {
-      throw new Error(`OpenAI error: ${response.status}`)
+        if (response.ok) {
+          const data = (await response.json()) as {
+            choices: Array<{ message: { content: string } }>
+          }
+          const raw = data.choices[0]?.message?.content?.trim() ?? ''
+          const content = raw
+            .replace(/^```(?:json)?\n?/, '')
+            .replace(/\n?```$/, '')
+            .trim()
+          gptData = JSON.parse(content) as GptPriceResponse
+        }
+      } catch (err) {
+        console.error('GPT-4o price research failed:', err)
+      }
     }
 
-    const data = await response.json() as {
-      choices: Array<{ message: { content: string } }>
-    }
-
-    const raw = data.choices[0]?.message?.content?.trim() ?? ''
-    // Strip markdown code fences if present
-    const content = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-
-    let priceData: PriceResearchResponse
-    try {
-      priceData = JSON.parse(content)
-    } catch {
+    // 3. Assemble response
+    if (!ebayStats && !gptData) {
       return NextResponse.json(
-        { error: 'Failed to parse price data' },
+        { error: 'Price research unavailable — no eBay credentials or OpenAI key configured' },
         { status: 503 }
       )
     }
 
-    // Validate response structure
-    if (
-      !priceData.vinted ||
-      !priceData.ebay ||
-      !priceData.recommendation ||
-      typeof priceData.vinted.avg_price !== 'number' ||
-      typeof priceData.ebay.avg_price !== 'number'
-    ) {
+    // eBay: prefer real data, fall back to GPT estimate
+    let ebay: PlatformData
+    if (ebayStats) {
+      ebay = {
+        avg_price: ebayStats.avg_price,
+        min_price: ebayStats.min_price,
+        max_price: ebayStats.max_price,
+        avg_days_to_sell: ebayStats.avg_days_to_sell,
+        source: 'live',
+        sample_listings: ebayStats.sample_listings,
+      }
+    } else if (gptData?.ebay) {
+      ebay = {
+        ...gptData.ebay,
+        source: 'ai_estimate',
+        sample_listings: gptData.ebay.sample_listings.map((l) => ({ ...l })),
+      }
+    } else {
       return NextResponse.json(
-        { error: 'Invalid price data format' },
+        { error: 'No eBay data available' },
         { status: 503 }
       )
     }
 
-    return NextResponse.json(priceData)
+    // Vinted: always GPT estimate (no public API)
+    let vinted: PlatformData
+    if (gptData?.vinted) {
+      vinted = {
+        ...gptData.vinted,
+        source: 'ai_estimate',
+        sample_listings: gptData.vinted.sample_listings.map((l) => ({ ...l })),
+      }
+    } else {
+      // No GPT data — return eBay only with a stub Vinted
+      vinted = {
+        avg_price: 0,
+        min_price: 0,
+        max_price: 0,
+        avg_days_to_sell: 0,
+        source: 'ai_estimate',
+        sample_listings: [],
+      }
+    }
+
+    // Recommendation: use GPT's if available, otherwise derive from eBay data
+    const recommendation = gptData?.recommendation ?? {
+      suggested_price: ebay.avg_price,
+      best_platform: 'eBay',
+      reasoning: `Based on ${ebayStats?.total_found ?? 0} recent sold items on eBay UK.`,
+    }
+
+    const result: PriceResearchResponse = { vinted, ebay, recommendation }
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Failed to research prices:', error)
-    return NextResponse.json(
-      { error: 'Failed to research prices' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to research prices' }, { status: 500 })
   }
 }
