@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 
-export type MarketplaceEventType = 'listed' | 'delisted' | 'sold' | 'error' | 'queued' | 'imported'
+export type MarketplaceEventType = 'listed' | 'delisted' | 'sold' | 'error' | 'queued' | 'imported' | 'publish_error' | 'delist_error'
 export type MarketplaceEventSource = 'api' | 'extension' | 'cron' | 'webhook' | 'manual'
 
 /**

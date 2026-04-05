@@ -68,6 +68,7 @@ export const GET = withAuth(async (_req, user) => {
     find: findsMap[item.find_id] || null,
     listing_price: item.listing_price || null,
     platform_category_id: item.platform_category_id || null,
+    fields: item.fields || null,
     ...(item.marketplace === 'shopify' && shopifyStoreDomain
       ? { settings: { shopifyShopUrl: shopifyStoreDomain } }
       : {}),
@@ -78,14 +79,32 @@ export const GET = withAuth(async (_req, user) => {
 
 /**
  * POST /api/marketplace/publish-queue
- * Called by extension after successfully publishing.
- * Updates status to "listed" and sets platform_listing_id/url.
+ * Called by extension after publishing (success or failure).
+ * On success: updates status to "listed" and sets platform_listing_id/url.
+ * On error: updates status to "error" and stores error_message + retry_count in fields.
  *
- * Body: { find_id, marketplace, platform_listing_id?, platform_listing_url? }
+ * Body: { find_id, marketplace, status?, error_message?, platform_listing_id?, platform_listing_url?, fields? }
+ *   status: 'listed' (default) or 'error'
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
   const body = await req.json()
-  const { find_id: findId, marketplace, platform_listing_id, platform_listing_url, fields: extraFields } = body
+  const {
+    find_id: findId,
+    marketplace,
+    platform_listing_id,
+    platform_listing_url,
+    fields: extraFields,
+    status: reportedStatus,
+    error_message: errorMessage,
+  } = body as {
+    find_id?: string
+    marketplace?: string
+    platform_listing_id?: string
+    platform_listing_url?: string
+    fields?: Record<string, unknown>
+    status?: 'listed' | 'error' | 'needs_publish'
+    error_message?: string
+  }
 
   if (!findId || !marketplace) {
     return ApiResponseHelper.badRequest('find_id and marketplace are required')
@@ -105,14 +124,31 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.notFound('Find not found')
   }
 
-  // Update marketplace data (merge any extra fields like collection_name)
+  // needs_publish = retry (keep in queue with updated retry_count)
+  // error = exhausted retries
+  // listed = success (default)
+  const targetStatus = reportedStatus === 'error'
+    ? 'error'
+    : reportedStatus === 'needs_publish'
+      ? 'needs_publish'
+      : 'listed'
+
+  // Update marketplace data (merge any extra fields like collection_name, retry_count)
   const updateData: Record<string, unknown> = {
-    status: 'listed',
-    platform_listing_id: platform_listing_id || null,
-    platform_listing_url: platform_listing_url || null,
-    last_synced_at: new Date().toISOString(),
+    status: targetStatus,
     updated_at: new Date().toISOString(),
   }
+
+  if (targetStatus === 'listed') {
+    updateData.platform_listing_id = platform_listing_id || null
+    updateData.platform_listing_url = platform_listing_url || null
+    updateData.last_synced_at = new Date().toISOString()
+  }
+
+  if (targetStatus === 'error' && errorMessage) {
+    updateData.error_message = errorMessage
+  }
+
   if (extraFields && typeof extraFields === 'object') {
     updateData.fields = extraFields
   }
@@ -127,7 +163,16 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.internalError()
   }
 
-  logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'listed', source: 'extension', details: { platform_listing_id, platform_listing_url } })
+  const eventType = targetStatus === 'error' ? 'publish_error' : 'listed'
+  logMarketplaceEvent(supabase, user.id, {
+    findId,
+    marketplace,
+    eventType,
+    source: 'extension',
+    details: targetStatus === 'error'
+      ? { error_message: errorMessage }
+      : { platform_listing_id, platform_listing_url },
+  })
 
-  return ApiResponseHelper.success({ message: 'Publish status updated' })
+  return ApiResponseHelper.success({ message: `Status updated to ${targetStatus}` })
 })

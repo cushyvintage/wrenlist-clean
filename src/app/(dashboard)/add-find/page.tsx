@@ -793,6 +793,7 @@ export default function AddFindPage() {
               <PlatformSelector
                 selectedPlatforms={formData.selectedPlatforms}
                 onPlatformToggle={handlePlatformToggle}
+                connectedPlatforms={shopifyShopId ? ['vinted', 'ebay', 'shopify'] : ['vinted', 'ebay']}
               />
             </div>
           </div>

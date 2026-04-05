@@ -442,6 +442,12 @@ export class EtsyClient {
     /**
      * Select a category by typing into the search typeahead and clicking
      * the first suggestion.
+     *
+     * Etsy's React search input requires:
+     * 1. Native value setter (React overrides .value)
+     * 2. InputEvent with inputType='insertText' (not plain Event)
+     * 3. Character-by-character to trigger debounced search
+     * 4. Suggestions appear as [role="option"] LI elements
      */
     async selectCategory(tabId, searchTerm) {
         await chrome.scripting.executeScript({
@@ -450,26 +456,38 @@ export class EtsyClient {
                 const searchInput = document.getElementById("category-field-search");
                 if (!searchInput)
                     return;
+                const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+                if (!nativeSetter)
+                    return;
                 // Focus and clear
                 searchInput.focus();
-                searchInput.value = "";
-                searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-                // Type the search term character by character to trigger typeahead
-                for (const char of term) {
-                    searchInput.value += char;
-                    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-                    searchInput.dispatchEvent(new KeyboardEvent("keydown", { key: char, bubbles: true }));
-                    searchInput.dispatchEvent(new KeyboardEvent("keyup", { key: char, bubbles: true }));
+                searchInput.click();
+                nativeSetter.call(searchInput, "");
+                searchInput.dispatchEvent(new InputEvent("input", {
+                    bubbles: true,
+                    inputType: "deleteContentBackward",
+                }));
+                // Small delay after clearing
+                await new Promise((r) => setTimeout(r, 200));
+                // Type character-by-character using native setter + InputEvent
+                for (let i = 0; i < term.length; i++) {
+                    nativeSetter.call(searchInput, term.slice(0, i + 1));
+                    searchInput.dispatchEvent(new InputEvent("input", {
+                        bubbles: true,
+                        cancelable: true,
+                        inputType: "insertText",
+                        data: term[i],
+                    }));
                 }
-                // Wait for suggestions to appear
-                await new Promise((r) => setTimeout(r, 1500));
-                // Look for suggestion list items and click the first one
-                const suggestions = document.querySelectorAll('[class*="suggestion"] li, [class*="autocomplete"] li, [role="option"], [class*="category-field"] li, [class*="menu-item"]');
-                if (suggestions.length > 0) {
-                    suggestions[0].click();
+                // Wait for suggestions to appear (Etsy debounces the search)
+                await new Promise((r) => setTimeout(r, 2000));
+                // Look for suggestion options and click the first one
+                const options = document.querySelectorAll('[role="option"]');
+                if (options.length > 0) {
+                    options[0].click();
                 }
                 else {
-                    // Fallback: try pressing Enter to select first result
+                    // Fallback: press Enter to select
                     searchInput.dispatchEvent(new KeyboardEvent("keydown", {
                         key: "Enter",
                         code: "Enter",
@@ -480,8 +498,8 @@ export class EtsyClient {
             },
             args: [searchTerm],
         });
-        // Wait for category selection to register and any dependent fields to appear
-        await wait(1500);
+        // Wait for category selection to register and dependent fields to appear
+        await wait(2000);
     }
 }
 // ─── Injected functions (run in page context) ──────────────────────

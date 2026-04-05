@@ -16,6 +16,7 @@ import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
+import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -111,6 +112,19 @@ export default function InventoryDetailPage() {
   const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
+  const [shopifyConnected, setShopifyConnected] = useState(false)
+
+  const extensionInfo = useExtensionInfo()
+
+  // Fetch Shopify connection status
+  useEffect(() => {
+    fetch('/api/shopify/connect')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.data?.connected) setShopifyConnected(true)
+      })
+      .catch(() => {})
+  }, [])
 
   // Fetch find details
   useEffect(() => {
@@ -216,7 +230,8 @@ export default function InventoryDetailPage() {
   }
 
   const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed').map((m) => m.marketplace))
-  const availableForCrosslist: Platform[] = (['ebay', 'shopify', 'vinted'] as Platform[]).filter((m) => !listedMarketplaces.has(m))
+  const connectedPlatforms: Platform[] = ['ebay', 'vinted', ...(shopifyConnected ? ['shopify' as Platform] : [])]
+  const availableForCrosslist: Platform[] = connectedPlatforms.filter((m) => !listedMarketplaces.has(m))
 
   const handleInputChange = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -994,6 +1009,31 @@ export default function InventoryDetailPage() {
         >
           <span>{ebayListResult.ok ? '✓ ' : '✗ '}{ebayListResult.message}</span>
           <button onClick={() => setEbayListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* Extension not detected warning */}
+      {extensionInfo.detected === false && find?.status !== 'sold' && (
+        <div
+          className="p-3 rounded text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: 'rgba(234,179,8,.08)',
+            borderWidth: '1px',
+            borderColor: 'rgba(234,179,8,.3)',
+            color: '#92400E',
+          }}
+        >
+          <span>
+            Wrenlist extension not detected — crosslisting requires the Chrome extension.{' '}
+            <a
+              href="https://chromewebstore.google.com/detail/wrenlist/nblnainobllgbjkdkpeodjpopkgnpfgb"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-medium"
+            >
+              Install extension
+            </a>
+          </span>
         </div>
       )}
 

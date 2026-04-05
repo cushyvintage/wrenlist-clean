@@ -138,6 +138,7 @@ type ExternalMessage = Record<string, unknown>;
   // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
   const QUEUE_POLL_ALARM = "queue_poll";
   const QUEUE_POLL_INTERVAL_MINUTES = 1;
+  const MAX_PUBLISH_RETRIES = 3;
 
   chrome.alarms.create(QUEUE_POLL_ALARM, {
     periodInMinutes: QUEUE_POLL_INTERVAL_MINUTES,
@@ -162,7 +163,13 @@ type ExternalMessage = Record<string, unknown>;
           const find = item.find;
           if (!find) continue;
 
-          console.log(`[QueuePoll] Publishing ${find.name} to ${mp}...`);
+          // Check retry count — skip items that have exhausted retries
+          const existingFields = (item.fields as Record<string, unknown>) ?? {};
+          const retryCount = typeof existingFields.retry_count === "number"
+            ? existingFields.retry_count
+            : 0;
+
+          console.log(`[QueuePoll] Publishing ${find.name} to ${mp} (attempt ${retryCount + 1}/${MAX_PUBLISH_RETRIES})...`);
 
           // Build Product from find data, enriched with per-platform overrides
           const listingPrice = item.listing_price ?? find.asking_price_gbp ?? 0;
@@ -201,35 +208,68 @@ type ExternalMessage = Record<string, unknown>;
 
           // Report back to Wrenlist API
           try {
-            const reportBody: Record<string, unknown> = {
-              find_id: item.find_id,
-              marketplace: mp,
-              platform_listing_id: result.product?.id ? String(result.product.id) : null,
-              platform_listing_url: result.product?.url ?? null,
-            };
+            if (result.success) {
+              const reportBody: Record<string, unknown> = {
+                find_id: item.find_id,
+                marketplace: mp,
+                platform_listing_id: result.product?.id ? String(result.product.id) : null,
+                platform_listing_url: result.product?.url ?? null,
+              };
 
-            // Include collection name and product type for Shopify
-            if (mp === "shopify" && result.success) {
-              const productType = product.dynamicProperties?.productType;
-              if (productType) {
-                reportBody.fields = { collection_name: productType };
+              // Include collection name and product type for Shopify
+              if (mp === "shopify") {
+                const productType = product.dynamicProperties?.productType;
+                if (productType) {
+                  reportBody.fields = { collection_name: productType };
+                }
+              }
+
+              await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(reportBody),
+              });
+              console.log(`[QueuePoll] Published ${find.name} to ${mp}`);
+            } else {
+              // Publish failed — check if we should retry or mark as error
+              const nextRetryCount = retryCount + 1;
+              const errorMsg = result.message ?? "Unknown publish error";
+
+              if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
+                // Exhausted retries — report error to API
+                console.error(`[QueuePoll] Failed to publish ${find.name} to ${mp} after ${MAX_PUBLISH_RETRIES} attempts: ${errorMsg}`);
+                await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    find_id: item.find_id,
+                    marketplace: mp,
+                    status: "error",
+                    error_message: errorMsg,
+                    fields: { ...existingFields, retry_count: nextRetryCount },
+                  }),
+                });
+              } else {
+                // Still have retries left — update retry_count in fields but keep needs_publish
+                console.warn(`[QueuePoll] Publish attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${find.name} on ${mp}: ${errorMsg}. Will retry.`);
+                await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    find_id: item.find_id,
+                    marketplace: mp,
+                    status: "needs_publish",
+                    error_message: errorMsg,
+                    fields: { ...existingFields, retry_count: nextRetryCount },
+                  }),
+                });
               }
             }
-
-            await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(reportBody),
-            });
           } catch (e) {
             console.warn("[QueuePoll] Failed to report publish result:", e);
-          }
-
-          if (result.success) {
-            console.log(`[QueuePoll] Published ${find.name} to ${mp}`);
-          } else {
-            console.warn(`[QueuePoll] Failed to publish ${find.name} to ${mp}:`, result.message);
           }
         }
       }
@@ -252,7 +292,12 @@ type ExternalMessage = Record<string, unknown>;
           const listingId = item.platform_listing_id;
           if (!listingId) continue;
 
-          console.log(`[QueuePoll] Delisting ${listingId} from ${mp}...`);
+          const existingFields = (item.fields as Record<string, unknown>) ?? {};
+          const retryCount = typeof existingFields.retry_count === "number"
+            ? existingFields.retry_count
+            : 0;
+
+          console.log(`[QueuePoll] Delisting ${listingId} from ${mp} (attempt ${retryCount + 1}/${MAX_PUBLISH_RETRIES})...`);
 
           // Pass settings (e.g. shopifyShopUrl) from the queue item
           const delistOptions = item.settings ? { settings: item.settings } : {};
@@ -260,23 +305,53 @@ type ExternalMessage = Record<string, unknown>;
 
           // Report back to Wrenlist API
           try {
-            await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                find_id: item.find_id,
-                marketplace: mp,
-              }),
-            });
+            if (result.success) {
+              await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                }),
+              });
+              console.log(`[QueuePoll] Delisted ${listingId} from ${mp}`);
+            } else {
+              const nextRetryCount = retryCount + 1;
+              const errorMsg = result.message ?? "Unknown delist error";
+
+              if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
+                console.error(`[QueuePoll] Failed to delist ${listingId} from ${mp} after ${MAX_PUBLISH_RETRIES} attempts: ${errorMsg}`);
+                await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    find_id: item.find_id,
+                    marketplace: mp,
+                    status: "error",
+                    error_message: errorMsg,
+                    fields: { ...existingFields, retry_count: nextRetryCount },
+                  }),
+                });
+              } else {
+                console.warn(`[QueuePoll] Delist attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${listingId} on ${mp}: ${errorMsg}. Will retry.`);
+                await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    find_id: item.find_id,
+                    marketplace: mp,
+                    status: "needs_delist",
+                    error_message: errorMsg,
+                    fields: { ...existingFields, retry_count: nextRetryCount },
+                  }),
+                });
+              }
+            }
           } catch (e) {
             console.warn("[QueuePoll] Failed to report delist result:", e);
-          }
-
-          if (result.success) {
-            console.log(`[QueuePoll] Delisted ${listingId} from ${mp}`);
-          } else {
-            console.warn(`[QueuePoll] Failed to delist ${listingId} from ${mp}:`, result.message);
           }
         }
       }
