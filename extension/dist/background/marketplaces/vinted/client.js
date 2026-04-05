@@ -944,17 +944,12 @@ export class VintedClient {
         }).then((res) => res.json());
         if (!response?.id) {
             console.error('[Vinted] uploadImage failed, response:', JSON.stringify(response));
-            // Send to telemetry
-            try {
-                const { getWrenlistBaseUrl } = await import("../../shared/crosslistApi.js");
-                const baseUrl = await getWrenlistBaseUrl();
-                fetch(`${baseUrl}/api/debug/relist-log`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ event: "uploadImage_failed", response, fileName: file.name, fileSize: file.size }),
-                }).catch(() => {});
-            } catch { /* silent */ }
+            fetch("https://app.wrenlist.com/api/debug/relist-log", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ event: "uploadImage_failed", response, fileName: file.name, fileSize: file.size }),
+            }).catch(() => {});
         }
         return response;
     }
@@ -1047,16 +1042,12 @@ export class VintedClient {
             if (!res.ok) {
                 console.error("[Vinted] postListing failed", res.status, text);
                 // Telemetry: send error to Wrenlist for visibility
-                try {
-                    const { getWrenlistBaseUrl } = await import("../../shared/crosslistApi.js");
-                    const baseUrl = await getWrenlistBaseUrl();
-                    fetch(`${baseUrl}/api/debug/relist-log`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ status: res.status, response: text, payload }),
-                    }).catch(() => {});
-                } catch { /* silent */ }
+                fetch("https://app.wrenlist.com/api/debug/relist-log", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ event: "postListing_failed", status: res.status, response: text, payload }),
+                }).catch(() => {});
                 // Check if the response contains a CAPTCHA URL (DataDome bot protection)
                 try {
                     const errorData = JSON.parse(text);
