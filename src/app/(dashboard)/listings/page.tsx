@@ -434,6 +434,7 @@ export default function ListingsPage() {
                         key={mp.id}
                         platform={mp.marketplace}
                         live={mp.status === 'listed'}
+                        href={mp.platform_listing_url}
                       />
                     ))}
                   </div>
@@ -463,18 +464,6 @@ export default function ListingsPage() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 mt-2 flex-wrap justify-end">
-                    {group.marketplaces
-                      .filter((mp) => mp.platform_listing_url)
-                      .map((mp) => (
-                        <Link
-                          key={mp.id}
-                          href={mp.platform_listing_url!}
-                          target="_blank"
-                          className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
-                        >
-                          view on {mp.marketplace === 'ebay' ? 'eBay' : mp.marketplace}
-                        </Link>
-                      ))}
                     {hasListed && (
                       <Link
                         href={`/finds/${group.find_id}/edit`}

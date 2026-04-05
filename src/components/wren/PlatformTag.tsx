@@ -21,6 +21,8 @@ interface PlatformTagProps {
   live?: boolean
   /** Optional custom label */
   label?: string
+  /** Optional link to the platform listing */
+  href?: string | null
 }
 
 const platformConfig: Partial<Record<Platform, string>> = {
@@ -40,20 +42,31 @@ export function PlatformTag({
   platform,
   live = false,
   label,
+  href,
 }: PlatformTagProps) {
   const displayLabel = label || platformConfig[platform] || platform
 
-  return (
-    <span
-      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-        live
-          ? 'border-sage bg-sage/6 text-sage'
-          : 'border-cream-dk bg-cream-md text-ink-lt'
-      }`}
-    >
+  const className = `inline-block px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+    live
+      ? 'border-sage bg-sage/6 text-sage'
+      : 'border-cream-dk bg-cream-md text-ink-lt'
+  }${href ? ' hover:opacity-80 cursor-pointer' : ''}`
+
+  const content = (
+    <>
       <MarketplaceIcon platform={platform} size="sm" className="inline-block align-text-bottom" />
       {' '}{displayLabel}
       {live && ' · live'}
-    </span>
+    </>
   )
+
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {content}
+      </a>
+    )
+  }
+
+  return <span className={className}>{content}</span>
 }
