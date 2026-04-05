@@ -357,7 +357,7 @@ export default function ListingsPage() {
               Select marketplaces to publish to:
             </p>
             <div className="space-y-2 mb-4">
-              {(['ebay', 'vinted', 'shopify'] as Platform[]).map((platform) => (
+              {(['ebay', 'vinted', 'etsy', 'shopify'] as Platform[]).map((platform) => (
                 <label key={platform} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"

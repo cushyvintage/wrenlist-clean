@@ -50,6 +50,8 @@ export default function PlatformConnectPage() {
   const [shopifyFormData, setShopifyFormData] = useState({ storeDomain: '' })
   const [shopifyLoading, setShopifyLoading] = useState(false)
   const [shopifyError, setShopifyError] = useState<string | null>(null)
+  const [etsyConnected, setEtsyConnected] = useState(false)
+  const [etsyLoading, setEtsyLoading] = useState(false)
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
   const extensionInfo = useExtensionInfo()
@@ -129,6 +131,29 @@ export default function PlatformConnectPage() {
       }
     } catch (error) {
       setExtensionDetected(false)
+    }
+  }
+
+  // Check Etsy login via the Wrenlist extension (cookie-based)
+  const checkEtsySession = async (): Promise<void> => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+
+      const response = await new Promise<{ loggedIn: boolean }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'etsy' }, (response) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError) {
+            resolve({ loggedIn: false })
+          } else {
+            resolve(response || { loggedIn: false })
+          }
+        })
+      })
+
+      setEtsyConnected(response.loggedIn)
+    } catch {
+      setEtsyConnected(false)
     }
   }
 
@@ -293,6 +318,12 @@ export default function PlatformConnectPage() {
     }
 
     fetchShopifyStatus()
+  }, [])
+
+  // Check Etsy login on mount
+  useEffect(() => {
+    setEtsyLoading(true)
+    void checkEtsySession().finally(() => setEtsyLoading(false))
   }, [])
 
   const handleShopifyConnect = async (e: React.FormEvent) => {
@@ -988,27 +1019,56 @@ export default function PlatformConnectPage() {
         )}
       </Panel>
 
-      {/* Etsy - Pending */}
+      {/* Etsy */}
       <Panel>
-        <div className="flex items-center gap-4">
-          <div className="flex-shrink-0 opacity-70">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-shrink-0">
             <MarketplaceIcon platform="etsy" size="lg" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <div className="font-medium text-sm text-ink">Etsy</div>
-              <span className="px-2 py-1 text-xs font-semibold text-amber bg-amber-50 rounded">
-                API pending
-              </span>
+              <div className="font-medium text-sm text-ink">
+                {etsyConnected ? 'Etsy — Connected ✅' : 'Etsy'}
+              </div>
             </div>
             <div className="text-xs text-ink-lt">
-              We're awaiting Etsy API key approval — the application is in.
+              {etsyLoading ? 'Checking login...' : etsyConnected
+                ? 'Crosslist your finds to Etsy via browser automation'
+                : 'Log in to etsy.com, then click Check connection'}
             </div>
           </div>
-          <button className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition flex-shrink-0">
-            View roadmap →
-          </button>
+          <Badge status={etsyConnected ? 'listed' : 'draft'} label={etsyConnected ? 'connected' : 'not connected'} />
         </div>
+
+        {!etsyConnected && (
+          <div className="flex gap-2">
+            <a
+              href="https://www.etsy.com/signin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
+            >
+              Log in to Etsy →
+            </a>
+            <button
+              onClick={async () => {
+                setEtsyLoading(true)
+                await checkEtsySession()
+                setEtsyLoading(false)
+              }}
+              disabled={etsyLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+            >
+              {etsyLoading ? 'Checking...' : 'Check connection'}
+            </button>
+          </div>
+        )}
+
+        {etsyConnected && (
+          <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
+            Etsy crosslisting uses browser automation — the extension opens the Etsy listing form, fills all fields, uploads images, selects the category, and clicks Publish. No API key needed.
+          </div>
+        )}
       </Panel>
 
       {/* Shopify */}
