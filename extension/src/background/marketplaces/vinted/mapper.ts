@@ -766,9 +766,8 @@ export class VintedMapper {
         },
         color_ids: colorIds,
         // If vintedMetadata has existing photo IDs, reuse them directly (avoids re-upload)
-        assigned_photos: product.vintedMetadata?.photos?.length
-          ? product.vintedMetadata.photos.map((p: { id: number }) => ({ id: p.id, orientation: 0 }))
-          : await this.mapPhotos(validation.media, tempUuid),
+        // Always upload fresh photos — existing Vinted photo IDs cannot be reused across listings
+        assigned_photos: await this.mapPhotos(validation.media, tempUuid),
         measurement_length: null,
         measurement_width: null,
         item_attributes: [],

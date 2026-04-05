@@ -353,6 +353,10 @@ async function dispatchExternalMessage(message) {
     }
 }
 async function handlePublishCommand(message) {
+    // Persist wrenlistBaseUrl to storage so crosslistApi.js picks it up
+    if (message.wrenlistBaseUrl && message.wrenlistBaseUrl.startsWith("http")) {
+        chrome.storage.sync.set({ wrenlistApiBase: message.wrenlistBaseUrl.replace(/\/+$/, "") }).catch(() => {});
+    }
     const marketplace = resolveMarketplace(message);
     const product = resolveProduct(message);
     return withExtensionVersion(await publishToMarketplace(marketplace, product, {

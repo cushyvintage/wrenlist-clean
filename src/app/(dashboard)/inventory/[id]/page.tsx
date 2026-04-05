@@ -733,6 +733,7 @@ export default function InventoryDetailPage() {
           {
             action: 'postlistingtomarketplace',
             marketplace: 'vinted',
+            vintedTld: 'co.uk',
             wrenlistBaseUrl: typeof window !== 'undefined' ? window.location.origin : '',
             productData: {
               id: find.id,
