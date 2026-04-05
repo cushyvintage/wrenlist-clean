@@ -8,7 +8,9 @@ import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import MarkAsSoldModal from '@/components/inventory/MarkAsSoldModal'
 import InventoryItemHeader from '@/components/inventory/InventoryItemHeader'
 import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
+import VintedMetadataPanel from '@/components/inventory/VintedMetadataPanel'
 import { VINTED_COLORS } from '@/data/vinted-colors'
+import type { VintedStoredMetadata } from '@/types/vinted-metadata'
 import { CATEGORY_MAP } from '@/data/marketplace-category-map'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
@@ -1136,6 +1138,12 @@ export default function InventoryDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Vinted Metadata */}
+            {(() => {
+              const vm = (find.platform_fields as any)?.vinted?.vintedMetadata as VintedStoredMetadata | undefined
+              return vm ? <VintedMetadataPanel metadata={vm} /> : null
+            })()}
 
             {/* SKU */}
             {find.sku && (
