@@ -762,6 +762,8 @@ export default function InventoryDetailPage() {
                 // Pass stored Vinted IDs directly so mapper skips lookup
                 colorIds: vintedMeta?.color_ids || [],
                 packageSizeId: vintedMeta?.shipping?.package_size_id || vintedMeta?.package_size_id || 2,
+                // Pass ISBN for books so Vinted doesn't reject with "Please enter an ISBN"
+                ...(vintedMeta?.isbn ? { ISBN: vintedMeta.isbn } : {}),
               },
               // Pass catalog_id at top level so mapper uses it directly
               vintedCatalogId: vintedMeta?.catalog_id || null,
