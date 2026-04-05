@@ -16,8 +16,9 @@ export default function MarkAsSoldModal({
   onCancel,
   isLoading = false,
 }: MarkAsSoldModalProps) {
-  const initialPrice = find.asking_price_gbp != null ? String(find.asking_price_gbp) : ''
-  const initialDate = new Date().toISOString().split('T')[0]
+  const initialPrice: string = find.asking_price_gbp != null ? String(find.asking_price_gbp) : ''
+  const isoString = new Date().toISOString()
+  const initialDate: string = isoString.split('T')[0] || ''
 
   const [price, setPrice] = useState<string>(initialPrice)
   const [date, setDate] = useState<string>(initialDate)
