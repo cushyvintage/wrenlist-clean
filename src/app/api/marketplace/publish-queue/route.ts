@@ -66,10 +66,25 @@ export const GET = withAuth(async (_req, user) => {
     }
   }
 
+  // If any Shopify items, fetch the user's Shopify store domain
+  const hasShopify = (data || []).some((item) => item.marketplace === 'shopify')
+  let shopifyStoreDomain: string | null = null
+  if (hasShopify) {
+    const { data: conn } = await supabase
+      .from('shopify_connections')
+      .select('store_domain')
+      .eq('user_id', user.id)
+      .single()
+    shopifyStoreDomain = conn?.store_domain || null
+  }
+
   const queue = (data || []).map((item) => ({
     find_id: item.find_id,
     marketplace: item.marketplace,
     find: findsMap[item.find_id] || null,
+    ...(item.marketplace === 'shopify' && shopifyStoreDomain
+      ? { settings: { shopifyShopUrl: shopifyStoreDomain } }
+      : {}),
   }))
 
   return ApiResponseHelper.success(queue)

@@ -134,7 +134,9 @@ type ExternalMessage = Record<string, unknown>;
             dynamicProperties: {},
           };
 
-          const result = await publishToMarketplace(mp, product);
+          // Pass settings (e.g. shopifyShopUrl) from the queue item
+          const publishOptions = item.settings ? { settings: item.settings } : {};
+          const result = await publishToMarketplace(mp, product, publishOptions);
 
           // Report back to Wrenlist API
           try {

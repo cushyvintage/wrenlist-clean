@@ -4,8 +4,8 @@ import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import type { Platform } from '@/types'
 
-// eBay and Shopify publish via API; all others queue for extension
-const API_MARKETPLACES = new Set(['ebay', 'shopify'])
+// eBay publishes via API; Shopify and others queue for extension
+const API_MARKETPLACES = new Set(['ebay'])
 const SUPPORTED_MARKETPLACES: Platform[] = ['ebay', 'shopify', 'vinted', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed', 'etsy']
 
 interface MarketplaceResult {
@@ -78,22 +78,6 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results.ebay = { ok: true, listingUrl: data.data.listingUrl }
         } else {
           results.ebay = { ok: false, error: data.error || data.data?.message || 'eBay publish failed' }
-        }
-      } else if (marketplace === 'shopify') {
-        // Shopify — direct API publish
-        const res = await fetch(`${baseUrl}/api/shopify/publish`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            cookie: req.headers.get('cookie') || '',
-          },
-          body: JSON.stringify({ findId }),
-        })
-        const data = await res.json()
-        if (res.ok && data.data?.listingUrl) {
-          results.shopify = { ok: true, listingUrl: data.data.listingUrl }
-        } else {
-          results.shopify = { ok: false, error: data.error || 'Shopify publish failed' }
         }
       } else {
         // All other marketplaces — queue for extension via publish-queue
