@@ -123,7 +123,7 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
   }, [isScanning, onDetected])
 
   return (
-    <div className="relative w-full" style={{ aspectRatio: '16/10' }}>
+    <div className="relative w-full" style={{ aspectRatio: '4/3' }}>
       {/* Camera feed */}
       <div className="absolute inset-0 bg-[#2a3a28] rounded-lg overflow-hidden flex items-center justify-center">
         {loading && <Loader2 className="w-8 h-8 text-white/40 animate-spin" />}
@@ -303,9 +303,9 @@ export default function ScannerPage() {
   )
 
   return (
-    <div className="flex gap-6 max-w-[1400px]">
+    <div className="flex flex-col lg:flex-row gap-6 max-w-[1400px]">
       {/* Main column */}
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 min-w-0 space-y-6">
         {/* SCAN panel */}
         <Panel title="Scan">
           <div className="space-y-4">
@@ -319,7 +319,7 @@ export default function ScannerPage() {
               <button
                 onClick={() => setCameraOpen(true)}
                 className="w-full rounded-lg overflow-hidden"
-                style={{ aspectRatio: '16/10' }}
+                style={{ aspectRatio: '4/3' }}
               >
                 <div className="w-full h-full bg-[#2a3a28] flex flex-col items-center justify-center gap-4 hover:bg-[#324432] transition-colors">
                   <p className="text-white/70 text-xs uppercase tracking-widest">
@@ -426,8 +426,8 @@ export default function ScannerPage() {
         )}
       </div>
 
-      {/* Right sidebar — Lookup Result */}
-      <div className="w-[320px] shrink-0 space-y-6">
+      {/* Right sidebar — Lookup Result (below on mobile, side on desktop) */}
+      <div className="w-full lg:w-[320px] lg:shrink-0 space-y-6">
         {(lookupResult || looking) && (
           <Panel title="Lookup result">
             {looking ? (
