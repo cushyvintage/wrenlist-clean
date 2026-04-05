@@ -52,17 +52,21 @@ export const GET = withAuth(async (_req, user) => {
     colour: string | null
     size: string | null
     shipping_weight_grams: number | null
-    platform_fields: Record<string, any> | null
   }
 
   const enrichedFindIds = [...new Set((data || []).map((d) => d.find_id))]
   let findsMap: Record<string, PublishQueueFind> = {}
 
   if (enrichedFindIds.length > 0) {
-    const { data: finds } = await supabase
+    const { data: finds, error: enrichError } = await supabase
       .from('finds')
-      .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams, platform_fields')
+      .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams')
+      .eq('user_id', user.id)
       .in('id', enrichedFindIds)
+
+    if (enrichError) {
+      console.error('[PublishQueue] Find enrichment failed:', enrichError)
+    }
 
     if (finds) {
       findsMap = Object.fromEntries(

@@ -192,7 +192,7 @@ type ExternalMessage = Record<string, unknown>;
             brand: find.brand ?? undefined,
             condition: mapCondition(find.condition),
             category: shopifyCategory,
-            tags: find.platform_fields?.tags ?? "",
+            tags: [find.brand, find.category, "vintage"].filter(Boolean).join(", "),
             color: find.colour ?? undefined,
             size: find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
