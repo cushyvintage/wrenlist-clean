@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useCallback } from 'react'
+import { Loader2 } from 'lucide-react'
 
 interface PhotoLightboxProps {
   photos: string[]
   currentIndex: number
   onClose: () => void
   onNavigate: (index: number) => void
+  onEnhance?: (index: number) => void
+  onRemoveBg?: (index: number) => void
+  isProcessing?: boolean
 }
 
 export default function PhotoLightbox({
@@ -14,6 +18,9 @@ export default function PhotoLightbox({
   currentIndex,
   onClose,
   onNavigate,
+  onEnhance,
+  onRemoveBg,
+  isProcessing,
 }: PhotoLightboxProps) {
   const total = photos.length
 
@@ -91,9 +98,37 @@ export default function PhotoLightbox({
       <img
         src={photos[currentIndex]}
         alt={`Photo ${currentIndex + 1} of ${total}`}
-        className="max-w-[90vw] max-h-[85vh] object-contain select-none"
+        className="max-w-[90vw] max-h-[80vh] object-contain select-none"
         draggable={false}
       />
+
+      {/* Toolbar */}
+      {(onEnhance || onRemoveBg) && (
+        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-2">
+          {onEnhance && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => onEnhance(currentIndex)}
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg px-3 py-1.5 transition-colors"
+            >
+              {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>✨</span>}
+              Enhance
+            </button>
+          )}
+          {onRemoveBg && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => onRemoveBg(currentIndex)}
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg px-3 py-1.5 transition-colors"
+            >
+              {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>🪄</span>}
+              Remove background
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Counter */}
       {total > 1 && (

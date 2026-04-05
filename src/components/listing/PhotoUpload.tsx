@@ -14,12 +14,14 @@ import PhotoCropModal from './PhotoCropModal'
 import PhotoLightbox from './PhotoLightbox'
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -79,6 +81,19 @@ async function getPhotoFile(
   return new File([blob], `photo-${index}.${ext}`, { type: blob.type })
 }
 
+/** Minimum longest-side in px for marketplace compliance */
+const MIN_PHOTO_PX = 500
+
+/** Resolve dimensions of an image from its src URL */
+async function getImageDimensions(src: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+    img.onerror = reject
+    img.src = src
+  })
+}
+
 /** 6-dot drag handle SVG (2x3 grid) */
 function DragHandleIcon() {
   return (
@@ -132,7 +147,7 @@ function SortablePhoto({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 10 : 0,
   }
 
@@ -165,14 +180,14 @@ function SortablePhoto({
           className={`absolute ${index === 0 ? 'top-1 left-14' : 'top-1 left-1'} z-20 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-sage transition-all`}
           title="Preview"
         >
-          🔍
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
         </button>
       )}
 
       <img
         src={preview}
         alt={`Photo ${index + 1}`}
-        className={`w-full h-20 object-cover pointer-events-none ${selectionMode ? 'cursor-pointer' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`w-full h-24 sm:h-20 object-cover pointer-events-none ${selectionMode ? 'cursor-pointer' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       />
 
       {/* Drag handle */}
@@ -328,6 +343,40 @@ export default function PhotoUpload({
   const [showWatermarkInput, setShowWatermarkInput] = useState(false)
   const [watermarkingAll, setWatermarkingAll] = useState(false)
 
+  // Undo state — stores pre-mutation photos/previews for single-level undo
+  const [undoState, setUndoState] = useState<{ photos: File[]; previews: string[] } | null>(null)
+  const [undoLabel, setUndoLabel] = useState<string | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /** Save current state for undo, auto-dismiss after 10s */
+  const saveUndo = useCallback((label: string) => {
+    setUndoState({ photos: [...photos], previews: [...photoPreviews] })
+    setUndoLabel(label)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => {
+      setUndoState(null)
+      setUndoLabel(null)
+    }, 10_000)
+  }, [photos, photoPreviews])
+
+  const handleUndo = useCallback(() => {
+    if (!undoState || !onReplacePhotos) return
+    onReplacePhotos(undoState.photos, undoState.previews)
+    setUndoState(null)
+    setUndoLabel(null)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+  }, [undoState, onReplacePhotos])
+
+  // Clean up undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    }
+  }, [])
+
+  // Photo quality warning
+  const [qualityWarning, setQualityWarning] = useState<string | null>(null)
+
   // Duplicate detection
   const fingerprintsRef = useRef<Map<number, string>>(new Map())
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null)
@@ -346,6 +395,9 @@ export default function PhotoUpload({
   // New photo animation tracking
   const [newIndices, setNewIndices] = useState<Set<number>>(new Set())
 
+  // Drag overlay ghost preview
+  const [activeDragIndex, setActiveDragIndex] = useState<number | null>(null)
+
   // Stable IDs for sortable
   const sortableIds = useMemo(
     () => photoPreviews.map((_, i) => `photo-${i}`),
@@ -357,7 +409,13 @@ export default function PhotoUpload({
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const idx = sortableIds.indexOf(event.active.id as string)
+    setActiveDragIndex(idx !== -1 ? idx : null)
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragIndex(null)
     const { active, over } = event
     if (!over || active.id === over.id || !onReorder) return
     const oldIndex = sortableIds.indexOf(active.id as string)
@@ -377,7 +435,35 @@ export default function PhotoUpload({
       setNewIndices(newSet)
       setTimeout(() => setNewIndices(new Set()), 600)
 
+      // Clear undo — adding photos is a different operation
+      setUndoState(null)
+      setUndoLabel(null)
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+
       onAddPhotos(files)
+
+      // Async dimension / quality check
+      const lowResWarnings: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        try {
+          const url = URL.createObjectURL(files[i]!)
+          const dims = await getImageDimensions(url)
+          URL.revokeObjectURL(url)
+          const longest = Math.max(dims.w, dims.h)
+          if (longest < MIN_PHOTO_PX) {
+            const photoNum = startIndex + i + 1
+            lowResWarnings.push(
+              `Photo ${photoNum} is low resolution (${dims.w}\u00d7${dims.h}). eBay requires ${MIN_PHOTO_PX}px minimum.`
+            )
+          }
+        } catch {
+          // Dimension check is best-effort
+        }
+      }
+      if (lowResWarnings.length > 0) {
+        setQualityWarning(lowResWarnings.join(' '))
+        setTimeout(() => setQualityWarning(null), 6000)
+      }
 
       // Async fingerprint check
       for (let i = 0; i < files.length; i++) {
@@ -421,6 +507,7 @@ export default function PhotoUpload({
           }
           return p
         })
+        saveUndo('Undo remove background')
         if (onReplacePhotos) {
           onReplacePhotos(updatedPhotos, newPreviews)
         } else {
@@ -435,7 +522,7 @@ export default function PhotoUpload({
         setRemovingBgIndex(null)
       }
     },
-    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
+    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto, saveUndo]
   )
 
   // --- Auto-enhance ---
@@ -457,6 +544,7 @@ export default function PhotoUpload({
           }
           return p
         })
+        saveUndo('Undo enhance')
         if (onReplacePhotos) {
           onReplacePhotos(updatedPhotos, newPreviews)
         } else {
@@ -471,7 +559,7 @@ export default function PhotoUpload({
         setEnhancingIndex(null)
       }
     },
-    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
+    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto, saveUndo]
   )
 
   // --- Watermark ---
@@ -493,6 +581,7 @@ export default function PhotoUpload({
           }
           return p
         })
+        saveUndo('Undo watermark')
         if (onReplacePhotos) {
           onReplacePhotos(updatedPhotos, newPreviews)
         } else {
@@ -507,7 +596,7 @@ export default function PhotoUpload({
         setWatermarkingIndex(null)
       }
     },
-    [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto]
+    [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto, saveUndo]
   )
 
   const handleWatermarkAll = useCallback(async () => {
@@ -525,6 +614,7 @@ export default function PhotoUpload({
         updatedPhotos[i] = watermarked
         newPreviews[i] = URL.createObjectURL(watermarked)
       }
+      saveUndo('Undo watermark all')
       if (onReplacePhotos) {
         onReplacePhotos(updatedPhotos, newPreviews)
       } else {
@@ -541,7 +631,7 @@ export default function PhotoUpload({
     } finally {
       setWatermarkingAll(false)
     }
-  }, [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto])
+  }, [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto, saveUndo])
 
   // --- Bulk selection ---
   const handleToggleSelect = useCallback((index: number) => {
@@ -555,11 +645,22 @@ export default function PhotoUpload({
 
   const handleBulkDelete = useCallback(() => {
     if (onBulkRemove && selectedIndices.size > 0) {
+      setUndoState(null)
+      setUndoLabel(null)
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
       onBulkRemove(Array.from(selectedIndices))
       setSelectedIndices(new Set())
       setSelectionMode(false)
     }
   }, [onBulkRemove, selectedIndices])
+
+  // Wrap onRemovePhoto to clear undo state (removal is a different operation)
+  const handleRemovePhotoWithUndoClear = useCallback((index: number) => {
+    setUndoState(null)
+    setUndoLabel(null)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    onRemovePhoto(index)
+  }, [onRemovePhoto])
 
   // --- Crop apply ---
   const handleCropApply = useCallback(
@@ -575,6 +676,7 @@ export default function PhotoUpload({
         }
         return p
       })
+      saveUndo('Undo crop')
       if (onReplacePhotos) {
         onReplacePhotos(updatedPhotos, newPreviews)
       } else {
@@ -584,7 +686,7 @@ export default function PhotoUpload({
       URL.revokeObjectURL(oldPreview)
       setEditingIndex(null)
     },
-    [editingIndex, photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
+    [editingIndex, photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto, saveUndo]
   )
 
   // --- File drop/input ---
@@ -628,7 +730,7 @@ export default function PhotoUpload({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className="border-2 border-dashed border-sage/30 rounded-lg p-8 text-center hover:border-sage/50 transition-colors cursor-pointer group"
+          className="border-2 border-dashed border-sage/30 rounded-lg p-4 sm:p-8 text-center hover:border-sage/50 transition-colors cursor-pointer group"
           onClick={() => document.getElementById('photo-file-input')?.click()}
         >
           <input
@@ -639,7 +741,7 @@ export default function PhotoUpload({
             onChange={handleFileInput}
             className="hidden"
           />
-          <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📷</div>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform" style={{ background: '#EDE8DE' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="#8A9E88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="13" r="4" stroke="#8A9E88" strokeWidth="1.5"/></svg></div>
           <p className="text-sm text-ink font-medium mb-1">Drag photos here</p>
           <p className="text-xs text-sage-dim mb-4">JPG, PNG or HEIC · up to 20MB each</p>
           <div className="flex gap-2 justify-center">
@@ -730,16 +832,23 @@ export default function PhotoUpload({
             </div>
           )}
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          {/* Quality / resolution warning */}
+          {qualityWarning && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
+              {qualityWarning}
+            </div>
+          )}
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={sortableIds} strategy={horizontalListSortingStrategy}>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                 {photoPreviews.map((preview, idx) => (
                   <SortablePhoto
                     key={sortableIds[idx]}
                     id={sortableIds[idx]!}
                     preview={preview}
                     index={idx}
-                    onRemove={onRemovePhoto}
+                    onRemove={handleRemovePhotoWithUndoClear}
                     onSetMain={onSetMain}
                     onEdit={setEditingIndex}
                     onPreview={setLightboxIndex}
@@ -753,7 +862,7 @@ export default function PhotoUpload({
                 {photos.length < maxPhotos && !selectionMode && (
                   <button
                     type="button"
-                    className="w-full h-20 border-2 border-dashed border-sage/30 rounded hover:border-sage/50 transition-colors flex items-center justify-center text-sage-dim text-xl"
+                    className="w-full h-24 sm:h-20 border-2 border-dashed border-sage/30 rounded hover:border-sage/50 transition-colors flex items-center justify-center text-sage-dim text-xl"
                     onClick={() => document.getElementById('photo-file-input')?.click()}
                   >
                     +
@@ -761,7 +870,25 @@ export default function PhotoUpload({
                 )}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {activeDragIndex !== null && photoPreviews[activeDragIndex] && (
+                <div className="rounded overflow-hidden border border-sage/30 shadow-lg opacity-80 rotate-2">
+                  <img src={photoPreviews[activeDragIndex]} alt="Dragging" className="w-24 h-16 object-cover" />
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
+
+          {/* Undo button */}
+          {undoState && undoLabel && onReplacePhotos && (
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1 border border-sage/30 text-sage rounded hover:bg-sage/10 transition-colors"
+            >
+              <span>&#8617;</span> {undoLabel}
+            </button>
+          )}
 
           {/* Error banners */}
           {bgRemovalError && (
@@ -843,7 +970,7 @@ export default function PhotoUpload({
 
           {/* Hint text */}
           <p className="text-xs text-sage-dim">
-            Hover photos for tools: 🔍 preview · ⭐ set main · ✂ crop · ✕ remove. Drag to reorder.
+            Hover photos for tools: preview, set main, crop, remove. Drag to reorder.
           </p>
         </div>
       )}
@@ -855,6 +982,9 @@ export default function PhotoUpload({
           currentIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
+          onEnhance={(idx) => handleEnhance(idx)}
+          onRemoveBg={(idx) => handleRemoveBackground(idx)}
+          isProcessing={isProcessing}
         />
       )}
 
