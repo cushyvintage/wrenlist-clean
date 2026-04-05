@@ -9,6 +9,7 @@ import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
 import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 const IMPORT_LIMIT = 200
 
@@ -207,10 +208,21 @@ export default function PlatformConnectPage() {
     setPageError(null)
 
     try {
+      // Map UI field names to API field names and auto-select first location
+      const firstLocation = ebayPolicies?.locations?.[0]
+      const payload = {
+        fulfillmentPolicyId: ebaySelectedPolicies.shipping,
+        fulfillmentPolicyName: ebayPolicies?.shipping?.find((p: any) => p.id === ebaySelectedPolicies.shipping)?.name || '',
+        returnPolicyId: ebaySelectedPolicies.returns,
+        returnPolicyName: ebayPolicies?.returns?.find((p: any) => (p.returnPolicyId || p.id) === ebaySelectedPolicies.returns)?.name || '',
+        paymentPolicyId: ebaySelectedPolicies.payment,
+        paymentPolicyName: ebayPolicies?.payment?.find((p: any) => (p.paymentPolicyId || p.id) === ebaySelectedPolicies.payment)?.name || '',
+        merchantLocationKey: firstLocation?.merchantLocationKey || firstLocation?.key || 'default',
+      }
       const response = await fetch('/api/ebay/setup/policies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ebaySelectedPolicies),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -494,8 +506,11 @@ export default function PlatformConnectPage() {
 
       {/* Extension banner */}
       <div className="flex items-center gap-4 p-4 bg-sage-pale border border-sage rounded">
-        <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 bg-white rounded border border-border">
-          📦
+        <div className="flex-shrink-0">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Wrenlist Extension">
+            <rect width="24" height="24" rx="6" fill="#5E7D5E" />
+            <path d="M8 8V7C8 5.3 9.3 4 11 4H13C14.7 4 16 5.3 16 7V8M6 8H18L17 20H7L6 8Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -559,8 +574,8 @@ export default function PlatformConnectPage() {
           // State C: Connected + setup complete
           <div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-orange-100">
-                🛒
+              <div className="flex-shrink-0">
+                <MarketplaceIcon platform="ebay" size="lg" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -779,8 +794,8 @@ export default function PlatformConnectPage() {
           // State A: Not connected (no extension)
           <div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
-                👚
+              <div className="flex-shrink-0">
+                <MarketplaceIcon platform="vinted" size="lg" />
               </div>
               <div className="flex-1">
                 <div className="font-medium text-sm text-ink">Vinted</div>
@@ -810,8 +825,8 @@ export default function PlatformConnectPage() {
           // State B: Connected
           <div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-100">
-                👚
+              <div className="flex-shrink-0">
+                <MarketplaceIcon platform="vinted" size="lg" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -960,8 +975,8 @@ export default function PlatformConnectPage() {
       {/* Etsy - Pending */}
       <Panel>
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-amber-100 opacity-70">
-            🎨
+          <div className="flex-shrink-0 opacity-70">
+            <MarketplaceIcon platform="etsy" size="lg" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -983,8 +998,8 @@ export default function PlatformConnectPage() {
       {/* Shopify */}
       <Panel>
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 flex items-center justify-center text-2xl flex-shrink-0 rounded bg-green-50">
-            🏪
+          <div className="flex-shrink-0">
+            <MarketplaceIcon platform="shopify" size="lg" />
           </div>
           <div className="flex-1">
             <div className="font-medium text-sm text-ink">Shopify</div>

@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
       merchantLocationKey,
     } = body
 
-    if (!fulfillmentPolicyId || !returnPolicyId || !paymentPolicyId || !merchantLocationKey) {
-      return ApiResponseHelper.badRequest('All policy IDs and merchant location are required')
+    if (!fulfillmentPolicyId || !returnPolicyId || !paymentPolicyId) {
+      return ApiResponseHelper.badRequest('Shipping, payment, and returns policy IDs are required')
     }
 
     // Upsert into ebay_seller_config
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
           return_policy_name: returnPolicyName,
           payment_policy_id: paymentPolicyId,
           payment_policy_name: paymentPolicyName,
-          merchant_location_key: merchantLocationKey,
+          merchant_location_key: merchantLocationKey || 'default',
           setup_complete: true,
           updated_at: new Date().toISOString(),
         },
