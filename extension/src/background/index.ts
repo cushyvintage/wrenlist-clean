@@ -1329,10 +1329,96 @@ async function handleBatchImportVinted(message: ExternalMessage) {
       return withExtensionVersion(result);
     }
 
+    // --- Photo mirror phase: fetch CDN URLs with cookies and upload to Wrenlist ---
+    console.log("[Batch Import] Starting photo mirror phase...");
+    const photoUploadErrors: string[] = [];
+    const PHOTO_BATCH_SIZE = 5;
+
+    for (let i = 0; i < listings.length; i += PHOTO_BATCH_SIZE) {
+      const batch = listings.slice(i, i + PHOTO_BATCH_SIZE);
+      await Promise.allSettled(
+        batch.map(async (listing) => {
+          try {
+            // Look up the find by Vinted listing ID to get the find ID
+            const findRes = await fetch(
+              `${baseUrl}/api/import/find-by-vinted-id?listingId=${listing.id}`,
+              {
+                credentials: "include",
+              }
+            );
+            if (!findRes.ok) return;
+            const findData = await safeJson(findRes);
+            const findId = findData?.data?.findId;
+            if (!findId) return;
+
+            // Get photos from vintedMetadata or listing.photos
+            const photoUrls =
+              listing.vintedMetadata?.photos
+                ?.map((p: any) => p.full_size_url || p.url)
+                .filter(Boolean) || listing.photos?.slice(0, 5) || [];
+
+            if (!photoUrls.length) return;
+
+            // Fetch each photo and convert to base64
+            const photoData: Array<{ data: string; ext: string; index: number }> = [];
+            for (let j = 0; j < Math.min(photoUrls.length, 5); j++) {
+              try {
+                const imgRes = await fetch(photoUrls[j], { credentials: "include" });
+                if (!imgRes.ok) continue;
+                const buffer = await imgRes.arrayBuffer();
+                const bytes = new Uint8Array(buffer);
+                let binary = "";
+                for (let k = 0; k < bytes.byteLength; k++) {
+                  binary += String.fromCharCode(bytes[k]);
+                }
+                const base64 = btoa(binary);
+                const ext =
+                  photoUrls[j]
+                    .split(".")
+                    .pop()
+                    ?.split("?")[0]
+                    ?.toLowerCase() || "jpg";
+                photoData.push({ data: base64, ext, index: j });
+              } catch {
+                // Skip failed photos
+              }
+            }
+
+            if (!photoData.length) return;
+
+            // Upload to Wrenlist
+            const uploadRes = await fetch(`${baseUrl}/api/finds/${findId}/photos`, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ photos: photoData }),
+            });
+
+            if (!uploadRes.ok) {
+              photoUploadErrors.push(
+                `Failed to upload photos for listing ${listing.id}`
+              );
+            }
+          } catch (error) {
+            photoUploadErrors.push(
+              `Error processing photos for listing ${listing.id}: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+          }
+        })
+      );
+    }
+
+    if (photoUploadErrors.length > 0) {
+      console.warn("[Batch Import] Photo upload errors:", photoUploadErrors);
+    }
+
     return withExtensionVersion({
       success: true,
       message: data?.message ?? `Imported ${data?.results?.success ?? listings.length} items.`,
       results: data?.results ?? null,
+      photoUploadWarnings: photoUploadErrors.length > 0 ? photoUploadErrors : undefined,
     });
   } catch (error) {
     const normalized = normalizeError(error);

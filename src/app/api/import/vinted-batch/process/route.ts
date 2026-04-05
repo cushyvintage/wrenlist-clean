@@ -132,39 +132,6 @@ export async function POST(request: NextRequest) {
           status: findStatus,
         })
 
-        // Mirror photos to Supabase Storage (non-blocking — never fails the item)
-        if (photos.length > 0) {
-          void (async () => {
-            try {
-              const storedUrls: string[] = []
-              for (let i = 0; i < photos.length; i++) {
-                const photoUrl = photos[i]
-                if (!photoUrl) { continue }
-                try {
-                  const imgRes = await fetch(photoUrl)
-                  if (!imgRes.ok) { storedUrls.push(photoUrl); continue }
-                  const buffer = await imgRes.arrayBuffer()
-                  const ext = photoUrl.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg'
-                  const storagePath = `find-photos/${user.id}/${sku}-${i}.${ext}`
-                  const { error: uploadErr } = await supabase.storage
-                    .from('find-photos')
-                    .upload(storagePath, buffer, { contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`, upsert: true })
-                  if (uploadErr) { storedUrls.push(photoUrl); continue }
-                  const { data: { publicUrl } } = supabase.storage.from('find-photos').getPublicUrl(storagePath)
-                  storedUrls.push(publicUrl)
-                } catch {
-                  storedUrls.push(photoUrl)
-                }
-              }
-              if (storedUrls.length > 0) {
-                await supabase.from('finds').update({ photos: storedUrls }).eq('id', find.id)
-              }
-            } catch {
-              // Photo mirror failed silently
-            }
-          })()
-        }
-
         imported++
       } catch {
         errors++
