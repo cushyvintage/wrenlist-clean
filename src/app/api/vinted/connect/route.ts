@@ -57,25 +57,35 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('Missing vintedUserId or vintedUsername')
     }
 
-    // Resolve numeric user ID to actual Vinted login name
+    const supabase = await createSupabaseServerClient()
+
+    // If incoming username is numeric, check if DB already has a resolved name
     if (/^\d+$/.test(vintedUsername)) {
-      try {
-        const tld = body.tld || 'co.uk'
-        const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${vintedUsername}`, {
-          headers: { 'Accept': 'application/json' },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data?.user?.login) {
-            vintedUsername = data.user.login
+      const { data: existing } = await supabase
+        .from('vinted_connections')
+        .select('vinted_username')
+        .eq('user_id', user.id)
+        .single()
+      if (existing?.vinted_username && !/^\d+$/.test(existing.vinted_username)) {
+        vintedUsername = existing.vinted_username
+      } else {
+        // Try to resolve via Vinted public API
+        try {
+          const tld = body.tld || 'co.uk'
+          const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${vintedUsername}`, {
+            headers: { 'Accept': 'application/json' },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.user?.login) {
+              vintedUsername = data.user.login
+            }
           }
+        } catch {
+          // Keep numeric ID as fallback
         }
-      } catch {
-        // Keep numeric ID as fallback
       }
     }
-
-    const supabase = await createSupabaseServerClient()
 
     // Upsert connection
     const { data: connection, error } = await supabase
