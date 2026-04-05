@@ -301,6 +301,10 @@ export default function InventoryDetailPage() {
     }))
   }, [])
 
+  const handleReplacePhotos = useCallback((files: File[], previews: string[]) => {
+    setFormData((prev) => ({ ...prev, photos: files, photoPreviews: previews }))
+  }, [])
+
   const handleRemovePhoto = useCallback((index: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -318,40 +322,39 @@ export default function InventoryDetailPage() {
   }, [])
 
   const handleSetMainPhoto = useCallback((index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      photos: arrayMove(prev.photos, index, 0),
-      photoPreviews: arrayMove(prev.photoPreviews, index, 0),
-    }))
-    // Fire-and-forget DB save (photos reorder)
-    if (id) {
-      fetch(`/api/finds/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }).catch(() => {})
-    }
+    setFormData((prev) => {
+      const newPreviews = arrayMove(prev.photoPreviews, index, 0)
+      // Fire-and-forget DB save with updated photo order
+      if (id) {
+        fetch(`/api/finds/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: newPreviews }),
+        }).catch(() => {})
+      }
+      return {
+        ...prev,
+        photos: arrayMove(prev.photos, index, 0),
+        photoPreviews: newPreviews,
+      }
+    })
   }, [id])
 
   const handleBulkRemovePhotos = useCallback((indices: number[]) => {
-    const sortedDesc = [...indices].sort((a, b) => b - a)
+    const indexSet = new Set(indices)
     setFormData((prev) => {
-      const newPhotos = [...prev.photos]
-      const newPreviews = [...prev.photoPreviews]
-      for (const idx of sortedDesc) {
-        newPhotos.splice(idx, 1)
-        newPreviews.splice(idx, 1)
+      const newPhotos = prev.photos.filter((_, i) => !indexSet.has(i))
+      const newPreviews = prev.photoPreviews.filter((_, i) => !indexSet.has(i))
+      // Fire-and-forget DB save with updated photos
+      if (id) {
+        fetch(`/api/finds/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: newPreviews }),
+        }).catch(() => {})
       }
       return { ...prev, photos: newPhotos, photoPreviews: newPreviews }
     })
-    // Fire-and-forget DB save
-    if (id) {
-      fetch(`/api/finds/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }).catch(() => {})
-    }
   }, [id])
 
   const handleUpdatePhoto = useCallback((index: number, preview: string) => {
@@ -1323,6 +1326,7 @@ export default function InventoryDetailPage() {
                 photos={formData.photos}
                 photoPreviews={formData.photoPreviews}
                 onAddPhotos={handleAddPhotos}
+                onReplacePhotos={handleReplacePhotos}
                 onRemovePhoto={handleRemovePhoto}
                 onReorder={handleReorderPhotos}
                 onSetMain={handleSetMainPhoto}

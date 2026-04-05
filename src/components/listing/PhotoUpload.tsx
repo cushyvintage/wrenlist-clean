@@ -46,6 +46,7 @@ interface PhotoUploadProps {
   photos: File[]
   photoPreviews: string[]
   onAddPhotos: (files: File[]) => void
+  onReplacePhotos?: (files: File[], previews: string[]) => void
   onRemovePhoto: (index: number) => void
   onReorder?: (fromIndex: number, toIndex: number) => void
   onUpdatePhoto?: (index: number, preview: string) => void
@@ -77,7 +78,7 @@ function SortablePhoto({
   onRemove,
   onSetMain,
   onEdit,
-  onDoubleClick,
+  onPreview,
   selectionMode,
   isSelected,
   onToggleSelect,
@@ -90,7 +91,7 @@ function SortablePhoto({
   onRemove: (index: number) => void
   onSetMain?: (index: number) => void
   onEdit: (index: number) => void
-  onDoubleClick: (index: number) => void
+  onPreview: (index: number) => void
   selectionMode: boolean
   isSelected: boolean
   onToggleSelect: (index: number) => void
@@ -122,16 +123,28 @@ function SortablePhoto({
       } ${isNew ? 'animate-fadeIn' : ''}`}
       {...(selectionMode ? {} : attributes)}
       {...(selectionMode ? {} : listeners)}
-      onDoubleClick={(e) => {
-        e.preventDefault()
-        onDoubleClick(index)
-      }}
     >
       {/* Main badge */}
       {index === 0 && (
         <div className="absolute top-1 left-1 z-20 bg-sage text-white text-xs px-2 py-0.5 rounded pointer-events-none">
           main
         </div>
+      )}
+
+      {/* Preview/lightbox button (hover only) */}
+      {!selectionMode && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onPreview(index)
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={`absolute ${index === 0 ? 'top-1 left-14' : 'top-1 left-1'} z-20 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-sage transition-all`}
+          title="Preview"
+        >
+          🔍
+        </button>
       )}
 
       <img
@@ -230,6 +243,7 @@ export default function PhotoUpload({
   photos,
   photoPreviews,
   onAddPhotos,
+  onReplacePhotos,
   onRemovePhoto,
   onReorder,
   onUpdatePhoto,
@@ -364,9 +378,19 @@ export default function PhotoUpload({
         const processed = await removeBackground(photos[index]!)
         const updatedPhotos = [...photos]
         updatedPhotos[index] = processed
-        const newPreview = URL.createObjectURL(processed)
-        onAddPhotos(updatedPhotos)
-        if (onUpdatePhoto) onUpdatePhoto(index, newPreview)
+        const newPreviews = photoPreviews.map((p, i) => {
+          if (i === index) {
+            URL.revokeObjectURL(p)
+            return URL.createObjectURL(processed)
+          }
+          return p
+        })
+        if (onReplacePhotos) {
+          onReplacePhotos(updatedPhotos, newPreviews)
+        } else {
+          onAddPhotos(updatedPhotos)
+          if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setBgRemovalError(`Background removal failed: ${msg}`)
@@ -374,7 +398,7 @@ export default function PhotoUpload({
         setRemovingBgIndex(null)
       }
     },
-    [photos, onAddPhotos, onUpdatePhoto]
+    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
   )
 
   // --- Auto-enhance ---
@@ -387,9 +411,19 @@ export default function PhotoUpload({
         const enhanced = await autoEnhance(photos[index]!)
         const updatedPhotos = [...photos]
         updatedPhotos[index] = enhanced
-        const newPreview = URL.createObjectURL(enhanced)
-        onAddPhotos(updatedPhotos)
-        if (onUpdatePhoto) onUpdatePhoto(index, newPreview)
+        const newPreviews = photoPreviews.map((p, i) => {
+          if (i === index) {
+            URL.revokeObjectURL(p)
+            return URL.createObjectURL(enhanced)
+          }
+          return p
+        })
+        if (onReplacePhotos) {
+          onReplacePhotos(updatedPhotos, newPreviews)
+        } else {
+          onAddPhotos(updatedPhotos)
+          if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setEnhanceError(`Enhance failed: ${msg}`)
@@ -397,7 +431,7 @@ export default function PhotoUpload({
         setEnhancingIndex(null)
       }
     },
-    [photos, onAddPhotos, onUpdatePhoto]
+    [photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
   )
 
   // --- Watermark ---
@@ -410,9 +444,19 @@ export default function PhotoUpload({
         const watermarked = await addWatermark(photos[index]!, watermarkText.trim())
         const updatedPhotos = [...photos]
         updatedPhotos[index] = watermarked
-        const newPreview = URL.createObjectURL(watermarked)
-        onAddPhotos(updatedPhotos)
-        if (onUpdatePhoto) onUpdatePhoto(index, newPreview)
+        const newPreviews = photoPreviews.map((p, i) => {
+          if (i === index) {
+            URL.revokeObjectURL(p)
+            return URL.createObjectURL(watermarked)
+          }
+          return p
+        })
+        if (onReplacePhotos) {
+          onReplacePhotos(updatedPhotos, newPreviews)
+        } else {
+          onAddPhotos(updatedPhotos)
+          if (onUpdatePhoto) onUpdatePhoto(index, newPreviews[index]!)
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown error'
         setWatermarkError(`Watermark failed: ${msg}`)
@@ -420,7 +464,7 @@ export default function PhotoUpload({
         setWatermarkingIndex(null)
       }
     },
-    [photos, watermarkText, onAddPhotos, onUpdatePhoto]
+    [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto]
   )
 
   const handleWatermarkAll = useCallback(async () => {
@@ -429,21 +473,28 @@ export default function PhotoUpload({
     setWatermarkError(null)
     try {
       const updatedPhotos = [...photos]
+      const newPreviews = [...photoPreviews]
       for (let i = 0; i < photos.length; i++) {
         const watermarked = await addWatermark(photos[i]!, watermarkText.trim())
         updatedPhotos[i] = watermarked
-        if (onUpdatePhoto) {
-          onUpdatePhoto(i, URL.createObjectURL(watermarked))
+        URL.revokeObjectURL(newPreviews[i]!)
+        newPreviews[i] = URL.createObjectURL(watermarked)
+      }
+      if (onReplacePhotos) {
+        onReplacePhotos(updatedPhotos, newPreviews)
+      } else {
+        onAddPhotos(updatedPhotos)
+        for (let i = 0; i < newPreviews.length; i++) {
+          if (onUpdatePhoto) onUpdatePhoto(i, newPreviews[i]!)
         }
       }
-      onAddPhotos(updatedPhotos)
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error'
       setWatermarkError(`Watermark all failed: ${msg}`)
     } finally {
       setWatermarkingAll(false)
     }
-  }, [photos, watermarkText, onAddPhotos, onUpdatePhoto])
+  }, [photos, photoPreviews, watermarkText, onAddPhotos, onReplacePhotos, onUpdatePhoto])
 
   // --- Bulk selection ---
   const handleToggleSelect = useCallback((index: number) => {
@@ -469,12 +520,22 @@ export default function PhotoUpload({
       if (editingIndex === null) return
       const updatedPhotos = [...photos]
       updatedPhotos[editingIndex] = file
-      const newPreview = URL.createObjectURL(file)
-      onAddPhotos(updatedPhotos)
-      if (onUpdatePhoto) onUpdatePhoto(editingIndex, newPreview)
+      const newPreviews = photoPreviews.map((p, i) => {
+        if (i === editingIndex) {
+          URL.revokeObjectURL(p)
+          return URL.createObjectURL(file)
+        }
+        return p
+      })
+      if (onReplacePhotos) {
+        onReplacePhotos(updatedPhotos, newPreviews)
+      } else {
+        onAddPhotos(updatedPhotos)
+        if (onUpdatePhoto) onUpdatePhoto(editingIndex, newPreviews[editingIndex]!)
+      }
       setEditingIndex(null)
     },
-    [editingIndex, photos, onAddPhotos, onUpdatePhoto]
+    [editingIndex, photos, photoPreviews, onAddPhotos, onReplacePhotos, onUpdatePhoto]
   )
 
   // --- File drop/input ---
@@ -632,7 +693,7 @@ export default function PhotoUpload({
                     onRemove={onRemovePhoto}
                     onSetMain={onSetMain}
                     onEdit={setEditingIndex}
-                    onDoubleClick={setLightboxIndex}
+                    onPreview={setLightboxIndex}
                     selectionMode={selectionMode}
                     isSelected={selectedIndices.has(idx)}
                     onToggleSelect={handleToggleSelect}
@@ -765,7 +826,7 @@ export default function PhotoUpload({
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
               <path d="M6 5v4M6 3.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            <span>First photo is your main listing image. Drag to reorder. Double-click to preview.</span>
+            <span>First photo is your main listing image. Drag to reorder. Click 🔍 to preview.</span>
           </div>
         </div>
       )}

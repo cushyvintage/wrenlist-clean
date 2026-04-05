@@ -405,14 +405,21 @@ export default function AddFindPage() {
   // Handle photos
   const handleAddPhotos = useCallback((files: File[]) => {
     setFormData((prev) => {
-      const newPhotos = [...prev.photos, ...files].slice(0, 10)
-      const newPreviews = newPhotos.map((file) => URL.createObjectURL(file))
+      const newPhotos = [...prev.photos, ...files]
+      const newPreviews = [
+        ...prev.photoPreviews,
+        ...files.map((f) => URL.createObjectURL(f)),
+      ]
       return {
         ...prev,
         photos: newPhotos,
         photoPreviews: newPreviews,
       }
     })
+  }, [])
+
+  const handleReplacePhotos = useCallback((files: File[], previews: string[]) => {
+    setFormData((prev) => ({ ...prev, photos: files, photoPreviews: previews }))
   }, [])
 
   const handleRemovePhoto = useCallback((index: number) => {
@@ -858,6 +865,7 @@ export default function AddFindPage() {
                 photos={formData.photos}
                 photoPreviews={formData.photoPreviews}
                 onAddPhotos={handleAddPhotos}
+                onReplacePhotos={handleReplacePhotos}
                 onRemovePhoto={handleRemovePhoto}
                 onReorder={handleReorderPhotos}
                 onSetMain={handleSetMainPhoto}
