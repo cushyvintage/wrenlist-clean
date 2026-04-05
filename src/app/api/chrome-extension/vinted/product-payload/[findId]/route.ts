@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
-import { findToCrosslistProduct } from '@/lib/find-to-product'
+import { findToExtensionProduct } from '@/lib/find-to-product'
 import type { Find } from '@/types'
 
 /**
  * GET /api/chrome-extension/vinted/product-payload/[findId]
- * Fetches a Find from the platform and converts it to CrosslistProduct format
+ * Fetches a Find from the platform and converts it to ExtensionProduct format
  * for the Vinted extension to use directly
  */
 export async function GET(
@@ -42,8 +42,8 @@ export async function GET(
       return ApiResponseHelper.notFound()
     }
 
-    // Convert Find to CrosslistProduct format
-    const product = findToCrosslistProduct(find as Find)
+    // Convert Find to ExtensionProduct format
+    const product = findToExtensionProduct(find as Find)
 
     return ApiResponseHelper.success({
       success: true,

@@ -36,7 +36,7 @@ const CATEGORY_TO_EBAY_CATEGORY_ID: Record<string, number> = {
 }
 
 // For now, we'll define Condition mapping locally since the extension has its own Condition enum
-type CrosslistCondition = 'NewWithTags' | 'NewWithoutTags' | 'VeryGood' | 'Good' | 'Fair' | 'Poor'
+type ProductCondition = 'NewWithTags' | 'NewWithoutTags' | 'VeryGood' | 'Good' | 'Fair' | 'Poor'
 
 interface ShippingInfo {
   domesticShipping?: number
@@ -68,7 +68,7 @@ interface ShippingInfo {
   }
 }
 
-interface CrosslistProduct {
+interface ExtensionProduct {
   id: string
   marketPlaceId?: string
   marketplaceId?: string
@@ -76,7 +76,7 @@ interface CrosslistProduct {
   title: string
   description: string
   price: number
-  condition: CrosslistCondition
+  condition: ProductCondition
   category: string[]
   size?: string[]
   tags?: string
@@ -99,18 +99,18 @@ interface CrosslistProduct {
 }
 
 /**
- * Convert a Find (from wrenlist platform) to CrosslistProduct format
+ * Convert a Find (from wrenlist platform) to ExtensionProduct format
  * for use by the Vinted/eBay extension
  */
-export function findToCrosslistProduct(find: Find): CrosslistProduct {
-  // Map FindCondition to CrosslistCondition enum
-  const conditionMap: Record<string, CrosslistCondition> = {
+export function findToExtensionProduct(find: Find): ExtensionProduct {
+  // Map FindCondition to ProductCondition enum
+  const conditionMap: Record<string, ProductCondition> = {
     excellent: 'VeryGood',
     good: 'Good',
     fair: 'Fair',
   }
 
-  const condition: CrosslistCondition = find.condition ? (conditionMap[find.condition] || 'Good') : 'Good'
+  const condition: ProductCondition = find.condition ? (conditionMap[find.condition] || 'Good') : 'Good'
 
   // Build shipping info from find fields
   const shipping: ShippingInfo = {
