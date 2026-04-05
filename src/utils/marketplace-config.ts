@@ -12,7 +12,6 @@ export type Platform = ConfiguredPlatform
 export interface MarketplaceFeatures {
   id: Platform
   label: string
-  icon: string
   supportsAutoSync: boolean
   supportsScheduling: boolean
   platformFeePercent: number
@@ -46,7 +45,6 @@ export const MARKETPLACE_FEATURES: Record<Platform, MarketplaceFeatures> = {
   vinted: {
     id: 'vinted',
     label: 'Vinted',
-    icon: '👚',
     supportsAutoSync: true,
     supportsScheduling: false,
     platformFeePercent: 5,
@@ -77,7 +75,6 @@ export const MARKETPLACE_FEATURES: Record<Platform, MarketplaceFeatures> = {
   ebay: {
     id: 'ebay',
     label: 'eBay UK',
-    icon: '🛒',
     supportsAutoSync: true,
     supportsScheduling: true,
     platformFeePercent: 12.8,
@@ -122,7 +119,6 @@ export const MARKETPLACE_FEATURES: Record<Platform, MarketplaceFeatures> = {
   etsy: {
     id: 'etsy',
     label: 'Etsy',
-    icon: '🎨',
     supportsAutoSync: true,
     supportsScheduling: true,
     platformFeePercent: 6.5,
@@ -158,7 +154,6 @@ export const MARKETPLACE_FEATURES: Record<Platform, MarketplaceFeatures> = {
   shopify: {
     id: 'shopify',
     label: 'Shopify',
-    icon: '🏪',
     supportsAutoSync: false,
     supportsScheduling: false,
     platformFeePercent: 2.9,

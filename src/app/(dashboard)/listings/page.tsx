@@ -213,19 +213,14 @@ export default function ListingsPage() {
     }
   }
 
-  const getCategoryEmoji = (category?: string) => {
-    const emojiMap: Record<string, string> = {
-      ceramics: '🏺',
-      glassware: '🥃',
-      books: '📚',
-      jewellery: '💎',
-      clothing: '👕',
-      homeware: '🏠',
-      furniture: '🪑',
-      toys: '🧸',
-      other: '📦',
+  const getCategoryLabel = (category?: string) => {
+    const labelMap: Record<string, string> = {
+      ceramics: 'CR', glassware: 'GL', books: 'BK', jewellery: 'JW',
+      clothing: 'CL', homeware: 'HW', furniture: 'FR', toys: 'TY',
+      workwear: 'WK', footwear: 'FT', denim: 'DN', bags: 'BG',
+      accessories: 'AC', other: '—',
     }
-    return emojiMap[category || 'other'] || '📦'
+    return labelMap[category || 'other'] || '—'
   }
 
   return (
@@ -470,7 +465,7 @@ export default function ListingsPage() {
                 </div>
 
                 {/* Thumbnail */}
-                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-xs font-medium tracking-wide flex-shrink-0 overflow-hidden" style={{ color: '#6B7D6A' }}>
                   {group.find?.photos?.[0] ? (
                     <img
                       src={group.find.photos[0]}
@@ -478,7 +473,7 @@ export default function ListingsPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    getCategoryEmoji(group.find?.category || undefined)
+                    getCategoryLabel(group.find?.category || undefined)
                   )}
                 </div>
 
