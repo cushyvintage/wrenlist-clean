@@ -668,10 +668,10 @@ export default function InventoryDetailPage() {
       }
 
       // Mark PMD as needs_delist
-      const pmdRes = await fetch(`/api/finds/${id}/marketplace`, {
+      const pmdRes = await fetch(`/api/finds/${id}/marketplace?marketplace=vinted`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace: 'vinted', status: 'needs_delist' }),
+        body: JSON.stringify({ status: 'needs_delist' }),
       })
 
       if (!pmdRes.ok) {
