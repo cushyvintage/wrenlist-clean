@@ -153,22 +153,28 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
           </div>
         )}
 
+        {/* Video element always rendered so ref is available for getUserMedia */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`}
+        />
+
+        {/* Viewfinder overlay when scanning */}
         {isScanning && (
-          <>
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            {/* Viewfinder overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-white/70 text-xs uppercase tracking-widest mb-4">
-                Point camera at barcode or ISBN
-              </p>
-              <div className="w-48 h-32 border-2 border-white/30 rounded-lg" />
-            </div>
-          </>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <p className="text-white/70 text-xs uppercase tracking-widest mb-4">
+              Scanning...
+            </p>
+            <div className="w-48 h-32 border-2 border-white/30 rounded-lg" />
+          </div>
         )}
 
         {!isScanning && !loading && !error && (
           <p className="text-white/70 text-xs uppercase tracking-widest">
-            Point camera at barcode or ISBN
+            Starting camera...
           </p>
         )}
       </div>
