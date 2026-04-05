@@ -737,13 +737,35 @@ export default function InventoryDetailPage() {
             productData: {
               id: find.id,
               title: find.name,
-              description: find.description,
-              price: find.asking_price_gbp,
-              photos: find.photos,
-              category: find.category,
-              condition: find.condition,
-              brand: find.brand,
-              platform_fields: find.platform_fields,
+              description: find.description || '',
+              price: Number(find.asking_price_gbp) || 0,
+              // Extension expects 'images' not 'photos'
+              images: find.photos || [],
+              // Extension expects PascalCase condition enum
+              condition: (() => {
+                const c = find.condition?.toLowerCase() || ''
+                if (c === 'excellent') return 'VeryGood'
+                if (c === 'good') return 'Good'
+                if (c === 'fair') return 'Fair'
+                if (c === 'poor') return 'Poor'
+                if (c === 'new') return 'NewWithoutTags'
+                return 'Good'
+              })(),
+              category: [find.category || 'other'],
+              brand: find.brand || '',
+              dynamicProperties: {},
+              // Shipping from stored vintedMetadata
+              shipping: vintedMeta?.shipping ? {
+                shippingWeight: {
+                  value: Math.round((vintedMeta.shipping.weight_grams || 500) / 1000 * 10) / 10,
+                  unit: 'kg',
+                },
+                packageSizeId: vintedMeta.shipping.package_size_id || vintedMeta.package_size_id || 2,
+              } : {
+                shippingWeight: { value: 0.5, unit: 'kg' },
+                packageSizeId: vintedMeta?.package_size_id || 2,
+              },
+              // Full vintedMetadata passthrough for catalog resolution
               vintedMetadata: vintedMeta,
             },
           },
