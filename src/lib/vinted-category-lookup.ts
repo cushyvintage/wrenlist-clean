@@ -31,6 +31,14 @@ const VINTED_ID_TO_WRENLIST: Record<number, string> = {
   // Ceramics serveware (3850s)
   3856: 'teapots', // Coffee pots & teapots
   3857: 'jugs',    // Jugs
+  3865: 'ceramics',     // Speciality serveware
+  3847: 'collectibles', // Paintings
+  3485: 'homeware',     // Hotplates
+  1957: 'homeware',     // Candle holders
+  2364: 'toys',         // Kids
+  2365: 'toys',         // Babies & toddlers
+  5426: 'books',        // Textbooks & study materials
+  3045: 'collectibles', // DVD
 
   // Glassware / Drinkware (2005-2015)
   2005: 'glassware', // Drinkware (parent)
