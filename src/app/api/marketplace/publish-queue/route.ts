@@ -30,7 +30,7 @@ export const GET = withAuth(async (_req, user) => {
   // Fetch marketplace data with needs_publish status
   const { data, error } = await supabase
     .from('product_marketplace_data')
-    .select('find_id, marketplace, fields')
+    .select('find_id, marketplace, fields, listing_price, platform_category_id')
     .eq('status', 'needs_publish')
     .in('find_id', findIds)
 
@@ -49,6 +49,10 @@ export const GET = withAuth(async (_req, user) => {
     asking_price_gbp: number | null
     photos: string[] | null
     sku: string | null
+    colour: string | null
+    size: string | null
+    shipping_weight_grams: number | null
+    platform_fields: Record<string, any> | null
   }
 
   const enrichedFindIds = [...new Set((data || []).map((d) => d.find_id))]
@@ -57,7 +61,7 @@ export const GET = withAuth(async (_req, user) => {
   if (enrichedFindIds.length > 0) {
     const { data: finds } = await supabase
       .from('finds')
-      .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku')
+      .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams, platform_fields')
       .in('id', enrichedFindIds)
 
     if (finds) {
@@ -83,6 +87,8 @@ export const GET = withAuth(async (_req, user) => {
     find_id: item.find_id,
     marketplace: item.marketplace,
     find: findsMap[item.find_id] || null,
+    listing_price: item.listing_price || null,
+    platform_category_id: item.platform_category_id || null,
     ...(item.marketplace === 'shopify' && shopifyStoreDomain
       ? { settings: { shopifyShopUrl: shopifyStoreDomain } }
       : {}),

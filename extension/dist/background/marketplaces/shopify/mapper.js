@@ -99,7 +99,7 @@ export class ShopifyMapper {
             category: product.category?.[0]
                 ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
                 : null,
-            customProductType: "",
+            customProductType: product.dynamicProperties?.productType ?? "",
             collectionsToJoin: [],
             vendor: product.brand ?? "",
             tags,

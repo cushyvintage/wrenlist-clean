@@ -9,6 +9,60 @@ import { ShopifyMapper } from "./marketplaces/shopify/mapper.js";
 const KEEP_ALIVE_INTERVAL_MS = 20_000;
 const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
 const ICON_PATH = "icons/icon128.png";
+// Map Wrenlist categories to Shopify taxonomy category IDs
+// See: https://shopify.dev/docs/api/admin-graphql/unstable/enums/ProductTaxonomyCategoryAttribute
+const SHOPIFY_CATEGORY_MAP = {
+    ceramics: ["537"], // Home & Garden > Kitchen & Dining > Tableware > Plates (gid://shopify/TaxonomyCategory/537)
+    glassware: ["525"], // Home & Garden > Kitchen & Dining > Glassware
+    books: ["1"], // Arts & Entertainment > Books
+    jewellery: ["200"], // Apparel & Accessories > Jewelry
+    clothing: ["166"], // Apparel & Accessories > Clothing
+    homeware: ["536"], // Home & Garden > Kitchen & Dining > Tableware
+    furniture: ["436"], // Home & Garden > Furniture
+    toys: ["1253"], // Toys & Games
+    collectibles: ["25"], // Arts & Entertainment > Collectibles
+    jugs: ["537"], // Home & Garden > Kitchen & Dining > Tableware > Plates (closest)
+    art: ["11"], // Arts & Entertainment > Art
+};
+function mapCategoryToShopify(category) {
+    if (!category)
+        return [];
+    const mapped = SHOPIFY_CATEGORY_MAP[category.toLowerCase()];
+    return mapped ?? [];
+}
+const PRODUCT_TYPE_MAP = {
+    ceramics: "Vintage Ceramics",
+    glassware: "Vintage Glassware",
+    books: "Books",
+    jewellery: "Vintage Jewellery",
+    clothing: "Vintage Clothing",
+    homeware: "Vintage Homeware",
+    furniture: "Vintage Furniture",
+    toys: "Vintage Toys",
+    collectibles: "Collectibles",
+    jugs: "Vintage Ceramics",
+    art: "Art & Prints",
+};
+function mapProductType(category) {
+    if (!category)
+        return "";
+    return PRODUCT_TYPE_MAP[category.toLowerCase()] ?? "";
+}
+function mapCondition(condition) {
+    switch (condition?.toLowerCase()) {
+        case "excellent":
+        case "new":
+            return Condition.NewWithoutTags;
+        case "good":
+            return Condition.Good;
+        case "fair":
+            return Condition.Fair;
+        case "poor":
+            return Condition.Poor;
+        default:
+            return Condition.Good;
+    }
+}
 (() => {
     if (typeof chrome === "undefined" || !chrome.runtime) {
         return;
@@ -89,20 +143,34 @@ const ICON_PATH = "icons/icon128.png";
                     if (!find)
                         continue;
                     console.log(`[QueuePoll] Publishing ${find.name} to ${mp}...`);
-                    // Build Product from find data
+                    // Build Product from find data, enriched with per-platform overrides
+                    const listingPrice = item.listing_price ?? find.asking_price_gbp ?? 0;
+                    const shopifyCategory = item.platform_category_id
+                        ? [item.platform_category_id]
+                        : mapCategoryToShopify(find.category);
+                    const weightGrams = find.shipping_weight_grams;
                     const product = {
                         id: find.id,
                         marketPlaceId: find.id,
                         title: find.name ?? "Untitled",
                         description: find.description ?? "",
-                        price: find.asking_price_gbp ?? 0,
+                        price: listingPrice,
                         images: find.photos ?? [],
                         brand: find.brand ?? undefined,
-                        condition: Condition.Good,
-                        category: [],
-                        tags: "",
-                        shipping: { shippingWeight: undefined },
-                        dynamicProperties: {},
+                        condition: mapCondition(find.condition),
+                        category: shopifyCategory,
+                        tags: find.platform_fields?.tags ?? "",
+                        color: find.colour ?? undefined,
+                        size: find.size ? [find.size] : undefined,
+                        sku: find.sku ?? undefined,
+                        shipping: {
+                            shippingWeight: weightGrams
+                                ? { value: weightGrams, unit: "Grams" }
+                                : undefined,
+                        },
+                        dynamicProperties: {
+                            productType: mapProductType(find.category),
+                        },
                     };
                     // Pass settings (e.g. shopifyShopUrl) from the queue item
                     const publishOptions = item.settings ? { settings: item.settings } : {};
