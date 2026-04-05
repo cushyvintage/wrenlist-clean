@@ -62,6 +62,7 @@ const EBAY_OAUTH_SCOPES = [
   'https://api.ebay.com/oauth/api_scope',
   'https://api.ebay.com/oauth/api_scope/sell.inventory',
   'https://api.ebay.com/oauth/api_scope/sell.account',
+  'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly',
 ]
 
 const TOKEN_ENCRYPTION_KEY_ENV = 'EBAY_TOKEN_ENCRYPTION_KEY'
@@ -273,7 +274,7 @@ export class eBayClient {
         return data.username || null
       }
     } catch {
-      // Non-critical — fall back to generic name
+      // Non-critical
     }
     return null
   }
