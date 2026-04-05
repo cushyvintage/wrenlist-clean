@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 interface DelistQueueItem {
   find_id: string
@@ -113,6 +114,8 @@ export async function POST(request: NextRequest) {
       console.error('[Delist Queue] Failed to update status:', error)
       return ApiResponseHelper.internalError()
     }
+
+    logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'delisted', source: 'extension' })
 
     return ApiResponseHelper.success({ message: 'Delist status updated' })
   } catch (error) {

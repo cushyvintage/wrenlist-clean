@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { Find } from '@/types'
 
 /**
@@ -95,6 +96,9 @@ export async function POST(request: NextRequest) {
         `Product created but failed to store metadata: ${storeError.message}`
       )
     }
+
+    const listingUrl = product.online_store_url || `https://${connection.store_domain}/products/${product.handle}`
+    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'listed', source: 'api', details: { listingId: String(product.id), listingUrl } })
 
     return ApiResponseHelper.success({
       listingId: String(product.id),

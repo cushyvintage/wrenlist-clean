@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 /**
  * POST /api/ebay/delist
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
       console.error('[eBay Delist] Failed to update status:', updateError)
       // Don't fail — the item was actually delisted, just the DB sync failed
     }
+
+    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'delisted', source: 'api' })
 
     return ApiResponseHelper.success({
       message: 'Item successfully delisted from eBay',

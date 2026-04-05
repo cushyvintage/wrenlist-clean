@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 /**
  * GET /api/marketplace/publish-queue
@@ -135,6 +136,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   if (error) {
     return ApiResponseHelper.internalError()
   }
+
+  logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'listed', source: 'extension', details: { platform_listing_id, platform_listing_url } })
 
   return ApiResponseHelper.success({ message: 'Publish status updated' })
 })

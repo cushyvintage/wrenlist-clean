@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 /**
  * POST /api/shopify/delist
@@ -81,6 +82,8 @@ export async function POST(request: NextRequest) {
         `Product deleted but failed to update metadata: ${updateError.message}`
       )
     }
+
+    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'delisted', source: 'api' })
 
     return ApiResponseHelper.success({
       message: 'Product delisted from Shopify',

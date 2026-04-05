@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 // Reverse map: eBay category ID → Wrenlist category
 const EBAY_TO_CATEGORY: Record<string, string> = {
@@ -179,6 +180,8 @@ export async function POST(request: NextRequest) {
               }
             })()
           }
+
+          logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'ebay', eventType: 'imported', source: 'api' })
 
           imported++
         } catch { errors++ }

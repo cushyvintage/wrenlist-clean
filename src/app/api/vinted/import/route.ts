@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 
 // Map Vinted status string → Wrenlist condition
@@ -97,6 +98,8 @@ export async function POST(request: NextRequest) {
           listing_price: parseFloat(item.price?.amount || item.price_numeric || '0'),
           status: 'listed',
         })
+
+        logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api' })
 
         imported++
       } catch { errors++ }

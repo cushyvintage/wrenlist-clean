@@ -4,6 +4,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 // eBay category mapping (simple hardcoded map for now)
 
@@ -238,6 +239,8 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: 'find_id,marketplace' }
     )
+
+    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingId, listingUrl, sku } })
 
     return ApiResponseHelper.success({
       success: true,

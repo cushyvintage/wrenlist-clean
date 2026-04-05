@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension
@@ -76,6 +77,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         const data = await res.json()
         if (res.ok && data.data?.success) {
           results.ebay = { ok: true, listingUrl: data.data.listingUrl }
+          logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingUrl: data.data.listingUrl } })
         } else {
           results.ebay = { ok: false, error: data.error || data.data?.message || 'eBay publish failed' }
         }
@@ -97,6 +99,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results[marketplace] = { ok: false, error: `Failed to queue: ${queueError.message}` }
         } else {
           results[marketplace] = { ok: true, listingUrl: undefined }
+          logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'queued', source: 'api' })
         }
       }
     } catch (err) {
