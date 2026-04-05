@@ -8,6 +8,7 @@ import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { ProductMarketplaceData, Platform } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
+type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low' | 'days_listed'
 
 interface ListingWithFind extends ProductMarketplaceData {
   finds: {
@@ -26,6 +27,7 @@ interface ListingWithFind extends ProductMarketplaceData {
 interface GroupedListing {
   find_id: string
   find: ListingWithFind['finds']
+  created_at: string
   marketplaces: {
     marketplace: Platform
     status: string
@@ -35,8 +37,15 @@ interface GroupedListing {
   }[]
 }
 
+function daysAgo(dateStr: string): number {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
 export default function ListingsPage() {
   const [filter, setFilter] = useState<FilterType>('all')
+  const [marketplaceFilter, setMarketplaceFilter] = useState<Platform | 'all'>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [search, setSearch] = useState('')
   const [listings, setListings] = useState<ListingWithFind[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -98,6 +107,7 @@ export default function ListingsPage() {
         map.set(listing.find_id, {
           find_id: listing.find_id,
           find: listing.finds,
+          created_at: listing.created_at,
           marketplaces: [mp],
         })
       }
@@ -111,13 +121,38 @@ export default function ListingsPage() {
       filter === 'all' ||
       group.marketplaces.some((mp) => mp.status === filter)
 
+    const matchesMarketplace =
+      marketplaceFilter === 'all' ||
+      group.marketplaces.some((mp) => mp.marketplace === marketplaceFilter)
+
     const matchesSearch =
       !search ||
       group.find?.name.toLowerCase().includes(search.toLowerCase()) ||
       (group.find?.brand && group.find.brand.toLowerCase().includes(search.toLowerCase()))
 
-    return matchesFilter && matchesSearch
+    return matchesFilter && matchesMarketplace && matchesSearch
+  }).sort((a, b) => {
+    const priceA = a.marketplaces[0]?.listing_price ?? a.find?.asking_price_gbp ?? 0
+    const priceB = b.marketplaces[0]?.listing_price ?? b.find?.asking_price_gbp ?? 0
+    switch (sortBy) {
+      case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      case 'price_high': return priceB - priceA
+      case 'price_low': return priceA - priceB
+      case 'days_listed': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    }
   })
+
+  // Counts for filter pills
+  const counts = {
+    all: grouped.length,
+    listed: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'listed')).length,
+    sold: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'sold')).length,
+    delisted: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'delisted')).length,
+  }
+
+  // Active marketplaces for filter
+  const activeMarketplaces = Array.from(new Set(listings.map((l) => l.marketplace as Platform)))
 
   const getStatusBadgeType = (status: string) => {
     if (status === 'listed') return 'listed'
@@ -224,20 +259,49 @@ export default function ListingsPage() {
                   : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
               }`}
             >
-              {f === 'all' ? 'all listings' : f}
+              {f === 'all' ? 'all' : f} ({counts[f]})
             </button>
           ))}
         </div>
       </div>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search listings..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm w-full max-w-xs"
-      />
+      {/* Search + Marketplace Filter + Sort */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <input
+          type="text"
+          placeholder="Search listings..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm w-full max-w-xs"
+        />
+
+        {activeMarketplaces.length > 1 && (
+          <select
+            value={marketplaceFilter}
+            onChange={(e) => setMarketplaceFilter(e.target.value as Platform | 'all')}
+            className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm"
+          >
+            <option value="all">all platforms</option>
+            {activeMarketplaces.map((mp) => (
+              <option key={mp} value={mp}>
+                {mp === 'ebay' ? 'eBay' : mp.charAt(0).toUpperCase() + mp.slice(1)}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm"
+        >
+          <option value="newest">newest first</option>
+          <option value="oldest">oldest first</option>
+          <option value="price_high">price: high → low</option>
+          <option value="price_low">price: low → high</option>
+          <option value="days_listed">longest listed</option>
+        </select>
+      </div>
 
       {/* Crosslist error */}
       {crosslistError && (
@@ -453,17 +517,31 @@ export default function ListingsPage() {
                   )}
                 </div>
 
-                {/* Price (Right side) */}
-                <div className="text-right flex flex-col gap-2 items-end">
+                {/* Price + Meta (Right side) */}
+                <div className="text-right flex flex-col gap-1.5 items-end">
                   <div className="font-serif font-medium text-ink text-xl">
                     {displayPrice != null ? `£${displayPrice.toFixed(2)}` : '—'}
                   </div>
 
+                  {/* Profit margin */}
+                  {displayPrice != null && group.find?.cost_gbp != null && group.find.cost_gbp > 0 && (
+                    <span className="text-[11px] text-sage font-medium">
+                      +£{(displayPrice - group.find.cost_gbp).toFixed(2)} profit
+                    </span>
+                  )}
+
                   {/* Status Badge */}
                   <Badge status={getStatusBadgeType(overallStatus) as any} />
 
+                  {/* Days listed */}
+                  {hasListed && (
+                    <span className={`text-[11px] ${daysAgo(group.created_at) > 30 ? 'text-red' : 'text-ink-lt'}`}>
+                      {daysAgo(group.created_at)}d listed
+                    </span>
+                  )}
+
                   {/* Action Buttons */}
-                  <div className="flex gap-2 mt-2 flex-wrap justify-end">
+                  <div className="flex gap-2 mt-1 flex-wrap justify-end">
                     {hasListed && (
                       <Link
                         href={`/finds/${group.find_id}`}
