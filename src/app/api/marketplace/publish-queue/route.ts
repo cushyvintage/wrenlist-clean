@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
@@ -37,11 +37,17 @@ export const GET = withAuth(async (_req, user) => {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-  const { data: finds } = await supabaseAdmin
+  const { data: finds, error: findError } = await supabaseAdmin
     .from('finds')
     .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams')
     .eq('user_id', user.id)
     .in('id', findIds)
+
+  // Temporary debug — remove after confirming enrichment works
+  if (findError) {
+    console.error('[PublishQueue] Find enrichment error:', findError)
+  }
+  console.log('[PublishQueue] findIds:', findIds, 'user:', user.id, 'findsCount:', finds?.length ?? 0)
 
   const findsMap: Record<string, Record<string, unknown>> = {}
   if (finds) {
@@ -73,7 +79,8 @@ export const GET = withAuth(async (_req, user) => {
       : {}),
   }))
 
-  return ApiResponseHelper.success(queue)
+  // @ts-expect-error temporary debug
+  return NextResponse.json({ data: queue, _debug: { findIds, userId: user.id, findsFound: finds?.length ?? 0, findError: findError?.message ?? null } })
 })
 
 /**
