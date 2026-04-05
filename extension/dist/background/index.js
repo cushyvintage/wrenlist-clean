@@ -151,7 +151,9 @@ const ICON_PATH = "icons/icon128.png";
                     if (!listingId)
                         continue;
                     console.log(`[QueuePoll] Delisting ${listingId} from ${mp}...`);
-                    const result = await delistFromMarketplace(mp, listingId);
+                    // Pass settings (e.g. shopifyShopUrl) from the queue item
+                    const delistOptions = item.settings ? { settings: item.settings } : {};
+                    const result = await delistFromMarketplace(mp, listingId, delistOptions);
                     // Report back to Wrenlist API
                     try {
                         await fetch(`${baseUrl}/api/marketplace/delist-queue`, {

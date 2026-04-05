@@ -183,7 +183,9 @@ type ExternalMessage = Record<string, unknown>;
 
           console.log(`[QueuePoll] Delisting ${listingId} from ${mp}...`);
 
-          const result = await delistFromMarketplace(mp, listingId);
+          // Pass settings (e.g. shopifyShopUrl) from the queue item
+          const delistOptions = item.settings ? { settings: item.settings } : {};
+          const result = await delistFromMarketplace(mp, listingId, delistOptions);
 
           // Report back to Wrenlist API
           try {

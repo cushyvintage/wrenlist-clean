@@ -51,9 +51,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter out items without platform_listing_id (can't delist without an ID)
-    const queue = (data || []).filter(
+    const validItems = (data || []).filter(
       (item): item is DelistQueueItem => !!item.platform_listing_id
     )
+
+    // If any Shopify items, fetch the user's Shopify store domain
+    const hasShopify = validItems.some((item) => item.marketplace === 'shopify')
+    let shopifyStoreDomain: string | null = null
+    if (hasShopify) {
+      const { data: conn } = await supabase
+        .from('shopify_connections')
+        .select('store_domain')
+        .eq('user_id', user.id)
+        .single()
+      shopifyStoreDomain = conn?.store_domain || null
+    }
+
+    const queue = validItems.map((item) => ({
+      ...item,
+      ...(item.marketplace === 'shopify' && shopifyStoreDomain
+        ? { settings: { shopifyShopUrl: shopifyStoreDomain } }
+        : {}),
+    }))
 
     return ApiResponseHelper.success(queue)
   } catch (error) {
