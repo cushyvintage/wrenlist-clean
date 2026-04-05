@@ -310,12 +310,25 @@ export default function InventoryDetailPage() {
   }, [])
 
   const handleReorderPhotos = useCallback((fromIndex: number, toIndex: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      photos: arrayMove(prev.photos, fromIndex, toIndex),
-      photoPreviews: arrayMove(prev.photoPreviews, fromIndex, toIndex),
-    }))
-  }, [])
+    setFormData((prev) => {
+      const newPreviews = arrayMove(prev.photoPreviews, fromIndex, toIndex)
+
+      // Auto-save photo order to DB (fire-and-forget)
+      if (id) {
+        fetch(`/api/finds/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: newPreviews }),
+        }).catch(() => {})  // silent — user can still Save manually
+      }
+
+      return {
+        ...prev,
+        photos: arrayMove(prev.photos, fromIndex, toIndex),
+        photoPreviews: newPreviews,
+      }
+    })
+  }, [id])
 
   const margin = useMemo(() => {
     if (!formData.costPrice || !formData.price) return null
