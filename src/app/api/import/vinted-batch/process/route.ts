@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 
@@ -8,6 +9,84 @@ const CONDITION_MAP: Record<string, string> = {
   'New with tags': 'excellent', 'New without tags': 'excellent',
   'Very good': 'excellent', 'Good': 'good',
   'Satisfactory': 'fair', 'Fair': 'fair', 'Poor': 'poor',
+}
+
+/**
+ * Mirror a photo from Vinted CDN to Supabase Storage
+ */
+async function mirrorPhotoToStorage(
+  photoUrl: string,
+  index: number,
+  userId: string,
+  sku: string
+): Promise<string | null> {
+  try {
+    if (!photoUrl || !photoUrl.startsWith('http')) return null
+
+    const response = await fetch(photoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+      },
+    })
+
+    if (!response.ok) return null
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    let extension = 'jpg'
+    if (contentType.includes('png')) extension = 'png'
+    else if (contentType.includes('webp')) extension = 'webp'
+    else if (contentType.includes('heic')) extension = 'heic'
+
+    const filename = `${userId}/${sku}-${index}.${extension}`
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('find-photos')
+      .upload(filename, buffer, {
+        contentType,
+        cacheControl: '31536000',
+        upsert: true,
+      })
+
+    if (uploadError) return null
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('find-photos')
+      .getPublicUrl(filename)
+
+    return urlData.publicUrl
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Mirror all Vinted photos to Supabase Storage and return Supabase URLs
+ * If all photos fail to mirror, return original Vinted CDN URLs as fallback
+ */
+async function mirrorPhotosToStorage(
+  userId: string,
+  sku: string,
+  photoUrls: string[]
+): Promise<string[]> {
+  if (!photoUrls.length) return []
+
+  const mirrorResults = await Promise.all(
+    photoUrls.map((url, index) => mirrorPhotoToStorage(url, index, userId, sku))
+  )
+
+  const mirrored = mirrorResults.filter((url): url is string => Boolean(url))
+
+  // If any photos succeeded, use those; otherwise fall back to original URLs
+  return mirrored.length > 0 ? mirrored : photoUrls
 }
 
 /**
@@ -121,6 +200,19 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (findError || !find) { errors++; continue }
+
+        // Mirror photos to Supabase Storage (sync, not fire-and-forget)
+        const mirroredPhotos = await mirrorPhotosToStorage(user.id, sku, photos)
+        if (mirroredPhotos.length > 0 && mirroredPhotos !== photos) {
+          const { error: updateError } = await supabase
+            .from('finds')
+            .update({ photos: mirroredPhotos })
+            .eq('id', find.id)
+          // Non-fatal: if mirroring fails, proceed with original photos
+          if (updateError) {
+            console.warn(`[Vinted Import] Photo mirroring failed for find ${find.id}: ${updateError.message}`)
+          }
+        }
 
         await supabase.from('product_marketplace_data').insert({
           find_id: find.id,
