@@ -7,19 +7,19 @@
  */
 export const EBAY_CATEGORY_MAP: Record<string, string> = {
   // Dom's primary stock (from SOUL.md)
-  ceramics: '870',          // Pottery & China (Antiques)
-  glassware: '11700',       // Glass (Antiques)
-  books: '267',             // Books, Comics & Magazines
-  jewellery: '281',         // Jewellery & Watches
-  jewelry: '281',           // US spelling alias
-  clothing: '11450',        // Clothes, Shoes & Accessories
-  homeware: '11700',        // Home, Furniture & DIY
-  home: '11700',
-  collectibles: '11116',    // Collectables
-  medals: '15273',          // Medals
-  toys: '220',              // Toys & Games
-  furniture: '3197',        // Furniture (Antiques)
-  // Fallback
-  other: '99',
-  default: '99',
+  ceramics: '262392',       // Decorative Pottery, Ceramics & Glass Collector Plates (leaf)
+  glassware: '262393',      // Decorative Glass → Vases (leaf under Pottery, Ceramics & Glass)
+  books: '171228',          // Antiquarian & Collectable Books (leaf)
+  jewellery: '10968',       // Vintage & Antique Jewellery (leaf)
+  jewelry: '10968',         // US spelling alias
+  clothing: '175759',       // Vintage Clothing (leaf)
+  homeware: '20697',        // Decorative Ornaments & Figures (leaf)
+  home: '20697',
+  collectibles: '262392',   // Decorative Collector Plates (leaf) — default for collectibles
+  medals: '4003',           // Medals & Ribbons (leaf under Militaria)
+  toys: '19016',            // Vintage & Classic Toys (leaf)
+  furniture: '20091',       // Antique Furniture (leaf)
+  // Fallback — eBay "Other" under Collectables
+  other: '562',             // Other Collectables (leaf)
+  default: '562',
 }
