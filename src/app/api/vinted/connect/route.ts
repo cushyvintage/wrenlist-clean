@@ -51,10 +51,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { vintedUserId, vintedUsername } = body
+    let { vintedUserId, vintedUsername } = body
 
     if (!vintedUserId || !vintedUsername) {
       return ApiResponseHelper.badRequest('Missing vintedUserId or vintedUsername')
+    }
+
+    // Resolve numeric user ID to actual Vinted login name
+    if (/^\d+$/.test(vintedUsername)) {
+      try {
+        const tld = body.tld || 'co.uk'
+        const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${vintedUsername}`, {
+          headers: { 'Accept': 'application/json' },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.user?.login) {
+            vintedUsername = data.user.login
+          }
+        }
+      } catch {
+        // Keep numeric ID as fallback
+      }
     }
 
     const supabase = await createSupabaseServerClient()
