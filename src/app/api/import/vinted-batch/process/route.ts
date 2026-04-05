@@ -111,6 +111,8 @@ export async function POST(request: NextRequest) {
               vinted: {
                 primaryColor: item.colour_ids?.[0] || null,
                 catalogId: item.catalog_id || item.vintedMetadata?.catalog_id || null,
+                vintedMetadata: item.vintedMetadata || null,
+                originalListingId: String(item.id),
               },
             },
             selected_marketplaces: ['vinted'],

@@ -705,8 +705,78 @@ export default function InventoryDetailPage() {
   }
 
   const handleRelistOnVinted = async () => {
-    // Reuse the existing handleListOnVinted logic
-    await handleListOnVinted()
+    if (!find) return
+    setIsListingOnVinted(true)
+    setVintedListResult(null)
+    try {
+      // Get stored vintedMetadata from platform_fields
+      const vintedMeta = (find.platform_fields as any)?.vinted?.vintedMetadata
+      const originalListingId = (find.platform_fields as any)?.vinted?.originalListingId
+
+      if (!vintedMeta && !originalListingId) {
+        setVintedListResult({ ok: false, message: 'No Vinted metadata stored — item must be relisted manually on Vinted.' })
+        return
+      }
+
+      if (typeof window === 'undefined') return
+      const chromeExt = (window as any).chrome
+      if (!chromeExt?.runtime?.sendMessage) {
+        setVintedListResult({ ok: false, message: 'Extension not available.' })
+        return
+      }
+
+      // Dispatch relist to extension
+      const response = await new Promise<{ success: boolean; message?: string; listingId?: string }>((resolve) => {
+        const timeout = setTimeout(() => resolve({ success: false, message: 'Extension timed out.' }), 30000)
+        chromeExt.runtime.sendMessage(
+          'nblnainobllgbjkdkpeodjpopkgnpfgb',
+          {
+            action: 'postlistingtomarketplace',
+            marketplace: 'vinted',
+            wrenlistBaseUrl: typeof window !== 'undefined' ? window.location.origin : '',
+            productData: {
+              id: find.id,
+              title: find.name,
+              description: find.description,
+              price: find.asking_price_gbp,
+              photos: find.photos,
+              category: find.category,
+              condition: find.condition,
+              brand: find.brand,
+              platform_fields: find.platform_fields,
+              vintedMetadata: vintedMeta,
+            },
+          },
+          (res: any) => {
+            clearTimeout(timeout)
+            if (chromeExt.runtime.lastError) {
+              resolve({ success: false, message: chromeExt.runtime.lastError.message })
+            } else {
+              resolve(res || { success: false, message: 'No response from extension' })
+            }
+          }
+        )
+      })
+
+      if (response.success) {
+        // Update PMD status back to listed
+        await fetch(`/api/finds/${find.id}/marketplace?marketplace=vinted`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'listed', platform_listing_id: response.listingId }),
+        })
+        setVintedListResult({ ok: true, message: 'Relisted on Vinted successfully!' })
+        await fetch(`/api/finds/${id}`).then((res) => res.json()).then((result) => {
+          if (result.data) setFind(result.data)
+        })
+      } else {
+        setVintedListResult({ ok: false, message: response.message || 'Relist failed.' })
+      }
+    } catch (e) {
+      setVintedListResult({ ok: false, message: e instanceof Error ? e.message : 'Relist failed.' })
+    } finally {
+      setIsListingOnVinted(false)
+    }
   }
 
   if (isLoading) {
