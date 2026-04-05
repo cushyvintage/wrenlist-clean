@@ -100,7 +100,7 @@ export default function InventoryDetailPage() {
   const [templateAppliedBanner, setTemplateAppliedBanner] = useState(false)
   const [incompleteFields, setIncompleteFields] = useState<string[]>([])
   const [isListingOnVinted, setIsListingOnVinted] = useState(false)
-  const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string; url?: string } | null>(null)
   const [isListingOnEbay, setIsListingOnEbay] = useState(false)
   const [ebayListResult, setEbayListResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null }>>([])
@@ -726,7 +726,7 @@ export default function InventoryDetailPage() {
       }
 
       // Dispatch relist to extension
-      const response = await new Promise<{ success: boolean; message?: string; listingId?: string }>((resolve) => {
+      const response = await new Promise<{ success: boolean; message?: string; listingId?: string; product?: { id?: string | number; url?: string } }>((resolve) => {
         const timeout = setTimeout(() => resolve({ success: false, message: 'Extension timed out.' }), 30000)
         chromeExt.runtime.sendMessage(
           'nblnainobllgbjkdkpeodjpopkgnpfgb',
@@ -792,16 +792,23 @@ export default function InventoryDetailPage() {
       })
 
       if (response.success) {
+        const newListingId = response.product?.id ? String(response.product.id) : undefined
+        const newListingUrl = response.product?.url ?? undefined
         // Update PMD status back to listed
         await fetch(`/api/finds/${find.id}/marketplace?marketplace=vinted`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'listed', platform_listing_id: response.listingId }),
+          body: JSON.stringify({ status: 'listed', platform_listing_id: newListingId, platform_listing_url: newListingUrl }),
         })
-        setVintedListResult({ ok: true, message: 'Relisted on Vinted successfully!' })
-        await fetch(`/api/finds/${id}`).then((res) => res.json()).then((result) => {
-          if (result.data) setFind(result.data)
-        })
+        setVintedListResult({ ok: true, message: 'Relisted on Vinted successfully!', url: newListingUrl })
+        await Promise.all([
+          fetch(`/api/finds/${id}`).then((res) => res.json()).then((result) => {
+            if (result.data) setFind(result.data)
+          }),
+          fetch(`/api/finds/${id}/marketplace`).then((res) => res.json()).then((result) => {
+            if (result?.data) setMarketplaceData(result.data)
+          }),
+        ])
       } else {
         setVintedListResult({ ok: false, message: response.message || 'Relist failed.' })
       }
@@ -903,6 +910,9 @@ export default function InventoryDetailPage() {
           }}
         >
           <span>{vintedListResult.ok ? '✓ ' : '✗ '}{vintedListResult.message}</span>
+          {vintedListResult.ok && vintedListResult.url && (
+            <a href={vintedListResult.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600 }}>View on Vinted →</a>
+          )}
           <button onClick={() => setVintedListResult(null)} className="ml-4 opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
