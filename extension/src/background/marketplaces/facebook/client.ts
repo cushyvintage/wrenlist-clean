@@ -62,40 +62,40 @@ export class FacebookClient {
 
   private async ensureSession(force = false): Promise<void> {
     if (!force && (await this.areParametersCached())) {
-      this.user = (await this.getCachedParam("crosslist_facebook_actorid")) ?? "";
-      this.aParam = (await this.getCachedParam("crosslist_facebook_a")) ?? "";
+      this.user = (await this.getCachedParam("wrenlist_fb_actorid")) ?? "";
+      this.aParam = (await this.getCachedParam("wrenlist_fb_a")) ?? "";
       this.cometReq =
-        (await this.getCachedParam("crosslist_facebook_cometreq")) ?? "";
+        (await this.getCachedParam("wrenlist_fb_cometreq")) ?? "";
       this.fbDtsg =
-        (await this.getCachedParam("crosslist_facebook_dtsg")) ?? "";
+        (await this.getCachedParam("wrenlist_fb_dtsg")) ?? "";
       this.targetId =
-        (await this.getCachedParam("crosslist_facebook_targetid")) ?? "";
+        (await this.getCachedParam("wrenlist_fb_targetid")) ?? "";
       return;
     }
 
     const html = await this.getHtml();
     this.user = await this.extractAndCache(
-      "crosslist_facebook_actorid",
+      "wrenlist_fb_actorid",
       /"actorId"\s*:\s*"([0-9]*)"/,
       html,
     );
     this.aParam = await this.extractAndCache(
-      "crosslist_facebook_a",
+      "wrenlist_fb_a",
       /__a=([0-9]*)/,
       html,
     );
     this.cometReq = await this.extractAndCache(
-      "crosslist_facebook_cometreq",
+      "wrenlist_fb_cometreq",
       /comet_req=([0-9]*)/,
       html,
     );
     this.fbDtsg = await this.extractAndCache(
-      "crosslist_facebook_dtsg",
+      "wrenlist_fb_dtsg",
       /"DTSGInitialData",\s*\[\s*\]\s*,\s*{\s*"token":\s*"(.*?)"/,
       html,
     );
     this.targetId = await this.extractAndCache(
-      "crosslist_facebook_targetid",
+      "wrenlist_fb_targetid",
       /__typename":.*?"Marketplace",.*?"id":.*?"([0-9]+)"/,
       html,
     );
@@ -696,11 +696,11 @@ export class FacebookClient {
 
   private async areParametersCached() {
     const keys = [
-      "crosslist_facebook_actorid",
-      "crosslist_facebook_a",
-      "crosslist_facebook_cometreq",
-      "crosslist_facebook_dtsg",
-      "crosslist_facebook_targetid",
+      "wrenlist_fb_actorid",
+      "wrenlist_fb_a",
+      "wrenlist_fb_cometreq",
+      "wrenlist_fb_dtsg",
+      "wrenlist_fb_targetid",
     ];
     const values = await chrome.storage.local.get(keys);
     return keys.every((key) => Boolean(values[key]));

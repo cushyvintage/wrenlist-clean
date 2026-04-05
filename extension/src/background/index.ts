@@ -309,7 +309,6 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     case "publish_to_marketplace":
       return handlePublishCommand(message);
     case "publish_to_shopify":
-    case "crosslist_to_shopify": // legacy compat
       return handlePublishToShopify(message);
     case "updatelistingonmarketplace":
     case "update_marketplace_listing":
@@ -386,8 +385,6 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       return handleFetchVintedApi(message);
     case "fetch_wrenlist_api":
     case "fetchwrenlistapi":
-    case "fetch_crosslist_api": // legacy compat
-    case "fetchcrosslistapi": // legacy compat
       return handleFetchWrenlistApi(message);
     case "vinted_debug_info":
       return handleVintedDebugInfo();
