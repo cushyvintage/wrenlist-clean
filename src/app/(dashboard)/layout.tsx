@@ -6,6 +6,7 @@ import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { NavIcons } from '@/components/layout/NavIcons'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -16,23 +17,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     // WORKSPACE
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
-    { id: 'finds', label: 'Finds', icon: '📦', path: '/finds', section: 'WORKSPACE', pageTitle: 'Finds' },
-    { id: 'add-find', label: 'Add find', icon: '➕', path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
-    { id: 'listings', label: 'Listings', icon: '📋', path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+    { id: 'dashboard', label: 'Dashboard', icon: NavIcons.dashboard, path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
+    { id: 'finds', label: 'Finds', icon: NavIcons.finds, path: '/finds', section: 'WORKSPACE', pageTitle: 'Finds' },
+    { id: 'add-find', label: 'Add find', icon: NavIcons['add-find'], path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
+    { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
     // INSIGHTS
-    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
-    { id: 'price-research', label: 'Price Research', icon: '🔍', path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
-    { id: 'sold', label: 'Sold', icon: '✓', path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
+    { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
+    { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
+    { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
     // OPERATIONS
-    { id: 'sourcing', label: 'Sourcing', icon: '🛍', path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
-    { id: 'suppliers', label: 'Suppliers', icon: '🏪', path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
-    { id: 'expenses', label: 'Expenses', icon: '💰', path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
-    { id: 'mileage', label: 'Mileage', icon: '🚗', path: '/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
-    { id: 'tax', label: 'Tax', icon: '📄', path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
+    { id: 'sourcing', label: 'Sourcing', icon: NavIcons.sourcing, path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
+    { id: 'suppliers', label: 'Suppliers', icon: NavIcons.suppliers, path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
+    { id: 'expenses', label: 'Expenses', icon: NavIcons.expenses, path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
+    { id: 'mileage', label: 'Mileage', icon: NavIcons.mileage, path: '/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
+    { id: 'tax', label: 'Tax', icon: NavIcons.tax, path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
     // SETTINGS
-    { id: 'platform-connect', label: 'Platform Connect', icon: '🔗', path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
-    { id: 'settings', label: 'Settings', icon: '⚙', path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
+    { id: 'platform-connect', label: 'Platform Connect', icon: NavIcons['platform-connect'], path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
+    { id: 'settings', label: 'Settings', icon: NavIcons.settings, path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
   ]
 
   const currentPage = navItems.find((item) => activeNav === item.id)
