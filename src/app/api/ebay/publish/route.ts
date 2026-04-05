@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     const ebayCondition = conditionMap[find.condition] || 'USED'
     const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
-    const sku = `${baseSku}-v3`
+    const sku = `${baseSku}-v4`
 
     if (!find.photos || find.photos.length === 0) {
       return ApiResponseHelper.badRequest('At least one photo is required to publish to eBay. Please add photos and try again.')
