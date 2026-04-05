@@ -40,11 +40,17 @@ export async function GET(request: NextRequest) {
       .eq('marketplace_id', 'EBAY_GB')
       .single()
 
+    // Connection expiry = refresh token lifetime (18 months from creation)
+    // expires_at in DB is the access token expiry (2hrs) used for auto-refresh
+    const connectionExpiresAt = new Date(
+      new Date(tokens.created_at).getTime() + 18 * 30 * 24 * 60 * 60 * 1000
+    ).toISOString()
+
     return ApiResponseHelper.success({
       connected: true,
       setupComplete: config?.setup_complete || false,
       username: tokens.ebay_user || 'eBay account',
-      expiresAt: tokens.expires_at,
+      expiresAt: connectionExpiresAt,
     })
   } catch (error) {
     return ApiResponseHelper.internalError()

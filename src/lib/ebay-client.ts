@@ -15,6 +15,7 @@ interface eBayTokens {
   accessToken: string
   refreshToken: string
   expiresAt: Date
+  refreshTokenExpiresAt: Date
   scope: string[]
 }
 
@@ -130,10 +131,13 @@ export class eBayClient {
 
       const data: eBayOAuthResponse = await response.json()
 
+      // expires_in = access token lifetime (2hrs), x_refresh_token_expires_in = refresh token lifetime (18mo)
+      const refreshTokenExpiresIn = data.x_refresh_token_expires_in || 47304000 // default 18 months in seconds
       this.tokens = {
         accessToken: data.access_token,
         refreshToken: data.refresh_token || '',
         expiresAt: new Date(Date.now() + (data.expires_in - 300) * 1000),
+        refreshTokenExpiresAt: new Date(Date.now() + refreshTokenExpiresIn * 1000),
         scope: EBAY_OAUTH_SCOPES,
       }
 
@@ -173,10 +177,12 @@ export class eBayClient {
 
       const data = await response.json() as eBayOAuthResponse
 
+      const refreshTokenExpiresIn = data.x_refresh_token_expires_in || 47304000
       this.tokens = {
         accessToken: data.access_token,
         refreshToken: data.refresh_token || refreshToken,
         expiresAt: new Date(Date.now() + (data.expires_in - 300) * 1000),
+        refreshTokenExpiresAt: new Date(Date.now() + refreshTokenExpiresIn * 1000),
         scope: EBAY_OAUTH_SCOPES,
       }
 
@@ -244,6 +250,7 @@ export class eBayClient {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken || '',
         expiresAt: tokens.expiresAt,
+        refreshTokenExpiresAt: tokens.refreshTokenExpiresAt || new Date(Date.now() + 47304000 * 1000),
         scope: tokens.scope || EBAY_OAUTH_SCOPES,
       }
     }
