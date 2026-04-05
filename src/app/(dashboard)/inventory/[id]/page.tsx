@@ -752,9 +752,18 @@ export default function InventoryDetailPage() {
                 if (c === 'new') return 'NewWithoutTags'
                 return 'Good'
               })(),
-              category: [find.category || 'other'],
+              // Pass catalog_id as category[0] — mapper detects numeric IDs and skips resolution
+              category: vintedMeta?.catalog_id ? [String(vintedMeta.catalog_id)] : [find.category || 'other'],
               brand: find.brand || '',
-              dynamicProperties: {},
+              dynamicProperties: {
+                // Pass stored Vinted IDs directly so mapper skips lookup
+                colorIds: vintedMeta?.color_ids || [],
+                packageSizeId: vintedMeta?.shipping?.package_size_id || vintedMeta?.package_size_id || 2,
+              },
+              // Pass catalog_id at top level so mapper uses it directly
+              vintedCatalogId: vintedMeta?.catalog_id || null,
+              // size must be array — mapper uses size[0] parsed as int for size_id
+              size: vintedMeta?.size_id ? [String(vintedMeta.size_id)] : (find.size ? [find.size] : []),
               // Shipping from stored vintedMetadata
               shipping: vintedMeta?.shipping ? {
                 shippingWeight: {
