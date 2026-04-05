@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { arrayMove } from '@dnd-kit/sortable'
 import { useRouter, useParams } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
@@ -305,6 +306,14 @@ export default function InventoryDetailPage() {
       ...prev,
       photos: prev.photos.filter((_, i) => i !== index),
       photoPreviews: prev.photoPreviews.filter((_, i) => i !== index),
+    }))
+  }, [])
+
+  const handleReorderPhotos = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: arrayMove(prev.photos, fromIndex, toIndex),
+      photoPreviews: arrayMove(prev.photoPreviews, fromIndex, toIndex),
     }))
   }, [])
 
@@ -1271,6 +1280,7 @@ export default function InventoryDetailPage() {
                 photoPreviews={formData.photoPreviews}
                 onAddPhotos={handleAddPhotos}
                 onRemovePhoto={handleRemovePhoto}
+                onReorder={handleReorderPhotos}
                 maxPhotos={10}
               />
             </div>

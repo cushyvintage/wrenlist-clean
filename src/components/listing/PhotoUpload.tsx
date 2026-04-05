@@ -1,16 +1,88 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 import { removeBackground } from '@/lib/background-removal'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface PhotoUploadProps {
   photos: File[]
   photoPreviews: string[]
   onAddPhotos: (files: File[]) => void
   onRemovePhoto: (index: number) => void
+  onReorder?: (fromIndex: number, toIndex: number) => void
   onUpdatePhoto?: (index: number, preview: string) => void
   maxPhotos?: number
+}
+
+function SortablePhoto({
+  id,
+  preview,
+  index,
+  onRemove,
+}: {
+  id: string
+  preview: string
+  index: number
+  onRemove: (index: number) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 0,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative group rounded overflow-hidden border border-sage/14 touch-none"
+      {...attributes}
+      {...listeners}
+    >
+      {index === 0 && (
+        <div className="absolute top-1 left-1 z-20 bg-sage text-white text-xs px-2 py-0.5 rounded pointer-events-none">
+          main
+        </div>
+      )}
+      <img src={preview} alt={`Photo ${index + 1}`} className="w-full h-20 object-cover pointer-events-none" />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove(index)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+      >
+        <span className="text-white text-lg">✕</span>
+      </button>
+    </div>
+  )
 }
 
 export default function PhotoUpload({
@@ -18,11 +90,35 @@ export default function PhotoUpload({
   photoPreviews,
   onAddPhotos,
   onRemovePhoto,
+  onReorder,
   onUpdatePhoto,
   maxPhotos = 10,
 }: PhotoUploadProps) {
   const [removingBgIndex, setRemovingBgIndex] = useState<number | null>(null)
   const [bgRemovalError, setBgRemovalError] = useState<string | null>(null)
+
+  // Stable IDs for sortable — use index-based since photos don't have unique IDs
+  const sortableIds = useMemo(
+    () => photoPreviews.map((_, i) => `photo-${i}`),
+    [photoPreviews]
+  )
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !onReorder) return
+
+    const oldIndex = sortableIds.indexOf(active.id as string)
+    const newIndex = sortableIds.indexOf(over.id as string)
+    if (oldIndex !== -1 && newIndex !== -1) {
+      onReorder(oldIndex, newIndex)
+    }
+  }
+
   const handleRemoveBackground = async (index: number) => {
     if (index < 0 || index >= photos.length) return
 
@@ -33,15 +129,11 @@ export default function PhotoUpload({
       const photoFile = photos[index]!
       const processedFile = await removeBackground(photoFile)
 
-      // Update form state with processed photo
-      // Create new array with replaced photo at index
       const updatedPhotos = [...photos]
       updatedPhotos[index] = processedFile
 
-      // Create object URL for preview
       const newPreview = URL.createObjectURL(processedFile)
 
-      // Update parent component
       onAddPhotos(updatedPhotos)
 
       if (onUpdatePhoto) {
@@ -129,34 +221,30 @@ export default function PhotoUpload({
       {/* Photo thumbnails */}
       {photoPreviews.length > 0 && (
         <div className="space-y-3">
-          <div className="grid grid-cols-5 gap-2">
-            {photoPreviews.map((preview, idx) => (
-              <div key={idx} className="relative group rounded overflow-hidden border border-sage/14">
-                {idx === 0 && (
-                  <div className="absolute top-1 left-1 z-20 bg-sage text-white text-xs px-2 py-0.5 rounded">
-                    main
-                  </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sortableIds} strategy={horizontalListSortingStrategy}>
+              <div className="grid grid-cols-5 gap-2">
+                {photoPreviews.map((preview, idx) => (
+                  <SortablePhoto
+                    key={sortableIds[idx]}
+                    id={sortableIds[idx]!}
+                    preview={preview}
+                    index={idx}
+                    onRemove={onRemovePhoto}
+                  />
+                ))}
+                {photos.length < maxPhotos && (
+                  <button
+                    type="button"
+                    className="w-full h-20 border-2 border-dashed border-sage/30 rounded hover:border-sage/50 transition-colors flex items-center justify-center text-sage-dim text-xl"
+                    onClick={() => document.getElementById('photo-file-input')?.click()}
+                  >
+                    +
+                  </button>
                 )}
-                <img src={preview} alt={`Photo ${idx + 1}`} className="w-full h-20 object-cover" />
-                <button
-                  type="button"
-                  onClick={() => onRemovePhoto(idx)}
-                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                >
-                  <span className="text-white text-lg">✕</span>
-                </button>
               </div>
-            ))}
-            {photos.length < maxPhotos && (
-              <button
-                type="button"
-                className="w-full h-20 border-2 border-dashed border-sage/30 rounded hover:border-sage/50 transition-colors flex items-center justify-center text-sage-dim text-xl"
-                onClick={() => document.getElementById('photo-file-input')?.click()}
-              >
-                +
-              </button>
-            )}
-          </div>
+            </SortableContext>
+          </DndContext>
           <div className="space-y-2">
             {bgRemovalError && (
               <div className="text-xs text-red-600 bg-red-50 p-2 rounded">

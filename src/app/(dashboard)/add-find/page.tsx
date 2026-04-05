@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { arrayMove } from '@dnd-kit/sortable'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
@@ -422,6 +423,14 @@ export default function AddFindPage() {
     }))
   }, [])
 
+  const handleReorderPhotos = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: arrayMove(prev.photos, fromIndex, toIndex),
+      photoPreviews: arrayMove(prev.photoPreviews, fromIndex, toIndex),
+    }))
+  }, [])
+
   const handleUpdatePhoto = useCallback((index: number, preview: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -829,6 +838,7 @@ export default function AddFindPage() {
                 photoPreviews={formData.photoPreviews}
                 onAddPhotos={handleAddPhotos}
                 onRemovePhoto={handleRemovePhoto}
+                onReorder={handleReorderPhotos}
                 maxPhotos={10}
               />
             </div>
