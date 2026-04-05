@@ -517,6 +517,8 @@ async function dispatchExternalMessage(message) {
             return EXTENSION_VERSION;
         case "ping":
             return withExtensionVersion({ success: true, message: "Extension available" });
+        case "get_depop_categories":
+            return handleGetDepopCategories();
         case "detect_shopify_store":
         case "detectshopifystore":
             return handleDetectShopifyStore();
@@ -1612,6 +1614,39 @@ async function handleSyncVintedStatus(message) {
             error: normalized.message,
             stats: { checked: 0, updated: 0, unchanged: 0, failed: 0 },
         });
+    }
+}
+async function handleGetDepopCategories() {
+    try {
+        const cookies = await chrome.cookies.getAll({ domain: "depop.com" });
+        const token = cookies.find(c => c.name === "access_token")?.value;
+        const userId = cookies.find(c => c.name === "user_id")?.value;
+        if (!token)
+            return withError("No Depop access token found");
+        const headers = {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "accept": "application/json, text/plain, */*",
+        };
+        if (userId)
+            headers["Depop-UserId"] = userId;
+        const urls = [
+            "https://webapi.depop.com/api/v2/categories/tree/?lang=en",
+            "https://webapi.depop.com/api/v2/categories/?lang=en",
+            "https://webapi.depop.com/api/v1/categories/tree/?lang=en",
+            "https://webapi.depop.com/api/v1/categories/",
+        ];
+        for (const url of urls) {
+            const res = await fetch(url, { headers, credentials: "include" });
+            if (res.ok) {
+                const data = await res.json();
+                return withExtensionVersion({ success: true, categories: data, url });
+            }
+        }
+        return withError("All Depop category endpoints returned errors");
+    }
+    catch (e) {
+        return withError(e);
     }
 }
 async function handleDetectShopifyStore() {
