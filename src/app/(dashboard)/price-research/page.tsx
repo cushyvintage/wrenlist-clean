@@ -17,7 +17,7 @@ interface PlatformData {
   min_price: number
   max_price: number
   avg_days_to_sell: number
-  source: 'live' | 'ai_estimate'
+  source: 'sold' | 'live' | 'ai_estimate'
   sample_listings: SampleListing[]
 }
 
@@ -31,11 +31,18 @@ interface PriceResearchData {
   }
 }
 
-function SourceBadge({ source }: { source: 'live' | 'ai_estimate' }) {
-  if (source === 'live') {
+function SourceBadge({ source }: { source: 'sold' | 'live' | 'ai_estimate' }) {
+  if (source === 'sold') {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">
-        live listings
+        sold prices
+      </span>
+    )
+  }
+  if (source === 'live') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+        asking prices
       </span>
     )
   }
@@ -62,13 +69,15 @@ function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
         </div>
         <div className="text-sm text-ink">
           <span className="font-medium">{data.avg_days_to_sell.toFixed(1)}</span>{' '}
-          <span className="text-ink-lt">{data.source === 'live' ? 'avg days listed' : 'avg days to sell'}</span>
+          <span className="text-ink-lt">
+            {data.source === 'sold' ? 'avg days to sell' : data.source === 'live' ? 'avg days listed' : 'avg days to sell'}
+          </span>
         </div>
       </div>
       {data.sample_listings.length > 0 && (
         <div className="border-t border-border pt-4">
           <h4 className="text-xs font-medium text-ink-lt mb-3">
-            {data.source === 'live' ? 'current listings' : 'estimated sales'}
+            {data.source === 'sold' ? 'recent sales' : data.source === 'live' ? 'current listings' : 'estimated sales'}
           </h4>
           <div className="space-y-2">
             {data.sample_listings.map((listing, idx) => (
@@ -92,6 +101,7 @@ function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
                     {listing.days_ago > 0 && (
                       <> · {listing.days_ago}d {data.source === 'live' ? 'listed' : 'ago'}</>
                     )}
+
                   </span>
                 </div>
               </div>

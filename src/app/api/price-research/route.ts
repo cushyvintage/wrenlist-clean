@@ -14,7 +14,7 @@ interface PlatformData {
   min_price: number
   max_price: number
   avg_days_to_sell: number
-  source: 'live' | 'ai_estimate'
+  source: 'sold' | 'live' | 'ai_estimate'
   sample_listings: SampleListing[]
 }
 
@@ -145,7 +145,7 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
         min_price: ebayStats.min_price,
         max_price: ebayStats.max_price,
         avg_days_to_sell: ebayStats.avg_days_to_sell,
-        source: 'live',
+        source: ebayStats.source === 'sold' ? 'sold' : 'live',
         sample_listings: ebayStats.sample_listings,
       }
     } else if (gptData?.ebay) {
