@@ -201,16 +201,26 @@ type ExternalMessage = Record<string, unknown>;
 
           // Report back to Wrenlist API
           try {
+            const reportBody: Record<string, unknown> = {
+              find_id: item.find_id,
+              marketplace: mp,
+              platform_listing_id: result.product?.id ? String(result.product.id) : null,
+              platform_listing_url: result.product?.url ?? null,
+            };
+
+            // Include collection name and product type for Shopify
+            if (mp === "shopify" && result.success) {
+              const productType = product.dynamicProperties?.productType;
+              if (productType) {
+                reportBody.fields = { collection_name: productType };
+              }
+            }
+
             await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                find_id: item.find_id,
-                marketplace: mp,
-                platform_listing_id: result.product?.id ? String(result.product.id) : null,
-                platform_listing_url: result.product?.url ?? null,
-              }),
+              body: JSON.stringify(reportBody),
             });
           } catch (e) {
             console.warn("[QueuePoll] Failed to report publish result:", e);

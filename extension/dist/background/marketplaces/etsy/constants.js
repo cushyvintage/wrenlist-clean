@@ -8,8 +8,16 @@ export const ETSY_SESSION_COOKIE = "uaid";
  * The Etsy listing form uses a search typeahead at #category-field-search.
  * We type the search term and pick the first suggestion.
  */
+/**
+ * Top-level Wrenlist categories → Etsy search terms.
+ * Covers CATEGORY_MAP keys and CATEGORIES const values.
+ *
+ * Subcategory values like "ceramics_plates" or "jewellery_earrings"
+ * are resolved by extracting the prefix before "_" and looking up here.
+ * See resolveEtsyCategory() in client.ts.
+ */
 export const WRENLIST_TO_ETSY_CATEGORY = {
-    // From CATEGORY_MAP in src/data/marketplace-category-map.ts
+    // CATEGORY_MAP top-level keys (src/data/marketplace-category-map.ts)
     ceramics: "Ceramics & Pottery",
     glassware: "Glass",
     books: "Books",
@@ -23,7 +31,7 @@ export const WRENLIST_TO_ETSY_CATEGORY = {
     teapots: "Teapots",
     jugs: "Jugs & Pitchers",
     other: "Craft Supplies",
-    // From CATEGORIES const (clothing sub-categories)
+    // CATEGORIES const (clothing-focused labels, lowercased)
     denim: "Denim Clothing",
     workwear: "Workwear",
     footwear: "Shoes",
@@ -35,6 +43,52 @@ export const WRENLIST_TO_ETSY_CATEGORY = {
     outerwear: "Jackets & Coats",
     knitwear: "Knitwear",
     vintage: "Vintage",
+    // CATEGORY_TREE subcategory refinements (more specific Etsy search terms)
+    ceramics_plates: "Ceramic Plates",
+    ceramics_bowls: "Ceramic Bowls",
+    ceramics_dinner_sets: "Dinner Sets",
+    ceramics_teapots: "Teapots",
+    ceramics_jugs: "Ceramic Jugs",
+    ceramics_vases: "Ceramic Vases",
+    ceramics_other: "Ceramics & Pottery",
+    glassware_drinkware: "Glass Cups & Mugs",
+    glassware_glasses: "Stemmed Glasses",
+    glassware_tumblers: "Glass Tumblers",
+    glassware_vases: "Glass Vases",
+    glassware_other: "Glass",
+    books_fiction: "Fiction Books",
+    books_nonfiction: "Non-Fiction Books",
+    books_academic: "Academic Books",
+    books_illustrated: "Art Books",
+    books_other: "Books",
+    jewellery_earrings: "Earrings",
+    jewellery_necklaces: "Necklaces",
+    jewellery_bracelets: "Bracelets",
+    jewellery_rings: "Rings",
+    jewellery_brooches: "Brooches",
+    jewellery_other: "Jewellery",
+    clothing_dresses: "Dresses",
+    clothing_tops: "Tops & Shirts",
+    clothing_trousers: "Trousers",
+    clothing_skirts: "Skirts",
+    clothing_coats: "Coats & Jackets",
+    clothing_other: "Clothing",
+    homeware_candles: "Candles",
+    homeware_clocks: "Clocks",
+    homeware_storage: "Storage & Organization",
+    homeware_vases: "Vases",
+    homeware_other: "Home Décor",
+    furniture_seating: "Chairs & Seating",
+    furniture_tables: "Tables",
+    furniture_storage: "Shelving",
+    furniture_bedroom: "Bedroom Furniture",
+    furniture_other: "Furniture",
+    toys_figures: "Toy Figures",
+    toys_soft: "Plush Toys",
+    toys_educational: "Educational Toys",
+    toys_other: "Toys",
+    other_collectibles: "Collectibles",
+    other_misc: "Craft Supplies",
 };
 /**
  * when_made values for the Etsy select dropdown.

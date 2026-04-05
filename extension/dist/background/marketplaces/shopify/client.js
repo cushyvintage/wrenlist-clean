@@ -1,6 +1,6 @@
 import { chunkConcurrentRequestsWithRetry, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import { ADMIN_PRODUCT_DETAILS_QUERY, COLLECTIONS_LIST_QUERY, COLLECTION_CREATE_MUTATION, CREATE_METAFIELD_DEFINITION_MUTATION, CREATE_PRODUCT_MUTATION, GET_LOCATION_QUERY, GET_METAFIELD_DEFINITIONS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_SAVE_UPDATE_MUTATION, SHOPIFY_UPLOAD_IMAGE_URL, UPDATE_PRODUCT_MUTATION, UPLOAD_MEDIA_MUTATION, getShopifyAdminDomain, getShopifyGraphqlUrl, } from "./constants.js";
+import { ADMIN_PRODUCT_DETAILS_QUERY, COLLECTIONS_LIST_QUERY, COLLECTION_CREATE_MUTATION, PUBLICATIONS_QUERY, PUBLISHABLE_PUBLISH_MUTATION, CREATE_METAFIELD_DEFINITION_MUTATION, CREATE_PRODUCT_MUTATION, GET_LOCATION_QUERY, GET_METAFIELD_DEFINITIONS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_SAVE_UPDATE_MUTATION, SHOPIFY_UPLOAD_IMAGE_URL, UPDATE_PRODUCT_MUTATION, UPLOAD_MEDIA_MUTATION, getShopifyAdminDomain, getShopifyGraphqlUrl, } from "./constants.js";
 export class ShopifyClient {
     shopId;
     csrfToken = "";
@@ -537,6 +537,55 @@ export class ShopifyClient {
             return null;
         }
         return { id: collection.id, title: collection.title };
+    }
+    async getOnlineStorePublicationId() {
+        await this.startSession();
+        const response = await fetch(`${this.graphqlUrl}?operation=Publications`, {
+            method: "POST",
+            headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+            credentials: "include",
+            body: JSON.stringify({
+                operationName: "Publications",
+                variables: {},
+                query: PUBLICATIONS_QUERY,
+            }),
+        });
+        if (!response.ok)
+            return null;
+        const json = await response.json();
+        const edges = json?.data?.publications?.edges ?? [];
+        const onlineStore = edges.find((edge) => edge.node.name === "Online Store");
+        return onlineStore?.node?.id ?? null;
+    }
+    async publishToOnlineStore(productGid) {
+        const publicationId = await this.getOnlineStorePublicationId();
+        if (!publicationId) {
+            console.warn("[Shopify] Online Store publication not found");
+            return { success: false };
+        }
+        const response = await fetch(`${this.graphqlUrl}?operation=PublishablePublish`, {
+            method: "POST",
+            headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+            credentials: "include",
+            body: JSON.stringify({
+                operationName: "PublishablePublish",
+                variables: {
+                    id: productGid,
+                    input: [{ publicationId }],
+                },
+                query: PUBLISHABLE_PUBLISH_MUTATION,
+            }),
+        });
+        if (!response.ok)
+            return { success: false };
+        const json = await response.json();
+        const errors = json?.data?.publishablePublish?.userErrors ?? [];
+        if (errors.length) {
+            console.warn("[Shopify] Failed to publish to Online Store:", errors);
+            return { success: false };
+        }
+        const onlineStoreUrl = json?.data?.publishablePublish?.publishable?.onlineStoreUrl ?? undefined;
+        return { success: true, onlineStoreUrl };
     }
     async checkLogin() {
         try {

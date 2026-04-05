@@ -163,6 +163,34 @@ export const CREATE_METAFIELD_DEFINITION_MUTATION = `
     }
   }
 `;
+export const PUBLICATIONS_QUERY = `
+  query Publications {
+    publications(first: 20) {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+export const PUBLISHABLE_PUBLISH_MUTATION = `
+  mutation PublishablePublish($id: ID!, $input: [PublicationInput!]!) {
+    publishablePublish(id: $id, input: $input) {
+      publishable {
+        ... on Product {
+          id
+          onlineStoreUrl
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
 export const COLLECTIONS_LIST_QUERY = `
   query CollectionList($first: Int!) {
     collections(first: $first) {

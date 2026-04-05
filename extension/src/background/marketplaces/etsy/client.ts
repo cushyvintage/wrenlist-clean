@@ -444,16 +444,21 @@ export class EtsyClient {
   // ─── Helpers ───────────────────────────────────────────────────────
 
   private buildFormData(product: Product): EtsyFormFillData {
-    const wrenlistCategory = product.category?.[0]?.toLowerCase() || "";
+    const rawCategory = product.category?.[0]?.toLowerCase() || "";
+    // Try exact match first (handles subcategories like "ceramics_plates"),
+    // then try the prefix before "_" (handles "ceramics_plates" → "ceramics"),
+    // then fall back to the raw value as a search term
     const categorySearch =
-      WRENLIST_TO_ETSY_CATEGORY[wrenlistCategory] ||
+      WRENLIST_TO_ETSY_CATEGORY[rawCategory] ||
+      WRENLIST_TO_ETSY_CATEGORY[rawCategory.split("_")[0]] ||
       product.category?.[0] ||
       "";
 
     // Determine when_made based on product metadata
+    const categoryRoot = rawCategory.split("_")[0];
     const whenMade =
       product.whenMade || product.dynamicProperties?.when_made ||
-      (wrenlistCategory === "collectibles" || product.dynamicProperties?.is_vintage === "true"
+      (categoryRoot === "collectibles" || product.dynamicProperties?.is_vintage === "true"
         ? ETSY_WHEN_MADE_VINTAGE
         : ETSY_WHEN_MADE_RECENT);
 
@@ -516,7 +521,10 @@ export class EtsyClient {
 
   /**
    * Upload images to the Etsy listing form via the hidden file input.
-   * Fetches image URLs as blobs and sets them on the file input using DataTransfer.
+   *
+   * Images are fetched in the background service worker (no CORS restrictions),
+   * converted to base64 data URIs, then passed to an injected script that
+   * creates File objects and sets them on the file input via DataTransfer.
    */
   private async uploadImages(
     tabId: number,
@@ -526,32 +534,45 @@ export class EtsyClient {
     const allUrls = coverUrl ? [coverUrl, ...imageUrls] : [...imageUrls];
     if (allUrls.length === 0) return;
 
-    // Limit to 10 images (Etsy max is 10 photos)
+    // Limit to 10 images (Etsy max is 10 photos) — further limit to 20 for Etsy's new form
     const urls = allUrls.slice(0, 10);
 
+    // Fetch images in the background worker (no CORS issues here)
+    const imageDataList: Array<{ base64: string; mimeType: string }> = [];
+    for (const url of urls) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          console.warn(`[Etsy] Image fetch failed (${resp.status}): ${url}`);
+          continue;
+        }
+        const blob = await resp.blob();
+        const mimeType = blob.type || "image/jpeg";
+        const buffer = await blob.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce(
+            (data, byte) => data + String.fromCharCode(byte),
+            "",
+          ),
+        );
+        imageDataList.push({ base64, mimeType });
+      } catch (err) {
+        console.warn(`[Etsy] Failed to fetch image: ${url}`, err);
+      }
+    }
+
+    if (imageDataList.length === 0) {
+      console.warn("[Etsy] No images could be fetched");
+      return;
+    }
+
+    // Inject the base64 data into the page and set files on the input
     await chrome.scripting.executeScript({
       target: { tabId },
-      func: async (imageUrlList: string[]) => {
+      func: (
+        images: Array<{ base64: string; mimeType: string }>,
+      ) => {
         try {
-          // Fetch all images as blobs
-          const files: File[] = [];
-          for (let i = 0; i < imageUrlList.length; i++) {
-            try {
-              const resp = await fetch(imageUrlList[i]);
-              const blob = await resp.blob();
-              const ext = blob.type.split("/")[1] || "jpg";
-              const file = new File([blob], `photo_${i + 1}.${ext}`, {
-                type: blob.type || "image/jpeg",
-              });
-              files.push(file);
-            } catch (err) {
-              console.warn(`[Etsy] Failed to fetch image ${i}:`, err);
-            }
-          }
-
-          if (files.length === 0) return;
-
-          // Find the hidden file input
           const fileInput = document.querySelector(
             'input[type="file"]',
           ) as HTMLInputElement;
@@ -560,26 +581,35 @@ export class EtsyClient {
             return;
           }
 
-          // Use DataTransfer to set files on the input
           const dt = new DataTransfer();
-          for (const file of files) {
+
+          for (let i = 0; i < images.length; i++) {
+            const { base64, mimeType } = images[i];
+            // Decode base64 to binary
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let j = 0; j < binary.length; j++) {
+              bytes[j] = binary.charCodeAt(j);
+            }
+            const blob = new Blob([bytes], { type: mimeType });
+            const ext = mimeType.split("/")[1] || "jpg";
+            const file = new File([blob], `photo_${i + 1}.${ext}`, {
+              type: mimeType,
+            });
             dt.items.add(file);
           }
+
           fileInput.files = dt.files;
-
-          // Dispatch change event to trigger React's handler
           fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-
-          // Also try input event
           fileInput.dispatchEvent(new Event("input", { bubbles: true }));
         } catch (err) {
           console.error("[Etsy] Image upload error:", err);
         }
       },
-      args: [urls],
+      args: [imageDataList],
     });
 
-    // Wait for images to upload/process
+    // Wait for Etsy to process the uploaded images
     await wait(3000);
   }
 

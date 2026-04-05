@@ -85,7 +85,7 @@ export const GET = withAuth(async (_req, user) => {
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
   const body = await req.json()
-  const { find_id: findId, marketplace, platform_listing_id, platform_listing_url } = body
+  const { find_id: findId, marketplace, platform_listing_id, platform_listing_url, fields: extraFields } = body
 
   if (!findId || !marketplace) {
     return ApiResponseHelper.badRequest('find_id and marketplace are required')
@@ -105,16 +105,21 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.notFound('Find not found')
   }
 
-  // Update marketplace data
+  // Update marketplace data (merge any extra fields like collection_name)
+  const updateData: Record<string, unknown> = {
+    status: 'listed',
+    platform_listing_id: platform_listing_id || null,
+    platform_listing_url: platform_listing_url || null,
+    last_synced_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  if (extraFields && typeof extraFields === 'object') {
+    updateData.fields = extraFields
+  }
+
   const { error } = await supabase
     .from('product_marketplace_data')
-    .update({
-      status: 'listed',
-      platform_listing_id: platform_listing_id || null,
-      platform_listing_url: platform_listing_url || null,
-      last_synced_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('find_id', findId)
     .eq('marketplace', marketplace)
 

@@ -181,6 +181,20 @@ async function publishViaShopify(
     result = await services.client.postListing(payload);
   }
 
+  // Publish to Online Store sales channel so it's visible on the storefront
+  if (result.success && result.product?.id) {
+    try {
+      const productGid = `gid://shopify/Product/${result.product.id}`;
+      const pubResult = await services.client.publishToOnlineStore(productGid);
+      if (pubResult.onlineStoreUrl) {
+        result.product.url = pubResult.onlineStoreUrl;
+      }
+    } catch (e) {
+      console.warn("[Shopify] Failed to publish to Online Store:", e);
+      // Non-fatal — product is created, just not on the storefront yet
+    }
+  }
+
   return result;
 }
 

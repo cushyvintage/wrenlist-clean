@@ -7,6 +7,8 @@ import {
   ADMIN_PRODUCT_DETAILS_QUERY,
   COLLECTIONS_LIST_QUERY,
   COLLECTION_CREATE_MUTATION,
+  PUBLICATIONS_QUERY,
+  PUBLISHABLE_PUBLISH_MUTATION,
   CREATE_METAFIELD_DEFINITION_MUTATION,
   CREATE_PRODUCT_MUTATION,
   GET_LOCATION_QUERY,
@@ -722,6 +724,73 @@ export class ShopifyClient {
     }
 
     return { id: collection.id, title: collection.title };
+  }
+
+  public async getOnlineStorePublicationId(): Promise<string | null> {
+    await this.startSession();
+
+    const response = await fetch(
+      `${this.graphqlUrl}?operation=Publications`,
+      {
+        method: "POST",
+        headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+        credentials: "include",
+        body: JSON.stringify({
+          operationName: "Publications",
+          variables: {},
+          query: PUBLICATIONS_QUERY,
+        }),
+      },
+    );
+
+    if (!response.ok) return null;
+
+    const json = await response.json();
+    const edges = json?.data?.publications?.edges ?? [];
+    const onlineStore = edges.find(
+      (edge: any) => edge.node.name === "Online Store",
+    );
+    return onlineStore?.node?.id ?? null;
+  }
+
+  public async publishToOnlineStore(
+    productGid: string,
+  ): Promise<{ success: boolean; onlineStoreUrl?: string }> {
+    const publicationId = await this.getOnlineStorePublicationId();
+    if (!publicationId) {
+      console.warn("[Shopify] Online Store publication not found");
+      return { success: false };
+    }
+
+    const response = await fetch(
+      `${this.graphqlUrl}?operation=PublishablePublish`,
+      {
+        method: "POST",
+        headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+        credentials: "include",
+        body: JSON.stringify({
+          operationName: "PublishablePublish",
+          variables: {
+            id: productGid,
+            input: [{ publicationId }],
+          },
+          query: PUBLISHABLE_PUBLISH_MUTATION,
+        }),
+      },
+    );
+
+    if (!response.ok) return { success: false };
+
+    const json = await response.json();
+    const errors = json?.data?.publishablePublish?.userErrors ?? [];
+    if (errors.length) {
+      console.warn("[Shopify] Failed to publish to Online Store:", errors);
+      return { success: false };
+    }
+
+    const onlineStoreUrl =
+      json?.data?.publishablePublish?.publishable?.onlineStoreUrl ?? undefined;
+    return { success: true, onlineStoreUrl };
   }
 
   public async checkLogin(): Promise<boolean> {
