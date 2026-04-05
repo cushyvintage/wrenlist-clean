@@ -942,6 +942,20 @@ export class VintedClient {
             credentials: "include",
             body: form,
         }).then((res) => res.json());
+        if (!response?.id) {
+            console.error('[Vinted] uploadImage failed, response:', JSON.stringify(response));
+            // Send to telemetry
+            try {
+                const { getWrenlistBaseUrl } = await import("../../shared/crosslistApi.js");
+                const baseUrl = await getWrenlistBaseUrl();
+                fetch(`${baseUrl}/api/debug/relist-log`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ event: "uploadImage_failed", response, fileName: file.name, fileSize: file.size }),
+                }).catch(() => {});
+            } catch { /* silent */ }
+        }
         return response;
     }
     async fetchBrands(keyword) {
