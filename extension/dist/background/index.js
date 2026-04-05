@@ -1131,6 +1131,45 @@ async function handleBatchImportVinted(message) {
             }
             return withExtensionVersion(result);
         }
+        // --- Photo mirror phase: fetch CDN URLs with browser cookies, upload base64 to Wrenlist ---
+        console.log("[Batch Import] Starting photo mirror phase...");
+        const PHOTO_BATCH_SIZE = 5;
+        for (let pi = 0; pi < listings.length; pi += PHOTO_BATCH_SIZE) {
+            const photoBatch = listings.slice(pi, pi + PHOTO_BATCH_SIZE);
+            await Promise.allSettled(photoBatch.map(async (listing) => {
+                try {
+                    const findRes = await fetch(`${baseUrl}/api/import/find-by-vinted-id?listingId=${listing.id}`, { credentials: "include" });
+                    if (!findRes.ok) return;
+                    const findData = await safeJson(findRes);
+                    const findId = findData?.data?.findId;
+                    if (!findId) return;
+                    const photoUrls = (listing.vintedMetadata?.photos?.map((p) => p.full_size_url || p.url).filter(Boolean)) || listing.photos?.slice(0, 5) || [];
+                    if (!photoUrls.length) return;
+                    const photoData = [];
+                    for (let j = 0; j < Math.min(photoUrls.length, 5); j++) {
+                        try {
+                            const imgRes = await fetch(photoUrls[j], { credentials: "include" });
+                            if (!imgRes.ok) continue;
+                            const buffer = await imgRes.arrayBuffer();
+                            const bytes = new Uint8Array(buffer);
+                            let binary = "";
+                            for (let k = 0; k < bytes.byteLength; k++) binary += String.fromCharCode(bytes[k]);
+                            const base64 = btoa(binary);
+                            const ext = photoUrls[j].split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg";
+                            photoData.push({ data: base64, ext, index: j });
+                        } catch {}
+                    }
+                    if (!photoData.length) return;
+                    await fetch(`${baseUrl}/api/finds/${findId}/photos`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ photos: photoData }),
+                    });
+                } catch {}
+            }));
+        }
+        console.log("[Batch Import] Photo mirror phase complete.");
         return withExtensionVersion({
             success: true,
             message: data?.message ?? `Imported ${data?.results?.success ?? listings.length} items.`,
