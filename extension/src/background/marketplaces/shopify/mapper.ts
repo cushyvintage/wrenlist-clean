@@ -59,6 +59,7 @@ export interface ShopifyImageUploadResult {
 export interface ShopifyMapperDeps {
   uploadImages: (files: File[]) => Promise<ShopifyImageUploadResult[]>;
   getLocationId: () => Promise<string>;
+  getCollectionIds: (productType: string) => Promise<string[]>;
 }
 
 export class ShopifyMapper {
@@ -72,6 +73,10 @@ export class ShopifyMapper {
 
     const uploads = await this.deps.uploadImages(mediaFiles);
     const locationId = await this.deps.getLocationId();
+    const productType = product.dynamicProperties?.productType ?? "";
+    const collectionIds = productType
+      ? await this.deps.getCollectionIds(productType)
+      : [];
 
     const { productOptions, metafields } = this.buildOptionData(product);
 
@@ -80,7 +85,7 @@ export class ShopifyMapper {
         mediaContentType: upload.mediaContentType,
         originalSource: upload.originalSource,
       })),
-      product: this.buildProductInput(product, productOptions, locationId, metafields),
+      product: this.buildProductInput(product, productOptions, locationId, metafields, collectionIds),
     };
   }
 
@@ -153,6 +158,7 @@ export class ShopifyMapper {
     productOptions: Array<{ name: string; position: number; values: Array<{ name: string }> }>,
     locationId: string,
     metafields: Array<Record<string, unknown>>,
+    collectionIds: string[] = [],
   ) {
     const tags = (product.tags ?? "")
       .split(",")
@@ -173,7 +179,7 @@ export class ShopifyMapper {
         ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
         : null,
       customProductType: product.dynamicProperties?.productType ?? "",
-      collectionsToJoin: [],
+      collectionsToJoin: collectionIds,
       vendor: product.brand ?? "",
       tags,
       productOptions,

@@ -483,6 +483,7 @@ async function handlePublishToShopify(message) {
         const mapper = new ShopifyMapper({
             uploadImages: (files) => shopifyClient.uploadImages(files),
             getLocationId: () => shopifyClient.getLocationId(),
+            getCollectionIds: async () => [],
         });
         // Build Product from payload
         const product = {

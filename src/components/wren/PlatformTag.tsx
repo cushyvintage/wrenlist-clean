@@ -23,6 +23,8 @@ interface PlatformTagProps {
   label?: string
   /** Optional link to the platform listing */
   href?: string | null
+  /** Optional collection/category name (shown instead of "live") */
+  collection?: string | null
 }
 
 const platformConfig: Partial<Record<Platform, string>> = {
@@ -43,6 +45,7 @@ export function PlatformTag({
   live = false,
   label,
   href,
+  collection,
 }: PlatformTagProps) {
   const displayLabel = label || platformConfig[platform] || platform
 
@@ -56,7 +59,7 @@ export function PlatformTag({
     <>
       <MarketplaceIcon platform={platform} size="sm" className="inline-block align-text-bottom" />
       {' '}{displayLabel}
-      {live && ' · live'}
+      {live && (collection ? ` · ${collection}` : ' · live')}
     </>
   )
 

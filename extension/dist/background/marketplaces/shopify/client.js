@@ -1,6 +1,6 @@
 import { chunkConcurrentRequestsWithRetry, } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
-import { ADMIN_PRODUCT_DETAILS_QUERY, CREATE_METAFIELD_DEFINITION_MUTATION, CREATE_PRODUCT_MUTATION, GET_LOCATION_QUERY, GET_METAFIELD_DEFINITIONS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_SAVE_UPDATE_MUTATION, SHOPIFY_UPLOAD_IMAGE_URL, UPDATE_PRODUCT_MUTATION, UPLOAD_MEDIA_MUTATION, getShopifyAdminDomain, getShopifyGraphqlUrl, } from "./constants.js";
+import { ADMIN_PRODUCT_DETAILS_QUERY, COLLECTIONS_LIST_QUERY, COLLECTION_CREATE_MUTATION, CREATE_METAFIELD_DEFINITION_MUTATION, CREATE_PRODUCT_MUTATION, GET_LOCATION_QUERY, GET_METAFIELD_DEFINITIONS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_SAVE_UPDATE_MUTATION, SHOPIFY_UPLOAD_IMAGE_URL, UPDATE_PRODUCT_MUTATION, UPLOAD_MEDIA_MUTATION, getShopifyAdminDomain, getShopifyGraphqlUrl, } from "./constants.js";
 export class ShopifyClient {
     shopId;
     csrfToken = "";
@@ -477,6 +477,66 @@ export class ShopifyClient {
                 }),
             });
         }
+    }
+    async getCollections() {
+        await this.startSession();
+        const response = await fetch(`${this.graphqlUrl}?operation=CollectionList`, {
+            method: "POST",
+            headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+            credentials: "include",
+            body: JSON.stringify({
+                operationName: "CollectionList",
+                variables: { first: 100 },
+                query: COLLECTIONS_LIST_QUERY,
+            }),
+        });
+        if (!response.ok) {
+            return [];
+        }
+        const json = await response.json();
+        const edges = json?.data?.collections?.edges ?? [];
+        return edges.map((edge) => ({
+            id: edge.node.id,
+            title: edge.node.title,
+        }));
+    }
+    async createSmartCollection(title, productType) {
+        await this.startSession();
+        const response = await fetch(`${this.graphqlUrl}?operation=CollectionCreate`, {
+            method: "POST",
+            headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+            credentials: "include",
+            body: JSON.stringify({
+                operationName: "CollectionCreate",
+                variables: {
+                    input: {
+                        title,
+                        ruleSet: {
+                            appliedDisjunctively: false,
+                            rules: [
+                                {
+                                    column: "TYPE",
+                                    relation: "EQUALS",
+                                    condition: productType,
+                                },
+                            ],
+                        },
+                    },
+                },
+                query: COLLECTION_CREATE_MUTATION,
+            }),
+        });
+        if (!response.ok) {
+            return null;
+        }
+        const json = await response.json();
+        const collection = json?.data?.collectionCreate?.collection;
+        const errors = json?.data?.collectionCreate?.userErrors ?? [];
+        if (errors.length || !collection) {
+            console.warn("[Shopify] Failed to create collection:", errors);
+            return null;
+        }
+        return { id: collection.id, title: collection.title };
     }
     async checkLogin() {
         try {

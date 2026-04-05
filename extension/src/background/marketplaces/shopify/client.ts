@@ -5,6 +5,8 @@ import { Condition, Color, isColor } from "../../shared/enums.js";
 import type { Product, MarketplaceListingResult } from "../../types.js";
 import {
   ADMIN_PRODUCT_DETAILS_QUERY,
+  COLLECTIONS_LIST_QUERY,
+  COLLECTION_CREATE_MUTATION,
   CREATE_METAFIELD_DEFINITION_MUTATION,
   CREATE_PRODUCT_MUTATION,
   GET_LOCATION_QUERY,
@@ -641,6 +643,85 @@ export class ShopifyClient {
         },
       );
     }
+  }
+
+  public async getCollections(): Promise<Array<{ id: string; title: string }>> {
+    await this.startSession();
+
+    const response = await fetch(
+      `${this.graphqlUrl}?operation=CollectionList`,
+      {
+        method: "POST",
+        headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+        credentials: "include",
+        body: JSON.stringify({
+          operationName: "CollectionList",
+          variables: { first: 100 },
+          query: COLLECTIONS_LIST_QUERY,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const json = await response.json();
+    const edges = json?.data?.collections?.edges ?? [];
+    return edges.map((edge: any) => ({
+      id: edge.node.id,
+      title: edge.node.title,
+    }));
+  }
+
+  public async createSmartCollection(
+    title: string,
+    productType: string,
+  ): Promise<{ id: string; title: string } | null> {
+    await this.startSession();
+
+    const response = await fetch(
+      `${this.graphqlUrl}?operation=CollectionCreate`,
+      {
+        method: "POST",
+        headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+        credentials: "include",
+        body: JSON.stringify({
+          operationName: "CollectionCreate",
+          variables: {
+            input: {
+              title,
+              ruleSet: {
+                appliedDisjunctively: false,
+                rules: [
+                  {
+                    column: "TYPE",
+                    relation: "EQUALS",
+                    condition: productType,
+                  },
+                ],
+              },
+            },
+          },
+          query: COLLECTION_CREATE_MUTATION,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = await response.json();
+    const collection = json?.data?.collectionCreate?.collection;
+    const errors = json?.data?.collectionCreate?.userErrors ?? [];
+
+    if (errors.length || !collection) {
+      console.warn("[Shopify] Failed to create collection:", errors);
+      return null;
+    }
+
+    return { id: collection.id, title: collection.title };
   }
 
   public async checkLogin(): Promise<boolean> {

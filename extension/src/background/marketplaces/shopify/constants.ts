@@ -178,6 +178,34 @@ export const CREATE_METAFIELD_DEFINITION_MUTATION = `
   }
 `;
 
+export const COLLECTIONS_LIST_QUERY = `
+  query CollectionList($first: Int!) {
+    collections(first: $first) {
+      edges {
+        node {
+          id
+          title
+        }
+      }
+    }
+  }
+`;
+
+export const COLLECTION_CREATE_MUTATION = `
+  mutation CollectionCreate($input: CollectionInput!) {
+    collectionCreate(input: $input) {
+      collection {
+        id
+        title
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 
 
 

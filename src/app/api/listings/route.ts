@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         platform_listing_url,
         listing_price,
         status,
+        fields,
         error_message,
         created_at,
         updated_at,

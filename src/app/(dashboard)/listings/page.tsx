@@ -33,6 +33,7 @@ interface GroupedListing {
     status: string
     listing_price: number | null
     platform_listing_url: string | null
+    fields: Record<string, string> | null
     id: string
   }[]
 }
@@ -99,6 +100,7 @@ export default function ListingsPage() {
         status: listing.status,
         listing_price: listing.listing_price,
         platform_listing_url: listing.platform_listing_url,
+        fields: (listing.fields as Record<string, string> | null) ?? null,
         id: listing.id,
       }
       if (existing) {
@@ -494,6 +496,7 @@ export default function ListingsPage() {
                         platform={mp.marketplace}
                         live={mp.status === 'listed'}
                         href={mp.platform_listing_url}
+                        collection={mp.fields?.collection_name}
                       />
                     ))}
                   </div>

@@ -28,13 +28,17 @@ export class ShopifyMapper {
         }
         const uploads = await this.deps.uploadImages(mediaFiles);
         const locationId = await this.deps.getLocationId();
+        const productType = product.dynamicProperties?.productType ?? "";
+        const collectionIds = productType
+            ? await this.deps.getCollectionIds(productType)
+            : [];
         const { productOptions, metafields } = this.buildOptionData(product);
         return {
             media: uploads.map((upload) => ({
                 mediaContentType: upload.mediaContentType,
                 originalSource: upload.originalSource,
             })),
-            product: this.buildProductInput(product, productOptions, locationId, metafields),
+            product: this.buildProductInput(product, productOptions, locationId, metafields, collectionIds),
         };
     }
     async mapForEdit(product) {
@@ -84,7 +88,7 @@ export class ShopifyMapper {
         }
         return { productOptions, metafields };
     }
-    buildProductInput(product, productOptions, locationId, metafields) {
+    buildProductInput(product, productOptions, locationId, metafields, collectionIds = []) {
         const tags = (product.tags ?? "")
             .split(",")
             .map((tag) => tag.trim())
@@ -100,7 +104,7 @@ export class ShopifyMapper {
                 ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
                 : null,
             customProductType: product.dynamicProperties?.productType ?? "",
-            collectionsToJoin: [],
+            collectionsToJoin: collectionIds,
             vendor: product.brand ?? "",
             tags,
             productOptions,
