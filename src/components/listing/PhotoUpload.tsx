@@ -239,22 +239,33 @@ export default function PhotoUpload({
   selectedPlatforms,
   maxPhotos: maxPhotosProp,
 }: PhotoUploadProps) {
-  // Compute effective max from selected platforms (use lowest limit)
+  // Use the highest platform limit as max (each platform takes the first N it supports)
   const maxPhotos = useMemo(() => {
     if (maxPhotosProp !== undefined) return maxPhotosProp
     if (!selectedPlatforms || selectedPlatforms.length === 0) return 20
     const limits = selectedPlatforms
       .map((p) => PLATFORM_PHOTO_LIMITS[p])
       .filter((v): v is number => v !== undefined)
-    return limits.length > 0 ? Math.min(...limits) : 20
+    return limits.length > 0 ? Math.max(...limits) : 20
   }, [maxPhotosProp, selectedPlatforms])
 
-  // Platform limit hints for display
-  const platformLimitHints = useMemo(() => {
+  // Platforms that will only use a subset of photos (limit < current count)
+  const platformTruncationHints = useMemo(() => {
+    if (!selectedPlatforms || selectedPlatforms.length === 0) return null
+    const count = photoPreviews.length
+    return selectedPlatforms
+      .filter((p) => PLATFORM_PHOTO_LIMITS[p] !== undefined && PLATFORM_PHOTO_LIMITS[p]! < count)
+      .map((p) => ({ name: p.charAt(0).toUpperCase() + p.slice(1), max: PLATFORM_PHOTO_LIMITS[p]! }))
+      .sort((a, b) => a.max - b.max)
+  }, [selectedPlatforms, photoPreviews.length])
+
+  // Platform limit summary for display
+  const platformLimitSummary = useMemo(() => {
     if (!selectedPlatforms || selectedPlatforms.length === 0) return null
     return selectedPlatforms
       .filter((p) => PLATFORM_PHOTO_LIMITS[p] !== undefined)
       .map((p) => ({ name: p.charAt(0).toUpperCase() + p.slice(1), max: PLATFORM_PHOTO_LIMITS[p]! }))
+      .sort((a, b) => a.max - b.max)
   }, [selectedPlatforms])
   // Background removal
   const [removingBgIndex, setRemovingBgIndex] = useState<number | null>(null)
@@ -546,6 +557,7 @@ export default function PhotoUpload({
       {photoPreviews.length > 0 && (
         <div className="space-y-3">
           {/* Photo count indicator */}
+          <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <span
@@ -557,11 +569,11 @@ export default function PhotoUpload({
                       : 'text-sage-dim'
                 }`}
               >
-                {photoCount}/{maxPhotos} photos
+                {photoCount} photos
               </span>
-              {platformLimitHints && platformLimitHints.length > 0 && (
+              {platformLimitSummary && platformLimitSummary.length > 0 && (
                 <span className="text-xs text-sage-dim">
-                  ({platformLimitHints.map((p) => `${p.name}: ${p.max}`).join(' · ')})
+                  max: {platformLimitSummary.map((p) => `${p.name} ${p.max}`).join(' · ')}
                 </span>
               )}
             </div>
@@ -590,6 +602,15 @@ export default function PhotoUpload({
                 </button>
               </div>
             )}
+          </div>
+          {/* Truncation warning — platforms that will only use first N */}
+          {platformTruncationHints && platformTruncationHints.length > 0 && (
+            <div className="text-xs text-amber-700 bg-amber-50/50 px-2 py-1 rounded">
+              {platformTruncationHints.map((p) =>
+                `${p.name} will use the first ${p.max} photo${p.max === 1 ? '' : 's'}`
+              ).join(' · ')}
+            </div>
+          )}
           </div>
 
           {/* Duplicate warning */}
