@@ -77,9 +77,9 @@ function SortablePhoto({
           onRemove(index)
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+        className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
       >
-        <span className="text-white text-lg">✕</span>
+        ✕
       </button>
     </div>
   )
