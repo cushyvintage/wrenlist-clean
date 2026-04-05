@@ -54,12 +54,25 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         })
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           streamRef.current = stream
+
+          // Wait for video metadata to load (required for iOS Safari)
+          await new Promise<void>((resolve) => {
+            const video = videoRef.current!
+            if (video.readyState >= 2) {
+              resolve()
+            } else {
+              video.addEventListener('loadeddata', () => resolve(), { once: true })
+            }
+          })
+
+          // Explicit play() for iOS Safari
+          await videoRef.current.play()
           setIsScanning(true)
         }
       } catch (err) {
@@ -93,6 +106,12 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
       try {
         if (!videoRef.current || !canvasRef.current) return
 
+        // Wait for video to have dimensions (iOS can be slow)
+        if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+          animationId = requestAnimationFrame(scan)
+          return
+        }
+
         const ctx = canvasRef.current.getContext('2d')
         if (!ctx) return
 
@@ -123,9 +142,9 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
   }, [isScanning, onDetected])
 
   return (
-    <div className="relative w-full" style={{ aspectRatio: '4/3' }}>
+    <div className="relative w-full min-h-[250px]" style={{ aspectRatio: '4/3' }}>
       {/* Camera feed */}
-      <div className="absolute inset-0 bg-[#2a3a28] rounded-lg overflow-hidden flex items-center justify-center">
+      <div className="absolute inset-0 bg-[#2a3a28] rounded-lg overflow-hidden flex items-center justify-center min-h-[250px]">
         {loading && <Loader2 className="w-8 h-8 text-white/40 animate-spin" />}
 
         {error && (
@@ -136,7 +155,7 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
 
         {isScanning && (
           <>
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             {/* Viewfinder overlay */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <p className="text-white/70 text-xs uppercase tracking-widest mb-4">
