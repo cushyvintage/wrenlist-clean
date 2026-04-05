@@ -438,6 +438,27 @@ export default function AddFindPage() {
     }))
   }, [])
 
+  const handleSetMainPhoto = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: arrayMove(prev.photos, index, 0),
+      photoPreviews: arrayMove(prev.photoPreviews, index, 0),
+    }))
+  }, [])
+
+  const handleBulkRemovePhotos = useCallback((indices: number[]) => {
+    const sortedDesc = [...indices].sort((a, b) => b - a)
+    setFormData((prev) => {
+      const newPhotos = [...prev.photos]
+      const newPreviews = [...prev.photoPreviews]
+      for (const idx of sortedDesc) {
+        newPhotos.splice(idx, 1)
+        newPreviews.splice(idx, 1)
+      }
+      return { ...prev, photos: newPhotos, photoPreviews: newPreviews }
+    })
+  }, [])
+
   // Handle platform-specific fields
   const handlePlatformFieldChange = useCallback(
     (platform: Platform, field: string, value: any) => {
@@ -573,7 +594,7 @@ export default function AddFindPage() {
       }
 
       setUploadProgress(100)
-      router.push(`/inventory`)
+      router.push(`/finds`)
     } catch (err) {
       setError((err as any).message || 'An error occurred')
     } finally {
@@ -689,7 +710,7 @@ export default function AddFindPage() {
       setUploadProgress(100)
       setError(null)
 
-      router.push(`/inventory`)
+      router.push(`/finds`)
     } catch (err) {
       setError((err as any).message || 'An error occurred')
     } finally {
@@ -839,6 +860,9 @@ export default function AddFindPage() {
                 onAddPhotos={handleAddPhotos}
                 onRemovePhoto={handleRemovePhoto}
                 onReorder={handleReorderPhotos}
+                onSetMain={handleSetMainPhoto}
+                onBulkRemove={handleBulkRemovePhotos}
+                onUpdatePhoto={handleUpdatePhoto}
                 maxPhotos={10}
               />
             </div>

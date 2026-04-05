@@ -56,7 +56,7 @@ export async function middleware(req: NextRequest) {
   const dashboardRoutes = [
     '/onboarding',
     '/dashboard',
-    '/inventory',
+    '/finds',
     '/add-find',
     '/listings',
     '/expenses',

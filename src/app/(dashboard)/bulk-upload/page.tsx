@@ -365,7 +365,7 @@ export default function BulkUploadPage() {
                 <p className="text-sm text-sage mt-1">{successCount} imported • {skipCount} skipped</p>
               </div>
               <button
-                onClick={() => router.push('/inventory')}
+                onClick={() => router.push('/finds')}
                 className="px-4 py-2 bg-sage text-cream rounded-lg font-semibold hover:bg-sage/80"
               >
                 Go to Inventory

@@ -149,7 +149,7 @@ test.describe('Add Find Flow', () => {
       // Should navigate to inventory on success (or show error if API fails)
       await page.waitForTimeout(1000)
       const url = page.url()
-      const isSuccess = url.includes('/inventory') || url.includes('/add-find')
+      const isSuccess = url.includes('/finds') || url.includes('/add-find')
       expect(isSuccess).toBe(true)
     })
   })

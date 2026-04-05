@@ -214,7 +214,7 @@ export default function AnalyticsPage() {
           <button
             onClick={() => {
               // Navigate to inventory with aging filter
-              window.location.href = '/inventory?filter=aging'
+              window.location.href = '/finds?filter=aging'
             }}
             className="text-sm underline underline-offset-2 text-amber hover:text-amber-900 transition-colors"
           >

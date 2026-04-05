@@ -150,10 +150,10 @@ export default function SoldHistoryPage() {
               Items appear here when you mark them as sold or when sales sync from your marketplaces.
             </p>
             <Link
-              href="/inventory"
+              href="/finds"
               className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
             >
-              Go to inventory
+              Go to finds
             </Link>
           </div>
         </Panel>
@@ -184,7 +184,7 @@ export default function SoldHistoryPage() {
                   >
                     <td className="px-4 py-3">
                       <Link
-                        href={`/inventory/${item.id}`}
+                        href={`/finds/${item.id}`}
                         className="font-medium text-sm text-sage hover:underline"
                       >
                         {item.name}

@@ -197,7 +197,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   return (
                     <tr key={find.id} className="border-b border-sage/14 hover:bg-cream transition-colors">
                       <td className="px-6 py-4">
-                        <Link href={`/inventory/${find.id}`} className="text-sm font-medium text-sage hover:text-sage-dk">
+                        <Link href={`/finds/${find.id}`} className="text-sm font-medium text-sage hover:text-sage-dk">
                           {find.name}
                         </Link>
                         <div className="text-xs text-ink-lt">{find.category}</div>

@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
-import { PlatformTag } from '@/components/wren/PlatformTag'
 import { PLAN_LIMITS } from '@/config/plans'
-import type { Find, Profile, PlanId, Platform } from '@/types'
+import type { Find, Profile, PlanId } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 
 // Fallback mock data for when API is unavailable
@@ -282,16 +281,12 @@ export default function InventoryPage() {
   const [showMarkSoldForm, setShowMarkSoldForm] = useState(false)
   const [markSoldPrice, setMarkSoldPrice] = useState('')
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
-  const [bulkCrosslistTargets, setBulkCrosslistTargets] = useState<Platform[]>([])
-  const [isBulkCrosslisting, setIsBulkCrosslisting] = useState(false)
-  const [bulkCrosslistError, setBulkCrosslistError] = useState<string | null>(null)
-  const [bulkCrosslistProgress, setBulkCrosslistProgress] = useState<string | null>(null)
 
   /**
    * Set page title on mount
    */
   useEffect(() => {
-    document.title = 'Inventory | Wrenlist'
+    document.title = 'Finds | Wrenlist'
   }, [])
 
   /**
@@ -573,44 +568,6 @@ export default function InventoryPage() {
     }
   }
 
-  const handleBulkCrosslist = async () => {
-    const findIds = Array.from(selectedItems)
-    if (findIds.length === 0 || bulkCrosslistTargets.length === 0) return
-
-    setIsBulkCrosslisting(true)
-    setBulkCrosslistError(null)
-    let succeeded = 0
-    let failed = 0
-
-    for (let i = 0; i < findIds.length; i++) {
-      setBulkCrosslistProgress(`Publishing ${i + 1} of ${findIds.length}...`)
-      try {
-        const res = await fetch('/api/crosslist/publish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ findId: findIds[i], marketplaces: bulkCrosslistTargets }),
-        })
-        const data = await res.json()
-        const results = data.data?.results || {}
-        const anyOk = (Object.values(results) as Array<{ ok: boolean }>).some((r) => r.ok)
-        if (anyOk) succeeded++
-        else failed++
-      } catch {
-        failed++
-      }
-    }
-
-    setBulkCrosslistProgress(null)
-    setIsBulkCrosslisting(false)
-
-    if (failed === 0) {
-      setSelectedItems(new Set())
-      setBulkPublishConfirm(false)
-      setBulkCrosslistTargets([])
-    } else {
-      setBulkCrosslistError(`${succeeded} published, ${failed} failed`)
-    }
-  }
 
   const handleBulkMarkSold = async () => {
     const findIds = Array.from(selectedItems)
@@ -658,7 +615,10 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page title is in topbar - no need to repeat */}
+      {/* ELI5 */}
+      <p className="text-[13px]" style={{ color: '#8A9E88' }}>
+        Your items — everything you&apos;ve sourced, whether it&apos;s listed somewhere or still sitting in a box.
+      </p>
 
       {/* Plan limit error state */}
       {planLimitError && (
@@ -715,7 +675,7 @@ export default function InventoryPage() {
         {/* Search input */}
         <input
           type="text"
-          placeholder="search inventory..."
+          placeholder="search finds..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 min-w-[200px] px-[14px] py-[7px] text-[13px] rounded bg-[#EDE8DE] text-[#1E2E1C]"
@@ -785,9 +745,9 @@ export default function InventoryPage() {
       </div>
 
       {/* Bulk action error */}
-      {(bulkPublishError || bulkCrosslistError) && (
+      {bulkPublishError && (
         <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
-          {bulkPublishError || bulkCrosslistError}
+          {bulkPublishError}
         </div>
       )}
 
@@ -806,20 +766,6 @@ export default function InventoryPage() {
           </span>
 
           <div className="flex gap-2">
-            {/* Crosslist button */}
-            <button
-              onClick={() => setBulkPublishConfirm(true)}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors"
-              style={{
-                backgroundColor: '#3D5C3A',
-                color: '#F5F0E8',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
-            >
-              Crosslist
-            </button>
-
             {/* Mark as sold button */}
             <button
               onClick={() => setShowMarkSoldForm(!showMarkSoldForm)}
@@ -918,82 +864,11 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Bulk crosslist confirmation modal */}
-      {bulkPublishConfirm && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-          onClick={() => { setBulkPublishConfirm(false); setBulkCrosslistTargets([]) }}
-        >
-          <div
-            className="bg-white rounded p-6 max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-            style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
-          >
-            <h3 className="text-lg font-semibold mb-2" style={{ color: '#1E2E1C' }}>
-              Crosslist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
-            </h3>
-            <p className="text-sm mb-4" style={{ color: '#6B7D6A' }}>
-              Select marketplaces to publish to:
-            </p>
-            <div className="space-y-2 mb-4">
-              {(['ebay', 'vinted', 'shopify'] as Platform[]).map((platform) => (
-                <label key={platform} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={bulkCrosslistTargets.includes(platform)}
-                    onChange={() =>
-                      setBulkCrosslistTargets((prev) =>
-                        prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
-                      )
-                    }
-                    className="rounded"
-                  />
-                  <span className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
-                    {platform}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {bulkCrosslistProgress && (
-              <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{bulkCrosslistProgress}</p>
-            )}
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => { setBulkPublishConfirm(false); setBulkCrosslistTargets([]) }}
-                className="px-4 py-2 text-sm font-medium rounded transition-colors"
-                style={{
-                  backgroundColor: 'transparent',
-                  borderWidth: '1px',
-                  borderColor: 'rgba(61,92,58,.22)',
-                  color: '#3D5C3A',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBulkCrosslist}
-                disabled={isBulkCrosslisting || bulkCrosslistTargets.length === 0}
-                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-                style={{
-                  backgroundColor: '#3D5C3A',
-                  color: '#F5F0E8',
-                }}
-                onMouseEnter={(e) => !isBulkCrosslisting && (e.currentTarget.style.backgroundColor = '#2C4428')}
-                onMouseLeave={(e) => !isBulkCrosslisting && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
-              >
-                {isBulkCrosslisting ? 'Publishing...' : `Publish to ${bulkCrosslistTargets.length} platform${bulkCrosslistTargets.length !== 1 ? 's' : ''}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Loading state */}
       {isLoading && (
         <div className="text-center text-ink-lt py-8">
-          Loading inventory...
+          Loading finds...
         </div>
       )}
 
@@ -1029,7 +904,7 @@ export default function InventoryPage() {
                 return (
                   <tr
                     key={find.id}
-                    onClick={() => router.push(`/inventory/${find.id}`)}
+                    onClick={() => router.push(`/finds/${find.id}`)}
                     className="cursor-pointer transition-colors"
                     style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
@@ -1263,7 +1138,7 @@ export default function InventoryPage() {
         <Panel>
           <div className="text-center py-12 px-6">
             <p className="text-2xl mb-2">📦</p>
-            <p className="text-sage-dim text-sm mb-4">No items in your inventory yet</p>
+            <p className="text-sage-dim text-sm mb-4">No finds yet</p>
             <button
               onClick={() => router.push('/add-find')}
               className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"

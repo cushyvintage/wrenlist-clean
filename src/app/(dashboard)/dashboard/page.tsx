@@ -186,7 +186,7 @@ export default function DashboardPage() {
                     <InventoryRow
                       key={find.id}
                       find={find}
-                      onClick={() => router.push(`/inventory/${find.id}`)}
+                      onClick={() => router.push(`/finds/${find.id}`)}
                     />
                   ))}
                 </tbody>
@@ -203,8 +203,8 @@ export default function DashboardPage() {
               text={insight.insight}
               type={insight.type}
               link={{
-                text: insight.type === 'alert' ? 'adjust prices' : 'view inventory →',
-                onClick: () => router.push(insight.type === 'alert' ? '/inventory' : '/add-find'),
+                text: insight.type === 'alert' ? 'adjust prices' : 'view finds →',
+                onClick: () => router.push(insight.type === 'alert' ? '/finds' : '/add-find'),
               }}
             />
           )}

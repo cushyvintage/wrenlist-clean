@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     // WORKSPACE
     { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
-    { id: 'inventory', label: 'Inventory', icon: '📦', path: '/inventory', section: 'WORKSPACE', pageTitle: 'Inventory' },
+    { id: 'finds', label: 'Finds', icon: '📦', path: '/finds', section: 'WORKSPACE', pageTitle: 'Finds' },
     { id: 'add-find', label: 'Add find', icon: '➕', path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
     { id: 'listings', label: 'Listings', icon: '📋', path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
     // INSIGHTS
@@ -45,8 +45,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (pathname === item.path) return true
       // Check if pathname starts with the item's path (for nested routes)
       if (pathname.startsWith(item.path + '/')) {
-        // Special case: /inventory/[id] should highlight inventory
-        return item.id === 'inventory'
+        // Special case: /finds/[id] should highlight finds
+        return item.id === 'finds'
       }
       return false
     })

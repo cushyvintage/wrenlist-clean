@@ -75,7 +75,7 @@ export default function InventoryItemHeader({
     >
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push('/inventory')}
+          onClick={() => router.push('/finds')}
           className="text-sm text-sage hover:text-sage-dk transition"
         >
           ← Back

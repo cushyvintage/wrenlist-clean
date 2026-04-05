@@ -28,7 +28,7 @@ export function Sidebar({ children, className = '', userInfo }: SidebarProps) {
           Wrenlist
         </div>
         <div className="text-[9px] uppercase tracking-[.12em] mt-1" style={{ color: '#3D5C3A', fontWeight: 600 }}>
-          Inventory
+          Resale
         </div>
       </div>
 

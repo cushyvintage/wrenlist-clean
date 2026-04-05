@@ -367,7 +367,7 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
             {finds.map((find) => (
               <Link
                 key={find.id}
-                href={`/inventory/${find.id}`}
+                href={`/finds/${find.id}`}
                 className="flex items-center justify-between p-4 bg-white border border-sage/14 rounded-md hover:border-sage/30 transition-all"
               >
                 <div className="min-w-0 flex-1">
