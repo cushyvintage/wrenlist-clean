@@ -158,6 +158,27 @@ export default function AddFindPage() {
       setShowSaveAsTemplate(true)
     }
 
+    // Pre-fill from scanner params (title, category, brand, ean)
+    const titleParam = searchParams.get('title')
+    const categoryParam = searchParams.get('category')
+    const brandParam = searchParams.get('brand')
+    const eanParam = searchParams.get('ean')
+    if (titleParam || categoryParam || brandParam || eanParam) {
+      setFormData((prev) => ({
+        ...prev,
+        ...(titleParam && { title: titleParam }),
+        ...(categoryParam && { category: categoryParam }),
+        ...(brandParam && { brand: brandParam }),
+        ...(eanParam && {
+          platformFields: {
+            ...prev.platformFields,
+            vinted: { ...prev.platformFields.vinted, isbn: eanParam },
+            ebay: { ...prev.platformFields.ebay, isbn: eanParam },
+          },
+        }),
+      }))
+    }
+
     // Check if sourcingTripId param is set, fetch trip name
     const sourcingTripIdParam = searchParams.get('sourcingTripId')
     if (sourcingTripIdParam) {
