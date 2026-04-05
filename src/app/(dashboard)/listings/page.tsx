@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+/* eslint-disable @next/next/no-img-element */
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { ProductMarketplaceData, Platform } from '@/types'
@@ -408,11 +408,9 @@ export default function ListingsPage() {
                 {/* Thumbnail */}
                 <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
                   {group.find?.photos?.[0] ? (
-                    <Image
+                    <img
                       src={group.find.photos[0]}
                       alt={group.find.name || ''}
-                      width={64}
-                      height={64}
                       className="w-full h-full object-cover"
                     />
                   ) : (
