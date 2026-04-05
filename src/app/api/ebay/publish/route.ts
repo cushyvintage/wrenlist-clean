@@ -66,14 +66,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Map find to eBay inventory format
+    // eBay condition enums vary by category — use safe universal values
+    // Most collectible/vintage categories only accept USED or NEW
     const conditionMap: Record<string, string> = {
-      excellent: 'LIKE_NEW',
+      excellent: 'USED_EXCELLENT',
       good: 'USED_GOOD',
       fair: 'USED_ACCEPTABLE',
       poor: 'FOR_PARTS_OR_NOT_WORKING',
-      new_with_tags: 'NEW_WITH_TAGS',
-      new_without_tags: 'NEW_WITHOUT_TAGS',
+      new_with_tags: 'NEW',
+      new_without_tags: 'NEW',
     }
+    // Fallback: if the specific condition isn't accepted, retry with generic USED
+    const FALLBACK_CONDITION = 'USED'
 
     const ebayCondition = conditionMap[find.condition] || 'USED'
     const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
@@ -165,14 +169,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Publish offer with 25002 retry
+    // Publish offer — retry with fallback condition if condition is invalid for category
     let publishResult
     try {
       publishResult = await ebayClient.publishOffer(offerResult.offerId)
     } catch (error) {
-      // Check if error is 25002 (system error)
-      if (error instanceof Error && error.message.includes('25002')) {
-        // Wait 2 seconds and retry once
+      if (error instanceof Error && error.message.includes('invalid item condition')) {
+        // Condition not accepted for this category — retry with generic USED
+        try { await ebayClient.deleteOffer(offerResult.offerId) } catch { /* ignore */ }
+        inventoryItem.condition = FALLBACK_CONDITION
+        await ebayClient.createInventoryItem(inventoryItem.sku, inventoryItem)
+        offerResult = await ebayClient.createOffer(offer)
+        publishResult = await ebayClient.publishOffer(offerResult.offerId)
+      } else if (error instanceof Error && error.message.includes('25002')) {
         await new Promise(resolve => setTimeout(resolve, 2000))
         publishResult = await ebayClient.publishOffer(offerResult.offerId)
       } else {
