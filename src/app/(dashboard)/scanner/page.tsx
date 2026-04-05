@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { Loader2, X } from 'lucide-react'
 import { Panel } from '@/components/wren/Panel'
 import { useRouter } from 'next/navigation'
+import { BarcodeDetector } from 'barcode-detector/ponyfill'
 
 // ---------- Types ----------
 
@@ -52,10 +53,6 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
       setError(null)
 
       try {
-        if (!window.BarcodeDetector) {
-          throw new Error('Barcode scanning not supported in this browser. Use the manual input below.')
-        }
-
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
         })
@@ -85,9 +82,9 @@ function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => 
 
   // Scanning loop
   useEffect(() => {
-    if (!isScanning || !videoRef.current || !canvasRef.current || !window.BarcodeDetector) return
+    if (!isScanning || !videoRef.current || !canvasRef.current) return
 
-    const detector = new window.BarcodeDetector({
+    const detector = new BarcodeDetector({
       formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
     })
 
@@ -179,19 +176,6 @@ function timeAgo(date: Date): string {
   if (minutes < 60) return `${minutes} min ago`
   const hours = Math.floor(minutes / 60)
   return `${hours}h ago`
-}
-
-// ---------- BarcodeDetector types ----------
-
-declare class BarcodeDetector {
-  constructor(options?: { formats?: string[] })
-  detect(image: CanvasImageSource): Promise<Array<{ rawValue: string; format?: string }>>
-}
-
-declare global {
-  interface Window {
-    BarcodeDetector?: typeof BarcodeDetector
-  }
 }
 
 // ---------- Main Page ----------

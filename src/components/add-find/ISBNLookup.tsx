@@ -35,14 +35,6 @@ export default function ISBNLookup({
   const [isbnError, setIsbnError] = useState<string | null>(null)
   const [isbnResult, setIsbnResult] = useState<IsbnResult | null>(null)
   const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false)
-  const [barcodeScanSupported, setBarcodeScanSupported] = useState(true)
-
-  // Check for BarcodeDetector API support
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setBarcodeScanSupported(typeof (window as any).BarcodeDetector !== 'undefined')
-    }
-  }, [])
 
   // Handle ISBN lookup
   const handleIsbnLookup = useCallback(async () => {
@@ -156,24 +148,13 @@ export default function ISBNLookup({
         >
           📚 Look up by ISBN
         </button>
-        {barcodeScanSupported ? (
-          <button
-            type="button"
-            onClick={() => setBarcodeScannerOpen(true)}
-            className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
-          >
-            📷 Scan barcode
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled
-            title="Barcode scanning not supported on this browser"
-            className="text-xs text-sage-dim opacity-50 cursor-not-allowed"
-          >
-            📷 Scan barcode
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setBarcodeScannerOpen(true)}
+          className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+        >
+          📷 Scan barcode
+        </button>
       </div>
 
       {/* ISBN Lookup Input */}

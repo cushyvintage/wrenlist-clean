@@ -2,23 +2,12 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { Loader2, X } from 'lucide-react'
+import { BarcodeDetector } from 'barcode-detector/ponyfill'
 
 interface BarcodeScannerProps {
   isOpen: boolean
   onClose: () => void
   onDetected: (code: string) => void
-}
-
-// TypeScript declaration for BarcodeDetector API
-declare class BarcodeDetector {
-  constructor(options?: { formats?: string[] })
-  detect(image: CanvasImageSource): Promise<Array<{ rawValue: string; format?: string }>>
-}
-
-declare global {
-  interface Window {
-    BarcodeDetector?: typeof BarcodeDetector
-  }
 }
 
 export default function BarcodeScanner({ isOpen, onClose, onDetected }: BarcodeScannerProps) {
@@ -38,11 +27,6 @@ export default function BarcodeScanner({ isOpen, onClose, onDetected }: BarcodeS
       setIsScanning(false)
 
       try {
-        // Check BarcodeDetector support
-        if (!window.BarcodeDetector) {
-          throw new Error('Barcode scanning not supported on this browser')
-        }
-
         // Request camera access
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' }, // rear camera on mobile
@@ -75,12 +59,12 @@ export default function BarcodeScanner({ isOpen, onClose, onDetected }: BarcodeS
 
   // Scanning loop using requestAnimationFrame
   useEffect(() => {
-    if (!isScanning || !videoRef.current || !canvasRef.current || !window.BarcodeDetector) {
+    if (!isScanning || !videoRef.current || !canvasRef.current) {
       return
     }
 
-    const detector = new window.BarcodeDetector({
-      formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'isbn'],
+    const detector = new BarcodeDetector({
+      formats: ['ean_13', 'ean_8', 'code_128', 'code_39'],
     })
 
     let animationId: number
