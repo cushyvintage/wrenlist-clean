@@ -417,6 +417,23 @@ export class eBayClient {
   }
 
   /**
+   * Delete an unpublished offer
+   */
+  async deleteOffer(offerId: string): Promise<void> {
+    const response = await undiciFetch(`${this.baseUrl}/sell/inventory/v1/offer/${encodeURIComponent(offerId)}`, {
+      method: 'DELETE',
+      headers: new UndiciHeaders({
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+      }),
+    })
+    if (!response.ok && response.status !== 404) {
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay delete offer error (${response.status}): ${msg}`)
+    }
+  }
+
+  /**
    * End an offer (delist the listing)
    */
   async endOffer(offerId: string): Promise<any> {

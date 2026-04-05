@@ -144,7 +144,17 @@ export async function POST(request: NextRequest) {
       merchantLocationKey: sellerConfig.merchant_location_key,
     }
 
-    const offerResult = await ebayClient.createOffer(offer)
+    let offerResult = await ebayClient.createOffer(offer)
+
+    // If we got a stale offer back (already existed), delete and recreate with fresh category
+    if (offerResult.offerId && !offerResult.listingId) {
+      try {
+        await ebayClient.deleteOffer(offerResult.offerId)
+        offerResult = await ebayClient.createOffer(offer)
+      } catch {
+        // If delete fails (e.g. offer is already published), continue with existing offer
+      }
+    }
 
     // Publish offer with 25002 retry
     let publishResult
