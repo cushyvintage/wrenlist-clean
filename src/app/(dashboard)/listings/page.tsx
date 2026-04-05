@@ -21,6 +21,19 @@ interface ListingWithFind extends ProductMarketplaceData {
   }
 }
 
+/** A find grouped with all its marketplace listings */
+interface GroupedListing {
+  find_id: string
+  find: ListingWithFind['finds']
+  marketplaces: {
+    marketplace: Platform
+    status: string
+    listing_price: number | null
+    platform_listing_url: string | null
+    id: string
+  }[]
+}
+
 export default function ListingsPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
@@ -66,18 +79,41 @@ export default function ListingsPage() {
     loadListings()
   }, [])
 
-  // Filter listings
-  const filtered = listings.filter((listing) => {
+  // Group listings by find_id
+  const grouped: GroupedListing[] = (() => {
+    const map = new Map<string, GroupedListing>()
+    for (const listing of listings) {
+      const existing = map.get(listing.find_id)
+      const mp = {
+        marketplace: listing.marketplace as Platform,
+        status: listing.status,
+        listing_price: listing.listing_price,
+        platform_listing_url: listing.platform_listing_url,
+        id: listing.id,
+      }
+      if (existing) {
+        existing.marketplaces.push(mp)
+      } else {
+        map.set(listing.find_id, {
+          find_id: listing.find_id,
+          find: listing.finds,
+          marketplaces: [mp],
+        })
+      }
+    }
+    return Array.from(map.values())
+  })()
+
+  // Filter grouped listings
+  const filtered = grouped.filter((group) => {
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'listed' && listing.status === 'listed') ||
-      (filter === 'sold' && listing.status === 'sold') ||
-      (filter === 'delisted' && listing.status === 'delisted')
+      group.marketplaces.some((mp) => mp.status === filter)
 
     const matchesSearch =
       !search ||
-      listing.finds?.name.toLowerCase().includes(search.toLowerCase()) ||
-      (listing.finds?.brand && listing.finds.brand.toLowerCase().includes(search.toLowerCase()))
+      group.find?.name.toLowerCase().includes(search.toLowerCase()) ||
+      (group.find?.brand && group.find.brand.toLowerCase().includes(search.toLowerCase()))
 
     return matchesFilter && matchesSearch
   })
@@ -99,7 +135,7 @@ export default function ListingsPage() {
 
   const toggleAllSelection = () => {
     if (selectedItems.size === filtered.length) setSelectedItems(new Set())
-    else setSelectedItems(new Set(filtered.map((l) => l.find_id)))
+    else setSelectedItems(new Set(filtered.map((g) => g.find_id)))
   }
 
   const handleBulkCrosslist = async () => {
@@ -340,85 +376,109 @@ export default function ListingsPage() {
             )}
           </div>
         ) : (
-          filtered.map((listing) => (
-            <div
-              key={listing.id}
-              className="bg-white border border-sage/14 rounded-md p-4 grid grid-cols-[auto_60px_1fr_auto] gap-4 items-start hover:bg-cream transition-colors"
-            >
-              {/* Checkbox */}
-              <div className="flex items-center pt-4">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.has(listing.find_id)}
-                  onChange={() => toggleItemSelection(listing.find_id)}
-                  className="cursor-pointer"
-                />
-              </div>
+          filtered.map((group) => {
+            // Determine best status for badge (listed > sold > delisted > draft)
+            const hasListed = group.marketplaces.some((mp) => mp.status === 'listed')
+            const hasSold = group.marketplaces.some((mp) => mp.status === 'sold')
+            const overallStatus = hasListed ? 'listed' : hasSold ? 'sold' : group.marketplaces[0]?.status || 'draft'
 
-              {/* Thumbnail + Category Emoji */}
-              <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0">
-                {getCategoryEmoji(listing.finds?.category || undefined)}
-              </div>
+            // Check if prices differ across marketplaces
+            const prices = group.marketplaces
+              .map((mp) => mp.listing_price)
+              .filter((p): p is number => p !== null)
+            const allSamePrice = prices.length <= 1 || prices.every((p) => p === prices[0])
+            const displayPrice = prices[0] ?? group.find?.asking_price_gbp
 
-              {/* Details */}
-              <div className="flex-1">
-                <div className="font-medium text-ink text-sm">
-                  {listing.finds?.name}
-                </div>
-                <div className="text-xs text-ink-lt mt-1">
-                  {listing.finds?.category}
-                </div>
-
-                {/* Platform Tags */}
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  <PlatformTag
-                    platform={listing.marketplace as any}
-                    live={listing.status === 'listed'}
+            return (
+              <div
+                key={group.find_id}
+                className="bg-white border border-sage/14 rounded-md p-4 grid grid-cols-[auto_60px_1fr_auto] gap-4 items-start hover:bg-cream transition-colors"
+              >
+                {/* Checkbox */}
+                <div className="flex items-center pt-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.has(group.find_id)}
+                    onChange={() => toggleItemSelection(group.find_id)}
+                    className="cursor-pointer"
                   />
                 </div>
-              </div>
 
-              {/* Price (Right side) */}
-              <div className="text-right flex flex-col gap-2 items-end">
-                <div className="font-serif font-medium text-ink text-xl">
-                  £{listing.listing_price?.toFixed(2) || listing.finds?.asking_price_gbp?.toFixed(2) || '—'}
+                {/* Thumbnail + Category Emoji */}
+                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-2xl flex-shrink-0">
+                  {getCategoryEmoji(group.find?.category || undefined)}
                 </div>
 
-                {/* Status Badge */}
-                <Badge status={getStatusBadgeType(listing.status) as any} />
+                {/* Details */}
+                <div className="flex-1">
+                  <div className="font-medium text-ink text-sm">
+                    {group.find?.name}
+                  </div>
+                  <div className="text-xs text-ink-lt mt-1">
+                    {group.find?.category}
+                  </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 mt-2">
-                  {listing.platform_listing_url && (
-                    <Link
-                      href={listing.platform_listing_url}
-                      target="_blank"
-                      className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
-                    >
-                      view
-                    </Link>
+                  {/* Platform Tags — one per marketplace */}
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {group.marketplaces.map((mp) => (
+                      <PlatformTag
+                        key={mp.id}
+                        platform={mp.marketplace}
+                        live={mp.status === 'listed'}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Per-platform prices when they differ */}
+                  {!allSamePrice && (
+                    <div className="flex gap-3 mt-1.5 flex-wrap">
+                      {group.marketplaces
+                        .filter((mp) => mp.listing_price !== null)
+                        .map((mp) => (
+                          <span key={mp.id} className="text-[11px] text-ink-lt">
+                            {mp.marketplace === 'ebay' ? 'eBay' : mp.marketplace.charAt(0).toUpperCase() + mp.marketplace.slice(1)}: £{mp.listing_price!.toFixed(2)}
+                          </span>
+                        ))}
+                    </div>
                   )}
-                  {listing.status === 'listed' && (
-                    <button className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium">
-                      edit
-                    </button>
-                  )}
-                  {listing.status === 'sold' ? (
-                    <Link
-                      href={`/listings/create?findId=${listing.find_id}`}
-                      className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
-                    >
-                      relist
-                    </Link>
-                  ) : listing.status !== 'delisted' ? (
-                    <button className="px-2 py-1 text-xs bg-transparent border border-red/22 text-red hover:bg-red-50 rounded transition-colors font-medium">
-                      delist
-                    </button>
-                  ) : null}
+                </div>
+
+                {/* Price (Right side) */}
+                <div className="text-right flex flex-col gap-2 items-end">
+                  <div className="font-serif font-medium text-ink text-xl">
+                    {displayPrice != null ? `£${displayPrice.toFixed(2)}` : '—'}
+                  </div>
+
+                  {/* Status Badge */}
+                  <Badge status={getStatusBadgeType(overallStatus) as any} />
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mt-2 flex-wrap justify-end">
+                    {group.marketplaces
+                      .filter((mp) => mp.platform_listing_url)
+                      .map((mp) => (
+                        <Link
+                          key={mp.id}
+                          href={mp.platform_listing_url!}
+                          target="_blank"
+                          className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
+                        >
+                          view on {mp.marketplace === 'ebay' ? 'eBay' : mp.marketplace}
+                        </Link>
+                      ))}
+                    {hasListed && (
+                      <Link
+                        href={`/finds/${group.find_id}/edit`}
+                        className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
+                      >
+                        edit
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>
