@@ -38,13 +38,13 @@ export class ShopifyMapper {
         };
     }
     async mapForEdit(product) {
-        const locationId = await this.deps.getLocationId();
         const { productOptions, metafields } = this.buildOptionData(product);
+        const listingId = product.marketplaceId ?? product.marketPlaceId;
         return {
             mediaToReorder: [],
             mediaToUpdate: [],
-            product: this.buildProductInputForEdit(product, productOptions, locationId, metafields),
-            productId: `gid://shopify/Product/${product.marketplaceId}`,
+            product: this.buildProductInputForEdit(product, productOptions, "", metafields),
+            productId: `gid://shopify/Product/${listingId}`,
             publicationsToPublish: [],
             publicationsToUnpublish: [],
             shouldPublish: false,
@@ -133,11 +133,20 @@ export class ShopifyMapper {
             status: "ACTIVE",
         };
     }
-    buildProductInputForEdit(product, productOptions, locationId, metafields) {
-        const base = this.buildProductInput(product, productOptions, locationId, metafields);
+    buildProductInputForEdit(product, _productOptions, _locationId, _metafields) {
+        const tags = (product.tags ?? "")
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean);
         return {
-            ...base,
-            id: `gid://shopify/Product/${product.marketplaceId}`,
+            id: `gid://shopify/Product/${product.marketplaceId ?? product.marketPlaceId}`,
+            title: product.title,
+            descriptionHtml: (product.description ?? "").replace(/\n/g, "<br/>"),
+            vendor: product.brand ?? "",
+            tags,
+            category: product.category?.[0]
+                ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
+                : null,
             workflow: "product-details-update",
         };
     }

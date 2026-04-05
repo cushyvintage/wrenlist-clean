@@ -87,8 +87,8 @@ export class ShopifyMapper {
   public async mapForEdit(
     product: Product,
   ): Promise<ShopifyUpdatePayload> {
-    const locationId = await this.deps.getLocationId();
     const { productOptions, metafields } = this.buildOptionData(product);
+    const listingId = product.marketplaceId ?? product.marketPlaceId;
 
     return {
       mediaToReorder: [],
@@ -96,10 +96,10 @@ export class ShopifyMapper {
       product: this.buildProductInputForEdit(
         product,
         productOptions,
-        locationId,
+        "",
         metafields,
       ),
-      productId: `gid://shopify/Product/${product.marketplaceId}`,
+      productId: `gid://shopify/Product/${listingId}`,
       publicationsToPublish: [],
       publicationsToUnpublish: [],
       shouldPublish: false,
@@ -209,14 +209,24 @@ export class ShopifyMapper {
 
   private buildProductInputForEdit(
     product: Product,
-    productOptions: Array<{ name: string; position: number; values: Array<{ name: string }> }>,
-    locationId: string,
-    metafields: Array<Record<string, unknown>>,
+    _productOptions: Array<{ name: string; position: number; values: Array<{ name: string }> }>,
+    _locationId: string,
+    _metafields: Array<Record<string, unknown>>,
   ) {
-    const base = this.buildProductInput(product, productOptions, locationId, metafields);
+    const tags = (product.tags ?? "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
     return {
-      ...base,
-      id: `gid://shopify/Product/${product.marketplaceId}`,
+      id: `gid://shopify/Product/${product.marketplaceId ?? product.marketPlaceId}`,
+      title: product.title,
+      descriptionHtml: (product.description ?? "").replace(/\n/g, "<br/>"),
+      vendor: product.brand ?? "",
+      tags,
+      category: product.category?.[0]
+        ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
+        : null,
       workflow: "product-details-update",
     };
   }
