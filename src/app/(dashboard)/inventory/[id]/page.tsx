@@ -742,7 +742,9 @@ export default function InventoryDetailPage() {
               price: Number(find.asking_price_gbp) || 0,
               // Extension expects 'images' as string[] of URLs
               // Use vintedMetadata photo full_size_urls if available (stable Vinted CDN refs)
-              images: (vintedMeta?.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean)) || find.photos || [],
+              // Use Supabase-mirrored photos (find.photos) — server-side fetchable, no CORS issues
+              // Fall back to vintedMetadata CDN URLs only if find.photos is empty
+              images: (find.photos?.length ? find.photos : vintedMeta?.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean)) || [],
               // Extension expects PascalCase condition enum
               condition: (() => {
                 const c = find.condition?.toLowerCase() || ''
@@ -765,16 +767,14 @@ export default function InventoryDetailPage() {
               vintedCatalogId: vintedMeta?.catalog_id || null,
               // size must be array — mapper uses size[0] parsed as int for size_id
               size: vintedMeta?.size_id ? [String(vintedMeta.size_id)] : (find.size ? [find.size] : []),
-              // Shipping from stored vintedMetadata
-              shipping: vintedMeta?.shipping ? {
+              // Shipping from stored vintedMetadata — always Prepaid for Vinted UK
+              shipping: {
+                shippingType: 'Prepaid',
                 shippingWeight: {
-                  value: Math.round((vintedMeta.shipping.weight_grams || 500) / 1000 * 10) / 10,
+                  value: Math.round(((vintedMeta?.shipping?.weight_grams || 500) / 1000) * 10) / 10,
                   unit: 'kg',
                 },
-                packageSizeId: vintedMeta.shipping.package_size_id || vintedMeta.package_size_id || 2,
-              } : {
-                shippingWeight: { value: 0.5, unit: 'kg' },
-                packageSizeId: vintedMeta?.package_size_id || 2,
+                packageSizeId: vintedMeta?.shipping?.package_size_id || vintedMeta?.package_size_id || 2,
               },
               // Full vintedMetadata passthrough for catalog resolution
               vintedMetadata: vintedMeta,
