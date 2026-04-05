@@ -262,6 +262,8 @@ export class eBayClient {
    */
   async fetchUsername(): Promise<string | null> {
     if (!this.tokens?.accessToken) return null
+
+    // Try Identity API
     try {
       const response = await undiciFetch(`${this.baseUrl}/commerce/identity/v1/user/`, {
         headers: new UndiciHeaders({
@@ -271,11 +273,30 @@ export class eBayClient {
       })
       if (response.ok) {
         const data = await response.json() as { username?: string }
-        return data.username || null
+        if (data.username) return data.username
+      }
+      console.log('[eBay] Identity API status:', response.status)
+    } catch (err) {
+      console.log('[eBay] Identity API error:', err instanceof Error ? err.message : err)
+    }
+
+    // Fallback: try sell/account/v1/privilege which works with sell.account scope
+    try {
+      const response = await undiciFetch(`${this.baseUrl}/sell/account/v1/privilege`, {
+        headers: new UndiciHeaders({
+          'Authorization': `Bearer ${this.tokens.accessToken}`,
+          'Accept': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_GB',
+        }),
+      })
+      if (response.ok) {
+        const text = await response.text()
+        console.log('[eBay] Privilege response:', text.substring(0, 200))
       }
     } catch {
-      // Non-critical
+      // ignore
     }
+
     return null
   }
 
