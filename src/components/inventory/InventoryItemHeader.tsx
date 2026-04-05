@@ -9,6 +9,7 @@ interface MarketplaceDataItem {
   status: string
   platform_listing_url: string | null
   platform_listing_id: string | null
+  error_message: string | null
 }
 
 interface InventoryItemHeaderProps {

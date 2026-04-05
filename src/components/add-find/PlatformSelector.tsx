@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Platform } from '@/types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
@@ -60,7 +61,16 @@ export default function PlatformSelector({
               <span className={`text-sm ${connected ? 'text-ink group-hover:text-sage' : 'text-ink/50'} transition-colors`}>
                 {getPlatformLabel(platform)}
                 {!connected && (
-                  <span className="ml-1 text-xs text-ink/40">(not connected)</span>
+                  <>
+                    <span className="ml-1 text-xs text-ink/40">(not connected)</span>
+                    <Link
+                      href="/platform-connect"
+                      className="ml-1.5 text-xs text-sage hover:text-sage-dk underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Connect →
+                    </Link>
+                  </>
                 )}
               </span>
             </label>

@@ -384,6 +384,22 @@ export class ShopifyClient {
     const errors = json?.data?.productCreate?.userErrors ?? [];
 
     if (errors.length) {
+      // Retry once with a deduplicated handle when Shopify rejects a duplicate
+      const handleError = errors.find(
+        (e: { message?: string }) =>
+          typeof e.message === "string" &&
+          e.message.toLowerCase().includes("handle has already been taken"),
+      );
+      const currentTitle = payload.product?.title;
+      if (handleError && typeof currentTitle === "string" && !(payload as unknown as Record<string, unknown>)._retried) {
+        const deduped: ShopifyCreatePayload = {
+          ...payload,
+          product: { ...payload.product, title: `${currentTitle} (2)` },
+        };
+        (deduped as unknown as Record<string, unknown>)._retried = true;
+        return this.postListing(deduped);
+      }
+
       return {
         success: false,
         message: errors[0].message ?? "Shopify returned an error.",

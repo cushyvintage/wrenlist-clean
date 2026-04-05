@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 /* eslint-disable @next/next/no-img-element */
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
-import type { ProductMarketplaceData, Platform } from '@/types'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
 type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low' | 'days_listed'
+
+/** Statuses that indicate an item is still pending extension action */
+const PENDING_STATUSES: MarketplaceDataStatus[] = ['needs_publish', 'needs_delist']
 
 interface ListingWithFind extends ProductMarketplaceData {
   finds: {
@@ -30,7 +34,8 @@ interface GroupedListing {
   created_at: string
   marketplaces: {
     marketplace: Platform
-    status: string
+    status: MarketplaceDataStatus | string
+    error_message: string | null
     listing_price: number | null
     platform_listing_url: string | null
     fields: Record<string, string> | null
@@ -57,38 +62,62 @@ export default function ListingsPage() {
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistError, setCrosslistError] = useState<string | null>(null)
   const [crosslistProgress, setCrosslistProgress] = useState<string | null>(null)
+  const [shopifyConnected, setShopifyConnected] = useState(false)
 
-  // Set page title
+  // Set page title + fetch Shopify connection status
   useEffect(() => {
     document.title = 'Listings | Wrenlist'
+    fetch('/api/shopify/connect')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data?.connected) setShopifyConnected(true) })
+      .catch(() => {})
   }, [])
 
   // Load listings from API
-  useEffect(() => {
-    const loadListings = async () => {
-      try {
+  const loadListings = useCallback(async (silent = false) => {
+    try {
+      if (!silent) {
         setIsLoading(true)
         setError(null)
-        const response = await fetch('/api/listings')
-        const result = await response.json()
+      }
+      const response = await fetch('/api/listings')
+      const result = await response.json()
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to load listings')
-        }
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load listings')
+      }
 
-        // Handle ApiResponseHelper envelope: result.data || result
-        const data = result.data || result
-        setListings(Array.isArray(data) ? data : [])
-      } catch (err) {
+      // Handle ApiResponseHelper envelope: result.data || result
+      const data = result.data || result
+      setListings(Array.isArray(data) ? data : [])
+    } catch (err) {
+      if (!silent) {
         console.error('Failed to load listings:', err)
         setError(err instanceof Error ? err.message : 'Failed to load listings')
-      } finally {
-        setIsLoading(false)
       }
+    } finally {
+      if (!silent) setIsLoading(false)
     }
-
-    loadListings()
   }, [])
+
+  useEffect(() => {
+    loadListings()
+  }, [loadListings])
+
+  // Auto-refresh while any items are pending (queued / delisting)
+  const hasPending = listings.some((l) =>
+    PENDING_STATUSES.includes(l.status as MarketplaceDataStatus)
+  )
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (hasPending) {
+      pollRef.current = setInterval(() => loadListings(true), 5000)
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [hasPending, loadListings])
 
   // Group listings by find_id
   const grouped: GroupedListing[] = (() => {
@@ -98,6 +127,7 @@ export default function ListingsPage() {
       const mp = {
         marketplace: listing.marketplace as Platform,
         status: listing.status,
+        error_message: listing.error_message,
         listing_price: listing.listing_price,
         platform_listing_url: listing.platform_listing_url,
         fields: (listing.fields as Record<string, string> | null) ?? null,
@@ -262,6 +292,14 @@ export default function ListingsPage() {
         </div>
       </div>
 
+      {/* Pending items banner */}
+      {hasPending && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          Items queued for publishing — waiting for extension...
+        </div>
+      )}
+
       {/* Search + Marketplace Filter + Sort */}
       <div className="flex gap-3 flex-wrap items-center">
         <input
@@ -357,23 +395,44 @@ export default function ListingsPage() {
               Select marketplaces to publish to:
             </p>
             <div className="space-y-2 mb-4">
-              {(['ebay', 'vinted', 'etsy', 'shopify'] as Platform[]).map((platform) => (
-                <label key={platform} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={crosslistTargets.includes(platform)}
-                    onChange={() =>
-                      setCrosslistTargets((prev) =>
-                        prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
-                      )
-                    }
-                    className="rounded"
-                  />
-                  <span className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
-                    {platform}
-                  </span>
-                </label>
-              ))}
+              {(['ebay', 'vinted', 'etsy', 'shopify'] as Platform[]).map((platform) => {
+                // Shopify requires a stored connection; others work via the extension
+                const connected = platform === 'shopify' ? shopifyConnected : true
+                return (
+                  <label
+                    key={platform}
+                    className={`flex items-center gap-2 ${connected ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={crosslistTargets.includes(platform)}
+                      onChange={() =>
+                        connected && setCrosslistTargets((prev) =>
+                          prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
+                        )
+                      }
+                      disabled={!connected}
+                      className="rounded disabled:cursor-not-allowed"
+                    />
+                    <MarketplaceIcon platform={platform} size="sm" />
+                    <span className={`text-sm font-medium capitalize ${connected ? '' : 'text-ink/50'}`} style={connected ? { color: '#1E2E1C' } : undefined}>
+                      {platform}
+                      {!connected && (
+                        <>
+                          <span className="ml-1 text-xs text-ink/40 normal-case">(not connected)</span>
+                          <Link
+                            href="/platform-connect"
+                            className="ml-1.5 text-xs text-sage hover:text-sage-dk underline normal-case"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Connect →
+                          </Link>
+                        </>
+                      )}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
             {crosslistProgress && (
               <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>
@@ -494,7 +553,8 @@ export default function ListingsPage() {
                       <PlatformTag
                         key={mp.id}
                         platform={mp.marketplace}
-                        live={mp.status === 'listed'}
+                        status={mp.status as MarketplaceDataStatus}
+                        errorMessage={mp.error_message}
                         href={mp.platform_listing_url}
                         collection={mp.fields?.collection_name}
                       />

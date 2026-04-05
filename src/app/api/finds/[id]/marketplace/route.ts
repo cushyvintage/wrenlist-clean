@@ -163,13 +163,18 @@ export async function PATCH(
       return ApiResponseHelper.notFound('Find not found')
     }
 
-    // Update marketplace data status
+    // Update marketplace data status (clear error_message on status change)
+    const updatePayload: Record<string, unknown> = {
+      status: body.status || 'needs_delist',
+      updated_at: new Date().toISOString(),
+    }
+    if (body.status === 'needs_publish') {
+      updatePayload.error_message = null
+    }
+
     const { error } = await supabase
       .from('product_marketplace_data')
-      .update({
-        status: body.status || 'needs_delist',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('find_id', findId)
       .eq('marketplace', marketplace)
 

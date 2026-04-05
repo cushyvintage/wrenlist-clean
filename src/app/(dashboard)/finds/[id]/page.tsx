@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useRouter, useParams } from 'next/navigation'
 import PhotoUpload from '@/components/listing/PhotoUpload'
@@ -107,7 +107,10 @@ export default function InventoryDetailPage() {
   const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string; url?: string } | null>(null)
   const [isListingOnEbay, setIsListingOnEbay] = useState(false)
   const [ebayListResult, setEbayListResult] = useState<{ ok: boolean; message: string } | null>(null)
-  const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null }>>([])
+  const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null; error_message: string | null }>>([])
+  const [delistingPlatform, setDelistingPlatform] = useState<string | null>(null)
+  const [delistConfirm, setDelistConfirm] = useState<string | null>(null)
+  const [retryingPlatform, setRetryingPlatform] = useState<string | null>(null)
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
@@ -194,6 +197,38 @@ export default function InventoryDetailPage() {
     refreshMarketplaceData()
   }, [refreshMarketplaceData])
 
+  // Auto-refresh marketplace data while items are queued / delisting
+  const hasPendingMarketplace = marketplaceData.some(
+    (m) => m.status === 'needs_publish' || m.status === 'needs_delist'
+  )
+  const marketplacePollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const prevMarketplaceDataRef = useRef(marketplaceData)
+
+  useEffect(() => {
+    if (hasPendingMarketplace) {
+      marketplacePollRef.current = setInterval(refreshMarketplaceData, 5000)
+    }
+    return () => {
+      if (marketplacePollRef.current) clearInterval(marketplacePollRef.current)
+    }
+  }, [hasPendingMarketplace, refreshMarketplaceData])
+
+  // Detect when a queued item transitions to listed and show success message
+  useEffect(() => {
+    const prev = prevMarketplaceDataRef.current
+    const justPublished: string[] = []
+    for (const curr of marketplaceData) {
+      const old = prev.find((p) => p.marketplace === curr.marketplace)
+      if (old?.status === 'needs_publish' && curr.status === 'listed') {
+        justPublished.push(curr.marketplace)
+      }
+    }
+    if (justPublished.length > 0) {
+      setCrosslistResult({ ok: true, message: `Published to ${justPublished.join(', ')}` })
+    }
+    prevMarketplaceDataRef.current = marketplaceData
+  }, [marketplaceData])
+
   const handleCrosslist = async () => {
     if (!find || crosslistTargets.length === 0) return
     setIsCrosslisting(true)
@@ -208,15 +243,25 @@ export default function InventoryDetailPage() {
       const data = await res.json()
       const results = data.data?.results || {}
 
+      // eBay publishes directly via API; all other platforms queue for extension
+      const API_PLATFORMS = ['ebay']
       const succeeded = Object.entries(results).filter(([, r]: [string, any]) => r.ok).map(([m]) => m)
       const failed = Object.entries(results).filter(([, r]: [string, any]) => !r.ok).map(([m, r]: [string, any]) => `${m}: ${r.error}`)
 
+      // Build message distinguishing direct-published vs queued
+      const direct = succeeded.filter((m) => API_PLATFORMS.includes(m))
+      const queued = succeeded.filter((m) => !API_PLATFORMS.includes(m))
+      const parts: string[] = []
+      if (direct.length > 0) parts.push(`Listed on ${direct.join(', ')}`)
+      if (queued.length > 0) parts.push(`Queued for ${queued.join(', ')} — publishing via extension`)
+      if (failed.length > 0) parts.push(`Failed: ${failed.join('; ')}`)
+
       if (failed.length === 0) {
-        setCrosslistResult({ ok: true, message: `Published to ${succeeded.join(', ')}` })
+        setCrosslistResult({ ok: true, message: parts.join('. ') })
       } else if (succeeded.length > 0) {
-        setCrosslistResult({ ok: true, message: `Published to ${succeeded.join(', ')}. Failed: ${failed.join('; ')}` })
+        setCrosslistResult({ ok: true, message: parts.join('. ') })
       } else {
-        setCrosslistResult({ ok: false, message: failed.join('; ') })
+        setCrosslistResult({ ok: false, message: parts.join('. ') })
       }
 
       setShowCrosslistPicker(false)
@@ -777,6 +822,46 @@ export default function InventoryDetailPage() {
     }
   }
 
+  const handleDelistFromPlatform = async (marketplace: string) => {
+    if (!find) return
+    setDelistConfirm(null)
+    setDelistingPlatform(marketplace)
+    try {
+      const res = await fetch('/api/crosslist/delist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findId: find.id, marketplace }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || `Delist from ${marketplace} failed`)
+      }
+      refreshMarketplaceData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delist failed')
+    } finally {
+      setDelistingPlatform(null)
+    }
+  }
+
+  const handleRetryPublish = async (marketplace: string) => {
+    if (!find) return
+    setRetryingPlatform(marketplace)
+    try {
+      const res = await fetch(`/api/finds/${id}/marketplace?marketplace=${marketplace}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'needs_publish' }),
+      })
+      if (!res.ok) throw new Error('Failed to retry')
+      refreshMarketplaceData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Retry failed')
+    } finally {
+      setRetryingPlatform(null)
+    }
+  }
+
   const handleRelistOnVinted = async () => {
     if (!find) return
     setIsListingOnVinted(true)
@@ -1205,29 +1290,79 @@ export default function InventoryDetailPage() {
                 <p className="text-xs uppercase tracking-wider font-medium mb-2" style={{ color: '#8A9E88' }}>
                   Listed On
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {marketplaceData.map((md) => (
-                    <div key={md.marketplace} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
-                          {md.marketplace}
-                        </p>
-                        <span
-                          className="text-xs capitalize"
-                          style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
-                        >
-                          {md.status.replace('_', ' ')}
-                        </span>
+                    <div key={md.marketplace}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium capitalize" style={{ color: '#1E2E1C' }}>
+                            {md.marketplace}
+                          </p>
+                          <span
+                            className="text-xs capitalize"
+                            style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
+                          >
+                            {md.status === 'error' ? 'Error' : md.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {md.platform_listing_url && (
+                            <a
+                              href={md.platform_listing_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-sage underline underline-offset-1 hover:text-sage-dk transition"
+                            >
+                              View →
+                            </a>
+                          )}
+                          {md.status === 'listed' && (
+                            <>
+                              {delistConfirm === md.marketplace ? (
+                                <span className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleDelistFromPlatform(md.marketplace)}
+                                    disabled={delistingPlatform === md.marketplace}
+                                    className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+                                    style={{ backgroundColor: 'rgba(220,38,38,.12)', color: '#DC2626', borderWidth: '1px', borderColor: 'rgba(220,38,38,.3)' }}
+                                  >
+                                    {delistingPlatform === md.marketplace ? 'Delisting...' : 'Confirm'}
+                                  </button>
+                                  <button
+                                    onClick={() => setDelistConfirm(null)}
+                                    className="text-xs px-1.5 py-0.5 rounded transition-colors"
+                                    style={{ color: '#8A9E88' }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setDelistConfirm(md.marketplace)}
+                                  className="text-xs px-2 py-0.5 rounded transition-colors hover:bg-red-50"
+                                  style={{ color: '#8A9E88' }}
+                                >
+                                  Delist
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {md.status === 'error' && (
+                            <button
+                              onClick={() => handleRetryPublish(md.marketplace)}
+                              disabled={retryingPlatform === md.marketplace}
+                              className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+                              style={{ backgroundColor: 'rgba(61,92,58,.1)', color: '#3D5C3A', borderWidth: '1px', borderColor: 'rgba(61,92,58,.3)' }}
+                            >
+                              {retryingPlatform === md.marketplace ? 'Retrying...' : 'Retry'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {md.platform_listing_url && (
-                        <a
-                          href={md.platform_listing_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-sage underline underline-offset-1 hover:text-sage-dk transition"
-                        >
-                          View →
-                        </a>
+                      {md.status === 'error' && md.error_message && (
+                        <p className="text-xs mt-1 px-2 py-1 rounded" style={{ color: '#DC2626', backgroundColor: 'rgba(220,38,38,.06)' }}>
+                          {md.error_message}
+                        </p>
                       )}
                     </div>
                   ))}

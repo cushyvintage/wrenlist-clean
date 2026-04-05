@@ -29,7 +29,7 @@ export type FindCondition = 'excellent' | 'good' | 'fair'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 export type SupplierType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'flea_market' | 'online' | 'other'
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify' | 'depop' | 'poshmark' | 'mercari' | 'facebook' | 'whatnot' | 'grailed'
-export type MarketplaceDataStatus = 'not_listed' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
+export type MarketplaceDataStatus = 'not_listed' | 'needs_publish' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
 
 export interface Profile {
   id: string

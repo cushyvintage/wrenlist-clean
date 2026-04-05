@@ -178,6 +178,11 @@ type ExternalMessage = Record<string, unknown>;
             : mapCategoryToShopify(find.category);
           const weightGrams = find.shipping_weight_grams ?? find.weight_grams;
 
+          // Use raw Wrenlist category for most marketplaces; Shopify needs its own mapping
+          const productCategory = mp === "shopify"
+            ? shopifyCategory
+            : find.category ? [find.category] : [];
+
           const product: Product = {
             id: find.id,
             marketPlaceId: find.id,
@@ -187,7 +192,7 @@ type ExternalMessage = Record<string, unknown>;
             images: find.photos ?? [],
             brand: find.brand ?? undefined,
             condition: mapCondition(find.condition),
-            category: shopifyCategory,
+            category: productCategory,
             tags: [find.brand, find.category, "vintage"].filter(Boolean).join(", "),
             color: find.colour ?? undefined,
             size: find.size ? [find.size] : undefined,
