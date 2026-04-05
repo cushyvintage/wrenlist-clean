@@ -84,8 +84,14 @@ export async function GET(request: NextRequest) {
           ? `${p.shippingOptions[0].shippingServices[0].shippingServiceCode?.replace('UK_', '')} · Free · ${p.handlingTime?.value ?? 1}-${(p.handlingTime?.value ?? 1) + 1} days`
           : p.name,
       })),
-      returnPolicies: returnData.returnPolicies || [],
-      paymentPolicies: paymentData.paymentPolicies || [],
+      returnPolicies: (returnData.returnPolicies || []).map((p: any) => ({
+        id: p.returnPolicyId,
+        name: p.name,
+      })),
+      paymentPolicies: (paymentData.paymentPolicies || []).map((p: any) => ({
+        id: p.paymentPolicyId,
+        name: p.name,
+      })),
       locations: locationData.locations || [],
     })
   } catch (error) {
