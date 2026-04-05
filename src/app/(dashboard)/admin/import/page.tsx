@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 const ADMIN_EMAIL = 'dom@wrenlist.com'
 
@@ -68,7 +69,7 @@ export default function ImportPage() {
         <div className="bg-white rounded-lg border border-sage/14 p-6 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold text-ink">🛒 eBay UK</h2>
+              <h2 className="font-semibold text-ink flex items-center gap-2"><MarketplaceIcon platform="ebay" size="sm" /> eBay UK</h2>
               <p className="text-xs text-sage-dim mt-1">Fetches all eBay inventory items via API. Requires eBay connection.</p>
             </div>
             <button

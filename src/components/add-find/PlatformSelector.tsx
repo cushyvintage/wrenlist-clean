@@ -1,6 +1,7 @@
 'use client'
 
 import { Platform } from '@/types'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 interface PlatformSelectorProps {
   selectedPlatforms: Platform[]
@@ -38,6 +39,7 @@ export default function PlatformSelector({
               onChange={() => onPlatformToggle(platform)}
               className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
             />
+            <MarketplaceIcon platform={platform} size="sm" />
             <span className="text-sm text-ink group-hover:text-sage transition-colors">
               {getPlatformLabel(platform)}
             </span>

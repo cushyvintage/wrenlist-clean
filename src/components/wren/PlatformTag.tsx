@@ -12,6 +12,7 @@
  */
 
 import type { Platform } from '@/types'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 interface PlatformTagProps {
   /** Platform name */
@@ -50,7 +51,8 @@ export function PlatformTag({
           : 'border-cream-dk bg-cream-md text-ink-lt'
       }`}
     >
-      {displayLabel}
+      <MarketplaceIcon platform={platform} size="sm" className="inline-block align-text-bottom" />
+      {' '}{displayLabel}
       {live && ' · live'}
     </span>
   )

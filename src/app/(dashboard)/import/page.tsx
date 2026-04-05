@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Badge } from '@/components/wren/Badge'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 interface ImportItem {
   id: string
@@ -140,7 +141,7 @@ export default function ImportPage() {
               : 'border-transparent text-ink-lt hover:text-ink'
           }`}
         >
-          🛒 eBay UK <span className="ml-2 text-xs text-ink-lt">147</span>
+          <MarketplaceIcon platform="ebay" size="sm" /> eBay UK <span className="ml-2 text-xs text-ink-lt">147</span>
         </button>
         <button
           onClick={() => setActiveTab('vinted')}
@@ -150,7 +151,7 @@ export default function ImportPage() {
               : 'border-transparent text-ink-lt hover:text-ink'
           }`}
         >
-          👚 Vinted <span className="ml-2 text-xs text-ink-lt">83</span>
+          <MarketplaceIcon platform="vinted" size="sm" /> Vinted <span className="ml-2 text-xs text-ink-lt">83</span>
         </button>
       </div>
 

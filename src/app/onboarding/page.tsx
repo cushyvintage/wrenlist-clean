@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import type { Profile } from '@/types'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -125,7 +126,7 @@ export default function OnboardingPage() {
                     href="/platform-connect"
                     className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
                   >
-                    <div className="text-3xl mb-3">🎨</div>
+                    <div className="mb-3"><MarketplaceIcon platform="vinted" size="lg" /></div>
                     <h3 className="font-semibold text-ink mb-2">Vinted</h3>
                     <p className="text-sm text-sage">Fast, mobile-first marketplace for second-hand items</p>
                     <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
@@ -139,7 +140,7 @@ export default function OnboardingPage() {
                     href="/platform-connect"
                     className="group block p-6 border-2 border-sage/30 rounded-lg hover:border-sage hover:bg-cream/50 transition-all"
                   >
-                    <div className="text-3xl mb-3">🏪</div>
+                    <div className="mb-3"><MarketplaceIcon platform="ebay" size="lg" /></div>
                     <h3 className="font-semibold text-ink mb-2">eBay UK</h3>
                     <p className="text-sm text-sage">Global marketplace with auction and fixed-price listings</p>
                     <div className="mt-4 inline-flex items-center text-sage group-hover:text-ink transition-colors">
