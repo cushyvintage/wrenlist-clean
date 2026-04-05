@@ -466,7 +466,7 @@ export default function ListingsPage() {
                   <div className="flex gap-2 mt-2 flex-wrap justify-end">
                     {hasListed && (
                       <Link
-                        href={`/finds/${group.find_id}/edit`}
+                        href={`/finds/${group.find_id}`}
                         className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
                       >
                         edit
