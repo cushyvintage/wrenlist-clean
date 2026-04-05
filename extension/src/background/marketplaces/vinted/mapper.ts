@@ -636,20 +636,22 @@ export class VintedMapper {
     }
 
     // Check images - at least 1 required, 3+ for well-known brands
-    // First check if product has image URLs in the database
+    // Skip fetch validation if vintedMetadata has existing photo IDs (reused directly)
+    const hasExistingVintedPhotos = (product.vintedMetadata as any)?.photos?.length > 0;
     const imageUrls = product.images || [];
     const hasImageUrls = Array.isArray(imageUrls) && imageUrls.length > 0;
     
-    if (!hasImageUrls) {
-      errors.push("Product has no images in the database. Please add at least 1 image URL to the product.");
-    } else if (!media || media.length === 0) {
-      // Product has image URLs but media endpoint failed to fetch them
-      errors.push(`Product has ${imageUrls.length} image URL(s) but failed to fetch them. Check that image URLs are accessible.`);
-    } else {
-      // Check if brand is well-known (not "NO LABEL")
-      const isWellKnownBrand = brand.id !== 425886 && brand.id !== null;
-      if (isWellKnownBrand && media.length < 3) {
-        errors.push("Well-known brands require at least 3 images");
+    if (!hasExistingVintedPhotos) {
+      if (!hasImageUrls) {
+        errors.push("Product has no images in the database. Please add at least 1 image URL to the product.");
+      } else if (!media || media.length === 0) {
+        errors.push(`Product has ${imageUrls.length} image URL(s) but failed to fetch them. Check that image URLs are accessible.`);
+      } else {
+        // Check if brand is well-known (not "NO LABEL")
+        const isWellKnownBrand = brand.id !== 425886 && brand.id !== null;
+        if (isWellKnownBrand && media.length < 3) {
+          errors.push("Well-known brands require at least 3 images");
+        }
       }
     }
 
@@ -769,7 +771,10 @@ export class VintedMapper {
           international: null,
         },
         color_ids: colorIds,
-        assigned_photos: await this.mapPhotos(validation.media, tempUuid),
+        // If vintedMetadata has existing photo IDs, reuse them directly (avoids re-upload)
+        assigned_photos: product.vintedMetadata?.photos?.length
+          ? product.vintedMetadata.photos.map((p: { id: number }) => ({ id: p.id, orientation: 0 }))
+          : await this.mapPhotos(validation.media, tempUuid),
         measurement_length: null,
         measurement_width: null,
         item_attributes: [],

@@ -739,8 +739,9 @@ export default function InventoryDetailPage() {
               title: find.name,
               description: find.description || '',
               price: Number(find.asking_price_gbp) || 0,
-              // Extension expects 'images' not 'photos'
-              images: find.photos || [],
+              // Extension expects 'images' as string[] of URLs
+              // Use vintedMetadata photo full_size_urls if available (stable Vinted CDN refs)
+              images: (vintedMeta?.photos?.map((p: any) => p.full_size_url || p.url).filter(Boolean)) || find.photos || [],
               // Extension expects PascalCase condition enum
               condition: (() => {
                 const c = find.condition?.toLowerCase() || ''
