@@ -86,6 +86,9 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     const tokens = await client.exchangeCodeForTokens(code)
 
+    // Fetch eBay username
+    const ebayUsername = await client.fetchUsername()
+
     // Upsert tokens — insert or update
     const { error: upsertError } = await supabase
       .from('ebay_tokens')
@@ -96,6 +99,7 @@ export async function GET(request: NextRequest) {
         refresh_token: tokens.refreshToken,
         expires_at: tokens.expiresAt.toISOString(),
         scope: tokens.scope?.join(' ') || 'sell.inventory sell.account',
+        ebay_user: ebayUsername,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,marketplace_id' })
 

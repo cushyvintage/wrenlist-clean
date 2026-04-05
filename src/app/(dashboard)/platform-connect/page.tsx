@@ -103,7 +103,27 @@ export default function PlatformConnectPage() {
       setExtensionDetected(true)
       if (response.loggedIn && response.username) {
         setVintedConnected(true)
-        setVintedUsername(response.username)
+        let displayUsername = response.username
+
+        // If username is numeric (user ID from cookie), resolve to actual login
+        if (/^\d+$/.test(response.username)) {
+          try {
+            const tld = response.tld || 'co.uk'
+            const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${response.username}`, {
+              headers: { 'Accept': 'application/json' },
+            })
+            if (res.ok) {
+              const data = await res.json()
+              if (data?.user?.login) {
+                displayUsername = data.user.login
+              }
+            }
+          } catch {
+            // Fall back to numeric ID
+          }
+        }
+
+        setVintedUsername(displayUsername)
 
         // Save Vinted connection to database for persistence
         try {
@@ -111,7 +131,7 @@ export default function PlatformConnectPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              vintedUsername: response.username,
+              vintedUsername: displayUsername,
               vintedUserId: response.userId || response.username, // Fallback to username if userId missing
             }),
           })

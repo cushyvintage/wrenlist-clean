@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { config } from '@/lib/config'
+import { eBayClient } from '@/lib/ebay-client'
 
 /**
  * GET /api/ebay/status
@@ -32,8 +34,38 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Lazily fetch eBay username if not yet stored
+    let ebayUsername = tokens.ebay_user
+    if (!ebayUsername) {
+      try {
+        const ebayConfig = config
+        const client = new eBayClient({
+          environment: ebayConfig.ebay.environment,
+          marketplaceId: 'EBAY_GB',
+          clientId: ebayConfig.ebay.clientId,
+          clientSecret: ebayConfig.ebay.clientSecret,
+          redirectUrl: process.env.EBAY_REDIRECT_URI!,
+        })
+        client.setTokens({
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: new Date(tokens.expires_at),
+        })
+        ebayUsername = await client.fetchUsername()
+        if (ebayUsername) {
+          await supabase
+            .from('ebay_tokens')
+            .update({ ebay_user: ebayUsername })
+            .eq('user_id', user.id)
+            .eq('marketplace_id', 'EBAY_GB')
+        }
+      } catch {
+        // Non-critical
+      }
+    }
+
     // Check setup completion
-    const { data: config } = await supabase
+    const { data: sellerConfig } = await supabase
       .from('ebay_seller_config')
       .select('setup_complete')
       .eq('user_id', user.id)
@@ -48,8 +80,8 @@ export async function GET(request: NextRequest) {
 
     return ApiResponseHelper.success({
       connected: true,
-      setupComplete: config?.setup_complete || false,
-      username: tokens.ebay_user || 'eBay account',
+      setupComplete: sellerConfig?.setup_complete || false,
+      username: ebayUsername || 'eBay account',
       expiresAt: connectionExpiresAt,
     })
   } catch (error) {

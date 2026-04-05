@@ -257,6 +257,28 @@ export class eBayClient {
   }
 
   /**
+   * Fetch the eBay username for the authenticated user
+   */
+  async fetchUsername(): Promise<string | null> {
+    if (!this.tokens?.accessToken) return null
+    try {
+      const response = await undiciFetch(`${this.baseUrl}/commerce/identity/v1/user/`, {
+        headers: new UndiciHeaders({
+          'Authorization': `Bearer ${this.tokens.accessToken}`,
+          'Accept': 'application/json',
+        }),
+      })
+      if (response.ok) {
+        const data = await response.json() as { username?: string }
+        return data.username || null
+      }
+    } catch {
+      // Non-critical — fall back to generic name
+    }
+    return null
+  }
+
+  /**
    * Check if token needs refresh
    */
   isTokenExpired(): boolean {
