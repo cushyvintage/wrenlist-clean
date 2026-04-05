@@ -764,6 +764,10 @@ export default function InventoryDetailPage() {
                 packageSizeId: vintedMeta?.shipping?.package_size_id || vintedMeta?.package_size_id || 2,
                 // Pass ISBN for books so Vinted doesn't reject with "Please enter an ISBN"
                 ...(vintedMeta?.isbn ? { ISBN: vintedMeta.isbn } : {}),
+                // Pass pre-stored item_attributes so mapper uses them directly
+                vintedItemAttributes: vintedMeta?.item_attributes || [],
+                // Pass brand_id directly to skip mapper's brand lookup
+                vintedBrandId: vintedMeta?.brand_id || null,
               },
               // Pass catalog_id at top level so mapper uses it directly
               vintedCatalogId: vintedMeta?.catalog_id || null,

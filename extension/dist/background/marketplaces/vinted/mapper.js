@@ -673,7 +673,7 @@ export class VintedMapper {
                     ? product.title
                     : `${product.title[0]}${product.title.slice(1).toLowerCase()}`,
                 description: product.description,
-                brand_id: brand.id,
+                brand_id: product.dynamicProperties?.vintedBrandId || brand.id,
                 brand: brand.title,
                 size_id: product.size?.[0] ? parseInt(String(product.size[0]), 10) : null,
                 catalog_id: catalogId,
@@ -734,6 +734,16 @@ export class VintedMapper {
                     code: "language_book",
                     ids: [6435], // English
                 });
+            }
+        }
+        // Consume pre-stored item_attributes from relist payload
+        if (product.dynamicProperties?.vintedItemAttributes?.length > 0) {
+            for (const attr of product.dynamicProperties.vintedItemAttributes) {
+                // Don't duplicate codes already added (e.g. language_book from ISBN lookup)
+                const alreadyAdded = payload.item.item_attributes.some(a => a.code === attr.code);
+                if (!alreadyAdded) {
+                    payload.item.item_attributes.push(attr);
+                }
             }
         }
         if (product.dynamicProperties?.["Content rating"]) {
