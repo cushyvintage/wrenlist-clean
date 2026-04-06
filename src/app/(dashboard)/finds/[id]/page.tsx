@@ -17,7 +17,7 @@ import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
-import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -117,7 +117,7 @@ export default function InventoryDetailPage() {
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
   const extensionInfo = useExtensionInfo()
-  const { connected: allConnectedPlatforms } = useConnectedPlatforms()
+  const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
 
   // Fetch find details
   useEffect(() => {
@@ -225,10 +225,23 @@ export default function InventoryDetailPage() {
     setCrosslistResult(null)
 
     try {
+      // Pre-publish session re-check
+      const { valid, expired } = await recheckPlatforms(crosslistTargets)
+
+      if (expired.length > 0 && valid.length === 0) {
+        setCrosslistResult({ ok: false, message: `Session expired for ${expired.join(', ')}. Log back in on Platform Connect.` })
+        setIsCrosslisting(false)
+        return
+      }
+
+      const expiredNote = expired.length > 0
+        ? `${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`
+        : ''
+
       const res = await fetch('/api/crosslist/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ findId: find.id, marketplaces: crosslistTargets }),
+        body: JSON.stringify({ findId: find.id, marketplaces: valid }),
       })
       const data = await res.json()
       const results = data.data?.results || {}
@@ -245,8 +258,9 @@ export default function InventoryDetailPage() {
       if (direct.length > 0) parts.push(`Listed on ${direct.join(', ')}`)
       if (queued.length > 0) parts.push(`Queued for ${queued.join(', ')} — publishing via extension`)
       if (failed.length > 0) parts.push(`Failed: ${failed.join('; ')}`)
+      if (expiredNote) parts.push(expiredNote)
 
-      if (failed.length === 0) {
+      if (failed.length === 0 && expired.length === 0) {
         setCrosslistResult({ ok: true, message: parts.join('. ') })
       } else if (succeeded.length > 0) {
         setCrosslistResult({ ok: true, message: parts.join('. ') })
@@ -265,7 +279,8 @@ export default function InventoryDetailPage() {
   }
 
   const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed' || m.status === 'draft').map((m) => m.marketplace))
-  const availableForCrosslist: Platform[] = allConnectedPlatforms.filter((m) => !listedMarketplaces.has(m))
+  const availableForCrosslist: Platform[] = allConnectedPlatforms.map((cp) => cp.platform).filter((m) => !listedMarketplaces.has(m))
+  const connectedPlatformMap = new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp]))
 
   const handleInputChange = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -1037,6 +1052,7 @@ export default function InventoryDetailPage() {
         showCrosslistPicker={showCrosslistPicker}
         crosslistTargets={crosslistTargets}
         availableForCrosslist={availableForCrosslist}
+        platformUsernames={new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp.username]))}
         marketplaceData={marketplaceData}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}

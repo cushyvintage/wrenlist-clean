@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
-import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
@@ -63,7 +63,9 @@ export default function ListingsPage() {
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistError, setCrosslistError] = useState<string | null>(null)
   const [crosslistProgress, setCrosslistProgress] = useState<string | null>(null)
-  const { connected: connectedPlatforms, loading: platformsLoading } = useConnectedPlatforms()
+  const { connected: connectedPlatforms, loading: platformsLoading, recheckPlatforms } = useConnectedPlatforms()
+  const [sessionExpired, setSessionExpired] = useState<Platform[]>([])
+  const [crosslistResults, setCrosslistResults] = useState<Record<string, { ok: boolean; error?: string }> | null>(null)
 
   // Set page title
   useEffect(() => {
@@ -209,6 +211,24 @@ export default function ListingsPage() {
 
     setIsCrosslisting(true)
     setCrosslistError(null)
+    setSessionExpired([])
+    setCrosslistResults(null)
+
+    // Pre-publish session re-check
+    setCrosslistProgress('Checking sessions...')
+    const { valid, expired } = await recheckPlatforms(crosslistTargets)
+
+    if (expired.length > 0) {
+      setSessionExpired(expired)
+    }
+
+    if (valid.length === 0) {
+      setCrosslistProgress(null)
+      setIsCrosslisting(false)
+      setCrosslistError('All selected platforms have expired sessions. Log back in on Platform Connect.')
+      return
+    }
+
     let succeeded = 0
     let failed = 0
 
@@ -218,7 +238,7 @@ export default function ListingsPage() {
         const res = await fetch('/api/crosslist/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ findId: findIds[i], marketplaces: crosslistTargets }),
+          body: JSON.stringify({ findId: findIds[i], marketplaces: valid }),
         })
         const data = await res.json()
         const results = data.data?.results || {}
@@ -233,13 +253,19 @@ export default function ListingsPage() {
     setCrosslistProgress(null)
     setIsCrosslisting(false)
 
-    if (failed === 0) {
+    if (failed === 0 && expired.length === 0) {
       setSelectedItems(new Set())
       setShowCrosslistModal(false)
       setCrosslistTargets([])
     } else {
-      setCrosslistError(`${succeeded} published, ${failed} failed`)
+      const parts: string[] = []
+      if (succeeded > 0) parts.push(`${succeeded} published`)
+      if (failed > 0) parts.push(`${failed} failed`)
+      if (expired.length > 0) parts.push(`${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`)
+      setCrosslistError(parts.join(' · '))
     }
+
+    loadListings(true)
   }
 
   const getCategoryLabel = (category?: string) => {
@@ -375,92 +401,144 @@ export default function ListingsPage() {
       )}
 
       {/* Crosslist modal */}
-      {showCrosslistModal && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-          onClick={() => { setShowCrosslistModal(false); setCrosslistTargets([]) }}
-        >
+      {showCrosslistModal && (() => {
+        // Compute already-listed counts per platform for selected items
+        const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
+        const alreadyListedCounts: Record<string, number> = {}
+        for (const cp of connectedPlatforms) {
+          alreadyListedCounts[cp.platform] = selectedGroups.filter((g) =>
+            g.marketplaces.some((mp) => mp.marketplace === cp.platform && (mp.status === 'listed' || mp.status === 'draft'))
+          ).length
+        }
+        const totalSelected = selectedItems.size
+        const allFullyListed = connectedPlatforms.length > 0 && connectedPlatforms.every((cp) => alreadyListedCounts[cp.platform] === totalSelected)
+
+        const formatPlatformName = (p: string) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)
+
+        return (
           <div
-            className="bg-white rounded p-6 max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-            style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={() => { setShowCrosslistModal(false); setCrosslistTargets([]); setSessionExpired([]); setCrosslistError(null) }}
           >
-            <h3 className="text-lg font-semibold mb-2" style={{ color: '#1E2E1C' }}>
-              Crosslist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
-            </h3>
-            <p className="text-sm mb-4" style={{ color: '#6B7D6A' }}>
-              Select marketplaces to publish to:
-            </p>
-            <div className="space-y-2 mb-4">
-              {platformsLoading ? (
-                <p className="text-sm" style={{ color: '#8A9E88' }}>Checking connections...</p>
-              ) : connectedPlatforms.length === 0 ? (
-                <div className="py-3 text-center">
-                  <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>No marketplaces connected</p>
+            <div
+              className="bg-white rounded p-6 max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
+              style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+            >
+              <h3 className="text-lg font-semibold mb-2" style={{ color: '#1E2E1C' }}>
+                Crosslist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
+              </h3>
+              <p className="text-sm mb-4" style={{ color: '#6B7D6A' }}>
+                Select marketplaces to publish to:
+              </p>
+              <div className="space-y-2 mb-4">
+                {platformsLoading ? (
+                  <p className="text-sm" style={{ color: '#8A9E88' }}>Checking connections...</p>
+                ) : connectedPlatforms.length === 0 ? (
+                  <div className="py-3 text-center">
+                    <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>No marketplaces connected</p>
+                    <Link
+                      href="/platform-connect"
+                      className="text-sm font-medium text-sage hover:text-sage-dk underline"
+                    >
+                      Connect marketplaces →
+                    </Link>
+                  </div>
+                ) : allFullyListed ? (
+                  <div className="py-3 text-center">
+                    <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>All selected items are already listed on all connected platforms</p>
+                  </div>
+                ) : (
+                  connectedPlatforms.map((cp) => {
+                    const listedCount = alreadyListedCounts[cp.platform] || 0
+                    const allListed = listedCount === totalSelected
+                    const someListed = listedCount > 0 && !allListed
+                    const isExpired = sessionExpired.includes(cp.platform)
+
+                    return (
+                      <label
+                        key={cp.platform}
+                        className={`flex items-center gap-2 py-0.5 ${allListed || isExpired ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={crosslistTargets.includes(cp.platform)}
+                          onChange={() =>
+                            !allListed && !isExpired && setCrosslistTargets((prev) =>
+                              prev.includes(cp.platform) ? prev.filter((p) => p !== cp.platform) : [...prev, cp.platform]
+                            )
+                          }
+                          disabled={allListed || isExpired}
+                          className="rounded disabled:cursor-not-allowed"
+                        />
+                        <MarketplaceIcon platform={cp.platform} size="sm" />
+                        <span className="text-sm font-medium" style={{ color: allListed || isExpired ? '#8A9E88' : '#1E2E1C' }}>
+                          {formatPlatformName(cp.platform)}
+                          {cp.username && (
+                            <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {cp.username}</span>
+                          )}
+                        </span>
+                        {allListed && (
+                          <span className="text-xs ml-auto" style={{ color: '#8A9E88' }}>all listed</span>
+                        )}
+                        {someListed && (
+                          <span className="text-xs ml-auto" style={{ color: '#8A9E88' }}>{listedCount} of {totalSelected} listed</span>
+                        )}
+                        {isExpired && (
+                          <span className="text-xs ml-auto" style={{ color: '#C0392B' }}>session expired</span>
+                        )}
+                      </label>
+                    )
+                  })
+                )}
+                {!platformsLoading && connectedPlatforms.length > 0 && (
                   <Link
                     href="/platform-connect"
-                    className="text-sm font-medium text-sage hover:text-sage-dk underline"
+                    className="block text-xs mt-1"
+                    style={{ color: '#8A9E88' }}
                   >
-                    Connect marketplaces →
+                    Manage connections →
                   </Link>
+                )}
+              </div>
+              {crosslistProgress && (
+                <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>
+              )}
+              {crosslistError && (
+                <div className="text-xs mb-3 p-2 rounded" style={{ backgroundColor: 'rgba(192,57,43,.08)', color: '#C0392B' }}>
+                  {crosslistError}
+                  {sessionExpired.length > 0 && (
+                    <Link href="/platform-connect" className="ml-1 underline font-medium">
+                      Log back in →
+                    </Link>
+                  )}
                 </div>
-              ) : (
-                connectedPlatforms.map((platform) => (
-                  <label key={platform} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={crosslistTargets.includes(platform)}
-                      onChange={() =>
-                        setCrosslistTargets((prev) =>
-                          prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
-                        )
-                      }
-                      className="rounded"
-                    />
-                    <MarketplaceIcon platform={platform} size="sm" />
-                    <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
-                      {platform === 'ebay' ? 'eBay' : platform.charAt(0).toUpperCase() + platform.slice(1)}
-                    </span>
-                  </label>
-                ))
               )}
-              {!platformsLoading && connectedPlatforms.length > 0 && (
-                <Link
-                  href="/platform-connect"
-                  className="block text-xs mt-1"
-                  style={{ color: '#8A9E88' }}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => { setShowCrosslistModal(false); setCrosslistTargets([]); setSessionExpired([]); setCrosslistError(null) }}
+                  className="px-4 py-2 text-sm font-medium rounded transition-colors"
+                  style={{ backgroundColor: 'transparent', borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', color: '#3D5C3A' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  Manage connections →
-                </Link>
-              )}
-            </div>
-            {crosslistProgress && (
-              <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>
-            )}
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => { setShowCrosslistModal(false); setCrosslistTargets([]) }}
-                className="px-4 py-2 text-sm font-medium rounded transition-colors"
-                style={{ backgroundColor: 'transparent', borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', color: '#3D5C3A' }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(61,92,58,.08)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBulkCrosslist}
-                disabled={isCrosslisting || crosslistTargets.length === 0}
-                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-                style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
-                onMouseEnter={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#2C4428')}
-                onMouseLeave={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
-              >
-                {isCrosslisting ? 'Publishing...' : `Publish to ${crosslistTargets.length} platform${crosslistTargets.length !== 1 ? 's' : ''}`}
-              </button>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkCrosslist}
+                  disabled={isCrosslisting || crosslistTargets.length === 0 || allFullyListed}
+                  className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+                  onMouseEnter={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#2C4428')}
+                  onMouseLeave={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+                >
+                  {isCrosslisting ? 'Publishing...' : crosslistTargets.length === 0 ? 'Publish' : `Publish to ${crosslistTargets.length} platform${crosslistTargets.length !== 1 ? 's' : ''}`}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Listings Grid */}
       <div className="space-y-3">

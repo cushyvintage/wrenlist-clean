@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/wren/Badge'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import type { Find, Platform } from '@/types'
 
 interface MarketplaceDataItem {
@@ -22,6 +23,7 @@ interface InventoryItemHeaderProps {
   showCrosslistPicker?: boolean
   crosslistTargets?: Platform[]
   availableForCrosslist?: Platform[]
+  platformUsernames?: Map<Platform, string | undefined>
   marketplaceData?: MarketplaceDataItem[]
   onMarkAsSoldClick: () => void
   onEditClick: () => void
@@ -50,6 +52,7 @@ export default function InventoryItemHeader({
   showCrosslistPicker = false,
   crosslistTargets = [],
   availableForCrosslist = [],
+  platformUsernames,
   marketplaceData = [],
   onMarkAsSoldClick,
   onEditClick,
@@ -185,8 +188,9 @@ export default function InventoryItemHeader({
               Publish to
             </p>
             {availableForCrosslist.map((platform) => {
-              const colors = PLATFORM_COLORS[platform] || { border: 'rgba(61,92,58,.3)', text: '#3D5C3A', bg: 'rgba(61,92,58,.08)' }
               const isSelected = crosslistTargets.includes(platform)
+              const username = platformUsernames?.get(platform)
+              const formatName = (p: string) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)
               return (
                 <label
                   key={platform}
@@ -198,11 +202,12 @@ export default function InventoryItemHeader({
                     onChange={() => onCrosslistTargetToggle?.(platform)}
                     className="rounded"
                   />
-                  <span
-                    className="text-sm font-medium capitalize"
-                    style={{ color: colors.text }}
-                  >
-                    {platform}
+                  <MarketplaceIcon platform={platform} size="sm" />
+                  <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                    {formatName(platform)}
+                    {username && (
+                      <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>
+                    )}
                   </span>
                 </label>
               )
