@@ -99,11 +99,12 @@ export function ImportHeader({
           disabled={selectedCount === 0 || isImporting}
           className={`px-4 py-2 text-sm font-medium rounded transition ${
             confirming
-              ? 'bg-amber-600 text-white hover:bg-amber-700'
+              ? 'text-white'
               : selectedCount > 0 && !isImporting
                 ? 'bg-sage text-white hover:bg-sage-dk'
                 : 'bg-cream-dk text-ink-lt cursor-not-allowed'
           }`}
+          style={confirming ? { backgroundColor: '#d97706' } : undefined}
         >
           {isImporting
             ? 'Importing...'
