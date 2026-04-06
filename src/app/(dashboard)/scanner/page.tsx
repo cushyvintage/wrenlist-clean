@@ -331,6 +331,11 @@ export default function ScannerPage() {
       {/* Main column */}
       <div className="flex-1 min-w-0 space-y-6">
 
+        {/* How it works hint */}
+        <p className="text-xs text-ink-lt">
+          Scan a barcode or ISBN — we&apos;ll identify it, price it, and save it. Same item won&apos;t scan twice. Move to the next item to keep going.
+        </p>
+
         {/* Trip selector + stats banner */}
         <div className="space-y-4">
           <TripSelector onTripChange={setActiveTrip} />
