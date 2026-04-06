@@ -351,12 +351,15 @@ type ExternalMessage = Record<string, unknown>;
           };
 
           // Pass settings with TLD overrides for UK marketplaces
+          // Read publishMode from PMD fields if present (default: "draft" for Etsy)
+          const itemFields = (item as Record<string, unknown>).fields as Record<string, unknown> | undefined;
           const publishOptions = {
             settings: {
               ...(item.settings ?? {}),
               depopTld: "co.uk",
               facebookTld: "co.uk",
             },
+            publishMode: (itemFields?.publishMode as "draft" | "publish" | undefined) ?? "draft",
           };
           let result: Awaited<ReturnType<typeof publishToMarketplace>>;
           try {
@@ -385,9 +388,11 @@ type ExternalMessage = Record<string, unknown>;
           // Report back to Wrenlist API
           try {
             if (result.success) {
-              // Etsy queue poll always saves as draft (default publishMode).
-              // Other marketplaces publish directly via API.
-              const reportStatus = mp === "etsy" ? "draft" : "listed";
+              // Etsy returns publishMode ("draft" or "publish") from the result.
+              // Other marketplaces publish directly via API → always "listed".
+              const reportStatus = mp === "etsy"
+                ? ((result as unknown as Record<string, unknown>).publishMode === "publish" ? "listed" : "draft")
+                : "listed";
               const reportBody: Record<string, unknown> = {
                 find_id: item.find_id,
                 marketplace: mp,
