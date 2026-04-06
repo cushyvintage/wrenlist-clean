@@ -395,7 +395,7 @@ export default function ListingsPage() {
               Select marketplaces to publish to:
             </p>
             <div className="space-y-2 mb-4">
-              {(['ebay', 'vinted', 'etsy', 'shopify'] as Platform[]).map((platform) => {
+              {(['vinted', 'ebay', 'etsy', 'depop', 'facebook', 'shopify', 'poshmark', 'mercari', 'whatnot', 'grailed'] as Platform[]).map((platform) => {
                 // Shopify requires a stored connection; others work via the extension
                 const connected = platform === 'shopify' ? shopifyConnected : true
                 return (

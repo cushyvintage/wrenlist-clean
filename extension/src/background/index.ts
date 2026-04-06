@@ -280,7 +280,30 @@ type ExternalMessage = Record<string, unknown>;
               facebookTld: "co.uk",
             },
           };
-          const result = await publishToMarketplace(mp, product, publishOptions);
+          let result: Awaited<ReturnType<typeof publishToMarketplace>>;
+          try {
+            result = await publishToMarketplace(mp, product, publishOptions);
+          } catch (publishError) {
+            // publishToMarketplace threw (e.g. not logged in, CSRF missing) — treat as a failed attempt
+            const errorMsg = publishError instanceof Error ? publishError.message : String(publishError);
+            const nextRetryCount = retryCount + 1;
+            console.error(`[QueuePoll] ${mp} threw for ${find.name}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
+            try {
+              await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                  status: nextRetryCount >= MAX_PUBLISH_RETRIES ? "error" : "needs_publish",
+                  error_message: errorMsg,
+                  fields: { ...existingFields, retry_count: nextRetryCount },
+                }),
+              });
+            } catch { /* ignore reporting failure */ }
+            continue;
+          }
 
           // Report back to Wrenlist API
           try {
@@ -377,7 +400,29 @@ type ExternalMessage = Record<string, unknown>;
 
           // Pass settings (e.g. shopifyShopUrl) from the queue item
           const delistOptions = item.settings ? { settings: item.settings } : {};
-          const result = await delistFromMarketplace(mp, listingId, delistOptions);
+          let result: Awaited<ReturnType<typeof delistFromMarketplace>>;
+          try {
+            result = await delistFromMarketplace(mp, listingId, delistOptions);
+          } catch (delistError) {
+            const errorMsg = delistError instanceof Error ? delistError.message : String(delistError);
+            const nextRetryCount = retryCount + 1;
+            console.error(`[QueuePoll] ${mp} delist threw for ${listingId}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
+            try {
+              await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                  status: nextRetryCount >= MAX_PUBLISH_RETRIES ? "error" : "needs_delist",
+                  error_message: errorMsg,
+                  fields: { ...existingFields, retry_count: nextRetryCount },
+                }),
+              });
+            } catch { /* ignore reporting failure */ }
+            continue;
+          }
 
           // Report back to Wrenlist API
           try {

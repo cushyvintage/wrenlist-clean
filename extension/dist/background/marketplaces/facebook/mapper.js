@@ -372,7 +372,7 @@ export class FacebookMapper {
             quantity: product.quantity,
             item_price: {
                 currency,
-                price: Math.ceil(product.price).toString(),
+                price: product.price.toFixed(2),
             },
             min_acceptable_checkout_offer_price: product.acceptOffers && product.price > 1
                 ? Math.ceil(product.price * 0.5).toString()

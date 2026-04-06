@@ -224,10 +224,12 @@ export class EtsyClient {
         };
       }
 
-      // Open tab in background (active: false) so user isn't interrupted
+      // Open tab active — Etsy's React form needs a visible tab to render properly.
+      // Background tabs are throttled by Chrome and React components may not mount.
+      // Tab is auto-closed after save completes.
       const tab = await chrome.tabs.create({
         url: ETSY_CREATE_LISTING_URL,
-        active: false,
+        active: true,
       });
 
       if (!tab.id) {
@@ -276,21 +278,14 @@ export class EtsyClient {
         // Step 4: Select the first delivery profile
         await this.selectDeliveryProfile(tabId);
 
-        // Step 5: Click Publish and handle confirmation dialog
+        // Step 5: Save as draft (avoids $0.20 fee, user publishes from Etsy when ready)
         await wait(1000);
         await chrome.scripting.executeScript({
           target: { tabId },
           func: clickPublishButton,
         });
 
-        // Step 6: Handle Etsy's publish confirmation dialog
-        await wait(2000);
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          func: clickPublishConfirmation,
-        });
-
-        // Step 7: Wait for publish to complete and capture the listing URL
+        // Step 6: Wait for save to complete and capture the listing URL
         // After publishing, Etsy redirects to the listing page or manager
         await wait(5000);
 
@@ -312,12 +307,19 @@ export class EtsyClient {
 
         await chrome.tabs.remove(tabId).catch(() => {});
 
+        if (!listingId) {
+          return {
+            success: false,
+            message: "Etsy form submitted but no listing ID was returned. The listing may not have been saved — check Etsy dashboard.",
+          };
+        }
+
         return {
           success: true,
-          message: "Listing published on Etsy.",
+          message: "Listing saved as draft on Etsy.",
           product: {
-            id: listingId || product.id,
-            url: listingUrl || ETSY_CREATE_LISTING_URL,
+            id: listingId,
+            url: listingUrl || this.getProductUrl(listingId),
           },
         };
       } catch (error) {
@@ -354,7 +356,7 @@ export class EtsyClient {
       }
 
       const editUrl = `${ETSY_EDIT_LISTING_URL}/${marketplaceId}/edit`;
-      const tab = await chrome.tabs.create({ url: editUrl, active: false });
+      const tab = await chrome.tabs.create({ url: editUrl, active: true });
 
       if (!tab.id) {
         return { success: false, message: "Failed to open Etsy edit page" };
@@ -491,7 +493,7 @@ export class EtsyClient {
       // Fallback 3: browser automation — open the listing edit page and deactivate
       try {
         const editUrl = `${ETSY_EDIT_LISTING_URL}/${marketplaceId}/edit`;
-        const tab = await chrome.tabs.create({ url: editUrl, active: false });
+        const tab = await chrome.tabs.create({ url: editUrl, active: true });
         if (tab.id) {
           await this.waitForPageReady(tab.id, "#listing-title-input", 10000);
           // Look for a Deactivate button on the edit page
@@ -998,41 +1000,30 @@ function clickPublishButton(): { success: boolean; message?: string } {
   try {
     const buttons = Array.from(document.querySelectorAll("button"));
 
-    // Try Publish first
-    const publishBtn = buttons.find(
-      (b) => b.textContent?.trim() === "Publish",
-    );
-
-    if (publishBtn && !publishBtn.disabled) {
-      publishBtn.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Brief delay after scroll, then click
-      setTimeout(() => publishBtn.click(), 500);
-      return { success: true, message: "Clicked Publish" };
-    }
-
-    // Fallback: Save as draft
+    // Save as draft first — safer for automated flow, avoids $0.20 fee
+    // until user explicitly publishes from Etsy dashboard
     const draftBtn = buttons.find((b) =>
       b.textContent?.trim()?.includes("Save as draft"),
     );
 
     if (draftBtn && !draftBtn.disabled) {
-      draftBtn.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => draftBtn.click(), 500);
-      return { success: true, message: "Clicked Save as draft (Publish was disabled)" };
+      draftBtn.scrollIntoView({ block: "center" });
+      draftBtn.click();
+      return { success: true, message: "Saved as draft" };
     }
 
-    // Last resort: highlight the publish button area
-    if (publishBtn) {
-      publishBtn.scrollIntoView({ behavior: "smooth", block: "center" });
-      publishBtn.style.outline = "3px solid #f97316";
-      publishBtn.style.outlineOffset = "2px";
-      return {
-        success: false,
-        message: "Publish button is disabled. Please review required fields and click Publish manually.",
-      };
+    // Fallback: try Publish if no draft button
+    const publishBtn = buttons.find(
+      (b) => b.textContent?.trim() === "Publish",
+    );
+
+    if (publishBtn && !publishBtn.disabled) {
+      publishBtn.scrollIntoView({ block: "center" });
+      publishBtn.click();
+      return { success: true, message: "Clicked Publish" };
     }
 
-    return { success: false, message: "Publish button not found" };
+    return { success: false, message: "Save/Publish button not found or disabled" };
   } catch (error) {
     return {
       success: false,
