@@ -71,11 +71,11 @@ export default function MileagePage() {
 
   const filteredTrips = filterVehicle ? mileages.filter(m => m.vehicle === filterVehicle) : mileages
   const totalMiles = filteredTrips.reduce((sum, trip) => sum + trip.miles, 0)
-  const totalDeductible = filteredTrips.reduce((sum, trip) => sum + trip.deductible_value_gbp, 0)
+  const totalDeductible = Math.round(filteredTrips.reduce((sum, trip) => sum + trip.deductible_value_gbp, 0) * 100) / 100
   const avgMilesPerTrip = filteredTrips.length > 0 ? Math.round((totalMiles / filteredTrips.length) * 10) / 10 : 0
 
   const allTotalMiles = mileages.reduce((sum, m) => sum + m.miles, 0)
-  const allTotalDeductible = mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0)
+  const allTotalDeductible = Math.round(mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0) * 100) / 100
 
   // Check if any vehicle type is approaching the 10k threshold
   const thresholdWarnings: string[] = []
