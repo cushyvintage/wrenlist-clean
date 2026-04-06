@@ -278,7 +278,8 @@ export default function InventoryDetailPage() {
     }
   }
 
-  const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed' || m.status === 'draft').map((m) => m.marketplace))
+  const BLOCKED_STATUSES = new Set(['listed', 'draft', 'needs_publish', 'needs_delist'])
+  const listedMarketplaces = new Set(marketplaceData.filter((m) => BLOCKED_STATUSES.has(m.status)).map((m) => m.marketplace))
   const availableForCrosslist: Platform[] = allConnectedPlatforms.map((cp) => cp.platform).filter((m) => !listedMarketplaces.has(m))
   const connectedPlatformMap = new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp]))
 

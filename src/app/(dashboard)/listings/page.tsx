@@ -226,9 +226,14 @@ export default function ListingsPage() {
     setFailedTargets([])
 
     // Initialise per-platform statuses
-    const initStatuses: Record<string, { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }> = {}
+    const total = findIds.length
+    const initStatuses: Record<string, PlatformStatusEntry> = {}
+    const patchEntry = (prev: Record<string, PlatformStatusEntry>, p: string, patch: Partial<PlatformStatusEntry>): PlatformStatusEntry => {
+      const base: PlatformStatusEntry = prev[p] ?? { ...emptyEntry, total }
+      return { ...base, ...patch }
+    }
     for (const p of targets) {
-      initStatuses[p] = { status: 'checking', succeeded: 0, failed: 0, total: findIds.length }
+      initStatuses[p] = { status: 'checking', succeeded: 0, failed: 0, total }
     }
     setPlatformStatuses(initStatuses)
 
@@ -247,7 +252,7 @@ export default function ListingsPage() {
       setPlatformStatuses((prev) => {
         const next = { ...prev }
         for (const p of expired) {
-          next[p] = { ...next[p], status: 'failed', error: 'session expired' }
+          next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: 'session expired' }
         }
         return next
       })
@@ -262,15 +267,18 @@ export default function ListingsPage() {
     setPlatformStatuses((prev) => {
       const next = { ...prev }
       for (const p of valid) {
-        next[p] = { ...next[p], status: 'waiting' }
+        next[p] = { ...(next[p] ?? emptyEntry), status: 'waiting' }
       }
       return next
     })
     setCrosslistProgress(null)
 
     // Track per-platform tallies across all finds
-    const tallies: Record<string, { succeeded: number; failed: number; lastError?: string }> = {}
-    for (const p of valid) tallies[p] = { succeeded: 0, failed: 0 }
+    type Tally = { succeeded: number; failed: number; lastError?: string }
+    const defaultTally: Tally = { succeeded: 0, failed: 0 }
+    const tallies = new Map<string, Tally>()
+    for (const p of valid) tallies.set(p, { succeeded: 0, failed: 0 })
+    const t = (p: string): Tally => tallies.get(p) ?? defaultTally
 
     for (let i = 0; i < findIds.length; i++) {
       // Mark all valid platforms as publishing for this item
@@ -278,7 +286,7 @@ export default function ListingsPage() {
         const next = { ...prev }
         for (const p of valid) {
           if (next[p]?.status !== 'failed' || !expired.includes(p as Platform)) {
-            next[p] = { ...next[p], status: 'publishing' }
+            next[p] = { ...(next[p] ?? emptyEntry), status: 'publishing' }
           }
         }
         return next
@@ -299,41 +307,41 @@ export default function ListingsPage() {
           for (const p of valid) {
             const r = results[p]
             if (r?.ok) {
-              tallies[p].succeeded++
+              t(p).succeeded++
             } else if (r) {
-              tallies[p].failed++
-              tallies[p].lastError = r.error
+              t(p).failed++
+              t(p).lastError = r.error
             } else {
               // Platform not in results — treat as still queued (extension-based)
-              tallies[p].succeeded++
+              t(p).succeeded++
             }
             const isLast = i === findIds.length - 1
             if (isLast) {
               // Final status
-              if (tallies[p].failed > 0 && tallies[p].succeeded === 0) {
-                next[p] = { ...next[p], status: 'failed', error: tallies[p].lastError, succeeded: tallies[p].succeeded, failed: tallies[p].failed }
-              } else if (tallies[p].failed > 0) {
-                next[p] = { ...next[p], status: 'failed', error: `${tallies[p].failed} failed`, succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+              if (t(p).failed > 0 && t(p).succeeded === 0) {
+                next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: t(p).lastError, succeeded: t(p).succeeded, failed: t(p).failed }
+              } else if (t(p).failed > 0) {
+                next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: `${t(p).failed} failed`, succeeded: t(p).succeeded, failed: t(p).failed }
               } else {
                 // Extension platforms (vinted, etsy, depop, facebook) queue rather than list directly
                 const extensionPlatforms: Platform[] = ['vinted', 'etsy', 'depop', 'facebook']
                 const finalStatus: PlatformPublishStatus = extensionPlatforms.includes(p as Platform) ? 'queued' : 'listed'
-                next[p] = { ...next[p], status: finalStatus, succeeded: tallies[p].succeeded, failed: 0 }
+                next[p] = { ...(next[p] ?? emptyEntry), status: finalStatus, succeeded: t(p).succeeded, failed: 0 }
               }
             } else {
               // Intermediate — show progress
-              next[p] = { ...next[p], status: 'publishing', succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+              next[p] = { ...(next[p] ?? emptyEntry), status: 'publishing', succeeded: t(p).succeeded, failed: t(p).failed }
             }
           }
           return next
         })
       } catch {
         // Network error — mark all platforms as failed for this item
-        for (const p of valid) tallies[p].failed++
+        for (const p of valid) t(p).failed++
         setPlatformStatuses((prev) => {
           const next = { ...prev }
           for (const p of valid) {
-            next[p] = { ...next[p], succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+            next[p] = { ...(next[p] ?? emptyEntry), succeeded: t(p).succeeded, failed: t(p).failed }
           }
           return next
         })
@@ -341,8 +349,8 @@ export default function ListingsPage() {
     }
 
     // Compute overall success/failure
-    const allSucceeded = valid.every((p) => tallies[p].failed === 0)
-    const anyFailed = valid.some((p) => tallies[p].failed > 0)
+    const allSucceeded = valid.every((p) => t(p).failed === 0)
+    const anyFailed = valid.some((p) => t(p).failed > 0)
 
     if (allSucceeded && expired.length === 0) {
       // All good — close modal after a brief pause so user sees final statuses
@@ -356,7 +364,7 @@ export default function ListingsPage() {
         setTimeout(() => setSuccessToast(null), 4000)
       }, 1200)
     } else {
-      const failedPlatforms = valid.filter((p) => tallies[p].failed > 0)
+      const failedPlatforms = valid.filter((p) => t(p).failed > 0)
       const parts: string[] = []
       if (anyFailed) parts.push(`${failedPlatforms.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')} had failures`)
       if (expired.length > 0) parts.push(`${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`)
@@ -514,20 +522,21 @@ export default function ListingsPage() {
 
       {/* Crosslist modal */}
       {showCrosslistModal && (() => {
-        // Compute already-listed counts per platform — only count "listed" (live), not "draft" (pending)
+        // Compute per-platform counts for selected items
         const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
+        const BLOCKED_STATUSES = new Set(['listed', 'needs_publish', 'needs_delist'])
         const alreadyListedCounts: Record<string, number> = {}
         const draftCounts: Record<string, number> = {}
         for (const cp of connectedPlatforms) {
           alreadyListedCounts[cp.platform] = selectedGroups.filter((g) =>
-            g.marketplaces.some((mp) => mp.marketplace === cp.platform && mp.status === 'listed')
+            g.marketplaces.some((mp) => mp.marketplace === cp.platform && BLOCKED_STATUSES.has(mp.status))
           ).length
           draftCounts[cp.platform] = selectedGroups.filter((g) =>
             g.marketplaces.some((mp) => mp.marketplace === cp.platform && mp.status === 'draft')
           ).length
         }
         const totalSelected = selectedItems.size
-        // Only fully block if all items are live-listed (not draft)
+        // Block if all items are listed/queued (not draft)
         const allFullyListed = connectedPlatforms.length > 0 && connectedPlatforms.every((cp) => alreadyListedCounts[cp.platform] === totalSelected)
 
         // Selectable = connected platforms that aren't fully listed
