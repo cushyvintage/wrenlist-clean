@@ -637,7 +637,6 @@ export default function PlatformConnectPage() {
                 onClick={() => {
                   setEbaySelectedPolicies({})
                   setEbayChangingPolicies(true)
-                  ebay.refreshStatus()
                 }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
               >
