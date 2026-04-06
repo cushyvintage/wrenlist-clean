@@ -4,8 +4,8 @@ import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
 import { MileageForm } from '@/components/forms/MileageForm'
 import { useState, useEffect } from 'react'
-import type { Mileage, MileagePurpose } from '@/types'
-import { MILEAGE_PURPOSE_LABELS, HMRC_MILEAGE_RATE } from '@/types'
+import type { Mileage, MileagePurpose, VehicleType } from '@/types'
+import { MILEAGE_PURPOSE_LABELS, HMRC_RATES, VEHICLE_TYPE_ICONS, VEHICLE_TYPE_LABELS } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 
 const purposeColors: Record<MileagePurpose, string> = {
@@ -17,70 +17,55 @@ const purposeColors: Record<MileagePurpose, string> = {
   other: 'bg-cream-md text-ink-lt',
 }
 
+function getRateLabel(vehicleType: VehicleType): string {
+  const rate = HMRC_RATES[vehicleType]
+  if (rate.second !== null) {
+    return `${(rate.first * 100).toFixed(0)}p/${(rate.second * 100).toFixed(0)}p`
+  }
+  return `${(rate.first * 100).toFixed(0)}p/mi`
+}
+
 export default function MileagePage() {
   const [mileages, setMileages] = useState<Mileage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [vehicles, setVehicles] = useState<string[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filterVehicle, setFilterVehicle] = useState<string | null>(null)
 
-  // Set page title
   useEffect(() => {
     document.title = 'Mileage | Wrenlist'
   }, [])
 
-  // Fetch mileage entries
-  useEffect(() => {
-    const fetchMileage = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch('/api/mileage')
-        if (!response.ok) throw new Error('Failed to fetch mileage')
-        const data = await response.json()
-        const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
-        setMileages(entries)
+  const fetchMileage = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/mileage')
+      if (!response.ok) throw new Error('Failed to fetch mileage')
+      const data = await response.json()
+      const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
+      setMileages(entries)
 
-        // Extract unique vehicles
-        const uniqueVehicles = Array.from(new Set(entries.map((e: Mileage) => e.vehicle)))
-        setVehicles(uniqueVehicles as string[])
-        if (uniqueVehicles.length > 0 && !filterVehicle) {
-          setFilterVehicle(uniqueVehicles[0] as string)
-        }
-      } catch (err) {
-        console.error('Failed to fetch mileage:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load mileage')
-      } finally {
-        setIsLoading(false)
+      const uniqueVehicles = Array.from(new Set(entries.map((e: Mileage) => e.vehicle)))
+      setVehicles(uniqueVehicles as string[])
+      if (uniqueVehicles.length > 0 && !filterVehicle) {
+        setFilterVehicle(uniqueVehicles[0] as string)
       }
+    } catch (err) {
+      console.error('Failed to fetch mileage:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load mileage')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchMileage()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleFormSuccess = () => {
     setShowForm(false)
-    // Refetch mileage
-    const fetchMileage = async () => {
-      try {
-        const response = await fetch('/api/mileage')
-        if (!response.ok) throw new Error('Failed to fetch mileage')
-        const data = await response.json()
-        const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
-        setMileages(entries)
-
-        // Update vehicles
-        const uniqueVehicles = Array.from(new Set(entries.map((e: Mileage) => e.vehicle)))
-        setVehicles(uniqueVehicles as string[])
-        if (!filterVehicle && uniqueVehicles.length > 0) {
-          setFilterVehicle(uniqueVehicles[0] as string)
-        }
-      } catch (err) {
-        console.error('Failed to refetch mileage:', err)
-      }
-    }
     fetchMileage()
   }
 
@@ -91,6 +76,22 @@ export default function MileagePage() {
 
   const allTotalMiles = mileages.reduce((sum, m) => sum + m.miles, 0)
   const allTotalDeductible = mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0)
+
+  // Check if any vehicle type is approaching the 10k threshold
+  const thresholdWarnings: string[] = []
+  const vehicleTypeTotals: Partial<Record<VehicleType, number>> = {}
+  for (const m of mileages) {
+    const vt = m.vehicle_type || 'car'
+    vehicleTypeTotals[vt] = (vehicleTypeTotals[vt] || 0) + m.miles
+  }
+  for (const [vt, total] of Object.entries(vehicleTypeTotals)) {
+    const rate = HMRC_RATES[vt as VehicleType]
+    if (rate.threshold && total >= rate.threshold * 0.9 && total < rate.threshold) {
+      thresholdWarnings.push(`${VEHICLE_TYPE_LABELS[vt as VehicleType]}: ${total.toFixed(0)} of ${rate.threshold.toLocaleString()} miles — approaching reduced rate threshold`)
+    } else if (rate.threshold && total >= rate.threshold) {
+      thresholdWarnings.push(`${VEHICLE_TYPE_LABELS[vt as VehicleType]}: ${total.toFixed(0)} miles — reduced rate (${(rate.second! * 100).toFixed(0)}p/mi) now applies`)
+    }
+  }
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString)
@@ -107,8 +108,17 @@ export default function MileagePage() {
     <div className="space-y-6">
       {/* Disclaimer */}
       <div className="bg-blue-lt border border-blue-dk/20 rounded-md p-4 text-sm text-blue-dk">
-        <strong>HMRC mileage rates applied automatically.</strong> You are responsible for submitting accurate records — keep receipts and logs as evidence.
+        <strong>HMRC mileage rates applied automatically.</strong> Car/Van: 45p (first 10,000 mi), 25p after. Motorcycle: 24p. Bicycle: 20p.
       </div>
+
+      {/* Threshold warnings */}
+      {thresholdWarnings.length > 0 && (
+        <div className="bg-amber-lt border border-amber-dk/20 rounded-md p-4 text-sm text-amber-dk space-y-1">
+          {thresholdWarnings.map((w, i) => (
+            <div key={i}>{w}</div>
+          ))}
+        </div>
+      )}
 
       {/* Form toggle */}
       <div className="flex justify-between items-center">
@@ -141,6 +151,9 @@ export default function MileagePage() {
                   const vehicleMileages = mileages.filter(m => m.vehicle === vehicle)
                   const vehicleTotalMiles = vehicleMileages.reduce((sum, m) => sum + m.miles, 0)
                   const vehicleTotalDeductible = vehicleMileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0)
+                  // Get the vehicle type from the most recent entry for this vehicle
+                  const vehicleType: VehicleType = vehicleMileages[0]?.vehicle_type || 'car'
+                  const icon = VEHICLE_TYPE_ICONS[vehicleType]
 
                   return (
                     <div
@@ -151,10 +164,12 @@ export default function MileagePage() {
                       }`}
                     >
                       <div className="flex items-center gap-4 flex-1">
-                        <div className="text-2xl">🚗</div>
+                        <div className="text-2xl">{icon}</div>
                         <div className="flex-1">
                           <div className="font-medium text-ink">{vehicle}</div>
-                          <div className="text-xs text-ink-lt mt-1">{vehicleMileages.length} trips · {vehicleTotalMiles} miles logged</div>
+                          <div className="text-xs text-ink-lt mt-1">
+                            {VEHICLE_TYPE_LABELS[vehicleType]} · {vehicleMileages.length} trips · {vehicleTotalMiles} miles · {getRateLabel(vehicleType)}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -173,7 +188,7 @@ export default function MileagePage() {
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="total miles" value={allTotalMiles} delta="this tax year" suffix="" />
-            <StatCard label="deductible value" value={allTotalDeductible} prefix="£" delta="@ 45p/mile" suffix="" />
+            <StatCard label="deductible value" value={allTotalDeductible} prefix="£" delta="HMRC tiered rates" suffix="" />
             <StatCard label="trips logged" value={mileages.length} delta="all vehicles" suffix="" />
           </div>
 

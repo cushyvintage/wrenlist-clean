@@ -199,6 +199,8 @@ export interface Expense {
 
 export type MileagePurpose = 'car_boot' | 'charity_shop' | 'house_clearance' | 'sourcing' | 'delivery' | 'other'
 
+export type VehicleType = 'car' | 'van' | 'motorcycle' | 'bicycle'
+
 export interface Mileage {
   id: string
   user_id: string
@@ -208,12 +210,39 @@ export interface Mileage {
   from_location: string | null
   to_location: string | null
   vehicle: string
-  deductible_value_gbp: number // Calculated as miles * HMRC_RATE
+  vehicle_type: VehicleType
+  tax_year: string
+  deductible_value_gbp: number
   created_at: string
   updated_at: string
 }
 
-export const HMRC_MILEAGE_RATE = 0.45 // £0.45 per mile
+// HMRC Approved Mileage Allowance Payments (AMAPs)
+// Car/Van: 45p first 10k miles per tax year, then 25p
+// Motorcycle: 24p flat | Bicycle: 20p flat
+export const HMRC_RATES: Record<VehicleType, { first: number; second: number | null; threshold: number | null }> = {
+  car:        { first: 0.45, second: 0.25, threshold: 10000 },
+  van:        { first: 0.45, second: 0.25, threshold: 10000 },
+  motorcycle: { first: 0.24, second: null, threshold: null },
+  bicycle:    { first: 0.20, second: null, threshold: null },
+}
+
+/** @deprecated Use HMRC_RATES instead */
+export const HMRC_MILEAGE_RATE = 0.45
+
+export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
+  car: 'Car',
+  van: 'Van',
+  motorcycle: 'Motorcycle',
+  bicycle: 'Bicycle',
+}
+
+export const VEHICLE_TYPE_ICONS: Record<VehicleType, string> = {
+  car: '🚗',
+  van: '🚐',
+  motorcycle: '🏍️',
+  bicycle: '🚲',
+}
 
 export const EXPENSE_LABELS: Record<ExpenseCategory, string> = {
   packaging: 'Packaging',

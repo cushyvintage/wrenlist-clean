@@ -1,9 +1,9 @@
-import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateMileageSchema, validateBody } from '@/lib/validation'
-import type { Mileage } from '@/types'
+import { getTaxYear, calculateDeductible } from '@/lib/mileage-calc'
+import type { Mileage, VehicleType } from '@/types'
 
 /**
  * GET /api/mileage
@@ -36,7 +36,8 @@ export const GET = withAuth(async (req, user) => {
     const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error) }
+      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.success({
@@ -48,36 +49,63 @@ export const GET = withAuth(async (req, user) => {
       },
     })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/mileage error:', error) }    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production') { console.error('GET /api/mileage error:', error) }
+    return ApiResponseHelper.internalError()
   }
 })
 
 /**
  * POST /api/mileage
- * Create a new mileage entry
+ * Create a new mileage entry with HMRC tiered rate calculation
  */
 export const POST = withAuth(async (req, user) => {
   try {
     const supabase = await createSupabaseServerClient()
     const body = await req.json()
 
-    // Validate request body
     const validation = validateBody(CreateMileageSchema, body)
     if (!validation.success) {
       return ApiResponseHelper.badRequest(validation.error)
     }
 
-    // Create mileage entry with calculated deductible
-    const HMRC_MILEAGE_RATE = 0.45
+    const date = validation.data.date ?? new Date().toISOString().split('T')[0]!
+    const vehicleType = (validation.data.vehicle_type || 'car') as VehicleType
+    const taxYear = getTaxYear(date)
+
+    // Query cumulative miles for this user + vehicle type + tax year (before this trip)
+    const { data: cumulativeData, error: cumError } = await supabase
+      .from('mileage')
+      .select('miles')
+      .eq('user_id', user.id)
+      .eq('vehicle_type', vehicleType)
+      .eq('tax_year', taxYear)
+
+    if (cumError) {
+      if (process.env.NODE_ENV !== 'production') { console.error('Cumulative query error:', cumError) }
+      return ApiResponseHelper.internalError(cumError.message)
+    }
+
+    const cumulativeMilesBefore = (cumulativeData || []).reduce(
+      (sum: number, row: { miles: number }) => sum + Number(row.miles), 0
+    )
+
+    const { amount } = calculateDeductible(
+      validation.data.miles,
+      vehicleType,
+      cumulativeMilesBefore
+    )
+
     const mileage = {
       user_id: user.id,
-      date: validation.data.date || new Date().toISOString().split('T')[0],
+      date,
       miles: validation.data.miles,
       purpose: validation.data.purpose || 'sourcing',
       from_location: validation.data.from_location || null,
       to_location: validation.data.to_location || null,
       vehicle: validation.data.vehicle,
-      deductible_value_gbp: validation.data.miles * HMRC_MILEAGE_RATE,
+      vehicle_type: vehicleType,
+      tax_year: taxYear,
+      deductible_value_gbp: amount,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -89,11 +117,13 @@ export const POST = withAuth(async (req, user) => {
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production')  { console.error('Supabase error:', error) }      return ApiResponseHelper.internalError(error.message)
+      if (process.env.NODE_ENV !== 'production') { console.error('Supabase error:', error) }
+      return ApiResponseHelper.internalError(error.message)
     }
 
     return ApiResponseHelper.created(data as Mileage)
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production')  { console.error('POST /api/mileage error:', error) }    return ApiResponseHelper.internalError()
+    if (process.env.NODE_ENV !== 'production') { console.error('POST /api/mileage error:', error) }
+    return ApiResponseHelper.internalError()
   }
 })

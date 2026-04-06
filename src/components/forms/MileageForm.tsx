@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import type { MileagePurpose } from '@/types'
-import { MILEAGE_PURPOSE_LABELS, HMRC_MILEAGE_RATE } from '@/types'
+import type { MileagePurpose, VehicleType } from '@/types'
+import { MILEAGE_PURPOSE_LABELS, HMRC_RATES, VEHICLE_TYPE_LABELS, VEHICLE_TYPE_ICONS } from '@/types'
 
 interface MileageFormProps {
   onSubmit?: (data: MileageFormData) => Promise<void>
@@ -21,9 +20,11 @@ export interface MileageFormData {
   fromLocation?: string | null
   toLocation?: string | null
   vehicle: string
+  vehicleType: VehicleType
 }
 
 const purposes: MileagePurpose[] = ['car_boot', 'charity_shop', 'house_clearance', 'sourcing', 'delivery', 'other']
+const vehicleTypes: VehicleType[] = ['car', 'van', 'motorcycle', 'bicycle']
 
 export function MileageForm({
   onSubmit,
@@ -33,12 +34,12 @@ export function MileageForm({
   submitLabel = 'Log trip',
   onSuccess,
 }: MileageFormProps) {
-  const router = useRouter()
   const defaultData: MileageFormData = {
     date: new Date().toISOString().split('T')[0]!,
     miles: 0,
     purpose: 'sourcing',
     vehicle: vehicles[0] || '',
+    vehicleType: 'car',
     fromLocation: '',
     toLocation: '',
   }
@@ -51,9 +52,16 @@ export function MileageForm({
   const [isLoading, setIsLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  // Calculate deductible preview using first rate (conservative estimate)
   useEffect(() => {
-    setDeductible(formData.miles * HMRC_MILEAGE_RATE)
-  }, [formData.miles])
+    const rate = HMRC_RATES[formData.vehicleType]
+    setDeductible(formData.miles * rate.first)
+  }, [formData.miles, formData.vehicleType])
+
+  const currentRate = HMRC_RATES[formData.vehicleType]
+  const rateLabel = currentRate.second !== null
+    ? `${(currentRate.first * 100).toFixed(0)}p/mi (first ${currentRate.threshold?.toLocaleString()}), then ${(currentRate.second * 100).toFixed(0)}p`
+    : `${(currentRate.first * 100).toFixed(0)}p/mi`
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,10 +85,8 @@ export function MileageForm({
       setIsLoading(true)
 
       if (onSubmit) {
-        // Custom submission handler
         await onSubmit(formData)
       } else {
-        // Default: POST to API
         const payload = {
           date: formData.date,
           miles: formData.miles,
@@ -88,6 +94,7 @@ export function MileageForm({
           from_location: formData.fromLocation || null,
           to_location: formData.toLocation || null,
           vehicle: formData.vehicle,
+          vehicle_type: formData.vehicleType,
         }
 
         const response = await fetch('/api/mileage', {
@@ -102,23 +109,21 @@ export function MileageForm({
         }
       }
 
-      // Show success and reset
       setSuccessMessage('Trip logged successfully!')
       setFormData({
         date: new Date().toISOString().split('T')[0]!,
         miles: 0,
         purpose: 'sourcing',
         vehicle: formData.vehicle,
+        vehicleType: formData.vehicleType,
         fromLocation: '',
         toLocation: '',
       })
 
-      // Call callback if provided
       if (onSuccess) {
         onSuccess()
       }
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save trip')
@@ -132,6 +137,29 @@ export function MileageForm({
       {error && <div className="p-3 bg-red-lt text-red-dk rounded text-sm">{error}</div>}
       {successMessage && <div className="p-3 bg-green-lt text-green-dk rounded text-sm">{successMessage}</div>}
 
+      {/* Vehicle Type Selector */}
+      <div>
+        <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">Vehicle Type</label>
+        <div className="grid grid-cols-4 gap-2">
+          {vehicleTypes.map((vt) => (
+            <button
+              key={vt}
+              type="button"
+              onClick={() => setFormData({ ...formData, vehicleType: vt })}
+              className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded border text-sm transition ${
+                formData.vehicleType === vt
+                  ? 'bg-sage text-cream border-sage'
+                  : 'bg-cream border-sage/14 text-ink hover:bg-cream-dk'
+              }`}
+            >
+              <span className="text-lg">{VEHICLE_TYPE_ICONS[vt]}</span>
+              <span className="text-xs font-medium">{VEHICLE_TYPE_LABELS[vt]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="text-xs text-sage-dim mt-1.5">HMRC rate: {rateLabel}</div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         {/* Date */}
         <div>
@@ -144,7 +172,7 @@ export function MileageForm({
           />
         </div>
 
-        {/* Vehicle */}
+        {/* Vehicle Name */}
         <div>
           <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">Vehicle</label>
           {vehicles.length > 0 ? (
@@ -213,7 +241,7 @@ export function MileageForm({
 
         {/* Deductible value (read-only) */}
         <div>
-          <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">Deductible</label>
+          <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">Deductible (est.)</label>
           <div className="w-full px-3 py-2 border border-sage/14 rounded text-sm bg-cream text-sage font-mono font-medium">
             £{deductible.toFixed(2)}
           </div>

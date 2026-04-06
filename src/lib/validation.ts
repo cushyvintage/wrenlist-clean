@@ -73,6 +73,7 @@ export type UpdateExpenseInput = z.infer<typeof UpdateExpenseSchema>
 // ============================================================================
 
 export const MileagePurposeEnum = z.enum(['car_boot', 'charity_shop', 'house_clearance', 'sourcing', 'delivery', 'other'])
+export const VehicleTypeEnum = z.enum(['car', 'van', 'motorcycle', 'bicycle'])
 
 export const CreateMileageSchema = z.object({
   date: z.string().date().optional(),
@@ -81,6 +82,7 @@ export const CreateMileageSchema = z.object({
   from_location: z.string().optional().nullable(),
   to_location: z.string().optional().nullable(),
   vehicle: z.string().min(1, 'Vehicle is required'),
+  vehicle_type: VehicleTypeEnum.optional().default('car'),
 })
 
 export const UpdateMileageSchema = CreateMileageSchema.partial()

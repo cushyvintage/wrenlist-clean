@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateMileageSchema, validateBody } from '@/lib/validation'
-import type { Mileage } from '@/types'
+import { getTaxYear, calculateDeductible } from '@/lib/mileage-calc'
+import type { Mileage, VehicleType } from '@/types'
 
 /**
  * GET /api/mileage/[id]
@@ -70,13 +71,49 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return ApiResponseHelper.notFound()
     }
 
+    // If miles, vehicle_type, or date changed, recalculate deductible
+    const updateData: Record<string, unknown> = {
+      ...validation.data,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (validation.data.miles || validation.data.vehicle_type || validation.data.date) {
+      // Fetch full current record to merge with updates
+      const { data: current } = await supabase
+        .from('mileage')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (current) {
+        const miles = validation.data.miles ?? current.miles
+        const vehicleType = (validation.data.vehicle_type ?? current.vehicle_type) as VehicleType
+        const date = validation.data.date ?? current.date
+        const taxYear = getTaxYear(date)
+
+        // Get cumulative miles excluding this record
+        const { data: cumData } = await supabase
+          .from('mileage')
+          .select('miles')
+          .eq('user_id', user.id)
+          .eq('vehicle_type', vehicleType)
+          .eq('tax_year', taxYear)
+          .neq('id', id)
+
+        const cumulativeBefore = (cumData || []).reduce(
+          (sum: number, row: { miles: number }) => sum + Number(row.miles), 0
+        )
+
+        const { amount } = calculateDeductible(miles, vehicleType, cumulativeBefore)
+        updateData.deductible_value_gbp = amount
+        updateData.tax_year = taxYear
+      }
+    }
+
     // Update mileage entry
     const { data, error } = await supabase
       .from('mileage')
-      .update({
-        ...validation.data,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select('*')
       .single()
