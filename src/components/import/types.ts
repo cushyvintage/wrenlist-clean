@@ -1,5 +1,7 @@
 import type { Platform } from '@/types'
 
+export type ListingStatus = 'active' | 'draft'
+
 export interface ImportableItem {
   id: string
   platform: Platform
@@ -10,6 +12,7 @@ export interface ImportableItem {
   listingUrl: string | null
   alreadyImported: boolean
   checked: boolean
+  listingStatus: ListingStatus
 }
 
 export type ImportFilter = 'all' | 'not_imported' | 'imported'

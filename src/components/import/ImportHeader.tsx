@@ -1,6 +1,7 @@
 'use client'
 
 import type { Platform } from '@/types'
+import type { ListingStatus } from './types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 const PLATFORM_NAMES: Record<string, string> = {
@@ -9,6 +10,8 @@ const PLATFORM_NAMES: Record<string, string> = {
   etsy: 'Etsy',
   shopify: 'Shopify',
 }
+
+export type StatusFilter = 'all' | ListingStatus
 
 interface ImportHeaderProps {
   platform: Platform
@@ -23,6 +26,8 @@ interface ImportHeaderProps {
   onToggleShowOnlyNew: () => void
   searchQuery: string
   onSearchChange: (query: string) => void
+  statusFilter: StatusFilter
+  onStatusFilterChange: (filter: StatusFilter) => void
 }
 
 export function ImportHeader({
@@ -37,6 +42,8 @@ export function ImportHeader({
   onToggleShowOnlyNew,
   searchQuery,
   onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
 }: ImportHeaderProps) {
   return (
     <div className="space-y-4">
@@ -75,7 +82,7 @@ export function ImportHeader({
       </div>
 
       {/* Filters row */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <input
           type="text"
           placeholder="Search a listing"
@@ -83,6 +90,24 @@ export function ImportHeader({
           onChange={(e) => onSearchChange(e.target.value)}
           className="text-sm px-3 py-2 bg-cream-md border border-sage/14 rounded outline-none text-ink placeholder:text-ink-lt w-56"
         />
+
+        {/* Status filter pills */}
+        <div className="flex items-center gap-1">
+          {([['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => onStatusFilterChange(value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition ${
+                statusFilter === value
+                  ? 'bg-sage text-white'
+                  : 'bg-cream-md text-ink-lt hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"

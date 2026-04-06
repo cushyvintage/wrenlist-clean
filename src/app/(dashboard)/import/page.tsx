@@ -12,6 +12,7 @@ import { PlatformGrid } from '@/components/import/PlatformGrid'
 import { ImportHeader } from '@/components/import/ImportHeader'
 import { ImportItemList } from '@/components/import/ImportItemList'
 import type { ImportableItem, PlatformStatuses } from '@/components/import/types'
+import type { StatusFilter } from '@/components/import/ImportHeader'
 
 // No hard cap — fetch all listings from the marketplace
 const IMPORT_LIMIT = Infinity
@@ -35,6 +36,7 @@ export default function ImportPage() {
   // Filters
   const [showOnlyNew, setShowOnlyNew] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   // Import state
   const vintedImport = useMarketplaceImport()
@@ -65,6 +67,7 @@ export default function ImportPage() {
     setItems([])
     setFetchError(null)
     setSearchQuery('')
+    setStatusFilter('all')
 
     if (selectedPlatform === 'ebay') {
       loadEbayInventory()
@@ -104,6 +107,7 @@ export default function ImportPage() {
         listingUrl: l.listingUrl,
         alreadyImported: l.alreadyImported,
         checked: !l.alreadyImported,
+        listingStatus: l.listingId ? 'active' as const : 'draft' as const,
       }))
 
       setItems(mapped)
@@ -192,6 +196,7 @@ export default function ImportPage() {
             listingUrl: l.url,
             alreadyImported: importedSet.has(l.id),
             checked: !importedSet.has(l.id),
+            listingStatus: 'active',
           })
         }
 
@@ -304,6 +309,7 @@ export default function ImportPage() {
             listingUrl: p.marketplaceUrl,
             alreadyImported: importedSet.has(id),
             checked: !importedSet.has(id),
+            listingStatus: p.status === 'draft' ? 'draft' : 'active',
           })
         }
 
@@ -348,6 +354,7 @@ export default function ImportPage() {
   // --- Filtered items ---
   const filteredItems = items.filter((item) => {
     if (showOnlyNew && item.alreadyImported) return false
+    if (statusFilter !== 'all' && item.listingStatus !== statusFilter) return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       if (!item.title.toLowerCase().includes(q)) return false
@@ -601,6 +608,8 @@ export default function ImportPage() {
         onToggleShowOnlyNew={() => setShowOnlyNew((v) => !v)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
       />
 
       {/* Import progress */}
