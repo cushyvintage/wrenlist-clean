@@ -3,7 +3,8 @@
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { useState, useEffect } from 'react'
-import type { Find, Expense, Mileage } from '@/types'
+import type { Find, Expense, Mileage, VehicleType } from '@/types'
+import { HMRC_RATES, VEHICLE_TYPE_LABELS } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 
 export default function TaxPage() {
@@ -63,7 +64,22 @@ export default function TaxPage() {
   const revenue = sells.reduce((sum, find) => sum + (find.sold_price_gbp || 0), 0)
   const costOfGoods = sells.reduce((sum, find) => sum + (find.cost_gbp || 0), 0)
   const operatingExpenses = expenses.reduce((sum, exp) => sum + exp.amount_gbp, 0)
-  const mileageDeduction = mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0)
+  const mileageDeduction = Math.round(mileages.reduce((sum, m) => sum + m.deductible_value_gbp, 0) * 100) / 100
+  const totalMileageMiles = Math.round(mileages.reduce((sum, m) => sum + m.miles, 0) * 10) / 10
+
+  // Build mileage summary by vehicle type
+  const mileageByType: Partial<Record<VehicleType, number>> = {}
+  for (const m of mileages) {
+    const vt = (m.vehicle_type || 'car') as VehicleType
+    mileageByType[vt] = (mileageByType[vt] || 0) + m.miles
+  }
+  const mileageSummaryParts = Object.entries(mileageByType).map(([vt, miles]) => {
+    const rate = HMRC_RATES[vt as VehicleType]
+    return `${Math.round(miles as number)} mi ${VEHICLE_TYPE_LABELS[vt as VehicleType].toLowerCase()} @ ${(rate.first * 100).toFixed(0)}p`
+  })
+  const mileageSummaryLabel = mileageSummaryParts.length > 0
+    ? mileageSummaryParts.join(' · ')
+    : 'no trips logged'
   const taxableProfit = revenue - costOfGoods - operatingExpenses - mileageDeduction
 
   // VAT threshold
@@ -135,7 +151,7 @@ export default function TaxPage() {
         <div className="bg-cream border border-sage/14 rounded-lg p-4">
           <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">mileage deduction</div>
           <div className="font-serif text-2xl text-ink mb-1">£{mileageDeduction.toLocaleString()}</div>
-          <div className="text-xs text-ink-lt">3,240 mi @ 45p</div>
+          <div className="text-xs text-ink-lt">{totalMileageMiles > 0 ? `${totalMileageMiles.toLocaleString()} mi · HMRC rates` : 'no trips logged'}</div>
         </div>
       </div>
 
@@ -156,7 +172,12 @@ export default function TaxPage() {
               <td className="py-4 px-4 text-right font-mono text-sage">− £{operatingExpenses.toLocaleString()}</td>
             </tr>
             <tr className="bg-cream-md">
-              <td className="py-4 px-4 text-ink-lt">− Mileage deduction</td>
+              <td className="py-4 px-4 text-ink-lt">
+                − Mileage deduction
+                {mileageSummaryParts.length > 0 && (
+                  <span className="block text-[11px] text-ink-lt/60 mt-0.5">{mileageSummaryLabel}</span>
+                )}
+              </td>
               <td className="py-4 px-4 text-right font-mono text-sage">− £{mileageDeduction.toLocaleString()}</td>
             </tr>
             <tr className="bg-cream-dk border-t-2 border-sage/22">
