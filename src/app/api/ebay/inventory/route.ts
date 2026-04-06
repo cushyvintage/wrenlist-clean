@@ -81,6 +81,10 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       const sku = item.sku as string
       if (!sku) continue
 
+      // Skip orphaned/ghost items where the title is just the UUID SKU (no real product data)
+      const productTitle = ((item.product as Record<string, unknown> | undefined)?.title as string) || ''
+      if (!productTitle && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sku)) continue
+
       let listingId: string | null = null
       let price: number | null = null
       let categoryId: string | null = null
