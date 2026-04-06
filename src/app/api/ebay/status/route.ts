@@ -46,10 +46,30 @@ export async function GET(request: NextRequest) {
           clientSecret: ebayConfig.ebay.clientSecret,
           redirectUrl: process.env.EBAY_REDIRECT_URI!,
         })
+
+        // Refresh access token first — stored token is likely expired (2hr lifetime)
+        let accessToken = tokens.access_token
+        if (tokens.refresh_token && new Date(tokens.expires_at) <= new Date()) {
+          try {
+            const newTokens = await client.refreshAccessToken(tokens.refresh_token)
+            accessToken = newTokens.accessToken
+            await supabase
+              .from('ebay_tokens')
+              .update({
+                access_token: newTokens.accessToken,
+                expires_at: newTokens.expiresAt.toISOString(),
+              })
+              .eq('user_id', user.id)
+              .eq('marketplace_id', 'EBAY_GB')
+          } catch {
+            // Token refresh failed — skip username fetch
+          }
+        }
+
         client.setTokens({
-          accessToken: tokens.access_token,
+          accessToken,
           refreshToken: tokens.refresh_token,
-          expiresAt: new Date(tokens.expires_at),
+          expiresAt: new Date(Date.now() + 7200000), // treat as valid after refresh
         })
         ebayUsername = await client.fetchUsername()
         if (ebayUsername) {
@@ -60,7 +80,7 @@ export async function GET(request: NextRequest) {
             .eq('marketplace_id', 'EBAY_GB')
         }
       } catch {
-        // Non-critical
+        // Non-critical — username will show as null
       }
     }
 
@@ -81,7 +101,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHelper.success({
       connected: true,
       setupComplete: sellerConfig?.setup_complete || false,
-      username: ebayUsername || 'eBay account',
+      username: ebayUsername || null,
       expiresAt: connectionExpiresAt,
     })
   } catch (error) {
