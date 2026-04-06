@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { formatPlatformName } from '@/lib/crosslist'
 import type { Find, Platform } from '@/types'
 
 interface MarketplaceDataItem {
@@ -185,7 +186,6 @@ export default function InventoryItemHeader({
             {availableForCrosslist.map((platform) => {
               const isSelected = crosslistTargets.includes(platform)
               const username = platformUsernames?.get(platform)
-              const formatName = (p: string) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)
               return (
                 <label
                   key={platform}
@@ -199,7 +199,7 @@ export default function InventoryItemHeader({
                   />
                   <MarketplaceIcon platform={platform} size="sm" />
                   <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
-                    {formatName(platform)}
+                    {formatPlatformName(platform)}
                     {username && (
                       <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>
                     )}

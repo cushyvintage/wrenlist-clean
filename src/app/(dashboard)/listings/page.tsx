@@ -8,6 +8,7 @@ import { PlatformTag } from '@/components/wren/PlatformTag'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
+import { formatPlatformName, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
@@ -361,14 +362,14 @@ export default function ListingsPage() {
         setCrosslistTargets([])
         setSelectedItems(new Set())
         setPlatformStatuses({})
-        const platformNames = valid.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
+        const platformNames = valid.map((p) => formatPlatformName(p)).join(', ')
         setSuccessToast(`Queued for ${platformNames}`)
         setTimeout(() => setSuccessToast(null), 4000)
       }, 1200)
     } else {
       const failedPlatforms = valid.filter((p) => t(p).failed > 0)
       const parts: string[] = []
-      if (anyFailed) parts.push(`${failedPlatforms.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')} had failures`)
+      if (anyFailed) parts.push(`${failedPlatforms.map((p) => formatPlatformName(p)).join(', ')} had failures`)
       if (expired.length > 0) parts.push(`${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`)
       setCrosslistError(parts.join(' · '))
       setFailedTargets([...expired, ...failedPlatforms])
@@ -457,7 +458,7 @@ export default function ListingsPage() {
             <option value="all">all platforms</option>
             {activeMarketplaces.map((mp) => (
               <option key={mp} value={mp}>
-                {mp === 'ebay' ? 'eBay' : mp.charAt(0).toUpperCase() + mp.slice(1)}
+                {formatPlatformName(mp)}
               </option>
             ))}
           </select>
@@ -526,12 +527,11 @@ export default function ListingsPage() {
       {showCrosslistModal && (() => {
         // Compute per-platform counts for selected items
         const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
-        const BLOCKED_STATUSES = new Set(['listed', 'needs_publish', 'needs_delist'])
         const alreadyListedCounts: Record<string, number> = {}
         const draftCounts: Record<string, number> = {}
         for (const cp of connectedPlatforms) {
           alreadyListedCounts[cp.platform] = selectedGroups.filter((g) =>
-            g.marketplaces.some((mp) => mp.marketplace === cp.platform && BLOCKED_STATUSES.has(mp.status))
+            g.marketplaces.some((mp) => mp.marketplace === cp.platform && CROSSLIST_BLOCKED_STATUSES.has(mp.status))
           ).length
           draftCounts[cp.platform] = selectedGroups.filter((g) =>
             g.marketplaces.some((mp) => mp.marketplace === cp.platform && mp.status === 'draft')
@@ -544,8 +544,6 @@ export default function ListingsPage() {
         // Selectable = connected platforms that aren't fully listed
         const selectablePlatforms = connectedPlatforms.filter((cp) => (alreadyListedCounts[cp.platform] ?? 0) < totalSelected && !sessionExpired.includes(cp.platform))
         const allSelected = selectablePlatforms.length > 0 && selectablePlatforms.every((cp) => crosslistTargets.includes(cp.platform))
-
-        const formatPlatformName = (p: string) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)
 
         const handleSelectAll = () => {
           if (allSelected) {
@@ -698,7 +696,7 @@ export default function ListingsPage() {
                             <input type="checkbox" disabled className="rounded cursor-not-allowed" />
                             <MarketplaceIcon platform={p} size="sm" />
                             <span className="text-sm font-medium" style={{ color: '#8A9E88' }}>
-                              {p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)}
+                              {formatPlatformName(p)}
                             </span>
                             <span className="text-xs ml-auto" style={{ color: '#C0392B' }}>
                               disconnected · <Link href="/platform-connect" className="underline">reconnect</Link>
@@ -874,7 +872,7 @@ export default function ListingsPage() {
                         .filter((mp) => mp.listing_price !== null)
                         .map((mp) => (
                           <span key={mp.id} className="text-[11px] text-ink-lt">
-                            {mp.marketplace === 'ebay' ? 'eBay' : mp.marketplace.charAt(0).toUpperCase() + mp.marketplace.slice(1)}: £{mp.listing_price!.toFixed(2)}
+                            {formatPlatformName(mp.marketplace)}: £{mp.listing_price!.toFixed(2)}
                           </span>
                         ))}
                     </div>

@@ -18,6 +18,7 @@ import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
+import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -225,49 +226,8 @@ export default function InventoryDetailPage() {
     setCrosslistResult(null)
 
     try {
-      // Pre-publish session re-check
-      const { valid, expired } = await recheckPlatforms(crosslistTargets)
-
-      if (expired.length > 0 && valid.length === 0) {
-        setCrosslistResult({ ok: false, message: `Session expired for ${expired.join(', ')}. Log back in on Platform Connect.` })
-        setIsCrosslisting(false)
-        return
-      }
-
-      const expiredNote = expired.length > 0
-        ? `${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`
-        : ''
-
-      const res = await fetch('/api/crosslist/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ findId: find.id, marketplaces: valid }),
-      })
-      const data = await res.json()
-      const results = data.data?.results || {}
-
-      // eBay publishes directly via API; all other platforms queue for extension
-      const API_PLATFORMS = ['ebay']
-      const succeeded = Object.entries(results).filter(([, r]: [string, any]) => r.ok).map(([m]) => m)
-      const failed = Object.entries(results).filter(([, r]: [string, any]) => !r.ok).map(([m, r]: [string, any]) => `${m}: ${r.error}`)
-
-      // Build message distinguishing direct-published vs queued
-      const direct = succeeded.filter((m) => API_PLATFORMS.includes(m))
-      const queued = succeeded.filter((m) => !API_PLATFORMS.includes(m))
-      const parts: string[] = []
-      if (direct.length > 0) parts.push(`Listed on ${direct.join(', ')}`)
-      if (queued.length > 0) parts.push(`Queued for ${queued.join(', ')} — publishing via extension`)
-      if (failed.length > 0) parts.push(`Failed: ${failed.join('; ')}`)
-      if (expiredNote) parts.push(expiredNote)
-
-      if (failed.length === 0 && expired.length === 0) {
-        setCrosslistResult({ ok: true, message: parts.join('. ') })
-      } else if (succeeded.length > 0) {
-        setCrosslistResult({ ok: true, message: parts.join('. ') })
-      } else {
-        setCrosslistResult({ ok: false, message: parts.join('. ') })
-      }
-
+      const outcome = await crosslistFind(find.id, crosslistTargets, recheckPlatforms)
+      setCrosslistResult({ ok: outcome.ok, message: outcome.message })
       setShowCrosslistPicker(false)
       setCrosslistTargets([])
       refreshMarketplaceData()
@@ -278,8 +238,7 @@ export default function InventoryDetailPage() {
     }
   }
 
-  const BLOCKED_STATUSES = new Set(['listed', 'draft', 'needs_publish', 'needs_delist'])
-  const listedMarketplaces = new Set(marketplaceData.filter((m) => BLOCKED_STATUSES.has(m.status)).map((m) => m.marketplace))
+  const listedMarketplaces = new Set(marketplaceData.filter((m) => CROSSLIST_BLOCKED_STATUSES.has(m.status)).map((m) => m.marketplace))
   const availableForCrosslist: Platform[] = allConnectedPlatforms.map((cp) => cp.platform).filter((m) => !listedMarketplaces.has(m))
   const connectedPlatformMap = new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp]))
 

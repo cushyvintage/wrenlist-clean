@@ -1,0 +1,87 @@
+import type { Platform } from '@/types'
+
+/** Statuses that block an item from being crosslisted to a platform */
+export const CROSSLIST_BLOCKED_STATUSES = new Set(['listed', 'draft', 'needs_publish', 'needs_delist'])
+
+/** Platforms that publish via API (not extension queue) */
+export const API_PLATFORMS = new Set<Platform>(['ebay'])
+
+/** Format a platform key for display: 'ebay' → 'eBay', 'facebook' → 'Facebook' */
+export function formatPlatformName(platform: string): string {
+  if (platform === 'ebay') return 'eBay'
+  return platform.charAt(0).toUpperCase() + platform.slice(1)
+}
+
+interface PublishResult {
+  ok: boolean
+  error?: string
+  listingUrl?: string
+  alreadyListed?: boolean
+}
+
+export interface CrosslistOutcome {
+  /** Whether anything succeeded */
+  ok: boolean
+  /** Human-readable summary */
+  message: string
+  /** Platforms that succeeded */
+  succeeded: string[]
+  /** Platforms that failed with errors */
+  failed: string[]
+  /** Platforms where session had expired */
+  expired: Platform[]
+}
+
+/**
+ * Publish a single find to multiple marketplaces via /api/crosslist/publish.
+ * Handles session re-check, partial publish, and builds a human-readable result.
+ */
+export async function crosslistFind(
+  findId: string,
+  targets: Platform[],
+  recheckPlatforms: (platforms: Platform[]) => Promise<{ valid: Platform[]; expired: Platform[] }>
+): Promise<CrosslistOutcome> {
+  // Pre-publish session re-check
+  const { valid, expired } = await recheckPlatforms(targets)
+
+  if (valid.length === 0) {
+    return {
+      ok: false,
+      message: `Session expired for ${expired.map(formatPlatformName).join(', ')}. Log back in on Platform Connect.`,
+      succeeded: [],
+      failed: [],
+      expired,
+    }
+  }
+
+  const res = await fetch('/api/crosslist/publish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ findId, marketplaces: valid }),
+  })
+  const data = await res.json()
+  const results: Record<string, PublishResult> = data.data?.results || {}
+
+  const succeeded = Object.entries(results).filter(([, r]) => r.ok).map(([m]) => m)
+  const failed = Object.entries(results).filter(([, r]) => !r.ok).map(([m, r]) => `${m}: ${r.error}`)
+
+  // Build message distinguishing direct-published vs queued
+  const direct = succeeded.filter((m) => API_PLATFORMS.has(m as Platform))
+  const queued = succeeded.filter((m) => !API_PLATFORMS.has(m as Platform))
+  const parts: string[] = []
+  if (direct.length > 0) parts.push(`Listed on ${direct.map(formatPlatformName).join(', ')}`)
+  if (queued.length > 0) parts.push(`Queued for ${queued.map(formatPlatformName).join(', ')} — publishing via extension`)
+  if (failed.length > 0) parts.push(`Failed: ${failed.join('; ')}`)
+  if (expired.length > 0) parts.push(`${expired.map(formatPlatformName).join(', ')}: session expired`)
+
+  const anySucceeded = succeeded.length > 0
+  const anyFailed = failed.length > 0 || expired.length > 0
+
+  return {
+    ok: anySucceeded || !anyFailed,
+    message: parts.join('. ') || 'No results',
+    succeeded,
+    failed,
+    expired,
+  }
+}
