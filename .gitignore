@@ -32,6 +32,9 @@ logs/
 *.log
 npm-debug.log*
 
+# Built artifacts
+extension/dist/
+
 # Misc
 .eslintcache
 .vercel

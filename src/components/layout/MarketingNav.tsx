@@ -46,6 +46,7 @@ export function MarketingNav({
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
+          <img src="/wrenlist-logo.png" alt="" width={32} height={32} className="rounded-sm" style={{ mixBlendMode: 'multiply' }} />
           <div className="text-2xl font-serif text-ink font-medium">Wrenlist</div>
           <div className="hidden sm:block text-xs uppercase tracking-widest text-sage-dim font-medium">
             Thrifter&apos;s OS

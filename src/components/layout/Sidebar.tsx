@@ -24,11 +24,16 @@ export function Sidebar({ children, className = '', userInfo }: SidebarProps) {
     >
       {/* Logo / branding area */}
       <div className="px-[18px] py-6 border-b" style={{ borderColor: 'rgba(255,255,255,.07)' }}>
-        <div className="font-serif text-base font-medium" style={{ color: '#C8DEC6' }}>
-          Wrenlist
-        </div>
-        <div className="text-[9px] uppercase tracking-[.12em] mt-1" style={{ color: '#3D5C3A', fontWeight: 600 }}>
-          Resale
+        <div className="flex items-center gap-2.5">
+          <img src="/wrenlist-logo.png" alt="" width={28} height={28} className="rounded-sm" style={{ mixBlendMode: 'multiply' }} />
+          <div>
+            <div className="font-serif text-base font-medium" style={{ color: '#C8DEC6' }}>
+              Wrenlist
+            </div>
+            <div className="text-[9px] uppercase tracking-[.12em] mt-0.5" style={{ color: '#3D5C3A', fontWeight: 600 }}>
+              Resale
+            </div>
+          </div>
         </div>
       </div>
 
