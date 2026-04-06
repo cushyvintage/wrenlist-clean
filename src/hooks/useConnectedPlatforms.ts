@@ -120,6 +120,18 @@ async function checkVintedViaExtension(): Promise<ConnectedPlatform | null> {
   try {
     const r = await sendExtensionMessage({ action: 'get_vinted_session' })
     if (!r?.loggedIn) return null
+
+    // Try to get resolved display name from DB (extension often returns numeric ID)
+    try {
+      const res = await fetch('/api/vinted/connect')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.data?.connected && data.data?.vintedUsername) {
+          return { platform: 'vinted', username: data.data.vintedUsername }
+        }
+      }
+    } catch { /* fall through to extension username */ }
+
     return { platform: 'vinted', username: r.username || undefined }
   } catch {
     return null
