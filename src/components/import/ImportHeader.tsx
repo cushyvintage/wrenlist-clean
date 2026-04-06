@@ -48,10 +48,14 @@ export function ImportHeader({
 }: ImportHeaderProps) {
   const [confirming, setConfirming] = useState(false)
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevCountRef = useRef(selectedCount)
 
-  // Reset confirm state when selection changes
+  // Reset confirm state when selection count actually changes
   useEffect(() => {
-    setConfirming(false)
+    if (prevCountRef.current !== selectedCount) {
+      setConfirming(false)
+      prevCountRef.current = selectedCount
+    }
   }, [selectedCount])
 
   function handleImportClick() {
