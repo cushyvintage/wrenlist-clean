@@ -1,5 +1,6 @@
-import type { VehicleType } from '@/types'
+import type { VehicleType, MileageRate } from '@/types'
 import { HMRC_RATES } from '@/types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Get UK tax year string from a date.
@@ -22,6 +23,34 @@ export function getTaxYear(dateStr: string): string {
   return `${year - 1}-${String(currentYearShort).padStart(2, '0')}`
 }
 
+/**
+ * Fetch HMRC rates from the database for a specific tax year and vehicle type.
+ * Falls back to the in-memory HMRC_RATES constant if no DB row found.
+ */
+export async function getRatesForTaxYear(
+  supabase: SupabaseClient,
+  taxYear: string,
+  vehicleType: VehicleType
+): Promise<MileageRate> {
+  const { data, error } = await supabase
+    .from('hmrc_mileage_rates')
+    .select('first_rate_pence, second_rate_pence, threshold_miles')
+    .eq('tax_year', taxYear)
+    .eq('vehicle_type', vehicleType)
+    .single()
+
+  if (error || !data) {
+    // Fallback to constant if no DB row (e.g. future tax year not yet seeded)
+    return HMRC_RATES[vehicleType]
+  }
+
+  return {
+    first: data.first_rate_pence / 100,
+    second: data.second_rate_pence != null ? data.second_rate_pence / 100 : null,
+    threshold: data.threshold_miles,
+  }
+}
+
 interface DeductibleResult {
   amount: number
   breakdown: string
@@ -31,50 +60,48 @@ interface DeductibleResult {
 
 /**
  * Calculate HMRC mileage deductible with tiered rates.
- *
- * For car/van: 45p first 10k miles per tax year, then 25p.
- * For motorcycle: flat 24p.
- * For bicycle: flat 20p.
+ * Accepts rates as a parameter — caller fetches from DB via getRatesForTaxYear().
  */
 export function calculateDeductible(
   miles: number,
   vehicleType: VehicleType,
-  cumulativeMilesBefore: number
+  cumulativeMilesBefore: number,
+  rate?: MileageRate
 ): DeductibleResult {
-  const rate = HMRC_RATES[vehicleType]
+  const r = rate ?? HMRC_RATES[vehicleType]
 
   // Flat rate vehicles (motorcycle, bicycle)
-  if (rate.second === null || rate.threshold === null) {
-    const amount = miles * rate.first
+  if (r.second === null || r.threshold === null) {
+    const amount = miles * r.first
     return {
       amount: Math.round(amount * 100) / 100,
-      breakdown: `${miles} miles @ ${(rate.first * 100).toFixed(0)}p/mile`,
-      rateApplied: rate.first * 100,
+      breakdown: `${miles} miles @ ${(r.first * 100).toFixed(0)}p/mile`,
+      rateApplied: r.first * 100,
       crossesThreshold: false,
     }
   }
 
-  const threshold = rate.threshold
+  const threshold = r.threshold
   const cumulativeAfter = cumulativeMilesBefore + miles
 
   // Case 1: All miles at first rate (under threshold)
   if (cumulativeAfter <= threshold) {
-    const amount = miles * rate.first
+    const amount = miles * r.first
     return {
       amount: Math.round(amount * 100) / 100,
-      breakdown: `${miles} miles @ ${(rate.first * 100).toFixed(0)}p/mile`,
-      rateApplied: rate.first * 100,
+      breakdown: `${miles} miles @ ${(r.first * 100).toFixed(0)}p/mile`,
+      rateApplied: r.first * 100,
       crossesThreshold: false,
     }
   }
 
   // Case 2: All miles at second rate (already over threshold)
   if (cumulativeMilesBefore >= threshold) {
-    const amount = miles * rate.second
+    const amount = miles * r.second
     return {
       amount: Math.round(amount * 100) / 100,
-      breakdown: `${miles} miles @ ${(rate.second * 100).toFixed(0)}p/mile (over ${threshold.toLocaleString()} mile threshold)`,
-      rateApplied: rate.second * 100,
+      breakdown: `${miles} miles @ ${(r.second * 100).toFixed(0)}p/mile (over ${threshold.toLocaleString()} mile threshold)`,
+      rateApplied: r.second * 100,
       crossesThreshold: false,
     }
   }
@@ -82,12 +109,12 @@ export function calculateDeductible(
   // Case 3: Split — this journey crosses the threshold
   const firstRateMiles = threshold - cumulativeMilesBefore
   const secondRateMiles = miles - firstRateMiles
-  const amount = (firstRateMiles * rate.first) + (secondRateMiles * rate.second)
+  const amount = (firstRateMiles * r.first) + (secondRateMiles * r.second)
 
   return {
     amount: Math.round(amount * 100) / 100,
-    breakdown: `${firstRateMiles} miles @ ${(rate.first * 100).toFixed(0)}p + ${secondRateMiles.toFixed(1)} miles @ ${(rate.second * 100).toFixed(0)}p (crosses ${threshold.toLocaleString()} mile threshold)`,
-    rateApplied: rate.first * 100, // show first rate as primary
+    breakdown: `${firstRateMiles} miles @ ${(r.first * 100).toFixed(0)}p + ${secondRateMiles.toFixed(1)} miles @ ${(r.second * 100).toFixed(0)}p (crosses ${threshold.toLocaleString()} mile threshold)`,
+    rateApplied: r.first * 100,
     crossesThreshold: true,
   }
 }

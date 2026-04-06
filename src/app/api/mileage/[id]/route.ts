@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateMileageSchema, validateBody } from '@/lib/validation'
-import { getTaxYear, calculateDeductible } from '@/lib/mileage-calc'
+import { getTaxYear, calculateDeductible, getRatesForTaxYear } from '@/lib/mileage-calc'
 import type { Mileage, VehicleType } from '@/types'
 
 /**
@@ -104,7 +104,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           (sum: number, row: { miles: number }) => sum + Number(row.miles), 0
         )
 
-        const { amount } = calculateDeductible(miles, vehicleType, cumulativeBefore)
+        const rate = await getRatesForTaxYear(supabase, taxYear, vehicleType)
+        const { amount } = calculateDeductible(miles, vehicleType, cumulativeBefore, rate)
         updateData.deductible_value_gbp = amount
         updateData.tax_year = taxYear
       }

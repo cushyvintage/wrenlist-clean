@@ -217,10 +217,17 @@ export interface Mileage {
   updated_at: string
 }
 
+// HMRC rate structure — used for DB rows and in-memory fallback
+export interface MileageRate {
+  first: number        // pounds per mile, first tier (e.g. 0.45)
+  second: number | null // pounds per mile, second tier (e.g. 0.25), null for flat
+  threshold: number | null // miles before second tier kicks in (e.g. 10000), null for flat
+}
+
 // HMRC Approved Mileage Allowance Payments (AMAPs)
-// Car/Van: 45p first 10k miles per tax year, then 25p
-// Motorcycle: 24p flat | Bicycle: 20p flat
-export const HMRC_RATES: Record<VehicleType, { first: number; second: number | null; threshold: number | null }> = {
+// Fallback constant — used for form previews and when DB row not found
+// Source of truth is hmrc_mileage_rates table (keyed by tax_year + vehicle_type)
+export const HMRC_RATES: Record<VehicleType, MileageRate> = {
   car:        { first: 0.45, second: 0.25, threshold: 10000 },
   van:        { first: 0.45, second: 0.25, threshold: 10000 },
   motorcycle: { first: 0.24, second: null, threshold: null },

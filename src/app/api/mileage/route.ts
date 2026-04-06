@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateMileageSchema, validateBody } from '@/lib/validation'
-import { getTaxYear, calculateDeductible } from '@/lib/mileage-calc'
+import { getTaxYear, calculateDeductible, getRatesForTaxYear } from '@/lib/mileage-calc'
 import type { Mileage, VehicleType } from '@/types'
 
 /**
@@ -89,10 +89,14 @@ export const POST = withAuth(async (req, user) => {
       (sum: number, row: { miles: number }) => sum + Number(row.miles), 0
     )
 
+    // Fetch HMRC rates from DB for this tax year (falls back to constant)
+    const rate = await getRatesForTaxYear(supabase, taxYear, vehicleType)
+
     const { amount } = calculateDeductible(
       validation.data.miles,
       vehicleType,
-      cumulativeMilesBefore
+      cumulativeMilesBefore,
+      rate
     )
 
     const mileage = {
