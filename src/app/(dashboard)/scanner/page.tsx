@@ -347,10 +347,9 @@ export default function ScannerPage() {
                 style={{ aspectRatio: '4/3' }}
               >
                 <div className="w-full h-full bg-[#2a3a28] flex flex-col items-center justify-center gap-4 hover:bg-[#324432] transition-colors">
-                  <p className="text-white/70 text-xs uppercase tracking-widest">
-                    Point camera at barcode or ISBN
-                  </p>
-                  <div className="w-48 h-32 border-2 border-white/30 rounded-lg" />
+                  <div className="w-48 h-32 border-2 border-white/30 rounded-lg flex items-center justify-center">
+                    <span className="text-white/80 text-sm font-medium">Tap to scan</span>
+                  </div>
                   <p className="text-white/40 text-xs">
                     or use a USB barcode scanner
                   </p>
