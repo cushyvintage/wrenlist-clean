@@ -1,0 +1,31 @@
+{
+  "source": "Etsy public docs + web research",
+  "status": "PARTIAL — needs API key for full taxonomy (getSellerTaxonomyNodes)",
+  "note": "Etsy has ~6000 categories, ~400 attributes, ~3500 values. Extension uses text search (categorySearch) not IDs.",
+  "apiEndpoint": "GET https://openapi.etsy.com/v3/application/seller-taxonomy/nodes",
+  "authRequired": "x-api-key header with format 'keystring:shared_secret'",
+  "topLevelCategories": [
+    { "name": "Accessories", "id": 1 },
+    { "name": "Art & Collectibles", "id": 2 },
+    { "name": "Baby", "id": null },
+    { "name": "Bags & Purses", "id": null },
+    { "name": "Bath & Beauty", "id": null },
+    { "name": "Books, Movies & Music", "id": null },
+    { "name": "Clothing", "id": null },
+    { "name": "Craft Supplies & Tools", "id": null },
+    { "name": "Electronics & Accessories", "id": null },
+    { "name": "Home & Living", "id": null },
+    { "name": "Jewellery", "id": null },
+    { "name": "Paper & Party Supplies", "id": null },
+    { "name": "Pet Supplies", "id": null },
+    { "name": "Shoes", "id": 1429 },
+    { "name": "Toys & Games", "id": null },
+    { "name": "Weddings", "id": null }
+  ],
+  "knownExamples": {
+    "Shoes": { "id": 1429, "level": 1 },
+    "Girls' Shoes": { "id": 1440, "level": 2, "parentId": 1429 },
+    "Craft Supplies & Tools > Yarn & Fiber > Yarn": { "note": "3-level deep example from docs" }
+  },
+  "extensionApproach": "Form-fill via categorySearch text field, not taxonomy IDs"
+}

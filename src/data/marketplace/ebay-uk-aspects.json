@@ -1,0 +1,4314 @@
+{
+  "source": "eBay Taxonomy API v1 - getItemAspectsForCategory",
+  "treeId": 3,
+  "extracted": "2026-04-06",
+  "totalCategories": 29,
+  "categories": {
+    "220": {
+      "name": "Toys Games",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "267": {
+      "name": "Books Comics Magazines",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "281": {
+      "name": "Jewellery Watches",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "562": {
+      "name": "Other Collectables",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "870": {
+      "name": "Pottery Ceramics Glass (parent)",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "3197": {
+      "name": "Furniture",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "4003": {
+      "name": "Medals",
+      "totalAspects": 4,
+      "required": [],
+      "recommended": [
+        "Region of Origin",
+        "Country of Origin"
+      ],
+      "allAspects": [
+        {
+          "name": "Type",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Art",
+            "Boomerangs",
+            "Carvings",
+            "Clothing",
+            "Craft Work"
+          ]
+        },
+        {
+          "name": "Region of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Japan"
+          ]
+        },
+        {
+          "name": "Provenance",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ownership History Available",
+            "Ownership History Not Available"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        }
+      ]
+    },
+    "10968": {
+      "name": "Vintage Jewellery",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "11116": {
+      "name": "Coins",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "11450": {
+      "name": "Clothes Shoes Accessories",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "11700": {
+      "name": "Home Furniture DIY (parent)",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "19016": {
+      "name": "Vintage Toys",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "20081": {
+      "name": "Antiques",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "20091": {
+      "name": "Antique Furniture",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "20697": {
+      "name": "Decorative Ornaments",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "29223": {
+      "name": "Antiquarian Books",
+      "totalAspects": 20,
+      "required": [],
+      "recommended": [
+        "Signed",
+        "Personalised",
+        "Country of Origin",
+        "Unit Type"
+      ],
+      "allAspects": [
+        {
+          "name": "Publisher",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Armed Services Edition",
+            "Big Little Books",
+            "Easton Press",
+            "Encyclopædia Britannica, Inc",
+            "Folio Society"
+          ]
+        },
+        {
+          "name": "Author",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "A.A. Milne",
+            "Agatha Christie",
+            "Alberto Vázquez-Figueroa",
+            "Aldous Huxley",
+            "Aleister Crowley"
+          ]
+        },
+        {
+          "name": "Binding",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Annual",
+            "Brochure/Pamphlet",
+            "Cloth",
+            "Disbound",
+            "Fine Binding"
+          ]
+        },
+        {
+          "name": "Special Attributes",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1st Edition",
+            "Dust Jacket",
+            "Ex-Library",
+            "Illustrated",
+            "Inscribed"
+          ]
+        },
+        {
+          "name": "Language",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arabic",
+            "Armenian",
+            "Bengali",
+            "Bulgarian",
+            "Chinese"
+          ]
+        },
+        {
+          "name": "Non-Fiction Subject",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Architecture & Design",
+            "Biographies & True Stories",
+            "Books on Collecting",
+            "Business, Economics & Industry",
+            "Chess"
+          ]
+        },
+        {
+          "name": "Character Family",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Alice in Wonderland",
+            "Biggles",
+            "Billy Bunter",
+            "Dana Girls",
+            "Hardy Boys"
+          ]
+        },
+        {
+          "name": "Original/Facsimile",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Original",
+            "Facsimile",
+            "Unknown"
+          ]
+        },
+        {
+          "name": "Original/Reproduction",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Original",
+            "Reproduction"
+          ]
+        },
+        {
+          "name": "Fiction Subject",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Action & Adventure",
+            "Adult & Erotic",
+            "Ancient Literature",
+            "Classic Literature",
+            "Crime & Thriller"
+          ]
+        },
+        {
+          "name": "Illustrator",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arthur Rackham",
+            "Axel Scheffler",
+            "Chris Van Allsburg",
+            "Edmund Dulac",
+            "George Cruishank"
+          ]
+        },
+        {
+          "name": "Region",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Africa",
+            "Antarctica",
+            "Asia",
+            "Australia, Oceania",
+            "Europe"
+          ]
+        },
+        {
+          "name": "Signed",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "No",
+            "Yes"
+          ]
+        },
+        {
+          "name": "Personalised",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "No",
+            "Yes"
+          ]
+        },
+        {
+          "name": "Year Printed",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Place of Publication",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Unit Quantity",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Unit Type",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "10ml",
+            "100ml",
+            "10g",
+            "100g",
+            "kg"
+          ]
+        }
+      ]
+    },
+    "38228": {
+      "name": "Glass Vases",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "38277": {
+      "name": "Pottery Plates",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "175759": {
+      "name": "Vintage Clothing",
+      "totalAspects": 0,
+      "aspects": []
+    },
+    "262360": {
+      "name": "Drinkware",
+      "totalAspects": 37,
+      "required": [
+        "Colour",
+        "Type"
+      ],
+      "recommended": [
+        "Vintage",
+        "Time Period Manufactured",
+        "Original/Licensed Reproduction",
+        "Department",
+        "Year Manufactured",
+        "Country of Origin",
+        "Handmade",
+        "Signed"
+      ],
+      "allAspects": [
+        {
+          "name": "Colour",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beer Glass",
+            "Beer Mug",
+            "Beer Stein",
+            "Brandy Glass",
+            "Champagne Glass"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Brand",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "222 Fifth",
+            "3GO",
+            "Abbey Press"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Break/Chip Resistant",
+            "Collapsible",
+            "Colour-Changing",
+            "Commemorative",
+            "Crested China"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Albany",
+            "Amalfi Classic",
+            "Amanda",
+            "America",
+            "American Beauty"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Berlin",
+            "Blenheim"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Licensed Reproduction",
+            "Original"
+          ]
+        },
+        {
+          "name": "Department",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Unisex Baby & Toddler",
+            "Boys",
+            "Girls",
+            "Unisex Kids",
+            "Teens"
+          ]
+        },
+        {
+          "name": "Capacity",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Block Optic",
+            "Brambly Hedge"
+          ]
+        },
+        {
+          "name": "Lid Type",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Drink Through",
+            "Push Button",
+            "Slide Lock",
+            "Twist"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Geometric",
+            "Heart",
+            "Round",
+            "Square",
+            "Straight"
+          ]
+        },
+        {
+          "name": "Occasion",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "All Occasions",
+            "Anniversary",
+            "Autumn",
+            "Baby Shower",
+            "Back to School"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aller Vale",
+            "American",
+            "Angels",
+            "Animals",
+            "Axe Vale"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Signed",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Two-Piece",
+            "Three-Piece",
+            "Four-Piece",
+            "Five-Piece",
+            "Six-Piece"
+          ]
+        },
+        {
+          "name": "Signed By",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aaron Angell",
+            "Andile Dyalvane",
+            "Aneta Regel",
+            "Bari Ziperstein",
+            "Beate Kuhn"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable",
+            "Machine Washable up to 30°C",
+            "Spot Clean Only"
+          ]
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "0.2 kg",
+            "0.3 kg",
+            "0.4 kg",
+            "0.4 lb",
+            "0.5 kg"
+          ]
+        },
+        {
+          "name": "Keeps Cold For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2 hrs",
+            "4 hrs",
+            "6 hrs",
+            "8 hrs",
+            "10 hrs"
+          ]
+        },
+        {
+          "name": "Keeps Hot For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2 hrs",
+            "4 hrs",
+            "6 hrs",
+            "8 hrs",
+            "10 hrs"
+          ]
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262366": {
+      "name": "Bowls",
+      "totalAspects": 37,
+      "required": [
+        "Brand",
+        "Material",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Time Period Manufactured",
+        "Handmade",
+        "Vintage",
+        "Year Manufactured",
+        "Original/Licensed Reproduction",
+        "Antique",
+        "Department"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "1888 Mills",
+            "222 Fifth"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bowl",
+            "Cereal Bowl",
+            "Chip & Dip Bowl Set",
+            "Compote & Pedestal Bowl",
+            "Decorative Bowl"
+          ]
+        },
+        {
+          "name": "Set Includes",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bowl",
+            "Bowl Set",
+            "Bread Plate",
+            "Cereal Bowl",
+            "Charger Plate"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abundance",
+            "Acapulco",
+            "Amberina",
+            "American Brilliant",
+            "Amherst"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "Amapola",
+            "American Clipper",
+            "American Sweetheart",
+            "Anniversary Rose"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "America",
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Bohemia"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1930s",
+            "Angels",
+            "Animals",
+            "Bear",
+            "Beatrix Potter"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Geometric",
+            "Heart",
+            "Oval",
+            "Rectangle"
+          ]
+        },
+        {
+          "name": "Occasion",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "All Occasions",
+            "Anniversary",
+            "Baby Shower",
+            "Back to School",
+            "Baisakhi"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Break-Resistant",
+            "Commemorative",
+            "Date-Lined",
+            "Dishwasher Safe",
+            "Engraved"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "22 cm",
+            "24 cm",
+            "26 cm",
+            "30 cm",
+            "32 cm"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Era",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-Georgian (Pre-1714)",
+            "Victorian (1837-1900)",
+            "Edwardian (1901-1910)",
+            "Early 20th Century (1911-1940)",
+            "Mid 20th Century (1941-1969)"
+          ]
+        },
+        {
+          "name": "Department",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Unisex Baby & Toddler",
+            "Boys",
+            "Girls",
+            "Unisex Kids",
+            "Teens"
+          ]
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "0.2 lb",
+            "0.4 lb",
+            "0.2 kg",
+            "0.6 lb",
+            "0.8 lb"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Two-Piece",
+            "Three-Piece",
+            "Four-Piece",
+            "Five-Piece",
+            "Six-Piece"
+          ]
+        },
+        {
+          "name": "Item Depth",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 cm"
+          ]
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable up to 30°C",
+            "Machine Washable up to 40°C",
+            "Machine Washable up to 60°C"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262372": {
+      "name": "Cup & Saucers",
+      "totalAspects": 37,
+      "required": [
+        "Colour",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Time Period Manufactured",
+        "Vintage",
+        "Department",
+        "Original/Licensed Reproduction",
+        "Year Manufactured",
+        "Handmade",
+        "Signed"
+      ],
+      "allAspects": [
+        {
+          "name": "Colour",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Coffee Cup",
+            "Coffee Cup & Saucer",
+            "Cup",
+            "Cup & Saucer",
+            "Espresso Cup"
+          ]
+        },
+        {
+          "name": "Brand",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "222 Fifth",
+            "3GO",
+            "Abbey Press"
+          ]
+        },
+        {
+          "name": "Set Includes",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beer Glass",
+            "Beer Mug",
+            "Beer Stein",
+            "Bottle",
+            "Brandy/Cognac Snifter"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Albany",
+            "Amalfi Classic",
+            "Amanda",
+            "America",
+            "American Beauty"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Department",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Unisex Baby & Toddler",
+            "Boys",
+            "Girls",
+            "Unisex Kids",
+            "Teens"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Licensed Reproduction",
+            "Original"
+          ]
+        },
+        {
+          "name": "Capacity",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Berlin",
+            "Blenheim"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Block Optic",
+            "Brambly Hedge"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aller Vale",
+            "American",
+            "Angels",
+            "Animals",
+            "Axe Vale"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Occasion",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "All Occasions",
+            "Anniversary",
+            "Autumn",
+            "Baby Shower",
+            "Back to School"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Break/Chip Resistant",
+            "Collapsible",
+            "Colour-Changing",
+            "Commemorative",
+            "Date-Lined"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Figural",
+            "Geometric",
+            "Heart",
+            "Round",
+            "Square"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Signed",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Signed By",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aaron Angell",
+            "Andile Dyalvane",
+            "Aneta Regel",
+            "Bari Ziperstein",
+            "Beate Kuhn"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Two-Piece",
+            "Three-Piece",
+            "Four-Piece",
+            "Five-Piece",
+            "Six-Piece"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "0.2 kg",
+            "0.3 kg",
+            "0.4 kg",
+            "0.4 lb",
+            "0.5 kg"
+          ]
+        },
+        {
+          "name": "Keeps Cold For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2 hrs",
+            "4 hrs",
+            "6 hrs",
+            "8 hrs",
+            "10 hrs"
+          ]
+        },
+        {
+          "name": "Keeps Hot For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2 hrs",
+            "4 hrs",
+            "6 hrs",
+            "8 hrs",
+            "10 hrs"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable",
+            "Machine Washable up to 30°C",
+            "Spot Clean Only"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262373": {
+      "name": "Dinner Sets",
+      "totalAspects": 37,
+      "required": [
+        "Brand",
+        "Material",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Time Period Manufactured",
+        "Handmade",
+        "Vintage",
+        "Year Manufactured",
+        "Antique",
+        "Original/Licensed Reproduction"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "1888 Mills",
+            "222 Fifth"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Charger Plate",
+            "Chip & Dip Bowl Set",
+            "Dinner Set",
+            "Punch Bowl Set"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abundance",
+            "Acapulco",
+            "Amberina",
+            "American Brilliant",
+            "Amherst"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Set Includes",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bowl",
+            "Bowl Set",
+            "Bread Plate",
+            "Cereal Bowl",
+            "Charger Plate"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1930s",
+            "Angels",
+            "Bear",
+            "Beatrix Potter",
+            "Big Cat"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Number of Place Settings",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1",
+            "2",
+            "4",
+            "6",
+            "8"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "Amapola",
+            "American Clipper",
+            "American Sweetheart",
+            "Anniversary Rose"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "America",
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Bohemia"
+          ]
+        },
+        {
+          "name": "Occasion",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "All Occasions",
+            "Anniversary",
+            "Baby Shower",
+            "Back to School",
+            "Baisakhi"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Geometric",
+            "Heart",
+            "Oval",
+            "Rectangle"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Break-Resistant",
+            "Commemorative",
+            "Date-Lined",
+            "Dishwasher Safe",
+            "Engraved"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Era",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-Georgian (Pre-1714)",
+            "Victorian (1837-1900)",
+            "Edwardian (1901-1910)",
+            "Early 20th Century (1911-1940)",
+            "Mid 20th Century (1941-1969)"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Item Depth",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 cm"
+          ]
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "22 cm",
+            "24 cm",
+            "26 cm",
+            "30 cm",
+            "32 cm"
+          ]
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "0.2 lb",
+            "0.4 lb",
+            "0.2 kg",
+            "0.6 lb",
+            "0.8 lb"
+          ]
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Two-Piece",
+            "Three-Piece",
+            "Four-Piece",
+            "Five-Piece",
+            "Six-Piece"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable up to 30°C",
+            "Machine Washable up to 40°C",
+            "Machine Washable up to 60°C"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262376": {
+      "name": "Jugs & Pitchers",
+      "totalAspects": 38,
+      "required": [
+        "Brand",
+        "Colour",
+        "Material",
+        "Type"
+      ],
+      "recommended": [
+        "Vintage",
+        "Original/Licensed Reproduction",
+        "Country of Origin",
+        "Year Manufactured",
+        "Handmade",
+        "Antique"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "222 Fifth",
+            "A&B Home"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Character Jug",
+            "Jug",
+            "Moonshine Jug",
+            "Pitcher",
+            "Toby Jug"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Berlin",
+            "Bohemia"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Acapulco",
+            "All-Over",
+            "Animal Print",
+            "Aztec",
+            "Blueberry"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Capacity",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "Amapola",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Biltons"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Chip Resistant",
+            "Decorative",
+            "Dishwasher Safe",
+            "Disposable",
+            "Drip Free Lip"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American",
+            "Animals",
+            "Beatrix Potter",
+            "Birds",
+            "British"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Oval",
+            "Rectangle",
+            "Round",
+            "Square"
+          ]
+        },
+        {
+          "name": "Item Depth",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1.9 kg",
+            "2.15 kg",
+            "3.4 kg"
+          ]
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Keeps Cold For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "4 hrs",
+            "8 hrs",
+            "10 hrs",
+            "12 hrs",
+            "14 hrs"
+          ]
+        },
+        {
+          "name": "Keeps Hot For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "4 hrs",
+            "8 hrs",
+            "10 hrs",
+            "12 hrs",
+            "14 hrs"
+          ]
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Model",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Packaging",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bag",
+            "Boxed",
+            "Carton",
+            "Unboxed"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable",
+            "Machine Washable up to 30°C",
+            "Machine Washable up to 40°C",
+            "Machine Washable up to 60°C"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262379": {
+      "name": "Plates",
+      "totalAspects": 36,
+      "required": [
+        "Brand",
+        "Material",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Handmade",
+        "Time Period Manufactured",
+        "Vintage",
+        "Antique",
+        "Department",
+        "Original/Licensed Reproduction",
+        "Year Manufactured"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "1888 Mills",
+            "222 Fifth"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bread Plate",
+            "Charger Plate",
+            "Chop Plate",
+            "Decorative Plate",
+            "Dessert Plate"
+          ]
+        },
+        {
+          "name": "Set Includes",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bowl",
+            "Bowl Set",
+            "Bread Plate",
+            "Cereal Bowl",
+            "Charger Plate"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abundance",
+            "Acapulco",
+            "Amberina",
+            "American Brilliant",
+            "Amherst"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "Amapola",
+            "American Clipper",
+            "American Sweetheart",
+            "Anniversary Rose"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "America",
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Bohemia"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Geometric",
+            "Heart",
+            "Oval",
+            "Rectangle"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1930s",
+            "Angels",
+            "Bear",
+            "Beatrix Potter",
+            "Big Cat"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Occasion",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "All Occasions",
+            "Anniversary",
+            "Baby Shower",
+            "Back to School",
+            "Baisakhi"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Break-Resistant",
+            "Commemorative",
+            "Date-Lined",
+            "Dishwasher Safe",
+            "Engraved"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Department",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Unisex Baby & Toddler",
+            "Boys",
+            "Girls",
+            "Unisex Kids",
+            "Teens"
+          ]
+        },
+        {
+          "name": "Era",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-Georgian (Pre-1714)",
+            "Victorian (1837-1900)",
+            "Edwardian (1901-1910)",
+            "Early 20th Century (1911-1940)",
+            "Mid 20th Century (1941-1969)"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "22 cm",
+            "24 cm",
+            "26 cm",
+            "30 cm",
+            "32 cm"
+          ]
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "0.2 lb",
+            "0.4 lb",
+            "0.2 kg",
+            "0.6 lb",
+            "0.8 lb"
+          ]
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Two-Piece",
+            "Three-Piece",
+            "Four-Piece",
+            "Five-Piece",
+            "Six-Piece"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Plate Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "60 cm",
+            "70 cm",
+            "80 cm",
+            "35 in",
+            "90 cm"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable up to 30°C",
+            "Machine Washable up to 40°C",
+            "Machine Washable up to 60°C"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        }
+      ]
+    },
+    "262381": {
+      "name": "Tea & Coffee Pots",
+      "totalAspects": 37,
+      "required": [
+        "Brand",
+        "Colour",
+        "Material",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Vintage",
+        "Original/Licensed Reproduction",
+        "Year Manufactured",
+        "Antique",
+        "Handmade"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "222 Fifth",
+            "A&B Home"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Coffee Pot",
+            "Tea Pot",
+            "Tea Set"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Capacity",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Berlin",
+            "Bohemia"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "Amapola",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Biltons"
+          ]
+        },
+        {
+          "name": "Number of Items in Set",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Acapulco",
+            "All-Over",
+            "Animal Print",
+            "Aztec",
+            "Blueberry"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American",
+            "Animals",
+            "Beatrix Potter",
+            "Birds",
+            "British"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Chip Resistant",
+            "Decorative",
+            "Disassemble for Storage",
+            "Dishwasher Safe",
+            "Disposable"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Oval",
+            "Rectangle",
+            "Round",
+            "Square"
+          ]
+        },
+        {
+          "name": "Item Depth",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Diameter",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1.9 kg",
+            "2.15 kg",
+            "3.4 kg"
+          ]
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Keeps Hot For",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "4 hrs",
+            "8 hrs",
+            "10 hrs",
+            "12 hrs",
+            "14 hrs"
+          ]
+        },
+        {
+          "name": "Manufacturer Warranty",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 Month",
+            "3 Months",
+            "6 Months",
+            "9 Months",
+            "1 Year"
+          ]
+        },
+        {
+          "name": "Model",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Packaging",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bag",
+            "Boxed",
+            "Carton",
+            "Unboxed"
+          ]
+        },
+        {
+          "name": "Care Instructions",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Hand Wash Only",
+            "Machine Washable",
+            "Machine Washable up to 30°C",
+            "Machine Washable up to 40°C",
+            "Machine Washable up to 60°C"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262394": {
+      "name": "Figurines",
+      "totalAspects": 33,
+      "required": [
+        "Brand"
+      ],
+      "recommended": [
+        "Year Manufactured",
+        "Country of Origin",
+        "Vintage",
+        "Handmade",
+        "Signed",
+        "Antique",
+        "Original/Licensed Reproduction"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "!it",
+            "(MALIN+GOETZ)",
+            "10 Strawberry Street",
+            "123 Creations"
+          ]
+        },
+        {
+          "name": "Subject",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract Art",
+            "Africa",
+            "Airplane Propeller",
+            "Al Pacino",
+            "American Flag"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Advertising",
+            "Africa",
+            "Airplanes",
+            "Alien"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "African",
+            "Americas",
+            "Arzberg",
+            "Augarten",
+            "Bavaria"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Figurine"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Biltons",
+            "Block Optic"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "3D Effect",
+            "Anti-Slip",
+            "Bordered",
+            "Carvings",
+            "Colour-Changing"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "African",
+            "Airbrush",
+            "All-Over",
+            "Animal Print"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Signed",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Era",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Georgian (1714-1837)",
+            "Victorian (1837-1900)",
+            "Edwardian (1901-1910)",
+            "Early 20th Century (1911-1940)",
+            "Mid 20th Century (1941-1969)"
+          ]
+        },
+        {
+          "name": "Signed By",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aaron Angell",
+            "Andile Dyalvane",
+            "Aneta Regel",
+            "Bari Ziperstein",
+            "Beate Kuhn"
+          ]
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Model",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "3R Studios DA4199",
+            "3R Studios DA7076",
+            "3R Studios DA7622",
+            "3R Studios DF1703",
+            "3R Studios DF1795"
+          ]
+        },
+        {
+          "name": "Packaging",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bag",
+            "Box",
+            "Carton"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262398": {
+      "name": "Ornaments",
+      "totalAspects": 30,
+      "required": [
+        "Brand",
+        "Type"
+      ],
+      "recommended": [
+        "Country of Origin",
+        "Vintage",
+        "Antique",
+        "Year Manufactured",
+        "Handmade",
+        "Original/Licensed Reproduction"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "10 Strawberry Street",
+            "1881 Rogers",
+            "1888 Mills",
+            "3E Home"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Angel",
+            "Angel Chimes",
+            "Bow",
+            "Curtain Decoration",
+            "Figurine"
+          ]
+        },
+        {
+          "name": "Subject",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "12 Days of Christmas Ornament",
+            "Africa",
+            "Airplane Propeller",
+            "Alligator",
+            "Anatomy"
+          ]
+        },
+        {
+          "name": "Material",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Shape",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Airplane",
+            "Animal",
+            "Arch",
+            "Bear",
+            "Bird"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "American Beauty",
+            "American Royal",
+            "American Sweetheart",
+            "Apple Blossom"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Advertising",
+            "Angels",
+            "Animals",
+            "Anime & Manga",
+            "Art"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts Movement"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Arzberg",
+            "Augarten",
+            "Bavaria",
+            "Berkshire",
+            "Biltmore"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Decorative",
+            "Engraved",
+            "Etched",
+            "Glow in the Dark",
+            "Hand Painted"
+          ]
+        },
+        {
+          "name": "Number of Items",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "All-Over",
+            "Animal Print",
+            "Argyle",
+            "Bordered"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 cm",
+            "2 cm",
+            "1 in",
+            "3 cm",
+            "4 cm"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 cm",
+            "2 cm",
+            "3 cm",
+            "4 cm",
+            "5 cm"
+          ]
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "1 cm",
+            "2 cm",
+            "3 cm",
+            "4 cm",
+            "5 cm"
+          ]
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "100 g",
+            "5 oz",
+            "150 g",
+            "200 g",
+            "250 g"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    },
+    "262408": {
+      "name": "Vases (Pottery)",
+      "totalAspects": 33,
+      "required": [
+        "Brand",
+        "Type"
+      ],
+      "recommended": [
+        "Year Manufactured",
+        "Original/Licensed Reproduction",
+        "Vintage",
+        "Handmade",
+        "Signed",
+        "Antique",
+        "Country of Origin"
+      ],
+      "allAspects": [
+        {
+          "name": "Brand",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Unmarked",
+            "!it",
+            "(MALIN+GOETZ)",
+            "10 Strawberry Street",
+            "123 Creations"
+          ]
+        },
+        {
+          "name": "Type",
+          "required": true,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Head Vase",
+            "Vase"
+          ]
+        },
+        {
+          "name": "Time Period Manufactured",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Pre-1700",
+            "1700-1749",
+            "1750-1799",
+            "1800-1849",
+            "1850-1899"
+          ]
+        },
+        {
+          "name": "Year Manufactured",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "2026",
+            "2025",
+            "2024",
+            "2023",
+            "2022"
+          ]
+        },
+        {
+          "name": "Backstamp",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Impressed",
+            "Incised",
+            "Painted",
+            "Printed"
+          ]
+        },
+        {
+          "name": "Colour",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Beige",
+            "Black",
+            "Blue",
+            "Brown",
+            "Clear"
+          ]
+        },
+        {
+          "name": "MPN",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Material",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bone China",
+            "Ceramic",
+            "Clay",
+            "Crystal",
+            "Glass"
+          ]
+        },
+        {
+          "name": "Origin",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "African",
+            "Americas",
+            "Arzberg",
+            "Augarten",
+            "Bavaria"
+          ]
+        },
+        {
+          "name": "Production Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Amethyst Glass",
+            "Art Glass",
+            "Art Pottery",
+            "Blue and White Pottery",
+            "Carnival Glass"
+          ]
+        },
+        {
+          "name": "Theme",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "Advertising",
+            "Africa",
+            "Airplanes",
+            "Alien"
+          ]
+        },
+        {
+          "name": "Original/Licensed Reproduction",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Original",
+            "Licensed Reproduction"
+          ]
+        },
+        {
+          "name": "Vintage",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Era",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Georgian (1714-1837)",
+            "Victorian (1837-1900)",
+            "Edwardian (1901-1910)",
+            "Early 20th Century (1911-1940)",
+            "Mid 20th Century (1941-1969)"
+          ]
+        },
+        {
+          "name": "Handmade",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Signed",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Antique",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Finish",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Ash Glaze",
+            "Feldspathic Glaze",
+            "Glossy",
+            "Lead-Free Glaze",
+            "Lead Glaze"
+          ]
+        },
+        {
+          "name": "Signed By",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Aaron Angell",
+            "Andile Dyalvane",
+            "Aneta Regel",
+            "Bari Ziperstein",
+            "Beate Kuhn"
+          ]
+        },
+        {
+          "name": "Country of Origin",
+          "required": false,
+          "mode": "SELECTION_ONLY",
+          "sampleValues": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola"
+          ]
+        },
+        {
+          "name": "Features",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "3D Effect",
+            "Anti-Slip",
+            "Bordered",
+            "Carvings",
+            "Colour-Changing"
+          ]
+        },
+        {
+          "name": "Item Height",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Length",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Weight",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Item Width",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        },
+        {
+          "name": "Model",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "3R Studios DA4199",
+            "3R Studios DA7076",
+            "3R Studios DA7622",
+            "3R Studios DF1703",
+            "3R Studios DF1795"
+          ]
+        },
+        {
+          "name": "Packaging",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Bag",
+            "Box",
+            "Carton"
+          ]
+        },
+        {
+          "name": "Pattern",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract",
+            "African",
+            "Airbrush",
+            "All-Over",
+            "Animal Print"
+          ]
+        },
+        {
+          "name": "Product Line",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Adam",
+            "American Sweetheart",
+            "Apple Blossom",
+            "Biltons",
+            "Block Optic"
+          ]
+        },
+        {
+          "name": "Production Technique",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Fused Glass",
+            "Hand Blown Glass",
+            "Lampwork",
+            "Millefiori",
+            "Pottery"
+          ]
+        },
+        {
+          "name": "Style",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "American Directoire",
+            "American Empire",
+            "Art Deco",
+            "Art Nouveau",
+            "Arts & Crafts/Mission Style"
+          ]
+        },
+        {
+          "name": "Subject",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": [
+            "Abstract Art",
+            "Africa",
+            "Airplane Propeller",
+            "Al Pacino",
+            "American Flag"
+          ]
+        },
+        {
+          "name": "PAS Number",
+          "required": false,
+          "mode": "FREE_TEXT",
+          "sampleValues": []
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,3175 @@
+{
+  "source": "eBay Taxonomy API v1",
+  "treeId": 3,
+  "treeVersion": "125",
+  "extracted": "2026-04-06",
+  "totalCategories": 15992,
+  "leafCategories": 14209,
+  "topLevel": {
+    "Collectables": {
+      "id": "1",
+      "l2Count": 57,
+      "totalLeaves": 1466,
+      "children": [
+        {
+          "id": "34",
+          "name": "Advertising Collectables",
+          "leafCount": 34
+        },
+        {
+          "id": "113",
+          "name": "Sewing",
+          "leafCount": 28
+        },
+        {
+          "id": "124",
+          "name": "Paper & Ephemera",
+          "leafCount": 27
+        },
+        {
+          "id": "137",
+          "name": "Disneyana",
+          "leafCount": 19
+        },
+        {
+          "id": "152",
+          "name": "Science Fiction Collectables",
+          "leafCount": 44
+        },
+        {
+          "id": "159",
+          "name": "Other Collectable Items",
+          "leafCount": 1
+        },
+        {
+          "id": "412",
+          "name": "Scientific Collectables",
+          "leafCount": 10
+        },
+        {
+          "id": "417",
+          "name": "Transportation Collectables",
+          "leafCount": 140
+        },
+        {
+          "id": "562",
+          "name": "Breweriana",
+          "leafCount": 40
+        },
+        {
+          "id": "593",
+          "name": "Tobacciana & Smoking Supplies",
+          "leafCount": 93
+        },
+        {
+          "id": "597",
+          "name": "Vanity, Perfume & Grooming",
+          "leafCount": 14
+        },
+        {
+          "id": "898",
+          "name": "Casino Collectables",
+          "leafCount": 10
+        },
+        {
+          "id": "907",
+          "name": "Holiday & Seasonal",
+          "leafCount": 28
+        },
+        {
+          "id": "914",
+          "name": "Postcards & Supplies",
+          "leafCount": 4
+        },
+        {
+          "id": "966",
+          "name": "Pens & Writing Equipment",
+          "leafCount": 31
+        },
+        {
+          "id": "1335",
+          "name": "Animal Collectables",
+          "leafCount": 202
+        },
+        {
+          "id": "1401",
+          "name": "Blade Accs, Armours & Shields",
+          "leafCount": 8
+        },
+        {
+          "id": "1404",
+          "name": "Lamps, Lighting",
+          "leafCount": 8
+        },
+        {
+          "id": "1430",
+          "name": "Metalware",
+          "leafCount": 19
+        },
+        {
+          "id": "1446",
+          "name": "Religion & Spirituality",
+          "leafCount": 18
+        },
+        {
+          "id": "1466",
+          "name": "Weird Stuff",
+          "leafCount": 6
+        },
+        {
+          "id": "2362",
+          "name": "Theatre, Opera & Ballet",
+          "leafCount": 16
+        },
+        {
+          "id": "2536",
+          "name": "Collectable Card Games",
+          "leafCount": 24
+        },
+        {
+          "id": "3213",
+          "name": "Rocks, Fossils & Minerals",
+          "leafCount": 18
+        },
+        {
+          "id": "3628",
+          "name": "Keyrings",
+          "leafCount": 1
+        },
+        {
+          "id": "3913",
+          "name": "Ethnographic Collectables",
+          "leafCount": 8
+        },
+        {
+          "id": "4097",
+          "name": "Pez",
+          "leafCount": 1
+        },
+        {
+          "id": "10860",
+          "name": "Fantasy, Myth & Magic",
+          "leafCount": 24
+        },
+        {
+          "id": "13658",
+          "name": "Animation Art & Merchandise",
+          "leafCount": 23
+        },
+        {
+          "id": "13720",
+          "name": "Jukeboxes",
+          "leafCount": 3
+        },
+        {
+          "id": "13777",
+          "name": "Decorative Collectables",
+          "leafCount": 40
+        },
+        {
+          "id": "13849",
+          "name": "Tools & Collectable Hardware",
+          "leafCount": 21
+        },
+        {
+          "id": "13881",
+          "name": "Flags",
+          "leafCount": 27
+        },
+        {
+          "id": "13905",
+          "name": "Kitchen & Home",
+          "leafCount": 105
+        },
+        {
+          "id": "13956",
+          "name": "Militaria",
+          "leafCount": 80
+        },
+        {
+          "id": "14429",
+          "name": "Autographs",
+          "leafCount": 33
+        },
+        {
+          "id": "29797",
+          "name": "Collectable Bottles & Pots",
+          "leafCount": 16
+        },
+        {
+          "id": "29832",
+          "name": "Radio, Television & Telephony",
+          "leafCount": 12
+        },
+        {
+          "id": "32615",
+          "name": "Badges & Patches",
+          "leafCount": 32
+        },
+        {
+          "id": "50188",
+          "name": "Masonic",
+          "leafCount": 7
+        },
+        {
+          "id": "60811",
+          "name": "Phone Cards",
+          "leafCount": 1
+        },
+        {
+          "id": "66503",
+          "name": "Moneyboxes & Piggy Banks",
+          "leafCount": 2
+        },
+        {
+          "id": "69851",
+          "name": "Vintage & Retro Collectables",
+          "leafCount": 7
+        },
+        {
+          "id": "79973",
+          "name": "Trade Cards",
+          "leafCount": 8
+        },
+        {
+          "id": "98795",
+          "name": "Storage, Displays & Accs",
+          "leafCount": 1
+        },
+        {
+          "id": "180250",
+          "name": "Model Railways & Trains",
+          "leafCount": 30
+        },
+        {
+          "id": "182982",
+          "name": "Non-Sport Trading Cards",
+          "leafCount": 20
+        },
+        {
+          "id": "258032",
+          "name": "Virtual & Crypto Collectables",
+          "leafCount": 1
+        },
+        {
+          "id": "259135",
+          "name": "Historical Memorabilia",
+          "leafCount": 22
+        },
+        {
+          "id": "259145",
+          "name": "Memorabilia",
+          "leafCount": 44
+        },
+        {
+          "id": "261595",
+          "name": "Baby & Nursery",
+          "leafCount": 2
+        },
+        {
+          "id": "261650",
+          "name": "Jewellery",
+          "leafCount": 1
+        },
+        {
+          "id": "261716",
+          "name": "Linens & Textiles",
+          "leafCount": 31
+        },
+        {
+          "id": "262050",
+          "name": "Emerging NFTs",
+          "leafCount": 1
+        },
+        {
+          "id": "262344",
+          "name": "Non-Sport Stickers, Collections & Albums",
+          "leafCount": 7
+        },
+        {
+          "id": "262413",
+          "name": "Photographic Images",
+          "leafCount": 6
+        },
+        {
+          "id": "263076",
+          "name": "Collectable Figures & Supplies",
+          "leafCount": 7
+        }
+      ]
+    },
+    "Everything Else": {
+      "id": "99",
+      "l2Count": 7,
+      "totalLeaves": 176,
+      "children": [
+        {
+          "id": "3133",
+          "name": "Educational",
+          "leafCount": 1
+        },
+        {
+          "id": "14112",
+          "name": "Test Auctions",
+          "leafCount": 156
+        },
+        {
+          "id": "88433",
+          "name": "Other",
+          "leafCount": 1
+        },
+        {
+          "id": "88739",
+          "name": "Memorials & Funerals",
+          "leafCount": 5
+        },
+        {
+          "id": "102480",
+          "name": "Information Products",
+          "leafCount": 1
+        },
+        {
+          "id": "172539",
+          "name": "Promotions",
+          "leafCount": 8
+        },
+        {
+          "id": "175838",
+          "name": "Item Based Services",
+          "leafCount": 4
+        }
+      ]
+    },
+    "Toys & Games": {
+      "id": "220",
+      "l2Count": 21,
+      "totalLeaves": 356,
+      "children": [
+        {
+          "id": "222",
+          "name": "Diecast & Vehicles",
+          "leafCount": 29
+        },
+        {
+          "id": "233",
+          "name": "Games",
+          "leafCount": 22
+        },
+        {
+          "id": "246",
+          "name": "Action Figures & Accessories",
+          "leafCount": 8
+        },
+        {
+          "id": "436",
+          "name": "Soft Toys & Stuffed Animals",
+          "leafCount": 10
+        },
+        {
+          "id": "717",
+          "name": "Vintage & Classic Toys",
+          "leafCount": 16
+        },
+        {
+          "id": "767",
+          "name": "Fast Food, Cereal & Sweet Toys",
+          "leafCount": 1
+        },
+        {
+          "id": "1039",
+          "name": "Other Toys & Games",
+          "leafCount": 1
+        },
+        {
+          "id": "1082",
+          "name": "Electronic Pets",
+          "leafCount": 1
+        },
+        {
+          "id": "1188",
+          "name": "Models & Kits",
+          "leafCount": 23
+        },
+        {
+          "id": "2562",
+          "name": "Radio Control & RC Toys",
+          "leafCount": 54
+        },
+        {
+          "id": "2613",
+          "name": "Jigsaws & Puzzles",
+          "leafCount": 5
+        },
+        {
+          "id": "2616",
+          "name": "Scalextric & Slot Car",
+          "leafCount": 26
+        },
+        {
+          "id": "2631",
+          "name": "Toy Soldiers",
+          "leafCount": 13
+        },
+        {
+          "id": "11731",
+          "name": "Educational Toys",
+          "leafCount": 14
+        },
+        {
+          "id": "11743",
+          "name": "Outdoor Toys & Activities",
+          "leafCount": 45
+        },
+        {
+          "id": "14737",
+          "name": "Steam",
+          "leafCount": 1
+        },
+        {
+          "id": "16486",
+          "name": "Wargames & Role-Playing",
+          "leafCount": 45
+        },
+        {
+          "id": "19169",
+          "name": "Preschool Toys & Pretend Play",
+          "leafCount": 18
+        },
+        {
+          "id": "49019",
+          "name": "Beanies",
+          "leafCount": 13
+        },
+        {
+          "id": "80546",
+          "name": "Creative Toys & Activities",
+          "leafCount": 1
+        },
+        {
+          "id": "183446",
+          "name": "Construction & Building Toys",
+          "leafCount": 10
+        }
+      ]
+    },
+    "Dolls & Bears": {
+      "id": "237",
+      "l2Count": 4,
+      "totalLeaves": 26,
+      "children": [
+        {
+          "id": "238",
+          "name": "Dolls, Clothing & Accessories",
+          "leafCount": 11
+        },
+        {
+          "id": "1202",
+          "name": "Doll's Miniatures & Houses",
+          "leafCount": 9
+        },
+        {
+          "id": "2440",
+          "name": "Paper Dolls, Clothes & Accessories",
+          "leafCount": 1
+        },
+        {
+          "id": "262353",
+          "name": "Bears, Clothing & Accessories",
+          "leafCount": 5
+        }
+      ]
+    },
+    "Stamps": {
+      "id": "260",
+      "l2Count": 17,
+      "totalLeaves": 426,
+      "children": [
+        {
+          "id": "261",
+          "name": "United States",
+          "leafCount": 16
+        },
+        {
+          "id": "3490",
+          "name": "Ireland",
+          "leafCount": 1
+        },
+        {
+          "id": "3499",
+          "name": "Great Britain",
+          "leafCount": 66
+        },
+        {
+          "id": "4742",
+          "name": "Europe",
+          "leafCount": 51
+        },
+        {
+          "id": "4752",
+          "name": "Thematics",
+          "leafCount": 28
+        },
+        {
+          "id": "7898",
+          "name": "Philately",
+          "leafCount": 6
+        },
+        {
+          "id": "65174",
+          "name": "British Colonies & Territories",
+          "leafCount": 77
+        },
+        {
+          "id": "170137",
+          "name": "Other Stamps",
+          "leafCount": 1
+        },
+        {
+          "id": "179377",
+          "name": "Caribbean",
+          "leafCount": 16
+        },
+        {
+          "id": "181416",
+          "name": "Asia",
+          "leafCount": 34
+        },
+        {
+          "id": "181417",
+          "name": "Central & South America",
+          "leafCount": 21
+        },
+        {
+          "id": "181420",
+          "name": "Worldwide",
+          "leafCount": 8
+        },
+        {
+          "id": "181421",
+          "name": "Publications & Supplies",
+          "leafCount": 7
+        },
+        {
+          "id": "181422",
+          "name": "Middle East",
+          "leafCount": 16
+        },
+        {
+          "id": "181423",
+          "name": "Africa",
+          "leafCount": 51
+        },
+        {
+          "id": "181424",
+          "name": "Australia & Oceania",
+          "leafCount": 25
+        },
+        {
+          "id": "181444",
+          "name": "North America",
+          "leafCount": 2
+        }
+      ]
+    },
+    "Books, Comics & Magazines": {
+      "id": "267",
+      "l2Count": 8,
+      "totalLeaves": 48,
+      "children": [
+        {
+          "id": "63",
+          "name": "Comic Books & Memorabilia",
+          "leafCount": 33
+        },
+        {
+          "id": "280",
+          "name": "Magazines",
+          "leafCount": 1
+        },
+        {
+          "id": "29223",
+          "name": "Antiquarian & Collectable",
+          "leafCount": 1
+        },
+        {
+          "id": "29792",
+          "name": "Audio Books",
+          "leafCount": 1
+        },
+        {
+          "id": "45110",
+          "name": "Accessories",
+          "leafCount": 5
+        },
+        {
+          "id": "118254",
+          "name": "Catalogues",
+          "leafCount": 1
+        },
+        {
+          "id": "184644",
+          "name": "Textbooks, Education & Reference",
+          "leafCount": 5
+        },
+        {
+          "id": "261186",
+          "name": "Books",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Jewellery & Watches": {
+      "id": "281",
+      "l2Count": 15,
+      "totalLeaves": 103,
+      "children": [
+        {
+          "id": "491",
+          "name": "Loose Diamonds & Gemstones",
+          "leafCount": 3
+        },
+        {
+          "id": "4196",
+          "name": "Fine Jewellery",
+          "leafCount": 9
+        },
+        {
+          "id": "10290",
+          "name": "Men's Jewellery",
+          "leafCount": 10
+        },
+        {
+          "id": "10968",
+          "name": "Costume Jewellery",
+          "leafCount": 9
+        },
+        {
+          "id": "84605",
+          "name": "Children's Jewellery",
+          "leafCount": 5
+        },
+        {
+          "id": "91427",
+          "name": "Engagement & Wedding",
+          "leafCount": 3
+        },
+        {
+          "id": "110633",
+          "name": "Handcrafted & Artisan Jewellery",
+          "leafCount": 8
+        },
+        {
+          "id": "164352",
+          "name": "Jewellery Care, Design & Repair",
+          "leafCount": 7
+        },
+        {
+          "id": "260324",
+          "name": "Watches, Parts & Accessories",
+          "leafCount": 19
+        },
+        {
+          "id": "261986",
+          "name": "Body Jewellery",
+          "leafCount": 1
+        },
+        {
+          "id": "261997",
+          "name": "Loose Beads",
+          "leafCount": 1
+        },
+        {
+          "id": "262022",
+          "name": "Jewellery Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "262023",
+          "name": "Other Jewellery",
+          "leafCount": 1
+        },
+        {
+          "id": "262024",
+          "name": "Vintage & Antique Jewellery",
+          "leafCount": 18
+        },
+        {
+          "id": "262025",
+          "name": "Ethnic, Regional & Tribal",
+          "leafCount": 8
+        }
+      ]
+    },
+    "Sound & Vision": {
+      "id": "293",
+      "l2Count": 13,
+      "totalLeaves": 142,
+      "children": [
+        {
+          "id": "11071",
+          "name": "TVs",
+          "leafCount": 1
+        },
+        {
+          "id": "14961",
+          "name": "TV & Home Audio Accessories",
+          "leafCount": 25
+        },
+        {
+          "id": "14969",
+          "name": "Home Audio & HiFi Separates",
+          "leafCount": 12
+        },
+        {
+          "id": "15052",
+          "name": "Portable Audio & Headphones",
+          "leafCount": 25
+        },
+        {
+          "id": "15069",
+          "name": "TV Reception & Set-Top Boxes",
+          "leafCount": 13
+        },
+        {
+          "id": "32852",
+          "name": "DVD, Blu-ray & Home Cinema",
+          "leafCount": 8
+        },
+        {
+          "id": "48446",
+          "name": "Multipurpose Batteries & Power",
+          "leafCount": 9
+        },
+        {
+          "id": "48644",
+          "name": "Manuals & Resources",
+          "leafCount": 1
+        },
+        {
+          "id": "71582",
+          "name": "TV & Home Audio Parts",
+          "leafCount": 17
+        },
+        {
+          "id": "175740",
+          "name": "Vintage Sound & Vision",
+          "leafCount": 22
+        },
+        {
+          "id": "175837",
+          "name": "Other Sound & Vision",
+          "leafCount": 1
+        },
+        {
+          "id": "178894",
+          "name": "Smart Glasses",
+          "leafCount": 1
+        },
+        {
+          "id": "183067",
+          "name": "Virtual Reality",
+          "leafCount": 7
+        }
+      ]
+    },
+    "Art": {
+      "id": "550",
+      "l2Count": 10,
+      "totalLeaves": 10,
+      "children": [
+        {
+          "id": "360",
+          "name": "Art Prints",
+          "leafCount": 1
+        },
+        {
+          "id": "551",
+          "name": "Paintings",
+          "leafCount": 1
+        },
+        {
+          "id": "552",
+          "name": "Art Drawings",
+          "leafCount": 1
+        },
+        {
+          "id": "553",
+          "name": "Art Sculptures",
+          "leafCount": 1
+        },
+        {
+          "id": "554",
+          "name": "Mixed Media Art & Collage Art",
+          "leafCount": 1
+        },
+        {
+          "id": "2211",
+          "name": "Art Photographs",
+          "leafCount": 1
+        },
+        {
+          "id": "20158",
+          "name": "Other Art",
+          "leafCount": 1
+        },
+        {
+          "id": "28009",
+          "name": "Art Posters",
+          "leafCount": 1
+        },
+        {
+          "id": "156196",
+          "name": "Textile Art & Fiber Art",
+          "leafCount": 1
+        },
+        {
+          "id": "262051",
+          "name": "Art NFTs",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Musical Instruments & DJ Equipment": {
+      "id": "619",
+      "l2Count": 15,
+      "totalLeaves": 365,
+      "children": [
+        {
+          "id": "308",
+          "name": "Other Musical Instruments",
+          "leafCount": 1
+        },
+        {
+          "id": "3858",
+          "name": "Guitars & Basses",
+          "leafCount": 55
+        },
+        {
+          "id": "10181",
+          "name": "Wind & Woodwind",
+          "leafCount": 37
+        },
+        {
+          "id": "12922",
+          "name": "Stage Lighting & Effects",
+          "leafCount": 15
+        },
+        {
+          "id": "16212",
+          "name": "Brass",
+          "leafCount": 24
+        },
+        {
+          "id": "48458",
+          "name": "DJ Equipment",
+          "leafCount": 19
+        },
+        {
+          "id": "175696",
+          "name": "Karaoke Entertainment",
+          "leafCount": 5
+        },
+        {
+          "id": "180008",
+          "name": "Accessories & Equipment",
+          "leafCount": 5
+        },
+        {
+          "id": "180010",
+          "name": "Pianos, Keyboards & Organs",
+          "leafCount": 24
+        },
+        {
+          "id": "180012",
+          "name": "Percussion",
+          "leafCount": 44
+        },
+        {
+          "id": "180014",
+          "name": "Pro Audio Equipment",
+          "leafCount": 23
+        },
+        {
+          "id": "180015",
+          "name": "Sheet Music & Song Books",
+          "leafCount": 2
+        },
+        {
+          "id": "180016",
+          "name": "String",
+          "leafCount": 34
+        },
+        {
+          "id": "181162",
+          "name": "Vintage Musical Instruments",
+          "leafCount": 76
+        },
+        {
+          "id": "182150",
+          "name": "Instruction Books & Media",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Cameras & Photography": {
+      "id": "625",
+      "l2Count": 15,
+      "totalLeaves": 132,
+      "children": [
+        {
+          "id": "3326",
+          "name": "Vintage Photography",
+          "leafCount": 18
+        },
+        {
+          "id": "4684",
+          "name": "Manuals & Guides",
+          "leafCount": 1
+        },
+        {
+          "id": "11724",
+          "name": "Camcorders",
+          "leafCount": 1
+        },
+        {
+          "id": "15200",
+          "name": "Camera, Drone & Photo Accessories",
+          "leafCount": 24
+        },
+        {
+          "id": "27432",
+          "name": "Other Photography",
+          "leafCount": 1
+        },
+        {
+          "id": "28179",
+          "name": "Telescopes & Binoculars",
+          "leafCount": 11
+        },
+        {
+          "id": "30078",
+          "name": "Lighting & Studio",
+          "leafCount": 22
+        },
+        {
+          "id": "30090",
+          "name": "Tripods & Supports",
+          "leafCount": 4
+        },
+        {
+          "id": "31388",
+          "name": "Digital Cameras",
+          "leafCount": 1
+        },
+        {
+          "id": "64353",
+          "name": "Flashes & Accessories",
+          "leafCount": 6
+        },
+        {
+          "id": "69323",
+          "name": "Film Photography",
+          "leafCount": 28
+        },
+        {
+          "id": "78997",
+          "name": "Lenses & Filters",
+          "leafCount": 8
+        },
+        {
+          "id": "150044",
+          "name": "Digital Photo Frames",
+          "leafCount": 1
+        },
+        {
+          "id": "179697",
+          "name": "Camera Drones",
+          "leafCount": 1
+        },
+        {
+          "id": "182074",
+          "name": "Replacement Parts & Tools",
+          "leafCount": 5
+        }
+      ]
+    },
+    "Pottery, Ceramics & Glass": {
+      "id": "870",
+      "l2Count": 6,
+      "totalLeaves": 50,
+      "children": [
+        {
+          "id": "170129",
+          "name": "Price Guides & Publications",
+          "leafCount": 1
+        },
+        {
+          "id": "262359",
+          "name": "Drinkware & Barware",
+          "leafCount": 4
+        },
+        {
+          "id": "262364",
+          "name": "Decorative Cookware & Tableware",
+          "leafCount": 18
+        },
+        {
+          "id": "262365",
+          "name": "Other Pottery & Glass",
+          "leafCount": 1
+        },
+        {
+          "id": "262384",
+          "name": "Decorative Pottery, Ceramics & Glass",
+          "leafCount": 24
+        },
+        {
+          "id": "262410",
+          "name": "Lamps, Lighting",
+          "leafCount": 2
+        }
+      ]
+    },
+    "Sporting Goods": {
+      "id": "888",
+      "l2Count": 53,
+      "totalLeaves": 1254,
+      "children": [
+        {
+          "id": "1492",
+          "name": "Fishing",
+          "leafCount": 72
+        },
+        {
+          "id": "1513",
+          "name": "Golf",
+          "leafCount": 70
+        },
+        {
+          "id": "3153",
+          "name": "Equestrian",
+          "leafCount": 128
+        },
+        {
+          "id": "7294",
+          "name": "Cycling",
+          "leafCount": 98
+        },
+        {
+          "id": "7301",
+          "name": "Hunting",
+          "leafCount": 70
+        },
+        {
+          "id": "11330",
+          "name": "Scooters",
+          "leafCount": 6
+        },
+        {
+          "id": "13340",
+          "name": "Tennis",
+          "leafCount": 12
+        },
+        {
+          "id": "15273",
+          "name": "Fitness, Running & Yoga",
+          "leafCount": 104
+        },
+        {
+          "id": "16021",
+          "name": "Baseball",
+          "leafCount": 56
+        },
+        {
+          "id": "16034",
+          "name": "Camping & Hiking",
+          "leafCount": 88
+        },
+        {
+          "id": "16052",
+          "name": "Scuba & Snorkelling",
+          "leafCount": 30
+        },
+        {
+          "id": "16258",
+          "name": "Inline & Roller Skating",
+          "leafCount": 8
+        },
+        {
+          "id": "16262",
+          "name": "Skateboarding",
+          "leafCount": 18
+        },
+        {
+          "id": "20835",
+          "name": "Archery",
+          "leafCount": 28
+        },
+        {
+          "id": "20846",
+          "name": "Bowling (Ten-Pin)",
+          "leafCount": 10
+        },
+        {
+          "id": "20862",
+          "name": "Football",
+          "leafCount": 22
+        },
+        {
+          "id": "21194",
+          "name": "Basketball",
+          "leafCount": 13
+        },
+        {
+          "id": "21557",
+          "name": "Cricket",
+          "leafCount": 17
+        },
+        {
+          "id": "21567",
+          "name": "Snooker & Pool",
+          "leafCount": 13
+        },
+        {
+          "id": "22709",
+          "name": "Surfing",
+          "leafCount": 10
+        },
+        {
+          "id": "23806",
+          "name": "Waterskiing & Wakeboarding",
+          "leafCount": 10
+        },
+        {
+          "id": "30100",
+          "name": "Boxing",
+          "leafCount": 11
+        },
+        {
+          "id": "30105",
+          "name": "Climbing/ Mountaineering",
+          "leafCount": 12
+        },
+        {
+          "id": "33485",
+          "name": "Football Shirts",
+          "leafCount": 27
+        },
+        {
+          "id": "36121",
+          "name": "Canoeing & Kayaking",
+          "leafCount": 10
+        },
+        {
+          "id": "36259",
+          "name": "Winter Sports",
+          "leafCount": 47
+        },
+        {
+          "id": "36279",
+          "name": "Martial Arts",
+          "leafCount": 11
+        },
+        {
+          "id": "40141",
+          "name": "More Sporting Goods",
+          "leafCount": 18
+        },
+        {
+          "id": "62166",
+          "name": "Squash",
+          "leafCount": 7
+        },
+        {
+          "id": "68787",
+          "name": "Handball",
+          "leafCount": 5
+        },
+        {
+          "id": "72575",
+          "name": "Darts",
+          "leafCount": 7
+        },
+        {
+          "id": "74050",
+          "name": "Swimming",
+          "leafCount": 10
+        },
+        {
+          "id": "79792",
+          "name": "Gymnastics",
+          "leafCount": 7
+        },
+        {
+          "id": "81538",
+          "name": "Coach & Referee Equipment",
+          "leafCount": 1
+        },
+        {
+          "id": "97072",
+          "name": "Table Tennis",
+          "leafCount": 7
+        },
+        {
+          "id": "98952",
+          "name": "Sailing",
+          "leafCount": 8
+        },
+        {
+          "id": "106460",
+          "name": "Badminton",
+          "leafCount": 8
+        },
+        {
+          "id": "117103",
+          "name": "Bowls",
+          "leafCount": 6
+        },
+        {
+          "id": "117146",
+          "name": "Kitesurfing & Powerkites",
+          "leafCount": 6
+        },
+        {
+          "id": "117165",
+          "name": "Windsurfing",
+          "leafCount": 7
+        },
+        {
+          "id": "159045",
+          "name": "Geocaching",
+          "leafCount": 10
+        },
+        {
+          "id": "184355",
+          "name": "Disc Golf",
+          "leafCount": 5
+        },
+        {
+          "id": "184369",
+          "name": "Skydiving, Para & Hang Gliding",
+          "leafCount": 10
+        },
+        {
+          "id": "184381",
+          "name": "Paintball",
+          "leafCount": 27
+        },
+        {
+          "id": "261242",
+          "name": "American Football",
+          "leafCount": 13
+        },
+        {
+          "id": "261243",
+          "name": "Rugby League & Rugby Union",
+          "leafCount": 16
+        },
+        {
+          "id": "261245",
+          "name": "Field, Ice & Roller Hockey",
+          "leafCount": 35
+        },
+        {
+          "id": "261246",
+          "name": "Volleyball",
+          "leafCount": 6
+        },
+        {
+          "id": "261247",
+          "name": "Wrestling",
+          "leafCount": 6
+        },
+        {
+          "id": "261249",
+          "name": "Lacrosse",
+          "leafCount": 14
+        },
+        {
+          "id": "261250",
+          "name": "Cheerleading",
+          "leafCount": 5
+        },
+        {
+          "id": "261251",
+          "name": "Curling",
+          "leafCount": 6
+        },
+        {
+          "id": "261831",
+          "name": "Sport Awards",
+          "leafCount": 3
+        }
+      ]
+    },
+    "Video Games & Consoles": {
+      "id": "1249",
+      "l2Count": 10,
+      "totalLeaves": 36,
+      "children": [
+        {
+          "id": "3944",
+          "name": "Coin-Operated Gaming",
+          "leafCount": 10
+        },
+        {
+          "id": "38583",
+          "name": "Video Game Merchandise",
+          "leafCount": 1
+        },
+        {
+          "id": "54968",
+          "name": "Video Game Accessories",
+          "leafCount": 18
+        },
+        {
+          "id": "139971",
+          "name": "Video Game Consoles",
+          "leafCount": 1
+        },
+        {
+          "id": "139973",
+          "name": "Video Games",
+          "leafCount": 1
+        },
+        {
+          "id": "156595",
+          "name": "Strategy Guides & Cheats",
+          "leafCount": 1
+        },
+        {
+          "id": "156597",
+          "name": "Prepaid Gaming Cards",
+          "leafCount": 1
+        },
+        {
+          "id": "171833",
+          "name": "Replacement Parts & Tools",
+          "leafCount": 1
+        },
+        {
+          "id": "182174",
+          "name": "Manuals, Inserts & Box Art",
+          "leafCount": 1
+        },
+        {
+          "id": "182175",
+          "name": "Original Game Cases & Boxes",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Pet Supplies": {
+      "id": "1281",
+      "l2Count": 13,
+      "totalLeaves": 125,
+      "children": [
+        {
+          "id": "301",
+          "name": "Other Pet Supplies",
+          "leafCount": 1
+        },
+        {
+          "id": "1285",
+          "name": "Reptiles",
+          "leafCount": 1
+        },
+        {
+          "id": "20734",
+          "name": "Birds",
+          "leafCount": 6
+        },
+        {
+          "id": "20737",
+          "name": "Cat Supplies",
+          "leafCount": 19
+        },
+        {
+          "id": "20742",
+          "name": "Dog Supplies",
+          "leafCount": 59
+        },
+        {
+          "id": "20754",
+          "name": "Fish & Aquarium",
+          "leafCount": 23
+        },
+        {
+          "id": "116391",
+          "name": "Pet Memorials",
+          "leafCount": 1
+        },
+        {
+          "id": "116881",
+          "name": "Beekeeping",
+          "leafCount": 1
+        },
+        {
+          "id": "122950",
+          "name": "Spiders & Insects",
+          "leafCount": 1
+        },
+        {
+          "id": "177801",
+          "name": "Poultry & Waterfowl",
+          "leafCount": 1
+        },
+        {
+          "id": "259318",
+          "name": "Cameras",
+          "leafCount": 1
+        },
+        {
+          "id": "259319",
+          "name": "Trackers",
+          "leafCount": 1
+        },
+        {
+          "id": "259320",
+          "name": "Small Animal Supplies",
+          "leafCount": 10
+        }
+      ]
+    },
+    "Events Tickets": {
+      "id": "1305",
+      "l2Count": 11,
+      "totalLeaves": 20,
+      "children": [
+        {
+          "id": "1306",
+          "name": "Other Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "34814",
+          "name": "Concert Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170587",
+          "name": "Festival Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170588",
+          "name": "Theatre Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170589",
+          "name": "Comedy Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170590",
+          "name": "Sport Events",
+          "leafCount": 1
+        },
+        {
+          "id": "170591",
+          "name": "Experiences",
+          "leafCount": 1
+        },
+        {
+          "id": "170592",
+          "name": "Museum Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170593",
+          "name": "Cinema Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "170594",
+          "name": "Theme Park Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "172008",
+          "name": "Gift Vouchers & Coupons",
+          "leafCount": 10
+        }
+      ]
+    },
+    "Baby": {
+      "id": "2984",
+      "l2Count": 16,
+      "totalLeaves": 143,
+      "children": [
+        {
+          "id": "1261",
+          "name": "Other Baby",
+          "leafCount": 1
+        },
+        {
+          "id": "19068",
+          "name": "Toys & Activities",
+          "leafCount": 7
+        },
+        {
+          "id": "20394",
+          "name": "Baby Bathing/Grooming",
+          "leafCount": 11
+        },
+        {
+          "id": "20400",
+          "name": "Baby Feeding",
+          "leafCount": 34
+        },
+        {
+          "id": "20416",
+          "name": "Nursery Bedding",
+          "leafCount": 15
+        },
+        {
+          "id": "20433",
+          "name": "Safety",
+          "leafCount": 13
+        },
+        {
+          "id": "37631",
+          "name": "Potty Training",
+          "leafCount": 1
+        },
+        {
+          "id": "45455",
+          "name": "Baby Changing & Nappies",
+          "leafCount": 9
+        },
+        {
+          "id": "53676",
+          "name": "Baby Books",
+          "leafCount": 6
+        },
+        {
+          "id": "66692",
+          "name": "Car Seats & Accessories",
+          "leafCount": 2
+        },
+        {
+          "id": "66697",
+          "name": "Nursery Decoration & Furniture",
+          "leafCount": 15
+        },
+        {
+          "id": "66698",
+          "name": "Pushchairs, Prams & Accs.",
+          "leafCount": 12
+        },
+        {
+          "id": "87167",
+          "name": "Maternity/Pregnancy",
+          "leafCount": 8
+        },
+        {
+          "id": "100978",
+          "name": "Christening & Gifts",
+          "leafCount": 7
+        },
+        {
+          "id": "100982",
+          "name": "Baby Carriers/Backpacks",
+          "leafCount": 1
+        },
+        {
+          "id": "134282",
+          "name": "Walkers",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Holidays & Travel": {
+      "id": "3252",
+      "l2Count": 9,
+      "totalLeaves": 17,
+      "children": [
+        {
+          "id": "1310",
+          "name": "Other Travel",
+          "leafCount": 1
+        },
+        {
+          "id": "3253",
+          "name": "Flight Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "16078",
+          "name": "Ferries/ Cruises",
+          "leafCount": 1
+        },
+        {
+          "id": "16079",
+          "name": "Accommodation",
+          "leafCount": 9
+        },
+        {
+          "id": "25614",
+          "name": "Package Holidays",
+          "leafCount": 1
+        },
+        {
+          "id": "34514",
+          "name": "Short Breaks",
+          "leafCount": 1
+        },
+        {
+          "id": "88839",
+          "name": "Bus/ Coach Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "98982",
+          "name": "Train Tickets",
+          "leafCount": 1
+        },
+        {
+          "id": "147399",
+          "name": "Car Hire/ Car Rental",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Cars, Motorcycles & Vehicles": {
+      "id": "9800",
+      "l2Count": 15,
+      "totalLeaves": 178,
+      "children": [
+        {
+          "id": "422",
+          "name": "Motorcycles & Scooters",
+          "leafCount": 48
+        },
+        {
+          "id": "1293",
+          "name": "Boats & Watercraft",
+          "leafCount": 5
+        },
+        {
+          "id": "9801",
+          "name": "Cars",
+          "leafCount": 61
+        },
+        {
+          "id": "9883",
+          "name": "Other Vehicles",
+          "leafCount": 1
+        },
+        {
+          "id": "29751",
+          "name": "Classic Cars",
+          "leafCount": 45
+        },
+        {
+          "id": "35576",
+          "name": "Motorcycles for Salvage",
+          "leafCount": 1
+        },
+        {
+          "id": "36626",
+          "name": "Disabled Vehicles",
+          "leafCount": 1
+        },
+        {
+          "id": "63732",
+          "name": "Commercial Vehicles",
+          "leafCount": 7
+        },
+        {
+          "id": "121902",
+          "name": "Aircraft & Aviation",
+          "leafCount": 1
+        },
+        {
+          "id": "121904",
+          "name": "Campers, Caravans & Motorhomes",
+          "leafCount": 3
+        },
+        {
+          "id": "122305",
+          "name": "Emergency Vehicles",
+          "leafCount": 1
+        },
+        {
+          "id": "122306",
+          "name": "Go-Karts",
+          "leafCount": 1
+        },
+        {
+          "id": "122307",
+          "name": "Military Vehicles",
+          "leafCount": 1
+        },
+        {
+          "id": "168693",
+          "name": "Cars for Salvage",
+          "leafCount": 1
+        },
+        {
+          "id": "181476",
+          "name": "Golf Buggies",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Property": {
+      "id": "10542",
+      "l2Count": 2,
+      "totalLeaves": 4,
+      "children": [
+        {
+          "id": "172187",
+          "name": "Overseas",
+          "leafCount": 2
+        },
+        {
+          "id": "172206",
+          "name": "UK & Ireland",
+          "leafCount": 2
+        }
+      ]
+    },
+    "Coins": {
+      "id": "11116",
+      "l2Count": 7,
+      "totalLeaves": 291,
+      "children": [
+        {
+          "id": "39482",
+          "name": "Bullion/Bars",
+          "leafCount": 10
+        },
+        {
+          "id": "58507",
+          "name": "Banknotes",
+          "leafCount": 52
+        },
+        {
+          "id": "58520",
+          "name": "Coins",
+          "leafCount": 211
+        },
+        {
+          "id": "58534",
+          "name": "Tokens",
+          "leafCount": 7
+        },
+        {
+          "id": "72378",
+          "name": "Historical Medals/Medallions",
+          "leafCount": 6
+        },
+        {
+          "id": "72381",
+          "name": "Share Certificates/Bonds",
+          "leafCount": 4
+        },
+        {
+          "id": "179197",
+          "name": "Virtual Currency",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Films & TV": {
+      "id": "11232",
+      "l2Count": 10,
+      "totalLeaves": 124,
+      "children": [
+        {
+          "id": "57",
+          "name": "Film Memorabilia",
+          "leafCount": 79
+        },
+        {
+          "id": "309",
+          "name": "VHS Tapes",
+          "leafCount": 1
+        },
+        {
+          "id": "381",
+          "name": "LaserDiscs",
+          "leafCount": 1
+        },
+        {
+          "id": "617",
+          "name": "DVDs & Blu-rays",
+          "leafCount": 1
+        },
+        {
+          "id": "1424",
+          "name": "TV Memorabilia",
+          "leafCount": 37
+        },
+        {
+          "id": "41676",
+          "name": "Other Formats",
+          "leafCount": 1
+        },
+        {
+          "id": "52554",
+          "name": "Video Media Accessories",
+          "leafCount": 1
+        },
+        {
+          "id": "63821",
+          "name": "Film Stock",
+          "leafCount": 1
+        },
+        {
+          "id": "132975",
+          "name": "UMDs",
+          "leafCount": 1
+        },
+        {
+          "id": "262053",
+          "name": "Film NFTs",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Music": {
+      "id": "11233",
+      "l2Count": 7,
+      "totalLeaves": 178,
+      "children": [
+        {
+          "id": "618",
+          "name": "Other Formats",
+          "leafCount": 1
+        },
+        {
+          "id": "2329",
+          "name": "Music Memorabilia",
+          "leafCount": 172
+        },
+        {
+          "id": "52473",
+          "name": "Audio Media Accessories",
+          "leafCount": 1
+        },
+        {
+          "id": "176983",
+          "name": "Cassettes",
+          "leafCount": 1
+        },
+        {
+          "id": "176984",
+          "name": "CDs",
+          "leafCount": 1
+        },
+        {
+          "id": "176985",
+          "name": "Vinyl Records",
+          "leafCount": 1
+        },
+        {
+          "id": "262054",
+          "name": "Music NFTs",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Clothes, Shoes & Accessories": {
+      "id": "11450",
+      "l2Count": 5,
+      "totalLeaves": 406,
+      "children": [
+        {
+          "id": "171146",
+          "name": "Kids",
+          "leafCount": 87
+        },
+        {
+          "id": "260010",
+          "name": "Women",
+          "leafCount": 62
+        },
+        {
+          "id": "260012",
+          "name": "Men",
+          "leafCount": 44
+        },
+        {
+          "id": "260018",
+          "name": "Baby",
+          "leafCount": 21
+        },
+        {
+          "id": "260033",
+          "name": "Specialty",
+          "leafCount": 192
+        }
+      ]
+    },
+    "Home, Furniture & DIY": {
+      "id": "11700",
+      "l2Count": 30,
+      "totalLeaves": 1368,
+      "children": [
+        {
+          "id": "299",
+          "name": "Household & Laundry Supplies",
+          "leafCount": 50
+        },
+        {
+          "id": "631",
+          "name": "DIY Tools & Workshop Equipment",
+          "leafCount": 184
+        },
+        {
+          "id": "3187",
+          "name": "DIY Materials",
+          "leafCount": 203
+        },
+        {
+          "id": "3197",
+          "name": "Furniture",
+          "leafCount": 34
+        },
+        {
+          "id": "10033",
+          "name": "Home Décor",
+          "leafCount": 29
+        },
+        {
+          "id": "11827",
+          "name": "Wedding Supplies",
+          "leafCount": 22
+        },
+        {
+          "id": "14308",
+          "name": "Food & Drink",
+          "leafCount": 121
+        },
+        {
+          "id": "16086",
+          "name": "Celebrations & Occasions",
+          "leafCount": 52
+        },
+        {
+          "id": "16092",
+          "name": "Stationery & School Equipment",
+          "leafCount": 13
+        },
+        {
+          "id": "19266",
+          "name": "Metaphysical & New Age",
+          "leafCount": 12
+        },
+        {
+          "id": "20444",
+          "name": "Bedding",
+          "leafCount": 12
+        },
+        {
+          "id": "20563",
+          "name": "Cushions",
+          "leafCount": 1
+        },
+        {
+          "id": "20571",
+          "name": "Rugs & Carpets",
+          "leafCount": 10
+        },
+        {
+          "id": "20601",
+          "name": "Plumbing & Fixtures",
+          "leafCount": 15
+        },
+        {
+          "id": "20625",
+          "name": "Cookware, Dining & Bar",
+          "leafCount": 157
+        },
+        {
+          "id": "20697",
+          "name": "Lighting",
+          "leafCount": 10
+        },
+        {
+          "id": "20710",
+          "name": "Appliances",
+          "leafCount": 96
+        },
+        {
+          "id": "26677",
+          "name": "Bath",
+          "leafCount": 63
+        },
+        {
+          "id": "30565",
+          "name": "Heating, Cooling & Air",
+          "leafCount": 73
+        },
+        {
+          "id": "38219",
+          "name": "Fireplaces & Stoves",
+          "leafCount": 15
+        },
+        {
+          "id": "41968",
+          "name": "Home Security",
+          "leafCount": 23
+        },
+        {
+          "id": "43502",
+          "name": "Storage Solutions",
+          "leafCount": 13
+        },
+        {
+          "id": "63514",
+          "name": "Curtains, Blinds & Accessories",
+          "leafCount": 8
+        },
+        {
+          "id": "157967",
+          "name": "Luggage & Travel Accessories",
+          "leafCount": 33
+        },
+        {
+          "id": "176988",
+          "name": "Children's Home & Furniture",
+          "leafCount": 59
+        },
+        {
+          "id": "177073",
+          "name": "Kitchen",
+          "leafCount": 10
+        },
+        {
+          "id": "181076",
+          "name": "Other Home, Furniture & DIY",
+          "leafCount": 1
+        },
+        {
+          "id": "185066",
+          "name": "Smart Home & Surveillance",
+          "leafCount": 39
+        },
+        {
+          "id": "258031",
+          "name": "Clocks",
+          "leafCount": 7
+        },
+        {
+          "id": "262975",
+          "name": "Candles & Home Fragrance",
+          "leafCount": 3
+        }
+      ]
+    },
+    "Business, Office & Industrial": {
+      "id": "12576",
+      "l2Count": 27,
+      "totalLeaves": 2619,
+      "children": [
+        {
+          "id": "192",
+          "name": "Web Domains/ Email/ Software",
+          "leafCount": 5
+        },
+        {
+          "id": "11748",
+          "name": "Agriculture/Farming",
+          "leafCount": 93
+        },
+        {
+          "id": "11759",
+          "name": "Businesses For Sale",
+          "leafCount": 7
+        },
+        {
+          "id": "11804",
+          "name": "CNC, Metalworking & Manufacturing",
+          "leafCount": 479
+        },
+        {
+          "id": "11815",
+          "name": "Healthcare, Lab & Dental",
+          "leafCount": 275
+        },
+        {
+          "id": "11874",
+          "name": "Restaurant & Food Service",
+          "leafCount": 329
+        },
+        {
+          "id": "11890",
+          "name": "Retail & Shop Fitting",
+          "leafCount": 27
+        },
+        {
+          "id": "11897",
+          "name": "Facility Maintenance & Safety",
+          "leafCount": 125
+        },
+        {
+          "id": "21162",
+          "name": "Video Broadcasting & Recording",
+          "leafCount": 14
+        },
+        {
+          "id": "25298",
+          "name": "Office Equipment & Supplies",
+          "leafCount": 57
+        },
+        {
+          "id": "26221",
+          "name": "Material Handling",
+          "leafCount": 149
+        },
+        {
+          "id": "26238",
+          "name": "Printing & Graphic Arts",
+          "leafCount": 11
+        },
+        {
+          "id": "26261",
+          "name": "Other Business & Industrial",
+          "leafCount": 1
+        },
+        {
+          "id": "34165",
+          "name": "Telephone & Answering Systems",
+          "leafCount": 1
+        },
+        {
+          "id": "41498",
+          "name": "Building Materials & Supplies",
+          "leafCount": 72
+        },
+        {
+          "id": "42892",
+          "name": "Industrial Automation & Motion Controls",
+          "leafCount": 140
+        },
+        {
+          "id": "42909",
+          "name": "HVAC & Refrigeration",
+          "leafCount": 94
+        },
+        {
+          "id": "46534",
+          "name": "Cleaning & Janitorial Supplies",
+          "leafCount": 123
+        },
+        {
+          "id": "46576",
+          "name": "Hand Tools",
+          "leafCount": 45
+        },
+        {
+          "id": "55805",
+          "name": "Modular & Prefabricated Buildings",
+          "leafCount": 1
+        },
+        {
+          "id": "61573",
+          "name": "Power Tools",
+          "leafCount": 46
+        },
+        {
+          "id": "64808",
+          "name": "Industrial Tools",
+          "leafCount": 70
+        },
+        {
+          "id": "92074",
+          "name": "Electrical Equipment & Supplies",
+          "leafCount": 136
+        },
+        {
+          "id": "109471",
+          "name": "Adhesives, Sealants & Tapes",
+          "leafCount": 18
+        },
+        {
+          "id": "181939",
+          "name": "Test, Measurement & Inspection",
+          "leafCount": 118
+        },
+        {
+          "id": "183900",
+          "name": "Fasteners & Hardware",
+          "leafCount": 43
+        },
+        {
+          "id": "183978",
+          "name": "Hydraulics, Pneumatics, Pumps & Plumbing",
+          "leafCount": 140
+        }
+      ]
+    },
+    "Crafts": {
+      "id": "14339",
+      "l2Count": 22,
+      "totalLeaves": 530,
+      "children": [
+        {
+          "id": "3099",
+          "name": "Glass Art Supplies",
+          "leafCount": 1
+        },
+        {
+          "id": "3122",
+          "name": "Rubber Stamping",
+          "leafCount": 5
+        },
+        {
+          "id": "3127",
+          "name": "Woodworking",
+          "leafCount": 16
+        },
+        {
+          "id": "11783",
+          "name": "Art Supplies",
+          "leafCount": 54
+        },
+        {
+          "id": "11786",
+          "name": "Framing/Matting",
+          "leafCount": 1
+        },
+        {
+          "id": "11787",
+          "name": "Mosaic",
+          "leafCount": 1
+        },
+        {
+          "id": "11788",
+          "name": "Scrapbooking & Paper Crafts",
+          "leafCount": 42
+        },
+        {
+          "id": "16491",
+          "name": "Floral Crafts",
+          "leafCount": 13
+        },
+        {
+          "id": "28102",
+          "name": "Multi-Purpose Craft Supplies",
+          "leafCount": 63
+        },
+        {
+          "id": "28131",
+          "name": "Leathercrafts",
+          "leafCount": 28
+        },
+        {
+          "id": "28145",
+          "name": "Children's Crafts",
+          "leafCount": 1
+        },
+        {
+          "id": "28162",
+          "name": "Fabric",
+          "leafCount": 1
+        },
+        {
+          "id": "31723",
+          "name": "Beads & Jewellery Making",
+          "leafCount": 61
+        },
+        {
+          "id": "57738",
+          "name": "Hand-Crafted Items",
+          "leafCount": 1
+        },
+        {
+          "id": "112545",
+          "name": "More Crafts",
+          "leafCount": 2
+        },
+        {
+          "id": "134304",
+          "name": "Basketry & Chair Caning",
+          "leafCount": 10
+        },
+        {
+          "id": "160706",
+          "name": "Needlecrafts & Yarn",
+          "leafCount": 104
+        },
+        {
+          "id": "160737",
+          "name": "Sewing",
+          "leafCount": 73
+        },
+        {
+          "id": "183118",
+          "name": "Fabric Painting & Decorating",
+          "leafCount": 7
+        },
+        {
+          "id": "183126",
+          "name": "Decorative & Folk Painting",
+          "leafCount": 5
+        },
+        {
+          "id": "183302",
+          "name": "Sculpting, Moulding & Ceramics",
+          "leafCount": 23
+        },
+        {
+          "id": "183683",
+          "name": "Candle Making & Soap Making",
+          "leafCount": 18
+        }
+      ]
+    },
+    "Mobile Phones & Communication": {
+      "id": "15032",
+      "l2Count": 13,
+      "totalLeaves": 81,
+      "children": [
+        {
+          "id": "1500",
+          "name": "Radio Communication Equipment",
+          "leafCount": 34
+        },
+        {
+          "id": "3286",
+          "name": "Home Phones & Accessories",
+          "leafCount": 10
+        },
+        {
+          "id": "9355",
+          "name": "Mobile & Smart Phones",
+          "leafCount": 1
+        },
+        {
+          "id": "9394",
+          "name": "Mobile Phone Accessories",
+          "leafCount": 21
+        },
+        {
+          "id": "38331",
+          "name": "PDAs",
+          "leafCount": 1
+        },
+        {
+          "id": "43304",
+          "name": "Mobile Phone Parts",
+          "leafCount": 1
+        },
+        {
+          "id": "136699",
+          "name": "Dummy Mobile Phones",
+          "leafCount": 1
+        },
+        {
+          "id": "146492",
+          "name": "Phone Cards & SIM Cards",
+          "leafCount": 3
+        },
+        {
+          "id": "175744",
+          "name": "PDA Accessories",
+          "leafCount": 1
+        },
+        {
+          "id": "178893",
+          "name": "Smart Watches",
+          "leafCount": 1
+        },
+        {
+          "id": "182064",
+          "name": "Smart Watch Accessories",
+          "leafCount": 5
+        },
+        {
+          "id": "182073",
+          "name": "Vintage Mobile Phones",
+          "leafCount": 1
+        },
+        {
+          "id": "182098",
+          "name": "Vintage Home Phones",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Antiques": {
+      "id": "20081",
+      "l2Count": 17,
+      "totalLeaves": 196,
+      "children": [
+        {
+          "id": "12",
+          "name": "Other Antiques",
+          "leafCount": 1
+        },
+        {
+          "id": "1211",
+          "name": "Metalware",
+          "leafCount": 10
+        },
+        {
+          "id": "2207",
+          "name": "Ethnographic Antiques",
+          "leafCount": 5
+        },
+        {
+          "id": "4707",
+          "name": "Architectural Antiques",
+          "leafCount": 19
+        },
+        {
+          "id": "20082",
+          "name": "Asian/Oriental Antiques",
+          "leafCount": 41
+        },
+        {
+          "id": "20091",
+          "name": "Antique Furniture",
+          "leafCount": 24
+        },
+        {
+          "id": "20094",
+          "name": "Science/Medicine",
+          "leafCount": 3
+        },
+        {
+          "id": "20096",
+          "name": "Silver",
+          "leafCount": 52
+        },
+        {
+          "id": "22422",
+          "name": "Incunabula",
+          "leafCount": 1
+        },
+        {
+          "id": "23048",
+          "name": "Manuscripts",
+          "leafCount": 1
+        },
+        {
+          "id": "37941",
+          "name": "Woodenware",
+          "leafCount": 13
+        },
+        {
+          "id": "37958",
+          "name": "Maps, Atlases & Globes",
+          "leafCount": 14
+        },
+        {
+          "id": "37978",
+          "name": "Rugs & Carpets",
+          "leafCount": 1
+        },
+        {
+          "id": "66638",
+          "name": "Marine/Maritime",
+          "leafCount": 1
+        },
+        {
+          "id": "181726",
+          "name": "Musical Instruments",
+          "leafCount": 6
+        },
+        {
+          "id": "261588",
+          "name": "Tapestries",
+          "leafCount": 1
+        },
+        {
+          "id": "261755",
+          "name": "Restoration & Care",
+          "leafCount": 3
+        }
+      ]
+    },
+    "Health & Beauty": {
+      "id": "26395",
+      "l2Count": 19,
+      "totalLeaves": 399,
+      "children": [
+        {
+          "id": "1277",
+          "name": "Other Health & Beauty",
+          "leafCount": 1
+        },
+        {
+          "id": "11778",
+          "name": "Medical & Mobility",
+          "leafCount": 41
+        },
+        {
+          "id": "11838",
+          "name": "Bath & Body",
+          "leafCount": 16
+        },
+        {
+          "id": "11854",
+          "name": "Hair Care & Styling",
+          "leafCount": 16
+        },
+        {
+          "id": "11863",
+          "name": "Skin Care",
+          "leafCount": 18
+        },
+        {
+          "id": "31414",
+          "name": "Vision Care",
+          "leafCount": 14
+        },
+        {
+          "id": "31762",
+          "name": "Shaving & Hair Removal",
+          "leafCount": 19
+        },
+        {
+          "id": "31769",
+          "name": "Oral Care",
+          "leafCount": 15
+        },
+        {
+          "id": "31772",
+          "name": "Sun Care & Tanning",
+          "leafCount": 13
+        },
+        {
+          "id": "31786",
+          "name": "Make-Up",
+          "leafCount": 34
+        },
+        {
+          "id": "33914",
+          "name": "Tattoos & Body Art",
+          "leafCount": 16
+        },
+        {
+          "id": "36447",
+          "name": "Massage",
+          "leafCount": 8
+        },
+        {
+          "id": "47945",
+          "name": "Nail Care, Manicure & Pedicure",
+          "leafCount": 27
+        },
+        {
+          "id": "67588",
+          "name": "Health Care",
+          "leafCount": 98
+        },
+        {
+          "id": "67659",
+          "name": "Natural & Alternative Remedies",
+          "leafCount": 22
+        },
+        {
+          "id": "177731",
+          "name": "Salon & Spa",
+          "leafCount": 12
+        },
+        {
+          "id": "180345",
+          "name": "Fragrances",
+          "leafCount": 4
+        },
+        {
+          "id": "180959",
+          "name": "Vitamins & Lifestyle Supplements",
+          "leafCount": 18
+        },
+        {
+          "id": "183497",
+          "name": "Electronic Smoking, Parts & Accs",
+          "leafCount": 7
+        }
+      ]
+    },
+    "Wholesale & Job Lots": {
+      "id": "40005",
+      "l2Count": 25,
+      "totalLeaves": 72,
+      "children": [
+        {
+          "id": "26423",
+          "name": "Sporting Goods",
+          "leafCount": 1
+        },
+        {
+          "id": "26424",
+          "name": "Toys & Games",
+          "leafCount": 1
+        },
+        {
+          "id": "26425",
+          "name": "Collectables",
+          "leafCount": 1
+        },
+        {
+          "id": "31605",
+          "name": "Home & Garden",
+          "leafCount": 15
+        },
+        {
+          "id": "31822",
+          "name": "Health & Beauty",
+          "leafCount": 1
+        },
+        {
+          "id": "40019",
+          "name": "Automotive",
+          "leafCount": 1
+        },
+        {
+          "id": "41964",
+          "name": "Clothes, Shoes & Accessories",
+          "leafCount": 24
+        },
+        {
+          "id": "45065",
+          "name": "Mobile Phones Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "45077",
+          "name": "Crafts",
+          "leafCount": 1
+        },
+        {
+          "id": "45089",
+          "name": "Camera Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "48461",
+          "name": "Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "48757",
+          "name": "Baby",
+          "leafCount": 1
+        },
+        {
+          "id": "52529",
+          "name": "Antiques & Art",
+          "leafCount": 1
+        },
+        {
+          "id": "52550",
+          "name": "Dolls & Bears",
+          "leafCount": 1
+        },
+        {
+          "id": "52555",
+          "name": "Musical Instruments",
+          "leafCount": 1
+        },
+        {
+          "id": "56080",
+          "name": "Sports Memorabilia",
+          "leafCount": 1
+        },
+        {
+          "id": "56384",
+          "name": "Other Wholesale & Job Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "60102",
+          "name": "Pottery, Porcelain & Glass",
+          "leafCount": 1
+        },
+        {
+          "id": "90926",
+          "name": "Business, Office & Industrial",
+          "leafCount": 11
+        },
+        {
+          "id": "90950",
+          "name": "Novelty Items",
+          "leafCount": 1
+        },
+        {
+          "id": "90951",
+          "name": "Tickets & Travel",
+          "leafCount": 1
+        },
+        {
+          "id": "91595",
+          "name": "Greeting Cards/Stationery",
+          "leafCount": 1
+        },
+        {
+          "id": "259696",
+          "name": "Computing Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "259701",
+          "name": "Consumer Electronics Mixed Lots",
+          "leafCount": 1
+        },
+        {
+          "id": "260000",
+          "name": "PC & Video Gaming Mixed Lots",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Computers/Tablets & Networking": {
+      "id": "58058",
+      "l2Count": 20,
+      "totalLeaves": 238,
+      "children": [
+        {
+          "id": "162",
+          "name": "Other Computers & Networking",
+          "leafCount": 1
+        },
+        {
+          "id": "165",
+          "name": "Drives, Storage & Blank Media",
+          "leafCount": 21
+        },
+        {
+          "id": "3516",
+          "name": "Manuals & Resources",
+          "leafCount": 1
+        },
+        {
+          "id": "3676",
+          "name": "Keyboards, Mice & Pointers",
+          "leafCount": 6
+        },
+        {
+          "id": "11176",
+          "name": "Home Networking & Connectivity",
+          "leafCount": 13
+        },
+        {
+          "id": "11189",
+          "name": "Vintage Computing",
+          "leafCount": 4
+        },
+        {
+          "id": "18793",
+          "name": "Software",
+          "leafCount": 11
+        },
+        {
+          "id": "31530",
+          "name": "Laptop & Desktop Accessories",
+          "leafCount": 27
+        },
+        {
+          "id": "86722",
+          "name": "Power Protection, Distribution",
+          "leafCount": 6
+        },
+        {
+          "id": "162497",
+          "name": "Monitors, Projectors & Accs",
+          "leafCount": 8
+        },
+        {
+          "id": "171485",
+          "name": "Tablets & eBook Readers",
+          "leafCount": 1
+        },
+        {
+          "id": "171957",
+          "name": "Desktops & All-in-Ones",
+          "leafCount": 2
+        },
+        {
+          "id": "171961",
+          "name": "Printers, Scanners & Supplies",
+          "leafCount": 21
+        },
+        {
+          "id": "175672",
+          "name": "Laptops & Netbooks",
+          "leafCount": 2
+        },
+        {
+          "id": "175673",
+          "name": "Computer Components & Parts",
+          "leafCount": 35
+        },
+        {
+          "id": "175698",
+          "name": "Enterprise Networking, Servers",
+          "leafCount": 39
+        },
+        {
+          "id": "176970",
+          "name": "Tablet & eBook Reader Accs",
+          "leafCount": 12
+        },
+        {
+          "id": "180235",
+          "name": "Tablet & eBook Reader Parts",
+          "leafCount": 1
+        },
+        {
+          "id": "182094",
+          "name": "Computer Cables & Connectors",
+          "leafCount": 20
+        },
+        {
+          "id": "183062",
+          "name": "3D Printers & Supplies",
+          "leafCount": 7
+        }
+      ]
+    },
+    "Sports Memorabilia": {
+      "id": "64482",
+      "l2Count": 19,
+      "totalLeaves": 449,
+      "children": [
+        {
+          "id": "212",
+          "name": "Sports Trading Cards",
+          "leafCount": 19
+        },
+        {
+          "id": "430",
+          "name": "Tennis Memorabilia",
+          "leafCount": 1
+        },
+        {
+          "id": "6093",
+          "name": "Football Memorabilia",
+          "leafCount": 96
+        },
+        {
+          "id": "21550",
+          "name": "Subbuteo",
+          "leafCount": 5
+        },
+        {
+          "id": "24475",
+          "name": "American Football Memorabilia",
+          "leafCount": 6
+        },
+        {
+          "id": "24510",
+          "name": "Ice Hockey Memorabilia",
+          "leafCount": 6
+        },
+        {
+          "id": "27291",
+          "name": "Olympic Memorabilia",
+          "leafCount": 17
+        },
+        {
+          "id": "27391",
+          "name": "Cricket Memorabilia",
+          "leafCount": 18
+        },
+        {
+          "id": "31633",
+          "name": "Boxing Memorabilia",
+          "leafCount": 6
+        },
+        {
+          "id": "31647",
+          "name": "Golf Memorabilia",
+          "leafCount": 10
+        },
+        {
+          "id": "31663",
+          "name": "Horse Racing Memorabilia",
+          "leafCount": 10
+        },
+        {
+          "id": "31677",
+          "name": "Wrestling Memorabilia",
+          "leafCount": 9
+        },
+        {
+          "id": "53597",
+          "name": "Football Shirts",
+          "leafCount": 26
+        },
+        {
+          "id": "53621",
+          "name": "Football Programmes",
+          "leafCount": 114
+        },
+        {
+          "id": "53653",
+          "name": "Rugby League Memorabilia",
+          "leafCount": 15
+        },
+        {
+          "id": "53656",
+          "name": "Rugby Union Memorabilia",
+          "leafCount": 16
+        },
+        {
+          "id": "68362",
+          "name": "Motor Sport Memorabilia",
+          "leafCount": 41
+        },
+        {
+          "id": "75690",
+          "name": "More Sports Memorabilia",
+          "leafCount": 27
+        },
+        {
+          "id": "262343",
+          "name": "Sports Stickers, Collections & Albums",
+          "leafCount": 7
+        }
+      ]
+    },
+    "Vehicle Parts & Accessories": {
+      "id": "131090",
+      "l2Count": 25,
+      "totalLeaves": 1875,
+      "children": [
+        {
+          "id": "6030",
+          "name": "Car Parts & Accessories",
+          "leafCount": 414
+        },
+        {
+          "id": "6747",
+          "name": "Clothing, Protective Gear & Merchandise",
+          "leafCount": 53
+        },
+        {
+          "id": "10063",
+          "name": "Motorcycle & Scooter Parts & Accessories",
+          "leafCount": 289
+        },
+        {
+          "id": "25622",
+          "name": "Motorcycle Maintenance, Stands & Towing",
+          "leafCount": 30
+        },
+        {
+          "id": "34998",
+          "name": "Garage Equipment & Tools",
+          "leafCount": 112
+        },
+        {
+          "id": "36085",
+          "name": "Car Manuals & Literature",
+          "leafCount": 7
+        },
+        {
+          "id": "36630",
+          "name": "Disabled Vehicle Parts",
+          "leafCount": 1
+        },
+        {
+          "id": "36631",
+          "name": "Other Vehicle Parts & Accs",
+          "leafCount": 1
+        },
+        {
+          "id": "38635",
+          "name": "In-Car Technology, GPS & Security",
+          "leafCount": 68
+        },
+        {
+          "id": "43962",
+          "name": "ATV, Side-by-Side & UTV Parts & Accessories",
+          "leafCount": 302
+        },
+        {
+          "id": "49759",
+          "name": "Caravan, Campervan & Motorhome Parts & Accessories",
+          "leafCount": 81
+        },
+        {
+          "id": "82099",
+          "name": "Car Care, Utility & Trailers",
+          "leafCount": 22
+        },
+        {
+          "id": "96382",
+          "name": "Motorcycle Tuning & Styling",
+          "leafCount": 1
+        },
+        {
+          "id": "107059",
+          "name": "Car Tuning & Styling",
+          "leafCount": 208
+        },
+        {
+          "id": "122304",
+          "name": "Trials & Motocross Bike Parts",
+          "leafCount": 1
+        },
+        {
+          "id": "122309",
+          "name": "Military Vehicle Parts",
+          "leafCount": 1
+        },
+        {
+          "id": "169484",
+          "name": "Aircraft Parts & Accessories",
+          "leafCount": 2
+        },
+        {
+          "id": "169485",
+          "name": "Boats Parts & Accessories",
+          "leafCount": 5
+        },
+        {
+          "id": "169487",
+          "name": "Commercial Vehicle Parts",
+          "leafCount": 233
+        },
+        {
+          "id": "170140",
+          "name": "Golf Cart Parts & Accessories",
+          "leafCount": 6
+        },
+        {
+          "id": "177599",
+          "name": "Vehicle Services & Repairs",
+          "leafCount": 1
+        },
+        {
+          "id": "179487",
+          "name": "Oils, Fluids & Lubricants",
+          "leafCount": 20
+        },
+        {
+          "id": "184632",
+          "name": "Motorcycle Manuals & Literature",
+          "leafCount": 6
+        },
+        {
+          "id": "262266",
+          "name": "Safety & Security Accessories",
+          "leafCount": 10
+        },
+        {
+          "id": "263413",
+          "name": "Sidecars",
+          "leafCount": 1
+        }
+      ]
+    },
+    "Garden & Patio": {
+      "id": "159912",
+      "l2Count": 21,
+      "totalLeaves": 306,
+      "children": [
+        {
+          "id": "20498",
+          "name": "Décor",
+          "leafCount": 14
+        },
+        {
+          "id": "20727",
+          "name": "Swimming Pools, Saunas & Hot Tubs",
+          "leafCount": 36
+        },
+        {
+          "id": "25863",
+          "name": "Garden & Patio Furniture",
+          "leafCount": 12
+        },
+        {
+          "id": "29518",
+          "name": "Garden Power Tools & Equipment",
+          "leafCount": 25
+        },
+        {
+          "id": "29521",
+          "name": "Watering Equipment",
+          "leafCount": 13
+        },
+        {
+          "id": "42154",
+          "name": "Garden Lighting",
+          "leafCount": 9
+        },
+        {
+          "id": "43554",
+          "name": "Hydroponics",
+          "leafCount": 20
+        },
+        {
+          "id": "43560",
+          "name": "Lawn Mowers, Parts & Accessories",
+          "leafCount": 3
+        },
+        {
+          "id": "75578",
+          "name": "Bird & Wildlife Accessories",
+          "leafCount": 7
+        },
+        {
+          "id": "93632",
+          "name": "Ponds & Water Features",
+          "leafCount": 21
+        },
+        {
+          "id": "149242",
+          "name": "Outdoor Heating, Cooking & Eating",
+          "leafCount": 16
+        },
+        {
+          "id": "159473",
+          "name": "Garden Clothing & Protective Gear",
+          "leafCount": 7
+        },
+        {
+          "id": "159913",
+          "name": "Other Garden & Patio",
+          "leafCount": 1
+        },
+        {
+          "id": "177017",
+          "name": "Garden Structures & Shade",
+          "leafCount": 19
+        },
+        {
+          "id": "177032",
+          "name": "Garden Fencing, Privacy Screens & Gates",
+          "leafCount": 19
+        },
+        {
+          "id": "179308",
+          "name": "Plant Care, Soil & Accessories",
+          "leafCount": 15
+        },
+        {
+          "id": "181003",
+          "name": "Plants, Seeds & Bulbs",
+          "leafCount": 6
+        },
+        {
+          "id": "181020",
+          "name": "Composting & Garden Waste",
+          "leafCount": 7
+        },
+        {
+          "id": "181027",
+          "name": "Landscaping & Garden Materials",
+          "leafCount": 14
+        },
+        {
+          "id": "181033",
+          "name": "Garden Hand Tools & Equipment",
+          "leafCount": 27
+        },
+        {
+          "id": "181034",
+          "name": "Weed & Pest Control",
+          "leafCount": 15
+        }
+      ]
+    }
+  }
+}

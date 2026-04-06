@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { CATEGORY_TREE, CategoryNode } from '@/data/marketplace-category-map'
+import { CATEGORY_TREE } from '@/data/marketplace-category-map'
+import type { CategoryNode } from '@/types/categories'
 
 interface CategoryPickerProps {
   value: string
@@ -26,6 +27,12 @@ export default function CategoryPicker({
   const selectedTopLevel = useMemo(() => {
     if (!value) return null
     // Extract top-level from leaf node (e.g., "ceramics_plates" → "ceramics")
+    for (const [topKey, subcats] of Object.entries(CATEGORY_TREE)) {
+      for (const node of Object.values(subcats)) {
+        if (node.value === value) return topKey
+      }
+    }
+    // Fallback: split on first underscore
     const parts = value.split('_')
     return parts[0]
   }, [value])
@@ -50,10 +57,6 @@ export default function CategoryPicker({
     return null
   }, [value, selectedTopLevel])
 
-  const handleSelectTopLevel = (category: string) => {
-    setStep('subcategory')
-  }
-
   const handleSelectSubcategory = (node: CategoryNode) => {
     onChange(node.value, node)
     setStep('category')
@@ -66,10 +69,26 @@ export default function CategoryPicker({
   const handleCategoryClick = (cat: string) => {
     const catTree = CATEGORY_TREE[cat]
     if (!catTree) return
-    const firstSub = Object.values(catTree)[0]
+    // If only one subcategory, select it directly
+    const subs = Object.values(catTree)
+    if (subs.length === 1 && subs[0]) {
+      onChange(subs[0].value, subs[0])
+      return
+    }
+    // Otherwise show subcategory picker
+    // Temporarily set the top-level so subcategories render
+    const firstSub = subs[0]
     if (firstSub) {
       onChange(firstSub.value, firstSub)
     }
+    setStep('subcategory')
+  }
+
+  // Format top-level key for display
+  const formatLabel = (key: string) => {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
   }
 
   return (
@@ -87,7 +106,7 @@ export default function CategoryPicker({
                     : 'bg-cream-md border border-sage/14 text-ink hover:bg-cream'
                 }`}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {formatLabel(cat)}
               </button>
             ))}
           </div>
@@ -97,11 +116,20 @@ export default function CategoryPicker({
               <p className="text-xs text-sage-dim mb-1">Selected subcategory:</p>
               <p className="text-sm font-semibold text-ink">{selectedNode.label}</p>
               <div className="mt-2 space-y-1 text-xs text-sage-dim">
-                {selectedPlatforms.includes('ebay') && (
-                  <p>eBay: {selectedNode.ebayName}</p>
+                {selectedPlatforms.includes('ebay') && selectedNode.platforms.ebay && (
+                  <p>eBay: {selectedNode.platforms.ebay.name}</p>
                 )}
-                {selectedPlatforms.includes('vinted') && (
-                  <p>Vinted: {selectedNode.vintedName}</p>
+                {selectedPlatforms.includes('vinted') && selectedNode.platforms.vinted && (
+                  <p>Vinted: {selectedNode.platforms.vinted.name}</p>
+                )}
+                {selectedPlatforms.includes('shopify') && selectedNode.platforms.shopify && (
+                  <p>Shopify: {selectedNode.platforms.shopify.name}</p>
+                )}
+                {selectedPlatforms.includes('etsy') && selectedNode.platforms.etsy && (
+                  <p>Etsy: {selectedNode.platforms.etsy.name}</p>
+                )}
+                {selectedPlatforms.includes('depop') && selectedNode.platforms.depop && (
+                  <p>Depop: {selectedNode.platforms.depop.name}</p>
                 )}
               </div>
             </div>
@@ -127,11 +155,20 @@ export default function CategoryPicker({
                 }`}
               >
                 <div className="font-medium">{node.label}</div>
-                {selectedPlatforms.includes('ebay') && (
-                  <div className="text-xs opacity-75 mt-1">eBay: {node.ebayName}</div>
+                {selectedPlatforms.includes('ebay') && node.platforms.ebay && (
+                  <div className="text-xs opacity-75 mt-1">eBay: {node.platforms.ebay.name}</div>
                 )}
-                {selectedPlatforms.includes('vinted') && (
-                  <div className="text-xs opacity-75">Vinted: {node.vintedName}</div>
+                {selectedPlatforms.includes('vinted') && node.platforms.vinted && (
+                  <div className="text-xs opacity-75">Vinted: {node.platforms.vinted.name}</div>
+                )}
+                {selectedPlatforms.includes('shopify') && node.platforms.shopify && (
+                  <div className="text-xs opacity-75">Shopify: {node.platforms.shopify.name}</div>
+                )}
+                {selectedPlatforms.includes('etsy') && node.platforms.etsy && (
+                  <div className="text-xs opacity-75">Etsy: {node.platforms.etsy.name}</div>
+                )}
+                {selectedPlatforms.includes('depop') && node.platforms.depop && (
+                  <div className="text-xs opacity-75">Depop: {node.platforms.depop.name}</div>
                 )}
               </button>
             ))}

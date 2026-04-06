@@ -19,7 +19,7 @@ import { ShopifyClient } from "./marketplaces/shopify/client.js";
 import { ShopifyMapper } from "./marketplaces/shopify/mapper.js";
 
 const KEEP_ALIVE_INTERVAL_MS = 20_000;
-const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
+const DEFAULT_WRENLIST_BASE_URL = "https://app.wrenlist.com";
 const ICON_PATH = "icons/icon128.png";
 
 // Shopify taxonomy category IDs need to be looked up from Shopify's actual
@@ -43,8 +43,14 @@ const PRODUCT_TYPE_MAP: Record<string, string> = {
   furniture: "Vintage Furniture",
   toys: "Vintage Toys",
   collectibles: "Collectibles",
-  jugs: "Vintage Ceramics",
   art: "Art & Prints",
+  antiques: "Antiques",
+  electronics: "Electronics",
+  sports: "Sports & Outdoors",
+  music_media: "Music & Media",
+  craft_supplies: "Craft Supplies",
+  health_beauty: "Health & Beauty",
+  other: "",
 };
 
 // Facebook Marketplace category IDs (scraped from facebook.com/marketplace/create/item)
@@ -58,14 +64,22 @@ const FACEBOOK_CATEGORY_MAP: Record<string, string> = {
   furniture: "685207502348028",    // Furniture
   toys: "852990988564103",        // Toys and games
   collectibles: "694812561109098", // Antiques and collectibles
-  jugs: "307201127289111",        // Antique and collectible home goods
   art: "230517141491149",         // Arts and crafts
+  antiques: "694812561109098",    // Antiques and collectibles
+  electronics: "585516622131197", // Home decor (closest match)
+  sports: "852990988564103",      // Toys and games (closest match)
+  music_media: "298538951209945", // Books (media)
+  craft_supplies: "230517141491149", // Arts and crafts
+  health_beauty: "585516622131197",  // Home decor (closest match)
+  other: "684964985564453",       // Miscellaneous
 };
 
 function mapCategoryToFacebook(category?: string | null, platformCategoryId?: string | null): string[] {
   if (platformCategoryId) return [platformCategoryId];
   if (!category) return ["684964985564453"]; // Miscellaneous
-  const id = FACEBOOK_CATEGORY_MAP[category.toLowerCase()];
+  const cat = category.toLowerCase();
+  // Try exact match first, then top-level prefix (e.g. "ceramics_plates" → "ceramics")
+  const id = FACEBOOK_CATEGORY_MAP[cat] ?? FACEBOOK_CATEGORY_MAP[cat.split("_")[0]];
   return [id ?? "684964985564453"];
 }
 
@@ -73,26 +87,35 @@ function mapCategoryToFacebook(category?: string | null, platformCategoryId?: st
 // Note: "decor-home-accesories" is Depop's actual spelling (missing 's')
 const DEPOP_CATEGORY_MAP: Record<string, string[]> = {
   ceramics: ["everything-else", "home", "dinnerware"],
-  glassware: ["everything-else", "home", "decor-home-accesories"],
-  books: ["everything-else", "books-and-magazine", "books"],
+  glassware: ["everything-else", "home", "drinkware"],
+  books: ["everything-else", "books-and-magazines", "books"],
   jewellery: ["womenswear", "jewellery", "necklaces"],
-  clothing: ["womenswear", "tops", "t-shirts"],
+  clothing: ["womenswear", "tops", "blouses"],
   homeware: ["everything-else", "home", "decor-home-accesories"],
-  furniture: ["everything-else", "home", "decor-home-accesories"],
-  toys: ["everything-else", "home", "decor-home-accesories"],
-  collectibles: ["everything-else", "home", "dinnerware"],
-  jugs: ["everything-else", "home", "dinnerware"],
-  art: ["everything-else", "home", "decor-home-accesories"],
+  furniture: ["everything-else", "home", "furniture"],
+  toys: ["everything-else", "toys", "other-toys"],
+  collectibles: ["everything-else", "home", "decor-home-accesories"],
+  art: ["everything-else", "art", "painting"],
+  antiques: ["everything-else", "home", "decor-home-accesories"],
+  electronics: ["everything-else", "tech-accessories", "other-tech-accessories"],
+  sports: ["everything-else", "sports-equipment"],
+  music_media: ["everything-else", "music", "vinyl"],
+  craft_supplies: ["everything-else", "home", "other-home"],
+  health_beauty: ["everything-else", "beauty", "other-beauty"],
+  other: ["everything-else", "home", "other-home"],
 };
 
 function mapCategoryToDepop(category?: string | null): string[] {
   if (!category) return ["everything-else", "home", "decor-home-accesories"];
-  return DEPOP_CATEGORY_MAP[category.toLowerCase()] ?? ["everything-else", "home", "decor-home-accesories"];
+  const cat = category.toLowerCase();
+  // Try exact match first, then top-level prefix (e.g. "ceramics_plates" → "ceramics")
+  return DEPOP_CATEGORY_MAP[cat] ?? DEPOP_CATEGORY_MAP[cat.split("_")[0]] ?? ["everything-else", "home", "decor-home-accesories"];
 }
 
 function mapProductType(category?: string | null): string {
   if (!category) return "";
-  return PRODUCT_TYPE_MAP[category.toLowerCase()] ?? "";
+  const cat = category.toLowerCase();
+  return PRODUCT_TYPE_MAP[cat] ?? PRODUCT_TYPE_MAP[cat.split("_")[0]] ?? "";
 }
 
 function mapCondition(condition?: string | null): Condition {
@@ -184,19 +207,58 @@ type ExternalMessage = Record<string, unknown>;
   const MAX_PUBLISH_RETRIES = 3;
 
   chrome.alarms.create(QUEUE_POLL_ALARM, {
+    delayInMinutes: 0.1, // first poll ~6s after startup
     periodInMinutes: QUEUE_POLL_INTERVAL_MINUTES,
   });
 
-  chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name !== QUEUE_POLL_ALARM) return;
+  /**
+   * Fetch wrapper that reads Supabase auth cookies via chrome.cookies API
+   * and injects them as a Cookie header.
+   *
+   * MV3 service-worker `fetch()` with `credentials: "include"` does NOT
+   * reliably send first-party cookies for host_permissions origins.
+   * Using `chrome.cookies.getAll()` + an explicit Cookie header works.
+   */
+  let _cachedCookieStr: string | null = null;
+  let _cachedCookieTs = 0;
+  async function queueFetch(url: string, init?: RequestInit): Promise<Response> {
+    // Cache cookies for 30s to avoid hammering chrome.cookies on every POST
+    const now = Date.now();
+    if (!_cachedCookieStr || now - _cachedCookieTs > 30_000) {
+      try {
+        // Use `url` filter — more reliable than `domain` for matching cookies
+        // set with or without a leading dot on the domain.
+        const allCookies = await chrome.cookies.getAll({ url });
+        _cachedCookieStr = allCookies.map((c) => `${c.name}=${c.value}`).join("; ");
+        _cachedCookieTs = now;
+        console.log(`[QueuePoll] Loaded ${allCookies.length} cookies for ${new URL(url).origin}`);
+      } catch (e) {
+        console.warn("[QueuePoll] Failed to read cookies:", e);
+        _cachedCookieStr = "";
+      }
+    }
 
+    const headers = new Headers(init?.headers);
+    if (_cachedCookieStr) {
+      headers.set("Cookie", _cachedCookieStr);
+    }
+    return fetch(url, { ...init, headers });
+  }
+
+  /** Extracted so it can be invoked by both the alarm and check_queue message. */
+  async function runQueuePoll(): Promise<{ publish: number; delist: number; error?: string }> {
     const baseUrl = await getWrenlistBaseUrl();
+    // Reset cookie cache at start of each poll so we pick up fresh tokens
+    _cachedCookieStr = null;
+    let publishCount = 0;
+    let delistCount = 0;
 
     // --- Poll publish-queue ---
     try {
-      const pubRes = await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
-        credentials: "include",
-      });
+      const pubRes = await queueFetch(`${baseUrl}/api/marketplace/publish-queue`);
+      if (!pubRes.ok) {
+        console.warn(`[QueuePoll] Publish queue returned ${pubRes.status} — user may not be logged in to ${baseUrl}`);
+      }
       if (pubRes.ok) {
         const pubData = await pubRes.json();
         const items = pubData.data ?? [];
@@ -289,9 +351,8 @@ type ExternalMessage = Record<string, unknown>;
             const nextRetryCount = retryCount + 1;
             console.error(`[QueuePoll] ${mp} threw for ${find.name}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
             try {
-              await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+              await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                 method: "POST",
-                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   find_id: item.find_id,
@@ -323,13 +384,13 @@ type ExternalMessage = Record<string, unknown>;
                 }
               }
 
-              await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+              await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                 method: "POST",
-                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(reportBody),
               });
               console.log(`[QueuePoll] Published ${find.name} to ${mp}`);
+              publishCount++;
             } else {
               // Publish failed — check if we should retry or mark as error
               const nextRetryCount = retryCount + 1;
@@ -338,7 +399,7 @@ type ExternalMessage = Record<string, unknown>;
               if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
                 // Exhausted retries — report error to API
                 console.error(`[QueuePoll] Failed to publish ${find.name} to ${mp} after ${MAX_PUBLISH_RETRIES} attempts: ${errorMsg}`);
-                await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                   method: "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
@@ -353,7 +414,7 @@ type ExternalMessage = Record<string, unknown>;
               } else {
                 // Still have retries left — update retry_count in fields but keep needs_publish
                 console.warn(`[QueuePoll] Publish attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${find.name} on ${mp}: ${errorMsg}. Will retry.`);
-                await fetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                   method: "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
@@ -379,9 +440,7 @@ type ExternalMessage = Record<string, unknown>;
 
     // --- Poll delist-queue ---
     try {
-      const delRes = await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
-        credentials: "include",
-      });
+      const delRes = await queueFetch(`${baseUrl}/api/marketplace/delist-queue`);
       if (delRes.ok) {
         const delData = await delRes.json();
         const items = delData.data ?? [];
@@ -408,9 +467,8 @@ type ExternalMessage = Record<string, unknown>;
             const nextRetryCount = retryCount + 1;
             console.error(`[QueuePoll] ${mp} delist threw for ${listingId}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
             try {
-              await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+              await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                 method: "POST",
-                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   find_id: item.find_id,
@@ -427,9 +485,8 @@ type ExternalMessage = Record<string, unknown>;
           // Report back to Wrenlist API
           try {
             if (result.success) {
-              await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+              await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                 method: "POST",
-                credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   find_id: item.find_id,
@@ -437,13 +494,14 @@ type ExternalMessage = Record<string, unknown>;
                 }),
               });
               console.log(`[QueuePoll] Delisted ${listingId} from ${mp}`);
+              delistCount++;
             } else {
               const nextRetryCount = retryCount + 1;
               const errorMsg = result.message ?? "Unknown delist error";
 
               if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
                 console.error(`[QueuePoll] Failed to delist ${listingId} from ${mp} after ${MAX_PUBLISH_RETRIES} attempts: ${errorMsg}`);
-                await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                   method: "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
@@ -457,7 +515,7 @@ type ExternalMessage = Record<string, unknown>;
                 });
               } else {
                 console.warn(`[QueuePoll] Delist attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${listingId} on ${mp}: ${errorMsg}. Will retry.`);
-                await fetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                   method: "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
@@ -479,12 +537,29 @@ type ExternalMessage = Record<string, unknown>;
     } catch (e) {
       console.debug("[QueuePoll] Delist queue poll failed:", e);
     }
+
+    return { publish: publishCount, delist: delistCount };
+  }
+
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === QUEUE_POLL_ALARM) {
+      await runQueuePoll();
+    }
   });
 
   chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
     if (!message || (!("action" in message) && !("type" in message))) {
       sendResponse(withError("Unknown action"));
       return false;
+    }
+
+    // Handle check_queue/poll_queue inside the IIFE so it can access runQueuePoll
+    const cmd = normalizeCommand(message as ExternalMessage);
+    if (cmd === "check_queue" || cmd === "poll_queue") {
+      void runQueuePoll()
+        .then((result) => sendResponse(withExtensionVersion({ success: true, ...result })))
+        .catch((error) => sendResponse(withError(error)));
+      return true;
     }
 
     void dispatchExternalMessage(message as ExternalMessage)

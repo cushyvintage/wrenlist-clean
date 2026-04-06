@@ -1,0 +1,352 @@
+{
+  "source": "app.crosslist.com",
+  "extracted": "2026-04-05",
+  "description": "Crosslist unified category tree — these are the internal categories Crosslist uses, which auto-map to each marketplace's native categories",
+  "marketplaces": ["Poshmark", "Mercari", "eBay", "Depop", "Facebook", "Etsy", "Vinted", "Grailed", "Shopify", "Whatnot", "Starluv"],
+  "categories": {
+    "Antiques": {
+      "subcategories": [
+        "Antique appliances",
+        "Antique cleaners & polishes",
+        "Antique decor",
+        "Antique electronics",
+        "Antique furniture",
+        "Antique home improvement",
+        "Antique books & incunabulas",
+        "Antique manuscripts",
+        "Antique toys",
+        "All antiques"
+      ]
+    },
+    "Art": {
+      "subcategories": [
+        "Ceramic art",
+        "Drawings & illustrations",
+        "Fiber & textile art",
+        "Glass art",
+        "Mixed media",
+        "Paintings",
+        "Photographs",
+        "Posters & prints",
+        "Sculptures",
+        "All art"
+      ]
+    },
+    "Baby & toddler": {
+      "subcategories": [
+        "Baby bath",
+        "Car seats & accessories",
+        "Baby carriers",
+        "Baby feeding",
+        "Baby gear",
+        "Baby health",
+        "Baby safety",
+        "Diapering",
+        "Nursery bedding",
+        "Nursery furniture",
+        "Potty training",
+        "Strollers & accessories",
+        "All baby"
+      ]
+    },
+    "Books, movies & music": {
+      "subcategories": [
+        "Books",
+        "Catalogs",
+        "Magazines",
+        "Movies",
+        "Music",
+        "All books, movies & music"
+      ]
+    },
+    "Clothing, shoes & accessories": {
+      "subcategories": {
+        "Womenswear": [
+          "Women's accessories",
+          "Women's activewear",
+          "Women's bags",
+          "Women's dresses",
+          "Women's intimates & sleepwear",
+          "Women's jeans",
+          "Women's jewelry",
+          "Women's maternity",
+          "Women's outerwear",
+          "Women's pants",
+          "Women's shoes",
+          "Women's shorts",
+          "Women's skirts",
+          "Women's suits & blazers",
+          "Women's sweaters",
+          "Women's sweatshirts & hoodies",
+          "Women's swimwear",
+          "Women's tops & blouses",
+          "All womenswear"
+        ],
+        "Menswear": [
+          "Men's accessories",
+          "Men's activewear",
+          "Men's bags",
+          "Men's intimates & sleepwear",
+          "Men's jeans",
+          "Men's outerwear",
+          "Men's pants",
+          "Men's shoes",
+          "Men's shorts",
+          "Men's suits & blazers",
+          "Men's sweaters",
+          "Men's sweatshirts & hoodies",
+          "Men's swimwear",
+          "Men's tops & shirts",
+          "All menswear"
+        ],
+        "Girlswear": [
+          "Girls' accessories",
+          "Girls' activewear",
+          "Girls' bags",
+          "Girls' dresses",
+          "Girls' intimates & sleepwear",
+          "Girls' jeans",
+          "Girls' jewelry",
+          "Girls' outerwear",
+          "Girls' pants",
+          "Girls' shoes",
+          "Girls' shorts",
+          "Girls' skirts",
+          "Girls' suits & blazers",
+          "Girls' sweaters",
+          "Girls' sweatshirts & hoodies",
+          "Girls' swimwear",
+          "Girls' tops & blouses",
+          "All girlswear"
+        ],
+        "Boyswear": [
+          "Boys' accessories",
+          "Boys' activewear",
+          "Boys' bags",
+          "Boys' intimates & sleepwear",
+          "Boys' jeans",
+          "Boys' outerwear",
+          "Boys' pants",
+          "Boys' shoes",
+          "Boys' shorts",
+          "Boys' suits & blazers",
+          "Boys' sweaters",
+          "Boys' sweatshirts & hoodies",
+          "Boys' swimwear",
+          "Boys' tops & shirts",
+          "All boyswear"
+        ],
+        "Unisex kidswear": []
+      }
+    },
+    "Craft supplies": {
+      "subcategories": [
+        "Art supplies",
+        "Basketry & chair caning",
+        "Beading & jewelry making",
+        "Candle making & soap making",
+        "Decorative & tole painting",
+        "Floral crafts",
+        "Framing & matting",
+        "Fabric",
+        "Fabric painting & decorating",
+        "Glass & mosaics",
+        "Handcrafted & finished pieces",
+        "Leathercrafts",
+        "Metalworking",
+        "Multi-purpose craft supplies",
+        "Needlecrafts & yarn",
+        "Scrapbooking & paper crafts",
+        "Sculpting, molding & ceramics",
+        "Sewing",
+        "Stamping & embossing",
+        "Upholstery tools & equipment",
+        "Wall decor & tatouage",
+        "Woodworking",
+        "All craft supplies"
+      ]
+    },
+    "Collectibles": {
+      "subcategories": [
+        "Advertising",
+        "Animals",
+        "Animation art & merchandise",
+        "Arcade, jukeboxes & pinball",
+        "Autographs",
+        "Baby & nursery",
+        "Banks, registers & vending",
+        "Beads",
+        "Bottles & insulators",
+        "Breweriana",
+        "Casino",
+        "Collectible figures & supplies",
+        "Comic books & memorabilia",
+        "Decorative collectibles",
+        "Disneyana",
+        "Fantasy, mythical & magic",
+        "Knives, swords & blades",
+        "Lamps & lighting",
+        "Linens & textiles (1930-now)",
+        "Militaria",
+        "Paper",
+        "Pens & writing instruments",
+        "Pez, keychains & promo glasses",
+        "Postcards",
+        "Religion & spirituality",
+        "Rocks, fossils & minerals",
+        "Science fiction & horror",
+        "Tobacciana",
+        "Trading cards",
+        "Transportation",
+        "Vintage, retro & mid-century",
+        "All collectibles"
+      ]
+    },
+    "Electronics": {
+      "subcategories": [
+        "Cameras & photography",
+        "Cell phones & accessories",
+        "Computers & tablets",
+        "Drones & accessories",
+        "Portable audio & headphones",
+        "Radio communications",
+        "Smart home & security",
+        "TV, video & home audio",
+        "Vehicle electronics & GPS",
+        "Video games & consoles",
+        "Virtual reality headsets & accessories",
+        "All electronics"
+      ]
+    },
+    "Health & beauty": {
+      "subcategories": [
+        "Bath",
+        "Fragrance",
+        "Hair care",
+        "Intimate",
+        "Makeup",
+        "Nail care",
+        "Shaving & hair removal",
+        "Skin care",
+        "All health & beauty"
+      ]
+    },
+    "Home & garden": {
+      "subcategories": [
+        "Appliances",
+        "Bath",
+        "Bedding",
+        "Cleaning supplies",
+        "Home decor",
+        "Home improvement",
+        "Furniture",
+        "Kitchen & dining",
+        "Party supplies",
+        "Storage & organization",
+        "Tools & DIY",
+        "Outdoor & garden",
+        "All home & garden"
+      ]
+    },
+    "Musical instruments": {
+      "subcategories": [
+        "Brass",
+        "DJ equipment",
+        "Guitars & basses",
+        "Karaoke",
+        "Percussion",
+        "Pianos & keyboards",
+        "String",
+        "Wind & woodwind",
+        "All musical instruments"
+      ]
+    },
+    "Pet supplies": {
+      "subcategories": [
+        "Birds",
+        "Cats",
+        "Dogs",
+        "Fish & aquariums",
+        "Memorials & urns",
+        "Reptiles",
+        "Small pets",
+        "All pet supplies"
+      ]
+    },
+    "Sports & outdoors": {
+      "subcategories": [
+        "Air guns & slingshots",
+        "Airsoft",
+        "Archery",
+        "Backyard games",
+        "Boxing, martial arts & MMA",
+        "Camping & hiking",
+        "Climbing & caving",
+        "Cycling",
+        "Disc golf",
+        "Equestrian",
+        "Fishing",
+        "Fitness, running & yoga",
+        "Fencing",
+        "Geocaching",
+        "Go-karts (recreational)",
+        "Golf",
+        "Hunting",
+        "Indoor games",
+        "Inline & roller skating",
+        "Paintball",
+        "Scooters",
+        "Skateboarding & longboarding",
+        "Skydiving, para & hang gliding",
+        "Tactical & duty gear",
+        "Track & field",
+        "Triathlon",
+        "Team sports",
+        "Tennis & racket sports",
+        "Water sports",
+        "Winter sports",
+        "All sports & outdoors"
+      ]
+    },
+    "Toys & games": {
+      "subcategories": [
+        "Action figures & accessories",
+        "Baby & toddler toys",
+        "Beanbag plushies",
+        "Building toys",
+        "Dolls & accessories",
+        "Dress up & pretend play",
+        "Educational toys",
+        "Electronic, battery & wind-up",
+        "Games",
+        "Model railroads & trains",
+        "Models & kits",
+        "Outdoor toys & structures",
+        "Preschool toys & pretend play",
+        "Puzzles",
+        "Robots, monsters & space toys",
+        "Stuffed animals",
+        "Toy vehicles",
+        "Trading card games",
+        "TV, movie & character toys",
+        "Vintage & antique toys",
+        "All toys & games"
+      ]
+    },
+    "Vehicles & parts": {
+      "subcategories": [
+        "Car & truck parts",
+        "Motorcycle parts",
+        "ATV, side-by-side & UTV parts",
+        "Boat parts",
+        "Personal watercraft parts",
+        "Snowmobile parts",
+        "Other vehicle parts",
+        "All vehicles & parts"
+      ]
+    },
+    "Other": {
+      "subcategories": []
+    }
+  }
+}

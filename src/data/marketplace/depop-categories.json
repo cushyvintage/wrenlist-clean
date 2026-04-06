@@ -1,0 +1,166 @@
+{
+  "source": "Depop API v3 /attributes/",
+  "extracted": "2026-04-06",
+  "structure": "department > group > productType (3 levels, pipe-separated: 'department|group|productType')",
+  "departments": [
+    { "id": "menswear", "name": "Men" },
+    { "id": "womenswear", "name": "Women" },
+    { "id": "kidswear", "name": "Kids" },
+    { "id": "everything-else", "name": "Everything else" }
+  ],
+  "totalGroups": 27,
+  "totalProductTypes": 159,
+  "groups": [
+    {
+      "id": "tops", "name": "Tops",
+      "departments": ["menswear", "womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "tshirts", "name": "T-shirts" },
+        { "id": "hoodies", "name": "Hoodies" },
+        { "id": "sweatshirts", "name": "Sweatshirts" },
+        { "id": "jumpers", "name": "Jumpers" },
+        { "id": "cardigans", "name": "Cardigans" },
+        { "id": "shirts", "name": "Shirts" },
+        { "id": "polo-shirts", "name": "Polo shirts" },
+        { "id": "blouses", "name": "Blouses" },
+        { "id": "crop-top", "name": "Crop tops" },
+        { "id": "vests-tanks-camis", "name": "Vests" },
+        { "id": "corsets", "name": "Corsets" },
+        { "id": "bodysuits", "name": "Bodysuits" },
+        { "id": "other-tops", "name": "Other" }
+      ]
+    },
+    { "id": "jewellery", "name": "Jewellery", "departments": ["womenswear", "menswear"], "productTypes": [] },
+    {
+      "id": "bottoms", "name": "Bottoms",
+      "departments": ["menswear", "womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "jeans", "name": "Jeans" },
+        { "id": "joggers-tracksuits", "name": "Sweatpants" },
+        { "id": "trousers", "name": "Trousers" },
+        { "id": "shorts", "name": "Shorts" },
+        { "id": "leggings", "name": "Leggings" },
+        { "id": "skirts", "name": "Skirts" },
+        { "id": "other-bottoms", "name": "Other" }
+      ]
+    },
+    {
+      "id": "dresses", "name": "Dresses",
+      "departments": ["womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "casual-dresses", "name": "Casual dresses" },
+        { "id": "formal-dresses", "name": "Formal dresses" },
+        { "id": "mini-dresses", "name": "Mini dresses" },
+        { "id": "midi-dresses", "name": "Midi dresses" },
+        { "id": "maxi-dresses", "name": "Maxi dresses" },
+        { "id": "other-dresses", "name": "Other" }
+      ]
+    },
+    {
+      "id": "coats-and-jackets", "name": "Coats and jackets",
+      "departments": ["menswear", "womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "bomber-jackets", "name": "Bomber jackets" },
+        { "id": "denim-jackets", "name": "Denim jackets" },
+        { "id": "fleece-jackets", "name": "Fleece jackets" },
+        { "id": "leather-jackets", "name": "Leather jackets" },
+        { "id": "blazers", "name": "Blazers" },
+        { "id": "puffer-jackets", "name": "Puffer jackets" },
+        { "id": "trench-coats", "name": "Trench coats" },
+        { "id": "varsity-jackets", "name": "Varsity jackets" },
+        { "id": "windbreakers", "name": "Windbreakers" },
+        { "id": "other-coats-and-jackets", "name": "Other" }
+      ]
+    },
+    {
+      "id": "jumpsuits-and-playsuits", "name": "Jumpsuits and playsuits",
+      "departments": ["womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "jumpsuits", "name": "Jumpsuits" },
+        { "id": "playsuits", "name": "Playsuits" },
+        { "id": "dungarees", "name": "Dungarees" },
+        { "id": "other-jumpsuits-and-playsuits", "name": "Other" }
+      ]
+    },
+    {
+      "id": "suits", "name": "Suits",
+      "departments": ["menswear", "womenswear"],
+      "productTypes": [
+        { "id": "suit-jackets", "name": "Suit jackets" },
+        { "id": "suit-trousers", "name": "Suit trousers" },
+        { "id": "waistcoats", "name": "Waistcoats" },
+        { "id": "suit-sets", "name": "Suit sets" },
+        { "id": "other-suits", "name": "Other" }
+      ]
+    },
+    {
+      "id": "footwear", "name": "Footwear",
+      "departments": ["menswear", "womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "boots", "name": "Boots" },
+        { "id": "heels", "name": "Heels" },
+        { "id": "loafers", "name": "Loafers" },
+        { "id": "sandals-and-espadrilles", "name": "Sandals" },
+        { "id": "sliders-and-flip-flops", "name": "Sliders" },
+        { "id": "sneakers", "name": "Sneakers" },
+        { "id": "ballet-shoes", "name": "Flats" },
+        { "id": "platforms", "name": "Platforms" },
+        { "id": "other-shoes", "name": "Other" }
+      ]
+    },
+    {
+      "id": "accessories", "name": "Accessories",
+      "departments": ["menswear", "womenswear", "kidswear"],
+      "productTypes": [
+        { "id": "bags", "name": "Bags" },
+        { "id": "belts", "name": "Belts" },
+        { "id": "gloves", "name": "Gloves" },
+        { "id": "hair-accessories", "name": "Hair accessories" },
+        { "id": "hats", "name": "Hats" },
+        { "id": "scarves", "name": "Scarves" },
+        { "id": "sunglasses", "name": "Sunglasses" },
+        { "id": "ties", "name": "Ties" },
+        { "id": "wallets", "name": "Wallets" },
+        { "id": "watches", "name": "Watches" },
+        { "id": "other-accessories", "name": "Other" }
+      ]
+    },
+    { "id": "nightwear", "name": "Nightwear", "departments": ["menswear", "womenswear", "kidswear"], "productTypes": [{ "id": "pyjamas", "name": "Pyjamas" }, { "id": "robes", "name": "Robes" }, { "id": "other-nightwear", "name": "Other" }] },
+    { "id": "underwear", "name": "Underwear", "departments": ["menswear", "womenswear"], "productTypes": [{ "id": "bras", "name": "Bras" }, { "id": "briefs", "name": "Briefs" }, { "id": "socks", "name": "Socks" }, { "id": "tights", "name": "Tights" }, { "id": "other-underwear", "name": "Other" }] },
+    { "id": "swimwear", "name": "Swimwear", "departments": ["menswear", "womenswear", "kidswear"], "productTypes": [{ "id": "bikini-sets", "name": "Bikini sets" }, { "id": "bikini-tops", "name": "Bikini tops" }, { "id": "bikini-bottoms", "name": "Bikini bottoms" }, { "id": "swimsuits", "name": "Swimsuits" }, { "id": "swim-shorts", "name": "Swim shorts" }, { "id": "cover-ups", "name": "Cover ups" }, { "id": "other-swimwear", "name": "Other" }] },
+    { "id": "fancy-dress", "name": "Fancy dress", "departments": ["menswear", "womenswear", "kidswear"], "productTypes": [] },
+    { "id": "sleepsuits-and-bodysuits", "name": "Sleepsuits and bodysuits", "departments": ["kidswear"], "productTypes": [] },
+    { "id": "beauty", "name": "Beauty", "departments": ["everything-else"], "productTypes": [{ "id": "beauty-tools", "name": "Beauty tools" }, { "id": "fragrances", "name": "Fragrances" }, { "id": "hair-products", "name": "Hair products" }, { "id": "makeup", "name": "Make-up" }, { "id": "nails", "name": "Nails" }, { "id": "skincare-and-body", "name": "Skincare" }, { "id": "other-beauty", "name": "Other" }] },
+    { "id": "face-masks-and-coverings", "name": "Face masks and coverings", "departments": ["everything-else"], "productTypes": [] },
+    {
+      "id": "home", "name": "Home",
+      "departments": ["everything-else"],
+      "productTypes": [
+        { "id": "bathroom", "name": "Bathroom" },
+        { "id": "bedding", "name": "Bedding" },
+        { "id": "candles", "name": "Candles" },
+        { "id": "decor-home-accesories", "name": "Home accessories" },
+        { "id": "dinnerware", "name": "Dinnerware" },
+        { "id": "drinkware", "name": "Drinkware" },
+        { "id": "furniture", "name": "Furniture" },
+        { "id": "kitchen", "name": "Kitchen" },
+        { "id": "lighting", "name": "Lighting" },
+        { "id": "plants-and-flowers", "name": "Plants and flowers" },
+        { "id": "rugs-and-carpets", "name": "Rugs and carpets" },
+        { "id": "storage", "name": "Storage" },
+        { "id": "textiles", "name": "Textiles" },
+        { "id": "other-home", "name": "Other" }
+      ]
+    },
+    { "id": "tech-accessories", "name": "Tech accessories", "departments": ["everything-else"], "productTypes": [{ "id": "headphones-and-earphones", "name": "Headphones" }, { "id": "phone-cases", "name": "Phone cases" }, { "id": "speakers", "name": "Speakers" }, { "id": "other-tech-accessories", "name": "Other" }] },
+    { "id": "cameras-and-film", "name": "Cameras and film", "departments": ["everything-else"], "productTypes": [{ "id": "cameras", "name": "Cameras" }, { "id": "film", "name": "Film" }, { "id": "camera-accessories", "name": "Accessories" }, { "id": "other-cameras-and-film", "name": "Other" }] },
+    { "id": "art", "name": "Art", "departments": ["everything-else"], "productTypes": [{ "id": "art-prints", "name": "Art prints" }, { "id": "drawing-and-illustration", "name": "Drawing" }, { "id": "mixed-media", "name": "Mixed media" }, { "id": "painting", "name": "Painting" }, { "id": "photography", "name": "Photography" }, { "id": "posters", "name": "Posters" }, { "id": "sculpture", "name": "Sculpture" }, { "id": "other-art", "name": "Other" }] },
+    { "id": "books-and-magazines", "name": "Books and magazines", "departments": ["everything-else"], "productTypes": [{ "id": "books", "name": "Books" }, { "id": "comics", "name": "Comics" }, { "id": "magazines", "name": "Magazines" }, { "id": "zines", "name": "Zines" }, { "id": "other-books-and-magazines", "name": "Other" }] },
+    { "id": "music", "name": "Music", "departments": ["everything-else"], "productTypes": [{ "id": "cds", "name": "CDs" }, { "id": "cassettes", "name": "Cassettes" }, { "id": "vinyl", "name": "Vinyl" }, { "id": "other-music", "name": "Other" }] },
+    { "id": "party-supplies", "name": "Party supplies", "departments": ["everything-else"], "productTypes": [] },
+    { "id": "sports-equipment", "name": "Sports equipment", "departments": ["everything-else"], "productTypes": [] },
+    { "id": "toys", "name": "Toys", "departments": ["everything-else"], "productTypes": [{ "id": "plushies", "name": "Plushies" }, { "id": "puzzles-and-games", "name": "Puzzles and games" }, { "id": "figures-and-dolls", "name": "Figures and dolls" }, { "id": "other-toys", "name": "Other" }] },
+    { "id": "umbrellas", "name": "Umbrellas", "departments": ["everything-else"], "productTypes": [] },
+    { "id": "clothing-bundles", "name": "Clothing bundles", "departments": ["menswear", "womenswear", "kidswear"], "productTypes": [] }
+  ]
+}

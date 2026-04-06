@@ -1,26 +1,41 @@
 /**
  * eBay UK category mappings for Wrenlist
- * Maps Wrenlist category names (from find.category) to eBay UK category IDs
- * 
- * Based on PRD research (2026-03-30 Vendoo observation) + PRD-LISTING-WIZARD.md
- * To find eBay category IDs: https://www.ebay.co.uk/sch/ → browse categories
+ * Generated from CATEGORY_TREE — uses verified LEAF category IDs
+ *
+ * Maps both:
+ * - Top-level canonical keys (e.g. "ceramics") → first leaf eBay ID
+ * - Leaf values (e.g. "ceramics_plates") → specific eBay leaf ID
  */
-export const EBAY_CATEGORY_MAP: Record<string, string> = {
-  // Dom's primary stock (from SOUL.md)
-  // Verified eBay UK leaf categories (from Sell > Category selection)
-  ceramics: '38277',        // Pottery, Ceramics & Glass > Plates (leaf)
-  glassware: '38228',       // Pottery, Ceramics & Glass > Glass > Vases (leaf)
-  books: '29223',           // Books, Comics & Magazines > Antiquarian & Collectable (leaf)
-  jewellery: '10968',       // Jewellery & Watches > Vintage & Antique Jewellery (leaf)
-  jewelry: '10968',         // US spelling alias
-  clothing: '175759',       // Clothes, Shoes & Accessories > Vintage (leaf)
-  homeware: '20697',        // Collectables > Decorative Ornaments & Figures (leaf)
-  home: '20697',
-  collectibles: '38277',    // Default collectibles to Pottery Plates (Dom's primary stock)
-  medals: '4003',           // Collectables > Militaria > Medals (leaf)
-  toys: '19016',            // Toys & Games > Vintage & Classic Toys (leaf)
-  furniture: '20091',       // Antiques > Antique Furniture (leaf)
-  // Fallback
-  other: '562',             // Collectables > Other Collectables (leaf)
-  default: '562',
+
+import { CATEGORY_TREE, getPlatformCategoryId } from '@/data/marketplace-category-map'
+
+export const EBAY_CATEGORY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {}
+
+  for (const [topKey, subcats] of Object.entries(CATEGORY_TREE)) {
+    let firstId: string | null = null
+    for (const node of Object.values(subcats)) {
+      const ebayId = node.platforms.ebay?.id ?? '99'
+      map[node.value] = ebayId
+      if (!firstId) {
+        firstId = ebayId
+        map[topKey] = ebayId
+      }
+    }
+  }
+
+  // Legacy aliases
+  map['teapots'] = map['ceramics_teapots'] ?? '262381'
+  map['jugs'] = map['ceramics_jugs'] ?? '262376'
+  map['medals'] = map['collectibles_militaria'] ?? '13956'
+  map['home'] = map['homeware_other'] ?? '10034'
+  map['jewelry'] = map['jewellery_other'] ?? '262023'
+  map['default'] = '99'
+
+  return map
+})()
+
+/** Look up eBay leaf category ID for a find.category value */
+export function getEbayCategoryId(category: string): string {
+  return EBAY_CATEGORY_MAP[category] ?? getPlatformCategoryId(category, 'ebay') ?? '99'
 }

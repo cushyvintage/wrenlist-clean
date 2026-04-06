@@ -1,4 +1,4 @@
-import { EBAY_CATEGORY_MAP } from "@/lib/ebay-categories"
+import { EBAY_CATEGORY_MAP, getEbayCategoryId } from "@/lib/ebay-categories"
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get category: try eBay's own suggestion API first, fall back to hardcoded map
-    let categoryId = EBAY_CATEGORY_MAP[find.category] || EBAY_CATEGORY_MAP['default']
+    let categoryId = getEbayCategoryId(find.category)
     try {
       const suggested = await ebayClient.getCategorySuggestion(find.name || find.category)
       if (suggested) categoryId = suggested

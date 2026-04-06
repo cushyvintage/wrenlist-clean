@@ -1,0 +1,397 @@
+{
+  "_meta": {
+    "source": "Etsy buyer category pages (etsy.com/c) + Etsy Open API v3 documentation",
+    "extracted": "2026-04-06",
+    "status": "BUYER_TAXONOMY_COMPLETE — subcategories from live Etsy pages. Taxonomy IDs are partial (need ETSY_API_KEY for full getSellerTaxonomyNodes response).",
+    "notes": [
+      "Etsy has ~6000+ seller taxonomy categories, ~400 attributes, ~3500 values",
+      "Buyer taxonomy is shallower than seller taxonomy (seller goes 3-4 levels deep)",
+      "This file captures the buyer-facing 2-level tree visible at etsy.com/c",
+      "Seller taxonomy IDs can be populated via: GET https://openapi.etsy.com/v3/application/seller-taxonomy/nodes (requires x-api-key header)",
+      "The Wrenlist extension uses text search (categorySearch field) not taxonomy IDs for listing creation",
+      "URL slugs use US English (jewelry not jewellery, organization not organisation)"
+    ],
+    "topLevelCount": 17,
+    "totalCategories": 244,
+    "apiEndpoint": "GET https://openapi.etsy.com/v3/application/seller-taxonomy/nodes",
+    "authRequired": "x-api-key header"
+  },
+  "categories": [
+    {
+      "name": "Accessories",
+      "taxonomy_id": 1,
+      "slug": "accessories",
+      "level": 1,
+      "children": [
+        { "name": "Hair Accessories", "slug": "hair-accessories", "taxonomy_id": null },
+        { "name": "Patches & Appliques", "slug": "patches-and-appliques", "taxonomy_id": null },
+        { "name": "Keychains & Lanyards", "slug": "keychains-and-lanyards", "taxonomy_id": null },
+        { "name": "Hats & Head Coverings", "slug": "hats-and-caps", "taxonomy_id": null },
+        { "name": "Pins & Clips", "slug": "pins-and-clips", "taxonomy_id": null },
+        { "name": "Scarves & Wraps", "slug": "scarves-and-wraps", "taxonomy_id": null },
+        { "name": "Belts & Suspenders", "slug": "belts-and-suspenders", "taxonomy_id": null },
+        { "name": "Aprons", "slug": "aprons", "taxonomy_id": null },
+        { "name": "Sunglasses & Eyewear", "slug": "sunglasses-and-eyewear", "taxonomy_id": null },
+        { "name": "Costume Accessories", "slug": "costume-accessories", "taxonomy_id": null },
+        { "name": "Bouquets & Corsages", "slug": "bouquets-and-corsages", "taxonomy_id": null },
+        { "name": "Hand Fans", "slug": "hand-fans", "taxonomy_id": null },
+        { "name": "Suit & Tie Accessories", "slug": "suit-and-tie-accessories", "taxonomy_id": null },
+        { "name": "Gloves & Mittens", "slug": "gloves-and-mittens", "taxonomy_id": null },
+        { "name": "Umbrellas & Rain Accessories", "slug": "umbrellas-and-rain-accessories", "taxonomy_id": null },
+        { "name": "Collars", "slug": "collars", "taxonomy_id": null },
+        { "name": "Face Masks & Coverings", "slug": "face-masks-and-coverings", "taxonomy_id": null },
+        { "name": "Lanyards & Badge Holders", "slug": "lanyards-and-badge-holders", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Art & Collectibles",
+      "taxonomy_id": 2,
+      "slug": "art-and-collectibles",
+      "level": 1,
+      "children": [
+        { "name": "Painting", "slug": "painting", "taxonomy_id": null },
+        { "name": "Prints", "slug": "prints", "taxonomy_id": null },
+        { "name": "Drawing & Illustration", "slug": "drawing-and-illustration", "taxonomy_id": null },
+        { "name": "Photography", "slug": "photography", "taxonomy_id": null },
+        { "name": "Sculpture", "slug": "sculpture", "taxonomy_id": null },
+        { "name": "Glass Art", "slug": "glass-art", "taxonomy_id": null },
+        { "name": "Fibre Arts", "slug": "fiber-arts", "taxonomy_id": null },
+        { "name": "Mixed Media & Collage", "slug": "mixed-media-and-collage", "taxonomy_id": null },
+        { "name": "Dolls & Miniatures", "slug": "dolls-and-miniatures", "taxonomy_id": null },
+        { "name": "Collectibles", "slug": "collectibles", "taxonomy_id": null },
+        { "name": "Artist Trading Cards", "slug": "artist-trading-cards", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Bags & Purses",
+      "taxonomy_id": null,
+      "slug": "bags-and-purses",
+      "level": 1,
+      "children": [
+        { "name": "Handbags", "slug": "handbags", "taxonomy_id": null },
+        { "name": "Backpacks", "slug": "backpacks", "taxonomy_id": null },
+        { "name": "Wallets & Money Clips", "slug": "wallets-and-money-clips", "taxonomy_id": null },
+        { "name": "Cosmetic & Toiletry Storage", "slug": "cosmetic-and-toiletry-storage", "taxonomy_id": null },
+        { "name": "Totes", "slug": "totes", "taxonomy_id": null },
+        { "name": "Luggage & Travel", "slug": "luggage-and-travel", "taxonomy_id": null },
+        { "name": "Messenger Bags", "slug": "messenger-bags", "taxonomy_id": null },
+        { "name": "Clutches & Evening Bags", "slug": "clutches-and-evening-bags", "taxonomy_id": null },
+        { "name": "Market Bags", "slug": "market-bags", "taxonomy_id": null },
+        { "name": "Nappy Bags", "slug": "diaper-bags", "taxonomy_id": null },
+        { "name": "Laptop Bags", "slug": "laptop-bags", "taxonomy_id": null },
+        { "name": "Sports Bags", "slug": "sports-bags", "taxonomy_id": null },
+        { "name": "Fanny Packs", "slug": "fanny-packs", "taxonomy_id": null },
+        { "name": "Pouches & Coin Purses", "slug": "pouches-and-coin-purses", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Bath & Beauty",
+      "taxonomy_id": null,
+      "slug": "bath-and-beauty",
+      "level": 1,
+      "children": [
+        { "name": "Soaps", "slug": "soaps", "taxonomy_id": null },
+        { "name": "Bath Accessories", "slug": "bath-accessories", "taxonomy_id": null },
+        { "name": "Spa & Relaxation", "slug": "spa-and-relaxation", "taxonomy_id": null },
+        { "name": "Skin Care", "slug": "skin-care", "taxonomy_id": null },
+        { "name": "Hair Care", "slug": "hair-care", "taxonomy_id": null },
+        { "name": "Makeup & Cosmetics", "slug": "makeup-and-cosmetics", "taxonomy_id": null },
+        { "name": "Fragrances", "slug": "fragrances", "taxonomy_id": null },
+        { "name": "Essential Oils", "slug": "essential-oils", "taxonomy_id": null },
+        { "name": "Bath Bombs & Fizzies", "slug": "bath-bombs-and-fizzies", "taxonomy_id": null },
+        { "name": "Deodorants", "slug": "deodorants", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Books, Movies & Music",
+      "taxonomy_id": null,
+      "slug": "books-movies-and-music",
+      "level": 1,
+      "children": [
+        { "name": "Books", "slug": "books", "taxonomy_id": null },
+        { "name": "Movies", "slug": "movies", "taxonomy_id": null },
+        { "name": "Music", "slug": "music", "taxonomy_id": null },
+        { "name": "Zines", "slug": "zines", "taxonomy_id": null },
+        { "name": "Calendars & Planners", "slug": "calendars-and-planners", "taxonomy_id": null },
+        { "name": "Blank Books", "slug": "blank-books", "taxonomy_id": null },
+        { "name": "Book Accessories", "slug": "book-accessories", "taxonomy_id": null },
+        { "name": "Magazines", "slug": "magazines", "taxonomy_id": null },
+        { "name": "eBooks", "slug": "ebooks", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Clothing",
+      "taxonomy_id": null,
+      "slug": "clothing",
+      "level": 1,
+      "children": [
+        { "name": "Women's Clothing", "slug": "womens-clothing", "taxonomy_id": null },
+        { "name": "Men's Clothing", "slug": "mens-clothing", "taxonomy_id": null },
+        { "name": "Unisex Adult Clothing", "slug": "unisex-adult-clothing", "taxonomy_id": null },
+        { "name": "Girls' Clothing", "slug": "girls-clothing", "taxonomy_id": null },
+        { "name": "Boys' Clothing", "slug": "boys-clothing", "taxonomy_id": null },
+        { "name": "Gender-Neutral Kids' Clothing", "slug": "gender-neutral-kids-clothing", "taxonomy_id": null },
+        { "name": "Dresses", "slug": "dresses", "taxonomy_id": null },
+        { "name": "Tops & Tees", "slug": "tops-and-tees", "taxonomy_id": null },
+        { "name": "Jackets & Coats", "slug": "jackets-and-coats", "taxonomy_id": null },
+        { "name": "Trousers & Capris", "slug": "pants-and-capris", "taxonomy_id": null },
+        { "name": "Skirts", "slug": "skirts", "taxonomy_id": null },
+        { "name": "Jumpers & Hoodies", "slug": "sweaters", "taxonomy_id": null },
+        { "name": "Suits & Blazers", "slug": "suits-and-blazers", "taxonomy_id": null },
+        { "name": "Jeans", "slug": "jeans", "taxonomy_id": null },
+        { "name": "Shorts", "slug": "shorts", "taxonomy_id": null },
+        { "name": "Swimwear", "slug": "swimwear", "taxonomy_id": null },
+        { "name": "Activewear", "slug": "activewear", "taxonomy_id": null },
+        { "name": "Costumes", "slug": "costumes", "taxonomy_id": null },
+        { "name": "Uniforms", "slug": "uniforms", "taxonomy_id": null },
+        { "name": "Sleepwear", "slug": "sleepwear", "taxonomy_id": null },
+        { "name": "Intimates", "slug": "intimates", "taxonomy_id": null },
+        { "name": "Maternity", "slug": "maternity", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Craft Supplies & Tools",
+      "taxonomy_id": null,
+      "slug": "craft-supplies-and-tools",
+      "level": 1,
+      "children": [
+        { "name": "Beads, Gems & Cabochons", "slug": "beads", "taxonomy_id": null },
+        { "name": "Sewing & Fibre", "slug": "sewing-and-fiber", "taxonomy_id": null },
+        { "name": "Fabric", "slug": "fabric", "taxonomy_id": null },
+        { "name": "Yarn & Fibre", "slug": "yarn-and-fiber", "taxonomy_id": null },
+        { "name": "Jewellery & Beading", "slug": "jewelry-and-beading", "taxonomy_id": null },
+        { "name": "Paper, Party & Kids", "slug": "paper-party-and-kids", "taxonomy_id": null },
+        { "name": "Painting & Drawing", "slug": "painting-and-drawing", "taxonomy_id": null },
+        { "name": "Adhesives & Magnets", "slug": "adhesives-and-magnets", "taxonomy_id": null },
+        { "name": "Woodworking", "slug": "woodworking", "taxonomy_id": null },
+        { "name": "Floral & Garden Craft", "slug": "floral-and-garden-craft", "taxonomy_id": null },
+        { "name": "Candle Making", "slug": "candle-making", "taxonomy_id": null },
+        { "name": "Soap Making", "slug": "soap-making", "taxonomy_id": null },
+        { "name": "Scrapbooking", "slug": "scrapbooking", "taxonomy_id": null },
+        { "name": "Stamping", "slug": "stamping", "taxonomy_id": null },
+        { "name": "Doll & Model Making", "slug": "doll-and-model-making", "taxonomy_id": null },
+        { "name": "Leathercraft", "slug": "leathercraft", "taxonomy_id": null },
+        { "name": "Glass Fusing", "slug": "glass-fusing", "taxonomy_id": null },
+        { "name": "Sculpting", "slug": "sculpting", "taxonomy_id": null },
+        { "name": "Patterns & How To", "slug": "patterns-and-how-to", "taxonomy_id": null },
+        { "name": "Haberdashery", "slug": "notions-and-hardware", "taxonomy_id": null },
+        { "name": "Storage & Organisation", "slug": "storage-and-organization", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Electronics & Accessories",
+      "taxonomy_id": null,
+      "slug": "electronics-and-accessories",
+      "level": 1,
+      "children": [
+        { "name": "Mobile Phone Cases", "slug": "cell-phone-cases", "taxonomy_id": null },
+        { "name": "Computers & Peripherals", "slug": "computers-and-peripherals", "taxonomy_id": null },
+        { "name": "Gadgets", "slug": "gadgets", "taxonomy_id": null },
+        { "name": "Audio", "slug": "audio", "taxonomy_id": null },
+        { "name": "Video Games", "slug": "video-games", "taxonomy_id": null },
+        { "name": "Docking & Stands", "slug": "docking-and-stands", "taxonomy_id": null },
+        { "name": "Cables & Cords", "slug": "cables-and-cords", "taxonomy_id": null },
+        { "name": "Chargers & Adapters", "slug": "chargers-and-adapters", "taxonomy_id": null },
+        { "name": "Tablet & E-Reader Cases", "slug": "tablet-and-e-reader-cases", "taxonomy_id": null },
+        { "name": "Car Parts & Accessories", "slug": "car-parts-and-accessories", "taxonomy_id": null },
+        { "name": "Laptop Cases", "slug": "laptop-cases", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Home & Living",
+      "taxonomy_id": null,
+      "slug": "home-and-living",
+      "level": 1,
+      "children": [
+        { "name": "Furniture", "slug": "furniture", "taxonomy_id": null },
+        { "name": "Home Decor", "slug": "home-decor", "taxonomy_id": null },
+        { "name": "Outdoor & Gardening", "slug": "outdoor-and-garden", "taxonomy_id": null },
+        { "name": "Rugs & Flooring", "slug": "floor-and-rugs", "taxonomy_id": null },
+        { "name": "Lighting", "slug": "lighting", "taxonomy_id": null },
+        { "name": "Storage & Organisation", "slug": "storage-and-organization", "taxonomy_id": null },
+        { "name": "Bathroom", "slug": "bathroom", "taxonomy_id": null },
+        { "name": "Kitchen & Dining", "slug": "kitchen-and-dining", "taxonomy_id": null },
+        { "name": "Curtains & Window Treatments", "slug": "curtains-and-window-treatments", "taxonomy_id": null },
+        { "name": "Bedding", "slug": "bedding", "taxonomy_id": null },
+        { "name": "Spirituality & Religion", "slug": "spirituality-and-religion", "taxonomy_id": null },
+        { "name": "Food & Drink", "slug": "food-and-drink", "taxonomy_id": null },
+        { "name": "Home Improvement", "slug": "home-improvement", "taxonomy_id": null },
+        { "name": "Office", "slug": "office", "taxonomy_id": null },
+        { "name": "Home Appliances", "slug": "home-appliances", "taxonomy_id": null },
+        { "name": "Cleaning Supplies", "slug": "cleaning-supplies", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Jewellery",
+      "taxonomy_id": null,
+      "slug": "jewelry",
+      "level": 1,
+      "children": [
+        { "name": "Rings", "slug": "rings", "taxonomy_id": null },
+        { "name": "Necklaces", "slug": "necklaces", "taxonomy_id": null },
+        { "name": "Earrings", "slug": "earrings", "taxonomy_id": null },
+        { "name": "Bracelets", "slug": "bracelets", "taxonomy_id": null },
+        { "name": "Jewellery Sets", "slug": "jewelry-sets", "taxonomy_id": null },
+        { "name": "Watches", "slug": "watches", "taxonomy_id": null },
+        { "name": "Cremation & Memorial Jewellery", "slug": "cremation-and-memorial-jewelry", "taxonomy_id": null },
+        { "name": "Body Jewellery", "slug": "body-jewelry", "taxonomy_id": null },
+        { "name": "Smart Jewellery", "slug": "smart-jewelry", "taxonomy_id": null },
+        { "name": "Jewellery Storage", "slug": "jewelry-storage", "taxonomy_id": null },
+        { "name": "Brooches, Pins & Clips", "slug": "brooches", "taxonomy_id": null },
+        { "name": "Cuff Links & Tie Clips", "slug": "cuff-links-and-tie-clips", "taxonomy_id": null },
+        { "name": "Charms", "slug": "charms", "taxonomy_id": null },
+        { "name": "Anklets", "slug": "anklets", "taxonomy_id": null },
+        { "name": "Pendants", "slug": "pendants", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Kids & Baby",
+      "taxonomy_id": null,
+      "slug": "baby",
+      "level": 1,
+      "children": [
+        { "name": "Baby Clothing", "slug": "baby-clothing", "taxonomy_id": null },
+        { "name": "Toddler Clothing", "slug": "toddler-clothing", "taxonomy_id": null },
+        { "name": "Baby & Toddler Toys", "slug": "baby-and-toddler-toys", "taxonomy_id": null },
+        { "name": "Nursery Decor", "slug": "nursery-decor", "taxonomy_id": null },
+        { "name": "Nursery Furniture", "slug": "nursery-furniture", "taxonomy_id": null },
+        { "name": "Baby Accessories", "slug": "baby-accessories", "taxonomy_id": null },
+        { "name": "Baby Blankets", "slug": "baby-blankets", "taxonomy_id": null },
+        { "name": "Nursery Bedding", "slug": "nursery-bedding", "taxonomy_id": null },
+        { "name": "Baby Care", "slug": "baby-care", "taxonomy_id": null },
+        { "name": "Prams & Pushchairs", "slug": "strollers-and-accessories", "taxonomy_id": null },
+        { "name": "Baby Shoes", "slug": "baby-shoes", "taxonomy_id": null },
+        { "name": "Nappies & Potty Training", "slug": "diapering-and-potty-training", "taxonomy_id": null },
+        { "name": "Feeding", "slug": "feeding", "taxonomy_id": null },
+        { "name": "Baby Carriers & Wraps", "slug": "baby-carriers-and-wraps", "taxonomy_id": null },
+        { "name": "Keepsakes & Baby Announcements", "slug": "keepsakes-and-baby-announcements", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Paper & Party Supplies",
+      "taxonomy_id": null,
+      "slug": "paper-and-party-supplies",
+      "level": 1,
+      "children": [
+        { "name": "Stationery", "slug": "stationery", "taxonomy_id": null },
+        { "name": "Party Supplies", "slug": "party-supplies", "taxonomy_id": null },
+        { "name": "Invitations & Announcements", "slug": "invitations-and-announcements", "taxonomy_id": null },
+        { "name": "Gift Wrapping", "slug": "gift-wrapping", "taxonomy_id": null },
+        { "name": "Cards", "slug": "cards", "taxonomy_id": null },
+        { "name": "Stickers, Labels & Tags", "slug": "stickers-labels-and-tags", "taxonomy_id": null },
+        { "name": "Calendars & Planners", "slug": "calendars-and-planners", "taxonomy_id": null },
+        { "name": "Paper", "slug": "paper", "taxonomy_id": null },
+        { "name": "Bookmarks", "slug": "bookmarks", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Pet Supplies",
+      "taxonomy_id": null,
+      "slug": "pet-supplies",
+      "level": 1,
+      "children": [
+        { "name": "Pet Clothing, Accessories & Shoes", "slug": "pet-clothing-accessories-and-shoes", "taxonomy_id": null },
+        { "name": "Collars & Leads", "slug": "collars-and-leashes", "taxonomy_id": null },
+        { "name": "Pet Beds & Crate Pads", "slug": "pet-beds", "taxonomy_id": null },
+        { "name": "Bowls & Feeding", "slug": "bowls-and-feeding", "taxonomy_id": null },
+        { "name": "Pet Toys", "slug": "pet-toys", "taxonomy_id": null },
+        { "name": "Pet Health & Wellness", "slug": "pet-health-and-wellness", "taxonomy_id": null },
+        { "name": "Pet Carriers & Houses", "slug": "pet-carriers-and-houses", "taxonomy_id": null },
+        { "name": "Pet Furniture", "slug": "pet-furniture", "taxonomy_id": null },
+        { "name": "Pet Grooming", "slug": "pet-grooming", "taxonomy_id": null },
+        { "name": "Pet Treats", "slug": "pet-treats", "taxonomy_id": null },
+        { "name": "Pet ID Tags", "slug": "pet-id-tags", "taxonomy_id": null },
+        { "name": "Pet Memorial", "slug": "pet-memorial", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Shoes",
+      "taxonomy_id": 1429,
+      "slug": "shoes",
+      "level": 1,
+      "children": [
+        { "name": "Women's Shoes", "slug": "womens-shoes", "taxonomy_id": null },
+        { "name": "Men's Shoes", "slug": "mens-shoes", "taxonomy_id": null },
+        { "name": "Girls' Shoes", "slug": "girls-shoes", "taxonomy_id": 1440 },
+        { "name": "Boys' Shoes", "slug": "boys-shoes", "taxonomy_id": null },
+        { "name": "Unisex Shoes", "slug": "unisex-shoes", "taxonomy_id": null },
+        { "name": "Baby Shoes", "slug": "baby-shoes", "taxonomy_id": null },
+        { "name": "Boots", "slug": "boots", "taxonomy_id": null },
+        { "name": "Sandals", "slug": "sandals", "taxonomy_id": null },
+        { "name": "Trainers & Athletic Shoes", "slug": "sneakers-and-athletic-shoes", "taxonomy_id": null },
+        { "name": "Slippers", "slug": "slippers", "taxonomy_id": null },
+        { "name": "Shoe Accessories", "slug": "shoe-accessories", "taxonomy_id": null },
+        { "name": "Shoe Clips & Charms", "slug": "shoe-clips-and-charms", "taxonomy_id": null },
+        { "name": "Insoles & Inserts", "slug": "insoles-and-inserts", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Toys & Games",
+      "taxonomy_id": null,
+      "slug": "toys-and-games",
+      "level": 1,
+      "children": [
+        { "name": "Toys", "slug": "toys", "taxonomy_id": null },
+        { "name": "Games & Puzzles", "slug": "games-and-puzzles", "taxonomy_id": null },
+        { "name": "Dolls & Action Figures", "slug": "dolls-and-action-figures", "taxonomy_id": null },
+        { "name": "Stuffed Animals & Plushies", "slug": "stuffed-animals-and-plushies", "taxonomy_id": null },
+        { "name": "Outdoor & Gardening", "slug": "outdoor-and-gardening", "taxonomy_id": null },
+        { "name": "Sports & Outdoor Recreation", "slug": "sports-and-outdoor-recreation", "taxonomy_id": null },
+        { "name": "Learning & School", "slug": "learning-and-school", "taxonomy_id": null },
+        { "name": "Pretend Play", "slug": "pretend-play", "taxonomy_id": null },
+        { "name": "Building & Construction", "slug": "building-and-construction", "taxonomy_id": null },
+        { "name": "Musical Instruments", "slug": "musical-instruments", "taxonomy_id": null },
+        { "name": "Art & Drawing", "slug": "art-and-drawing", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Weddings",
+      "taxonomy_id": null,
+      "slug": "weddings",
+      "level": 1,
+      "children": [
+        { "name": "Wedding Decorations", "slug": "decorations", "taxonomy_id": null },
+        { "name": "Invitations", "slug": "invitations", "taxonomy_id": null },
+        { "name": "Gifts & Mementos", "slug": "gifts-and-mementos", "taxonomy_id": null },
+        { "name": "Wedding Clothing", "slug": "clothing", "taxonomy_id": null },
+        { "name": "Dresses", "slug": "dresses", "taxonomy_id": null },
+        { "name": "Accessories", "slug": "accessories", "taxonomy_id": null },
+        { "name": "Jewellery", "slug": "jewelry", "taxonomy_id": null },
+        { "name": "Shoes", "slug": "shoes", "taxonomy_id": null },
+        { "name": "Veils", "slug": "veils", "taxonomy_id": null },
+        { "name": "Flowers", "slug": "flowers", "taxonomy_id": null },
+        { "name": "Cake Toppers", "slug": "cake-toppers", "taxonomy_id": null },
+        { "name": "Guest Books", "slug": "guest-books", "taxonomy_id": null },
+        { "name": "Ring Bearer & Flower Girl", "slug": "ring-bearer-and-flower-girl", "taxonomy_id": null }
+      ]
+    },
+    {
+      "name": "Gifts",
+      "taxonomy_id": null,
+      "slug": "gifts",
+      "level": 1,
+      "children": [
+        { "name": "Gifts for Her", "slug": "gifts-for-her", "taxonomy_id": null },
+        { "name": "Gifts for Him", "slug": "gifts-for-him", "taxonomy_id": null },
+        { "name": "Gifts for Kids", "slug": "gifts-for-kids", "taxonomy_id": null },
+        { "name": "Personalised Gifts", "slug": "personalized-gifts", "taxonomy_id": null },
+        { "name": "Gift Cards & Vouchers", "slug": "gift-cards", "taxonomy_id": null },
+        { "name": "Gift Baskets", "slug": "gift-baskets", "taxonomy_id": null },
+        { "name": "Gift Boxes", "slug": "gift-boxes", "taxonomy_id": null }
+      ]
+    }
+  ],
+  "knownTaxonomyIds": {
+    "Accessories": { "taxonomy_id": 1, "level": 1 },
+    "Art & Collectibles": { "taxonomy_id": 2, "level": 1 },
+    "Shoes": { "taxonomy_id": 1429, "level": 1 },
+    "Girls' Shoes": { "taxonomy_id": 1440, "level": 2, "parent_id": 1429 }
+  },
+  "sellerTaxonomyExamples": {
+    "note": "Seller taxonomy is deeper than buyer taxonomy. Examples from Etsy docs:",
+    "examples": [
+      "Craft Supplies & Tools > Yarn & Fiber > Yarn (3 levels deep)",
+      "Shoes (id: 1429, level: 1) > Girls' Shoes (id: 1440, level: 2)"
+    ]
+  }
+}

@@ -2,7 +2,7 @@ import { Condition } from "./enums.js";
 
 // Wrenlist extension API utilities
 export const EXTENSION_VERSION = "1.2.0";
-const DEFAULT_WRENLIST_BASE_URL = "https://wrenlist.com";
+const DEFAULT_WRENLIST_BASE_URL = "https://app.wrenlist.com";
 
 async function getWrenlistBaseUrl(): Promise<string> {
   try {

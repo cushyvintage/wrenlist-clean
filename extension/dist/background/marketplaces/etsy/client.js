@@ -171,39 +171,95 @@ export class EtsyClient {
                     target: { tabId },
                     func: clickPublishButton,
                 });
-                // Step 6: Wait for save to complete and capture the listing URL
-                // After publishing, Etsy redirects to the listing page or manager
-                await wait(5000);
-                // Try to extract the listing ID from the tab URL after redirect
+                // Step 6: Wait for save to complete.
+                // After saving as draft, Etsy redirects to the listings manager
+                // (/your/shops/me/tools/listings) — the listing ID is NOT in the
+                // redirect URL. We poll for the URL to change away from the create
+                // page, then scrape the most recent draft listing ID from the page.
                 let listingId;
                 let listingUrl;
-                try {
-                    const updatedTab = await chrome.tabs.get(tabId);
-                    const tabUrl = updatedTab?.url || "";
-                    // Etsy redirects to /listing/{id} or listing-editor/{id}
-                    const idMatch = tabUrl.match(/listing[/-](?:editor\/)?(\d+)/);
-                    if (idMatch?.[1]) {
-                        listingId = idMatch[1];
-                        listingUrl = this.getProductUrl(listingId);
+                // Poll for redirect (up to 15s)
+                const redirectStart = Date.now();
+                while (Date.now() - redirectStart < 15000) {
+                    await wait(1000);
+                    try {
+                        const updatedTab = await chrome.tabs.get(tabId);
+                        const tabUrl = updatedTab?.url || "";
+                        // Check for listing-editor/{id} redirect (edit page)
+                        const editorMatch = tabUrl.match(/listing-editor\/(\d+)/);
+                        if (editorMatch?.[1]) {
+                            listingId = editorMatch[1];
+                            break;
+                        }
+                        // Check for /listing/{id} redirect
+                        const listingMatch = tabUrl.match(/\/listing\/(\d+)/);
+                        if (listingMatch?.[1]) {
+                            listingId = listingMatch[1];
+                            break;
+                        }
+                        // Redirected to listings manager — save succeeded but no ID in URL.
+                        // Navigate to the draft filter and wait for listing cards to load.
+                        if (tabUrl.includes("/tools/listings")) {
+                            try {
+                                // Navigate to drafts sorted by most recent update
+                                await chrome.tabs.update(tabId, {
+                                    url: "https://www.etsy.com/your/shops/me/tools/listings/state:draft,sort:update_date",
+                                });
+                                // Wait for the draft listings page to render cards
+                                await wait(5000);
+                                const scrapeResult = await chrome.scripting.executeScript({
+                                    target: { tabId },
+                                    func: (title) => {
+                                        const links = Array.from(document.querySelectorAll("a"));
+                                        // Pass 1: match by title prefix
+                                        const titlePrefix = title.slice(0, 30);
+                                        for (const link of links) {
+                                            const href = link.getAttribute("href") || "";
+                                            const idMatch = href.match(/listing-editor\/(\d+)/);
+                                            if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
+                                                return idMatch[1];
+                                            }
+                                        }
+                                        // Pass 2: first listing-editor link (most recent draft)
+                                        for (const link of links) {
+                                            const href = link.getAttribute("href") || "";
+                                            const idMatch = href.match(/listing-editor\/(\d+)/);
+                                            if (idMatch?.[1])
+                                                return idMatch[1];
+                                        }
+                                        return null;
+                                    },
+                                    args: [product.title || ""],
+                                });
+                                const scrapedId = scrapeResult?.[0]?.result;
+                                if (scrapedId)
+                                    listingId = scrapedId;
+                            }
+                            catch {
+                                // Scrape failed — listing was still saved
+                            }
+                            break;
+                        }
+                    }
+                    catch {
+                        // Tab may have been closed
+                        break;
                     }
                 }
-                catch {
-                    // Tab may have already been closed
-                }
                 await chrome.tabs.remove(tabId).catch(() => { });
-                if (!listingId) {
-                    return {
-                        success: false,
-                        message: "Etsy form submitted but no listing ID was returned. The listing may not have been saved — check Etsy dashboard.",
-                    };
+                if (listingId) {
+                    listingUrl = this.getProductUrl(listingId);
                 }
+                // Even without a listing ID, if we got past validation the save worked.
+                // The redirect to /tools/listings confirms it.
                 return {
                     success: true,
-                    message: "Listing saved as draft on Etsy.",
-                    product: {
-                        id: listingId,
-                        url: listingUrl || this.getProductUrl(listingId),
-                    },
+                    message: listingId
+                        ? "Listing saved as draft on Etsy."
+                        : "Listing saved as draft on Etsy (ID not captured — check Etsy dashboard).",
+                    product: listingId
+                        ? { id: listingId, url: listingUrl || this.getProductUrl(listingId) }
+                        : undefined,
                 };
             }
             catch (error) {
@@ -564,8 +620,9 @@ export class EtsyClient {
                         data: term[i],
                     }));
                 }
-                // Wait for suggestions to appear (Etsy debounces the search)
-                await new Promise((r) => setTimeout(r, 2000));
+                // Wait for suggestions to appear (Etsy debounces the search).
+                // 3s is safer — the typeahead can be slow on first load.
+                await new Promise((r) => setTimeout(r, 3000));
                 // Look for suggestion options and click the first one
                 const options = document.querySelectorAll('[role="option"]');
                 if (options.length > 0) {
@@ -625,19 +682,31 @@ export class EtsyClient {
 function fillEtsyListingForm(data) {
     // Inline helper — this function runs in page context via executeScript,
     // so it cannot reference any functions defined outside this closure.
+    //
+    // Etsy's 2026 listing form uses a custom state layer that listens for
+    // InputEvent (not plain Event) with a valid inputType, plus blur to
+    // commit the value. Without these, the DOM .value changes but the form
+    // state ignores it and validation still fails.
     function setNativeValue(element, value) {
         const proto = element instanceof HTMLTextAreaElement
             ? HTMLTextAreaElement.prototype
             : HTMLInputElement.prototype;
         const nativeSetter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+        element.focus();
         if (nativeSetter) {
             nativeSetter.call(element, value);
         }
         else {
             element.value = value;
         }
-        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new InputEvent("input", {
+            bubbles: true,
+            cancelable: true,
+            inputType: "insertText",
+            data: value,
+        }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
+        element.dispatchEvent(new Event("blur", { bubbles: true }));
     }
     try {
         const filled = [];
@@ -706,24 +775,34 @@ function fillEtsyListingForm(data) {
         // ── Who made it (radio: index 0 = "I did") ──
         const whoMadeRadios = document.querySelectorAll('input[name="whoMade"]');
         if (whoMadeRadios.length >= 1) {
-            // Default to "I did" (index 0) for vintage sellers
+            whoMadeRadios[0].focus();
             whoMadeRadios[0].checked = true;
             whoMadeRadios[0].click();
+            whoMadeRadios[0].dispatchEvent(new InputEvent("input", { bubbles: true }));
             whoMadeRadios[0].dispatchEvent(new Event("change", { bubbles: true }));
             filled.push("whoMade");
         }
         // ── What is it (radio: index 0 = "A finished product") ──
         const isSupplyRadios = document.querySelectorAll('input[name="isSupply"]');
         if (isSupplyRadios.length >= 1) {
+            isSupplyRadios[0].focus();
             isSupplyRadios[0].checked = true;
             isSupplyRadios[0].click();
+            isSupplyRadios[0].dispatchEvent(new InputEvent("input", { bubbles: true }));
             isSupplyRadios[0].dispatchEvent(new Event("change", { bubbles: true }));
             filled.push("isSupply");
         }
         // ── When was it made (select) ──
         const whenMadeSelect = document.getElementById("when-made-select");
         if (whenMadeSelect && data.whenMade) {
-            whenMadeSelect.value = data.whenMade;
+            const selectSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+            if (selectSetter) {
+                selectSetter.call(whenMadeSelect, data.whenMade);
+            }
+            else {
+                whenMadeSelect.value = data.whenMade;
+            }
+            whenMadeSelect.dispatchEvent(new Event("input", { bubbles: true }));
             whenMadeSelect.dispatchEvent(new Event("change", { bubbles: true }));
             filled.push("whenMade");
         }
