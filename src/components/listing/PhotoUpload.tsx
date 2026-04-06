@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Loader2, Check } from 'lucide-react'
 import { removeBackground } from '@/lib/background-removal'
+import { formatPlatformName } from '@/lib/crosslist'
 import { autoEnhance } from '@/lib/photo-enhance'
 import { addWatermark } from '@/lib/photo-watermark'
 import {
@@ -306,7 +307,7 @@ export default function PhotoUpload({
     const count = photoPreviews.length
     return selectedPlatforms
       .filter((p) => PLATFORM_PHOTO_LIMITS[p] !== undefined && PLATFORM_PHOTO_LIMITS[p]! < count)
-      .map((p) => ({ name: p.charAt(0).toUpperCase() + p.slice(1), max: PLATFORM_PHOTO_LIMITS[p]! }))
+      .map((p) => ({ name: formatPlatformName(p), max: PLATFORM_PHOTO_LIMITS[p]! }))
       .sort((a, b) => a.max - b.max)
   }, [selectedPlatforms, photoPreviews.length])
 
@@ -315,7 +316,7 @@ export default function PhotoUpload({
     if (!selectedPlatforms || selectedPlatforms.length === 0) return null
     return selectedPlatforms
       .filter((p) => PLATFORM_PHOTO_LIMITS[p] !== undefined)
-      .map((p) => ({ name: p.charAt(0).toUpperCase() + p.slice(1), max: PLATFORM_PHOTO_LIMITS[p]! }))
+      .map((p) => ({ name: formatPlatformName(p), max: PLATFORM_PHOTO_LIMITS[p]! }))
       .sort((a, b) => a.max - b.max)
   }, [selectedPlatforms])
   // Background removal

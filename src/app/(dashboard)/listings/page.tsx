@@ -370,7 +370,7 @@ export default function ListingsPage() {
       const failedPlatforms = valid.filter((p) => t(p).failed > 0)
       const parts: string[] = []
       if (anyFailed) parts.push(`${failedPlatforms.map((p) => formatPlatformName(p)).join(', ')} had failures`)
-      if (expired.length > 0) parts.push(`${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`)
+      if (expired.length > 0) parts.push(`${expired.map(formatPlatformName).join(', ')}: session expired`)
       setCrosslistError(parts.join(' · '))
       setFailedTargets([...expired, ...failedPlatforms])
     }
