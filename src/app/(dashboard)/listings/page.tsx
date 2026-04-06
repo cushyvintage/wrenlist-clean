@@ -64,11 +64,17 @@ export default function ListingsPage() {
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistError, setCrosslistError] = useState<string | null>(null)
   const [crosslistProgress, setCrosslistProgress] = useState<string | null>(null)
-  const { connected: connectedPlatforms, loading: platformsLoading, recheckPlatforms } = useConnectedPlatforms()
+  const { connected: connectedPlatforms, disconnected: disconnectedPlatforms, loading: platformsLoading, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 300_000 })
   const extensionInfo = useExtensionInfo()
   const [sessionExpired, setSessionExpired] = useState<Platform[]>([])
   const [successToast, setSuccessToast] = useState<string | null>(null)
   const [failedTargets, setFailedTargets] = useState<Platform[]>([])
+
+  // Per-platform publish statuses shown during crosslist
+  type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
+  interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
+  const emptyEntry: PlatformStatusEntry = { status: 'waiting', succeeded: 0, failed: 0, total: 0 }
+  const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
 
   // Set page title
   useEffect(() => {
@@ -215,29 +221,69 @@ export default function ListingsPage() {
 
     setIsCrosslisting(true)
     setCrosslistError(null)
+    setCrosslistProgress(null)
     setSessionExpired([])
     setFailedTargets([])
 
+    // Initialise per-platform statuses
+    const initStatuses: Record<string, { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }> = {}
+    for (const p of targets) {
+      initStatuses[p] = { status: 'checking', succeeded: 0, failed: 0, total: findIds.length }
+    }
+    setPlatformStatuses(initStatuses)
+
+    let valid: Platform[] = []
+    let expired: Platform[] = []
+
+    try {
     // Pre-publish session re-check
     setCrosslistProgress('Checking sessions...')
-    const { valid, expired } = await recheckPlatforms(targets)
+    const recheck = await recheckPlatforms(targets)
+    valid = recheck.valid
+    expired = recheck.expired
 
     if (expired.length > 0) {
       setSessionExpired(expired)
+      setPlatformStatuses((prev) => {
+        const next = { ...prev }
+        for (const p of expired) {
+          next[p] = { ...next[p], status: 'failed', error: 'session expired' }
+        }
+        return next
+      })
     }
 
     if (valid.length === 0) {
-      setCrosslistProgress(null)
-      setIsCrosslisting(false)
       setCrosslistError('All selected platforms have expired sessions. Log back in on Platform Connect.')
       return
     }
 
-    let succeeded = 0
-    let failed = 0
+    // Mark valid platforms as waiting
+    setPlatformStatuses((prev) => {
+      const next = { ...prev }
+      for (const p of valid) {
+        next[p] = { ...next[p], status: 'waiting' }
+      }
+      return next
+    })
+    setCrosslistProgress(null)
+
+    // Track per-platform tallies across all finds
+    const tallies: Record<string, { succeeded: number; failed: number; lastError?: string }> = {}
+    for (const p of valid) tallies[p] = { succeeded: 0, failed: 0 }
 
     for (let i = 0; i < findIds.length; i++) {
-      setCrosslistProgress(`Publishing ${i + 1} of ${findIds.length}...`)
+      // Mark all valid platforms as publishing for this item
+      setPlatformStatuses((prev) => {
+        const next = { ...prev }
+        for (const p of valid) {
+          if (next[p]?.status !== 'failed' || !expired.includes(p as Platform)) {
+            next[p] = { ...next[p], status: 'publishing' }
+          }
+        }
+        return next
+      })
+
       try {
         const res = await fetch('/api/crosslist/publish', {
           method: 'POST',
@@ -245,36 +291,86 @@ export default function ListingsPage() {
           body: JSON.stringify({ findId: findIds[i], marketplaces: valid }),
         })
         const data = await res.json()
-        const results = data.data?.results || {}
-        const anyOk = (Object.values(results) as Array<{ ok: boolean }>).some((r) => r.ok)
-        if (anyOk) succeeded++
-        else failed++
+        const results: Record<string, { ok: boolean; error?: string; listingUrl?: string; alreadyListed?: boolean }> = data.data?.results || {}
+
+        // Update tallies + live statuses per platform from this item's results
+        setPlatformStatuses((prev) => {
+          const next = { ...prev }
+          for (const p of valid) {
+            const r = results[p]
+            if (r?.ok) {
+              tallies[p].succeeded++
+            } else if (r) {
+              tallies[p].failed++
+              tallies[p].lastError = r.error
+            } else {
+              // Platform not in results — treat as still queued (extension-based)
+              tallies[p].succeeded++
+            }
+            const isLast = i === findIds.length - 1
+            if (isLast) {
+              // Final status
+              if (tallies[p].failed > 0 && tallies[p].succeeded === 0) {
+                next[p] = { ...next[p], status: 'failed', error: tallies[p].lastError, succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+              } else if (tallies[p].failed > 0) {
+                next[p] = { ...next[p], status: 'failed', error: `${tallies[p].failed} failed`, succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+              } else {
+                // Extension platforms (vinted, etsy, depop, facebook) queue rather than list directly
+                const extensionPlatforms: Platform[] = ['vinted', 'etsy', 'depop', 'facebook']
+                const finalStatus: PlatformPublishStatus = extensionPlatforms.includes(p as Platform) ? 'queued' : 'listed'
+                next[p] = { ...next[p], status: finalStatus, succeeded: tallies[p].succeeded, failed: 0 }
+              }
+            } else {
+              // Intermediate — show progress
+              next[p] = { ...next[p], status: 'publishing', succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+            }
+          }
+          return next
+        })
       } catch {
-        failed++
+        // Network error — mark all platforms as failed for this item
+        for (const p of valid) tallies[p].failed++
+        setPlatformStatuses((prev) => {
+          const next = { ...prev }
+          for (const p of valid) {
+            next[p] = { ...next[p], succeeded: tallies[p].succeeded, failed: tallies[p].failed }
+          }
+          return next
+        })
       }
     }
 
-    setCrosslistProgress(null)
-    setIsCrosslisting(false)
+    // Compute overall success/failure
+    const allSucceeded = valid.every((p) => tallies[p].failed === 0)
+    const anyFailed = valid.some((p) => tallies[p].failed > 0)
 
-    if (failed === 0 && expired.length === 0) {
-      // Success — close modal, show toast
-      setShowCrosslistModal(false)
-      setCrosslistTargets([])
-      setSelectedItems(new Set())
-      const platformNames = valid.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
-      setSuccessToast(`Queued for ${platformNames}`)
-      setTimeout(() => setSuccessToast(null), 4000)
+    if (allSucceeded && expired.length === 0) {
+      // All good — close modal after a brief pause so user sees final statuses
+      setTimeout(() => {
+        setShowCrosslistModal(false)
+        setCrosslistTargets([])
+        setSelectedItems(new Set())
+        setPlatformStatuses({})
+        const platformNames = valid.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
+        setSuccessToast(`Queued for ${platformNames}`)
+        setTimeout(() => setSuccessToast(null), 4000)
+      }, 1200)
     } else {
+      const failedPlatforms = valid.filter((p) => tallies[p].failed > 0)
       const parts: string[] = []
-      if (succeeded > 0) parts.push(`${succeeded} published`)
-      if (failed > 0) parts.push(`${failed} failed`)
+      if (anyFailed) parts.push(`${failedPlatforms.map((p) => p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)).join(', ')} had failures`)
       if (expired.length > 0) parts.push(`${expired.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}: session expired`)
       setCrosslistError(parts.join(' · '))
-      setFailedTargets([...expired])
+      setFailedTargets([...expired, ...failedPlatforms])
     }
 
     loadListings(true)
+    } catch (err) {
+      setCrosslistError(err instanceof Error ? err.message : 'Unexpected error')
+    } finally {
+      setIsCrosslisting(false)
+      setCrosslistProgress(null)
+    }
   }
 
   const getCategoryLabel = (category?: string) => {
@@ -454,6 +550,7 @@ export default function ListingsPage() {
           setSessionExpired([])
           setCrosslistError(null)
           setFailedTargets([])
+          setPlatformStatuses({})
         }
 
         return (
@@ -469,92 +566,150 @@ export default function ListingsPage() {
               <h3 className="text-lg font-semibold mb-2" style={{ color: '#1E2E1C' }}>
                 Crosslist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
               </h3>
-              <p className="text-sm mb-4" style={{ color: '#6B7D6A' }}>
-                Select marketplaces to publish to:
-              </p>
-              <div className="space-y-2 mb-4">
-                {platformsLoading ? (
-                  <p className="text-sm" style={{ color: '#8A9E88' }}>Checking connections...</p>
-                ) : connectedPlatforms.length === 0 ? (
-                  <div className="py-3 text-center">
-                    <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>No marketplaces connected</p>
-                    <Link href="/platform-connect" className="text-sm font-medium text-sage hover:text-sage-dk underline">
-                      Connect marketplaces →
-                    </Link>
-                    {extensionInfo.detected === false && (
-                      <p className="text-xs mt-2" style={{ color: '#8A9E88' }}>
-                        Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
-                      </p>
-                    )}
-                  </div>
-                ) : allFullyListed ? (
-                  <div className="py-3 text-center">
-                    <p className="text-sm" style={{ color: '#6B7D6A' }}>All selected items are already listed on all connected platforms</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Select all */}
-                    {selectablePlatforms.length > 1 && (
-                      <label className="flex items-center gap-2 pb-1 mb-1 cursor-pointer" style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.1)' }}>
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          onChange={handleSelectAll}
-                          className="rounded"
-                        />
-                        <span className="text-xs font-medium" style={{ color: '#8A9E88' }}>Select all</span>
-                      </label>
-                    )}
-                    {connectedPlatforms.map((cp) => {
-                      const listedCount = alreadyListedCounts[cp.platform] || 0
-                      const drafts = draftCounts[cp.platform] || 0
-                      const allListed = listedCount === totalSelected
-                      const someListed = listedCount > 0 && !allListed
-                      const isExpired = sessionExpired.includes(cp.platform)
+              {Object.keys(platformStatuses).length > 0 ? (
+                /* ── Live per-platform status list (replaces checkboxes while publishing) ── */
+                <div className="space-y-2 mb-4">
+                  {Object.entries(platformStatuses).map(([platform, ps]) => {
+                    const statusColor = ps.status === 'listed' || ps.status === 'queued' ? '#27AE60'
+                      : ps.status === 'failed' ? '#C0392B'
+                      : '#8A9E88'
+                    const statusLabel = ps.status === 'checking' ? 'checking session...'
+                      : ps.status === 'waiting' ? 'waiting...'
+                      : ps.status === 'publishing' ? (ps.total > 1 ? `publishing ${ps.succeeded + ps.failed + 1} of ${ps.total}...` : 'publishing...')
+                      : ps.status === 'listed' ? (ps.total > 1 ? `${ps.succeeded} listed` : 'listed')
+                      : ps.status === 'queued' ? (ps.total > 1 ? `${ps.succeeded} queued for extension` : 'queued for extension')
+                      : ps.status === 'failed' ? (ps.error || 'failed')
+                      : ''
 
-                      return (
-                        <label
-                          key={cp.platform}
-                          className={`flex items-center gap-2 py-0.5 ${allListed || isExpired ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={crosslistTargets.includes(cp.platform)}
-                            onChange={() =>
-                              !allListed && !isExpired && setCrosslistTargets((prev) =>
-                                prev.includes(cp.platform) ? prev.filter((p) => p !== cp.platform) : [...prev, cp.platform]
-                              )
-                            }
-                            disabled={allListed || isExpired}
-                            className="rounded disabled:cursor-not-allowed"
-                          />
-                          <MarketplaceIcon platform={cp.platform} size="sm" />
-                          <span className="text-sm font-medium" style={{ color: allListed || isExpired ? '#8A9E88' : '#1E2E1C' }}>
-                            {formatPlatformName(cp.platform)}
-                            {cp.username && (
-                              <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {cp.username}</span>
-                            )}
-                          </span>
-                          <span className="text-xs ml-auto" style={{ color: isExpired ? '#C0392B' : '#8A9E88' }}>
-                            {isExpired ? 'session expired' : allListed ? 'all listed' : someListed ? `${listedCount} of ${totalSelected} listed` : drafts > 0 ? `${drafts} draft` : ''}
-                          </span>
-                        </label>
-                      )
-                    })}
-                    {/* Extension not installed hint */}
-                    {extensionInfo.detected === false && (
-                      <p className="text-xs mt-1" style={{ color: '#8A9E88' }}>
-                        Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
-                      </p>
+                    return (
+                      <div key={platform} className="flex items-center gap-2 py-1">
+                        <MarketplaceIcon platform={platform as Platform} size="sm" />
+                        <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                          {formatPlatformName(platform)}
+                        </span>
+                        <span className="text-xs ml-auto flex items-center gap-1.5" style={{ color: statusColor }}>
+                          {(ps.status === 'checking' || ps.status === 'waiting' || ps.status === 'publishing') && (
+                            <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          )}
+                          {(ps.status === 'listed' || ps.status === 'queued') && (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          )}
+                          {ps.status === 'failed' && (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                          )}
+                          {statusLabel}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                /* ── Platform selection checkboxes (pre-publish) ── */
+                <>
+                  <p className="text-sm mb-4" style={{ color: '#6B7D6A' }}>
+                    Select marketplaces to publish to:
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    {platformsLoading ? (
+                      <p className="text-sm" style={{ color: '#8A9E88' }}>Checking connections...</p>
+                    ) : connectedPlatforms.length === 0 ? (
+                      <div className="py-3 text-center">
+                        <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>No marketplaces connected</p>
+                        <Link href="/platform-connect" className="text-sm font-medium text-sage hover:text-sage-dk underline">
+                          Connect marketplaces →
+                        </Link>
+                        {extensionInfo.detected === false && (
+                          <p className="text-xs mt-2" style={{ color: '#8A9E88' }}>
+                            Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
+                          </p>
+                        )}
+                      </div>
+                    ) : allFullyListed ? (
+                      <div className="py-3 text-center">
+                        <p className="text-sm" style={{ color: '#6B7D6A' }}>All selected items are already listed on all connected platforms</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Select all */}
+                        {selectablePlatforms.length > 1 && (
+                          <label className="flex items-center gap-2 pb-1 mb-1 cursor-pointer" style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.1)' }}>
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={handleSelectAll}
+                              className="rounded"
+                            />
+                            <span className="text-xs font-medium" style={{ color: '#8A9E88' }}>Select all</span>
+                          </label>
+                        )}
+                        {connectedPlatforms.map((cp) => {
+                          const listedCount = alreadyListedCounts[cp.platform] || 0
+                          const drafts = draftCounts[cp.platform] || 0
+                          const allListed = listedCount === totalSelected
+                          const someListed = listedCount > 0 && !allListed
+                          const isExpired = sessionExpired.includes(cp.platform)
+
+                          return (
+                            <label
+                              key={cp.platform}
+                              className={`flex items-center gap-2 py-0.5 ${allListed || isExpired ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={crosslistTargets.includes(cp.platform)}
+                                onChange={() =>
+                                  !allListed && !isExpired && setCrosslistTargets((prev) =>
+                                    prev.includes(cp.platform) ? prev.filter((p) => p !== cp.platform) : [...prev, cp.platform]
+                                  )
+                                }
+                                disabled={allListed || isExpired}
+                                className="rounded disabled:cursor-not-allowed"
+                              />
+                              <MarketplaceIcon platform={cp.platform} size="sm" />
+                              <span className="text-sm font-medium" style={{ color: allListed || isExpired ? '#8A9E88' : '#1E2E1C' }}>
+                                {formatPlatformName(cp.platform)}
+                                {cp.username && (
+                                  <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {cp.username}</span>
+                                )}
+                              </span>
+                              <span className="text-xs ml-auto" style={{ color: isExpired ? '#C0392B' : '#8A9E88' }}>
+                                {isExpired ? 'session expired' : allListed ? 'all listed' : someListed ? `${listedCount} of ${totalSelected} listed` : drafts > 0 ? `${drafts} draft` : ''}
+                              </span>
+                            </label>
+                          )
+                        })}
+                        {/* Platforms that disconnected mid-session */}
+                        {disconnectedPlatforms.filter((p) => !connectedPlatforms.some((cp) => cp.platform === p)).map((p) => (
+                          <div
+                            key={p}
+                            className="flex items-center gap-2 py-0.5 opacity-50"
+                          >
+                            <input type="checkbox" disabled className="rounded cursor-not-allowed" />
+                            <MarketplaceIcon platform={p} size="sm" />
+                            <span className="text-sm font-medium" style={{ color: '#8A9E88' }}>
+                              {p === 'ebay' ? 'eBay' : p.charAt(0).toUpperCase() + p.slice(1)}
+                            </span>
+                            <span className="text-xs ml-auto" style={{ color: '#C0392B' }}>
+                              disconnected · <Link href="/platform-connect" className="underline">reconnect</Link>
+                            </span>
+                          </div>
+                        ))}
+                        {/* Extension not installed hint */}
+                        {extensionInfo.detected === false && (
+                          <p className="text-xs mt-1" style={{ color: '#8A9E88' }}>
+                            Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
+                          </p>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-                {!platformsLoading && connectedPlatforms.length > 0 && (
-                  <Link href="/platform-connect" className="block text-xs mt-1" style={{ color: '#8A9E88' }}>
-                    Manage connections →
-                  </Link>
-                )}
-              </div>
+                    {!platformsLoading && connectedPlatforms.length > 0 && (
+                      <Link href="/platform-connect" className="block text-xs mt-1" style={{ color: '#8A9E88' }}>
+                        Manage connections →
+                      </Link>
+                    )}
+                  </div>
+                </>
+              )}
               {crosslistProgress && (
                 <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>
               )}

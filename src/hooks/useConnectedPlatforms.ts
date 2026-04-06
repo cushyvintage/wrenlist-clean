@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import type { Platform } from '@/types'
 
@@ -12,9 +12,16 @@ export interface ConnectedPlatform {
   username?: string
 }
 
+interface ConnectedPlatformsOptions {
+  /** Poll interval in ms. When set, re-checks connections on this interval. Pauses when tab is hidden. */
+  pollInterval?: number
+}
+
 interface ConnectedPlatformsResult {
   /** Platforms the user is currently connected to, with optional username */
   connected: ConnectedPlatform[]
+  /** Platforms that were connected but disconnected mid-session */
+  disconnected: Platform[]
   /** Whether checks are still running */
   loading: boolean
   /** Re-run all checks */
@@ -30,11 +37,16 @@ interface ConnectedPlatformsResult {
  * - Vinted: Extension session check (username from cookie)
  * - Shopify: DB connection check via /api/shopify/connect (shop name)
  * - Etsy, Facebook, Depop: Extension cookie checks (no username available)
+ *
+ * @param options.pollInterval - When set, re-runs checks on this interval (ms). Pauses when tab is hidden.
  */
-export function useConnectedPlatforms(): ConnectedPlatformsResult {
+export function useConnectedPlatforms(options?: ConnectedPlatformsOptions): ConnectedPlatformsResult {
   const [connected, setConnected] = useState<ConnectedPlatform[]>([])
+  const [disconnected, setDisconnected] = useState<Platform[]>([])
   const [loading, setLoading] = useState(true)
   const [tick, setTick] = useState(0)
+  /** Tracks all platforms that have been seen as connected during this session */
+  const everConnectedRef = useRef<Set<Platform>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -59,13 +71,65 @@ export function useConnectedPlatforms(): ConnectedPlatformsResult {
         if (extensionResults[i]) results.push(extensionResults[i]!)
       })
 
+      // Track newly connected platforms
+      const currentPlatforms = new Set(results.map((r) => r.platform))
+      for (const p of currentPlatforms) {
+        everConnectedRef.current.add(p)
+      }
+
+      // Compute disconnected: was connected before, no longer is
+      const newDisconnected: Platform[] = []
+      for (const p of everConnectedRef.current) {
+        if (!currentPlatforms.has(p)) newDisconnected.push(p)
+      }
+
       setConnected(results)
+      setDisconnected(newDisconnected)
       setLoading(false)
     }
 
     checkAll()
     return () => { cancelled = true }
   }, [tick])
+
+  // Polling with visibility-aware pause/resume
+  const pollInterval = options?.pollInterval
+  useEffect(() => {
+    if (!pollInterval) return
+
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    function startPolling() {
+      if (intervalId) return
+      intervalId = setInterval(() => setTick((t) => t + 1), pollInterval)
+    }
+
+    function stopPolling() {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+
+    function handleVisibility() {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        // Re-check immediately when tab becomes visible again
+        setTick((t) => t + 1)
+        startPolling()
+      }
+    }
+
+    // Start polling if tab is visible
+    if (!document.hidden) startPolling()
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [pollInterval])
 
   const recheckPlatforms = useCallback(async (platforms: Platform[]): Promise<{ valid: Platform[]; expired: Platform[] }> => {
     const checks = await Promise.all(
@@ -86,6 +150,7 @@ export function useConnectedPlatforms(): ConnectedPlatformsResult {
 
   return {
     connected,
+    disconnected,
     loading,
     refresh: () => setTick((t) => t + 1),
     recheckPlatforms,
@@ -148,7 +213,15 @@ async function checkExtensionPlatform(marketplace: Platform): Promise<ConnectedP
   }
 }
 
-function sendExtensionMessage(message: Record<string, string>): Promise<any> {
+interface ExtensionResponse {
+  loggedIn?: boolean
+  username?: string
+  userId?: string
+  tld?: string
+  success?: boolean
+}
+
+function sendExtensionMessage(message: Record<string, string>): Promise<ExtensionResponse | null> {
   return new Promise((resolve) => {
     if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
       resolve(null)
