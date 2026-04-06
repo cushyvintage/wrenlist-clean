@@ -4,14 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Platform } from '@/types'
 import { fetchApi } from '@/lib/api-utils'
+import { formatPlatformName } from '@/lib/crosslist'
 import { useMarketplaceImport } from '@/hooks/useMarketplaceImport'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { PlatformGrid } from '@/components/import/PlatformGrid'
 import { ImportHeader } from '@/components/import/ImportHeader'
 import { ImportItemList } from '@/components/import/ImportItemList'
-import type { ImportableItem, PlatformStatuses } from '@/components/import/types'
+import type { ImportableItem } from '@/components/import/types'
 import type { StatusFilter } from '@/components/import/ImportHeader'
 
 // No hard cap — fetch all listings from the marketplace
@@ -22,9 +24,11 @@ export default function ImportPage() {
   const router = useRouter()
   const selectedPlatform = searchParams.get('platform') as Platform | null
 
-  // Platform statuses
-  const [platforms, setPlatforms] = useState<PlatformStatuses | null>(null)
-  const [platformsLoading, setPlatformsLoading] = useState(true)
+  // Platform connection status (checks DB + extension cookies)
+  const { connected: connectedPlatforms, loading: platformsLoading } = useConnectedPlatforms()
+
+  // Platforms that have working import handlers
+  const IMPORT_SUPPORTED: Platform[] = ['ebay', 'vinted', 'shopify']
 
   // Import items state
   const [items, setItems] = useState<ImportableItem[]>([])
@@ -41,29 +45,9 @@ export default function ImportPage() {
   // Import state
   const vintedImport = useMarketplaceImport()
 
-  // Load platform statuses on mount
-  useEffect(() => {
-    async function loadPlatforms() {
-      try {
-        const data = await fetchApi<{ platforms: PlatformStatuses }>('/api/platforms/status')
-        setPlatforms(data.platforms)
-      } catch {
-        setPlatforms({
-          ebay: { connected: false, username: null },
-          vinted: { connected: false, username: null },
-          shopify: { connected: false, username: null },
-          etsy: { connected: false, username: null },
-        })
-      } finally {
-        setPlatformsLoading(false)
-      }
-    }
-    loadPlatforms()
-  }, [])
-
   // Load items when platform is selected
   useEffect(() => {
-    if (!selectedPlatform || !platforms) return
+    if (!selectedPlatform || platformsLoading) return
     setItems([])
     setFetchError(null)
     setSearchQuery('')
@@ -77,7 +61,7 @@ export default function ImportPage() {
       loadShopifyListings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPlatform, platforms])
+  }, [selectedPlatform, platformsLoading])
 
   // --- eBay ---
   async function loadEbayInventory() {
@@ -221,8 +205,15 @@ export default function ImportPage() {
       return
     }
 
-    const shopifyStatus = platforms?.shopify
-    const storeDomain = shopifyStatus?.storeDomain
+    // Fetch store domain from API since useConnectedPlatforms doesn't carry it
+    let storeDomain: string | undefined
+    try {
+      const res = await fetch('/api/shopify/connect')
+      if (res.ok) {
+        const data = await res.json()
+        storeDomain = data.data?.storeDomain || undefined
+      }
+    } catch { /* fall through */ }
     if (!storeDomain) {
       setFetchError('Shopify store domain not configured. Connect Shopify in Platform Connect first.')
       return
@@ -573,38 +564,59 @@ export default function ImportPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-lg font-serif italic text-ink">import</h1>
-        {platforms && <PlatformGrid platforms={platforms} onSelectPlatform={selectPlatform} />}
+        <PlatformGrid connected={connectedPlatforms} loading={platformsLoading} onSelectPlatform={selectPlatform} />
       </div>
     )
   }
 
+  const isConnected = connectedPlatforms.some((c) => c.platform === selectedPlatform)
+  const hasImportHandler = IMPORT_SUPPORTED.includes(selectedPlatform)
+
   // Not connected — prompt to connect
-  const platformStatus = platforms?.[selectedPlatform as keyof PlatformStatuses]
-  if (platformStatus && !platformStatus.connected) {
-    // For Vinted, check extension too — the DB might not have a record yet
-    if (selectedPlatform !== 'vinted') {
-      return (
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
-              ← back
-            </button>
-            <h1 className="text-lg font-serif italic text-ink">import</h1>
-          </div>
-          <div className="bg-white border border-sage/14 rounded-md p-8 text-center">
-            <p className="text-sm text-ink-lt mb-4">
-              Connect {selectedPlatform} to import your listings
-            </p>
-            <a
-              href="/platform-connect"
-              className="inline-block px-4 py-2 text-sm font-medium bg-sage text-white rounded hover:bg-sage-dk transition"
-            >
-              Connect {selectedPlatform} →
-            </a>
-          </div>
+  if (!isConnected) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
+            ← back
+          </button>
+          <h1 className="text-lg font-serif italic text-ink">import</h1>
         </div>
-      )
-    }
+        <div className="bg-white border border-sage/14 rounded-md p-8 text-center">
+          <p className="text-sm text-ink-lt mb-4">
+            Connect {formatPlatformName(selectedPlatform)} to import your listings
+          </p>
+          <a
+            href="/platform-connect"
+            className="inline-block px-4 py-2 text-sm font-medium bg-sage text-white rounded hover:bg-sage-dk transition"
+          >
+            Connect {formatPlatformName(selectedPlatform)} →
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Connected but no import handler yet — coming soon
+  if (!hasImportHandler) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
+            ← back
+          </button>
+          <h1 className="text-lg font-serif italic text-ink">import</h1>
+        </div>
+        <div className="bg-white border border-sage/14 rounded-md p-8 text-center">
+          <p className="text-sm font-medium text-ink mb-2">
+            {formatPlatformName(selectedPlatform)} import coming soon
+          </p>
+          <p className="text-sm text-ink-lt">
+            We&apos;re working on importing from {formatPlatformName(selectedPlatform)}. In the meantime, you can import from eBay, Vinted, or Shopify.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Per-platform import view

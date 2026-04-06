@@ -24,9 +24,4 @@ export interface PlatformStatus {
   storeDomain?: string | null
 }
 
-export interface PlatformStatuses {
-  ebay: PlatformStatus
-  vinted: PlatformStatus
-  shopify: PlatformStatus
-  etsy: PlatformStatus
-}
+export type PlatformStatuses = Partial<Record<Platform, PlatformStatus>>
