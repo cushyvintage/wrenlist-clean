@@ -87,8 +87,13 @@ export function ImportItemList({
                 )}
               </div>
 
-              {/* Status */}
-              <div className="flex-shrink-0">
+              {/* Status badges */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {item.listingStatus === 'draft' && (
+                  <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                    draft
+                  </span>
+                )}
                 {item.alreadyImported ? (
                   <span className="text-xs text-ink-lt bg-cream-dk px-2 py-1 rounded">
                     already in wren

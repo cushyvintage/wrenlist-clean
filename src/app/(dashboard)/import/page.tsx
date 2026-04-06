@@ -364,7 +364,7 @@ export default function ImportPage() {
 
   const selectableItems = filteredItems.filter((i) => !i.alreadyImported)
   const allSelected = selectableItems.length > 0 && selectableItems.every((i) => i.checked)
-  const selectedCount = items.filter((i) => i.checked && !i.alreadyImported).length
+  const selectedCount = filteredItems.filter((i) => i.checked && !i.alreadyImported).length
 
   // --- Import actions ---
   const isImporting = vintedImport.state.phase === 'importing' || vintedImport.state.phase === 'fetching'
