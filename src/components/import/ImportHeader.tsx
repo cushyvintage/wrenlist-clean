@@ -65,7 +65,7 @@ export function ImportHeader({
       confirmTimer.current = setTimeout(() => {
         confirmingRef.current = false
         forceUpdate(n => n + 1)
-      }, 4000)
+      }, 6000)
     }
   }
 
