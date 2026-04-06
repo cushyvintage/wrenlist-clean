@@ -28,6 +28,7 @@ export default function PlatformConnectPage() {
   const [pageError, setPageError] = useState<string | null>(null)
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
   const [ebaySelectedPolicies, setEbaySelectedPolicies] = useState<Record<string, string>>({})
+  const [ebayChangingPolicies, setEbayChangingPolicies] = useState(false)
   const [ebayPoliciesLoading, setEbayPoliciesLoading] = useState(false)
   const [ebaySetupMessage, setEbaySetupMessage] = useState<string | null>(null)
   const [policyIsLoading, setPolicyIsLoading] = useState(false)
@@ -301,6 +302,7 @@ export default function PlatformConnectPage() {
       }
 
       await ebay.refreshStatus()
+      setEbayChangingPolicies(false)
       setEbaySetupMessage('Policies saved successfully!')
     } catch (err) {
       setPageError(err instanceof Error ? err.message : 'Failed to save policies')
@@ -568,7 +570,7 @@ export default function PlatformConnectPage() {
               Wrenlist will create and manage listings on your behalf. Disconnect any time.
             </div>
           </div>
-        ) : ebay.setupComplete ? (
+        ) : ebay.setupComplete && !ebayChangingPolicies ? (
           // State C: Connected + setup complete
           <div>
             <div className="flex items-center gap-4 mb-6">
@@ -634,6 +636,7 @@ export default function PlatformConnectPage() {
               <button
                 onClick={() => {
                   setEbaySelectedPolicies({})
+                  setEbayChangingPolicies(true)
                   ebay.refreshStatus()
                 }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition"
