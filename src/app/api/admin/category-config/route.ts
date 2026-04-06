@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 
-// Only allow admin user (dom@wrenlist.com)
-const ADMIN_EMAIL = 'dom@wrenlist.com'
-
-const ensureAdmin = async () => {
-  const user = await getServerUser()
-  if (!user || user.email !== ADMIN_EMAIL) {
-    throw new Error('Unauthorized')
+export const GET = withAuth(async (req, user) => {
+  const adminUserId = process.env.ADMIN_USER_ID
+  if (!adminUserId || user.id !== adminUserId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
-}
 
-export const GET = async (req: NextRequest) => {
   try {
-    await ensureAdmin()
-
+    const { createSupabaseServerClient } = await import('@/lib/supabase-server')
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -29,17 +23,9 @@ export const GET = async (req: NextRequest) => {
   } catch (err) {
     const error = err instanceof Error ? err.message : 'Unknown error'
     console.error('Error fetching category configs:', error)
-
-    if (error === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Failed to fetch category configurations' },
       { status: 500 }
     )
   }
-}
+})

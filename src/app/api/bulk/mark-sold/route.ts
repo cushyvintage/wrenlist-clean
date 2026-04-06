@@ -1,18 +1,20 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/bulk/mark-sold
  * Mark multiple finds as sold with optional uniform sold price
  */
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`bulk-mark-sold:${user.id}`, 5)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
+  try {
     const body = await request.json()
     const { findIds, soldPrice } = body as { findIds: string[]; soldPrice?: number }
 
@@ -50,9 +52,6 @@ export async function POST(request: NextRequest) {
       ...(soldPrice !== undefined && soldPrice > 0 ? { sold_price_gbp: soldPrice } : {}),
     }
 
-    // Update all finds
-    // Note: Vinted delist dispatch happens client-side in inventory detail page via extension messaging
-    // Bulk operations cannot reach the browser extension, so individual mark-sold actions are responsible for delist dispatch
     const { error: updateError } = await supabase
       .from('finds')
       .update(updateData)
@@ -72,4 +71,4 @@ export async function POST(request: NextRequest) {
     console.error('POST /api/bulk/mark-sold error:', error)
     return ApiResponseHelper.internalError()
   }
-}
+})

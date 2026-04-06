@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface BarcodeLookupResult {
   title: string
@@ -18,7 +20,12 @@ function isIsbn(code: string): boolean {
   return false
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`barcode-lookup:${user.id}`, 30)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   try {
     const code = request.nextUrl.searchParams.get('code')
 
@@ -117,4 +124,4 @@ If you cannot identify the barcode, return: {"title":"","category":"other","bran
     console.error('Barcode lookup failed:', error)
     return NextResponse.json({ error: 'Barcode lookup failed' }, { status: 500 })
   }
-}
+})

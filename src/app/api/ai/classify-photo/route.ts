@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const VALID_CATEGORIES = [
   'ceramics', 'glassware', 'books', 'jewellery', 'clothing',
   'homeware', 'collectibles', 'toys', 'furniture', 'other',
 ]
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`classify-photo:${user.id}`, 20)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'AI features not configured' }, { status: 503 })
   }
@@ -62,4 +69,4 @@ export async function POST(request: NextRequest) {
     console.error('Failed to classify photo:', error)
     return NextResponse.json({ error: 'Failed to classify photo' }, { status: 500 })
   }
-}
+})

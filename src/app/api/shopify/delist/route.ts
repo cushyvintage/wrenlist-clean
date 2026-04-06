@@ -1,19 +1,21 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/shopify/delist
  * Delete/archive a Shopify product
  */
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`shopify-delist:${user.id}`, 10)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
+  try {
     const body = await request.json()
     const { findId } = body
 
@@ -96,4 +98,4 @@ export async function POST(request: NextRequest) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
     return ApiResponseHelper.internalError(msg)
   }
-}
+})

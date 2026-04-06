@@ -1,19 +1,21 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/bulk/publish-vinted
  * Queue multiple finds for Vinted publishing via the extension
  * The extension polls this endpoint and publishes items one by one
  */
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`bulk-publish-vinted:${user.id}`, 5)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
+  try {
     const body = await request.json()
     const { findIds } = body as { findIds: string[] }
 
@@ -43,12 +45,6 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.notFound('One or more finds not found or not authorized')
     }
 
-    // Queue finds for publishing: create queue entries that the extension will poll
-    // For now, we'll use a simple approach: return the queued items immediately
-    // The extension will call /api/chrome-extension/vinted/product-payload/[findId]
-    // and handle the actual publishing
-
-    // Return success response with queued items
     return ApiResponseHelper.success({
       queued: findIds.length,
       message: `Queued ${findIds.length} item${findIds.length !== 1 ? 's' : ''} for Vinted publishing — the extension will publish them now`,
@@ -57,4 +53,4 @@ export async function POST(request: NextRequest) {
     console.error('POST /api/bulk/publish-vinted error:', error)
     return ApiResponseHelper.internalError()
   }
-}
+})

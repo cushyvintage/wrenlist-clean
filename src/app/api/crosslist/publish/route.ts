@@ -1,8 +1,9 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension
@@ -27,6 +28,11 @@ interface MarketplaceResult {
  * Returns: { results: Record<string, MarketplaceResult> }
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
+  const { success } = await checkRateLimit(`crosslist-publish:${user.id}`, 10)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const body = await req.json()
   const { findId, marketplaces } = body as { findId?: string; marketplaces?: string[] }
 

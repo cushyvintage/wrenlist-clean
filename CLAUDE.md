@@ -1,10 +1,5 @@
 # CLAUDE.md — Wrenlist Dev Notes
 
-## Dev Account
-- **Email:** dom@wrenlist.com
-- **Password:** WrenlistDev2026!
-- **Supabase user ID:** 58b8da35-4c53-496d-bf97-2c62c27caf9a
-
 ## Supabase (wrenlist-clean)
 - **Project ID:** tewtfroudyicwfubgcqi
 - **URL:** https://tewtfroudyicwfubgcqi.supabase.co

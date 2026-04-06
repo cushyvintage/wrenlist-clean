@@ -1,8 +1,9 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Platform } from '@/types'
 
 const SUPPORTED_MARKETPLACES: Platform[] = [
@@ -21,6 +22,11 @@ const SUPPORTED_MARKETPLACES: Platform[] = [
  * Body: { findId: string, marketplace: string }
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
+  const { success } = await checkRateLimit(`crosslist-delist:${user.id}`, 10)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const body = await req.json()
   const { findId, marketplace } = body as { findId?: string; marketplace?: string }
 

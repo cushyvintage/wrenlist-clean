@@ -81,19 +81,56 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/webhay/ebay
+ * Verify eBay webhook notification signature.
+ * eBay signs POST payloads using the verification token + endpoint URL.
+ * We compute SHA-256(body + verificationToken + endpointUrl) and compare
+ * against the X-EBAY-SIGNATURE header.
+ */
+function verifyWebhookSignature(body: string, signatureHeader: string | null): boolean {
+  const verificationToken = process.env.EBAY_WEBHOOK_VERIFICATION_TOKEN
+  if (!verificationToken) {
+    console.error('[eBay Webhook] Missing EBAY_WEBHOOK_VERIFICATION_TOKEN — rejecting')
+    return false
+  }
+
+  if (!signatureHeader) {
+    console.warn('[eBay Webhook] No X-EBAY-SIGNATURE header present')
+    return false
+  }
+
+  const endpointUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'}/api/webhooks/ebay`
+  const expected = crypto
+    .createHash('sha256')
+    .update(body + verificationToken + endpointUrl)
+    .digest('hex')
+
+  // Constant-time comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(expected, 'hex'),
+      Buffer.from(signatureHeader, 'hex')
+    )
+  } catch {
+    // If header is wrong length or not valid hex, reject
+    return false
+  }
+}
+
+/**
+ * POST /api/webhooks/ebay
  * Handles ITEM_SOLD and MARKETPLACE_ACCOUNT_DELETION events
  */
 export async function POST(request: NextRequest) {
   try {
-    // eBay POST notifications use EC signature with a rotating public key.
-    // Full verification requires fetching eBay's public key and verifying the
-    // X-EBAY-SIGNATURE header (different from challenge response).
-    // For now: log the signature header and accept all events.
-    // TODO: implement full EC signature verification when scaling to multi-seller.
     const signatureHeader = request.headers.get('X-EBAY-SIGNATURE')
     const body = await request.text()
-    console.log('[eBay Webhook] Received notification, signature present:', !!signatureHeader)
+
+    if (!verifyWebhookSignature(body, signatureHeader)) {
+      console.warn('[eBay Webhook] Signature verification failed')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    console.log('[eBay Webhook] Signature verified')
 
     // Parse payload
     const payload: eBayWebhookPayload = JSON.parse(body)

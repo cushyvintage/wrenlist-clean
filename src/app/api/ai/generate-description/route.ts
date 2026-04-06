@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`generate-desc:${user.id}`, 15)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'AI features not configured' }, { status: 503 })
   }
@@ -54,4 +61,4 @@ Write ONLY the description. No title, no preamble.`
     console.error('Failed to generate description:', error)
     return NextResponse.json({ error: 'Failed to generate description' }, { status: 500 })
   }
-}
+})

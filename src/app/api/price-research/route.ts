@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { searchSoldItems, EbayListingStats } from '@/lib/ebay-finding'
 
 interface SampleListing {
@@ -64,7 +66,12 @@ function ebayStatsToSummary(stats: EbayListingStats): string {
   return `Real eBay UK sold data (${stats.total_found} items): avg £${stats.avg_price}, range £${stats.min_price}–£${stats.max_price}, avg ${stats.avg_days_to_sell} days ago.`
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`price-research:${user.id}`, 10)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   try {
     const { query } = await request.json()
 
@@ -195,4 +202,4 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
     console.error('Failed to research prices:', error)
     return NextResponse.json({ error: 'Failed to research prices' }, { status: 500 })
   }
-}
+})

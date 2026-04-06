@@ -1,8 +1,10 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/ebay/delist
@@ -12,13 +14,13 @@ import { logMarketplaceEvent } from '@/lib/marketplace-events'
  * Body: { find_id }
  * Returns: { success, message }
  */
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
+export const POST = withAuth(async (request, user) => {
+  const { success } = await checkRateLimit(`ebay-delist:${user.id}`, 10)
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
+  try {
     const body = await request.json()
     const { find_id: findId } = body
 
@@ -111,4 +113,4 @@ export async function POST(request: NextRequest) {
     console.error('[eBay Delist] Error:', msg)
     return ApiResponseHelper.internalError()
   }
-}
+})
