@@ -186,18 +186,38 @@ async function checkVintedViaExtension(): Promise<ConnectedPlatform | null> {
     const r = await sendExtensionMessage({ action: 'get_vinted_session' })
     if (!r?.loggedIn) return null
 
-    // Try to get resolved display name from DB (extension often returns numeric ID)
+    const extensionUsername = r.username || undefined
+    const extensionTld = r.tld || 'co.uk'
+
+    // Try to get resolved display name from DB
     try {
       const res = await fetch('/api/vinted/connect')
       if (res.ok) {
         const data = await res.json()
-        if (data.data?.connected && data.data?.vintedUsername) {
+        if (data.data?.connected && data.data?.vintedUsername && !/^\d+$/.test(data.data.vintedUsername)) {
           return { platform: 'vinted', username: data.data.vintedUsername }
         }
       }
-    } catch { /* fall through to extension username */ }
+    } catch { /* fall through */ }
 
-    return { platform: 'vinted', username: r.username || undefined }
+    // If extension returned a username (even numeric), POST it to save/resolve
+    if (extensionUsername) {
+      try {
+        const res = await fetch('/api/vinted/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vintedUserId: extensionUsername, vintedUsername: extensionUsername, tld: extensionTld }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.data?.vintedUsername && !/^\d+$/.test(data.data.vintedUsername)) {
+            return { platform: 'vinted', username: data.data.vintedUsername }
+          }
+        }
+      } catch { /* fall through */ }
+    }
+
+    return { platform: 'vinted', username: extensionUsername }
   } catch {
     return null
   }

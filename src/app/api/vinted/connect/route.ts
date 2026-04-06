@@ -29,32 +29,9 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // If stored username is still numeric, try to resolve the display name
-    let vintedUsername = connection.vinted_username
-    if (vintedUsername && /^\d+$/.test(vintedUsername)) {
-      try {
-        const res = await fetch(`https://www.vinted.co.uk/api/v2/users/${vintedUsername}`, {
-          headers: { 'Accept': 'application/json' },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data?.user?.login) {
-            vintedUsername = data.user.login
-            // Persist resolved name so we don't re-fetch next time
-            await supabase
-              .from('vinted_connections')
-              .update({ vinted_username: vintedUsername })
-              .eq('user_id', user.id)
-          }
-        }
-      } catch {
-        // Keep numeric ID as fallback
-      }
-    }
-
     return ApiResponseHelper.success({
       connected: true,
-      vintedUsername,
+      vintedUsername: connection.vinted_username,
       vintedUserId: connection.vinted_user_id,
     })
   } catch (error) {
