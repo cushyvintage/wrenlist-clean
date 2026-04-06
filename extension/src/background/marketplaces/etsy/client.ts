@@ -283,6 +283,9 @@ export class EtsyClient {
         // Step 4: Select the first delivery profile
         await this.selectDeliveryProfile(tabId);
 
+        // Step 4b: Set processing profile (required for publishing)
+        await this.selectProcessingProfile(tabId);
+
         // Step 5: Click Save as draft or Publish depending on mode
         const mode = options?.publishMode ?? "draft";
         await wait(1000);
@@ -929,6 +932,51 @@ export class EtsyClient {
 
     // Wait for the profile to be applied
     await wait(1500);
+  }
+
+  /**
+   * Set the processing profile on the Etsy listing form.
+   * Required for publishing — selects "Ready to dispatch" + "1-2 days".
+   */
+  private async selectProcessingProfile(tabId: number): Promise<void> {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        // Click "Ready to dispatch" radio button (value="1")
+        const radios = Array.from(document.querySelectorAll<HTMLInputElement>(
+          'input[name="readinessState"]',
+        ));
+        for (const radio of radios) {
+          if (radio.value === "1") {
+            radio.focus();
+            radio.checked = true;
+            radio.dispatchEvent(
+              new InputEvent("input", { bubbles: true, inputType: "insertText" }),
+            );
+            radio.dispatchEvent(new Event("change", { bubbles: true }));
+            break;
+          }
+        }
+
+        // Select "1-2 days (Recommended)" from processing time dropdown (value="1")
+        const select = document.querySelector<HTMLSelectElement>(
+          'select[name="processingRange"]',
+        );
+        if (select) {
+          const nativeSetter = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,
+            "value",
+          )?.set;
+          if (nativeSetter) nativeSetter.call(select, "1");
+          select.dispatchEvent(
+            new InputEvent("input", { bubbles: true, inputType: "insertText" }),
+          );
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      },
+    });
+
+    await wait(500);
   }
 }
 
