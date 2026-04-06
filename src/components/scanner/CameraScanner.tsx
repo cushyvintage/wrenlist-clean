@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Loader2, X } from 'lucide-react'
 import { BarcodeDetector } from 'barcode-detector/ponyfill'
+import { ScannerViewfinder } from './ScannerViewfinder'
 
 interface CameraScannerProps {
   onDetected: (code: string) => void
@@ -146,18 +147,13 @@ export function CameraScanner({ onDetected, onClose }: CameraScannerProps) {
 
         {/* Viewfinder overlay when scanning */}
         {isScanning && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p className="text-white/70 text-xs uppercase tracking-widest mb-4">
-              Scanning...
-            </p>
-            <div className="w-48 h-32 border-2 border-white/30 rounded-lg" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <ScannerViewfinder label="Scanning..." />
           </div>
         )}
 
         {!isScanning && !loading && !error && (
-          <p className="text-white/70 text-xs uppercase tracking-widest">
-            Starting camera...
-          </p>
+          <ScannerViewfinder label="Starting camera..." />
         )}
       </div>
 

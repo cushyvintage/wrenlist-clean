@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import { CameraScanner } from '@/components/scanner/CameraScanner'
 import { TripSelector } from '@/components/scanner/TripSelector'
+import { ScannerViewfinder } from '@/components/scanner/ScannerViewfinder'
 import type { ScanPriceData, ScanHistoryRecord, SourcingTrip } from '@/types'
 
 // ---------- Types ----------
@@ -366,13 +367,11 @@ export default function ScannerPage() {
                 className="w-full rounded-lg overflow-hidden"
                 style={{ aspectRatio: '4/3' }}
               >
-                <div className="w-full h-full bg-[#2a3a28] flex flex-col items-center justify-center gap-4 hover:bg-[#324432] transition-colors">
-                  <div className="w-48 h-32 border-2 border-white/30 rounded-lg flex items-center justify-center">
-                    <span className="text-white/80 text-sm font-medium">Tap to scan</span>
-                  </div>
-                  <p className="text-white/40 text-xs">
-                    or use a USB barcode scanner
-                  </p>
+                <div className="w-full h-full bg-[#0d1f0b] flex items-center justify-center rounded-lg hover:bg-[#162814] transition-colors">
+                  <ScannerViewfinder
+                    label="Tap to scan"
+                    sublabel="or use a USB barcode scanner"
+                  />
                 </div>
               </button>
             )}
