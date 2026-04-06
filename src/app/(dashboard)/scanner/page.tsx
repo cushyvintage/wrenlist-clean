@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Panel } from '@/components/wren/Panel'
+import { StatCard } from '@/components/wren/StatCard'
 import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import { CameraScanner } from '@/components/scanner/CameraScanner'
-import type { ScanPriceData, ScanHistoryRecord } from '@/types'
+import { TripSelector } from '@/components/scanner/TripSelector'
+import type { ScanPriceData, ScanHistoryRecord, SourcingTrip } from '@/types'
 
 // ---------- Types ----------
 
@@ -96,6 +98,26 @@ function saveScanToApi(scan: {
     })
 }
 
+/** Compute scan stats from recent scans list */
+function computeScanStats(scans: RecentScan[]) {
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfWeek = new Date(startOfToday)
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+
+  const todayCount = scans.filter((s) => s.time >= startOfToday).length
+  const weekCount = scans.filter((s) => s.time >= startOfWeek).length
+
+  const categoryCounts: Record<string, number> = {}
+  for (const s of scans) {
+    const cat = s.lookupResult?.category
+    if (cat) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1
+  }
+  const topCategory = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] as [string, number] | undefined
+
+  return { todayCount, weekCount, topCategory }
+}
+
 /** Fetch scan history from API and merge with localStorage scans */
 async function fetchAndMergeScans(
   setScans: (fn: (prev: RecentScan[]) => RecentScan[]) => void,
@@ -143,12 +165,15 @@ export default function ScannerPage() {
   const [priceLoading, setPriceLoading] = useState(false)
   const [recentScans, setRecentScans] = useState<RecentScan[]>([])
   const [lastScan, setLastScan] = useState<{ code: string; result: LookupResult } | null>(null)
+  const [activeTrip, setActiveTrip] = useState<SourcingTrip | null>(null)
 
   // Load recent scans: localStorage first (instant), then merge from API
   useEffect(() => {
     setRecentScans(loadRecentScans())
     fetchAndMergeScans(setRecentScans)
   }, [])
+
+  const scanStats = useMemo(() => computeScanStats(recentScans), [recentScans])
 
   // Perform barcode lookup
   const doLookup = useCallback(async (code: string) => {
@@ -284,7 +309,7 @@ export default function ScannerPage() {
     doLookup(manualInput.trim())
   }, [manualInput, doLookup])
 
-  // Add as find
+  // Add as find (includes active trip if set)
   const handleAddAsFind = useCallback(
     (result?: LookupResult) => {
       const r = result ?? lookupResult
@@ -294,15 +319,38 @@ export default function ScannerPage() {
       if (r.category) params.set('category', r.category)
       if (r.brand) params.set('brand', r.brand)
       if (r.ean) params.set('ean', r.ean)
+      if (activeTrip) params.set('sourcingTripId', activeTrip.id)
       router.push(`/add-find?${params.toString()}`)
     },
-    [lookupResult, router]
+    [lookupResult, activeTrip, router]
   )
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 max-w-[1400px]">
       {/* Main column */}
       <div className="flex-1 min-w-0 space-y-6">
+
+        {/* Trip selector + stats banner */}
+        <div className="space-y-4">
+          <TripSelector onTripChange={setActiveTrip} />
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard label="Today" value={scanStats.todayCount} delta={scanStats.todayCount === 1 ? 'scan' : 'scans'} />
+            <StatCard label="This week" value={scanStats.weekCount} delta={scanStats.weekCount === 1 ? 'scan' : 'scans'} />
+            <StatCard
+              label="Top category"
+              value={scanStats.topCategory ? scanStats.topCategory[0] : '—'}
+              delta={scanStats.topCategory ? `${scanStats.topCategory[1]} scans` : ''}
+            />
+            <StatCard
+              label="Active trip"
+              value={activeTrip ? activeTrip.name : '—'}
+              delta={activeTrip?.location ?? ''}
+            />
+          </div>
+        </div>
+
         {/* SCAN panel */}
         <Panel title="Scan">
           <div className="space-y-4">
