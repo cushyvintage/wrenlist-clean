@@ -77,9 +77,22 @@ export function ImportItemList({
                 )}
               </div>
 
-              {/* Info */}
+              {/* Info — clickable to open listing */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-ink truncate">{item.title}</div>
+                {item.listingUrl ? (
+                  <a
+                    href={item.listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-ink hover:text-sage truncate block group"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {item.title}
+                    <span className="inline-block ml-1 opacity-0 group-hover:opacity-60 transition text-xs">↗</span>
+                  </a>
+                ) : (
+                  <div className="text-sm font-medium text-ink truncate">{item.title}</div>
+                )}
                 {item.listingId && (
                   <div className="text-xs text-ink-lt mt-0.5">
                     #{item.listingId}

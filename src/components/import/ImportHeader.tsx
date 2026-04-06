@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import type { Platform } from '@/types'
 import type { ListingStatus } from './types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -45,6 +46,27 @@ export function ImportHeader({
   statusFilter,
   onStatusFilterChange,
 }: ImportHeaderProps) {
+  const [confirming, setConfirming] = useState(false)
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Reset confirm state when selection changes
+  useEffect(() => {
+    setConfirming(false)
+  }, [selectedCount])
+
+  function handleImportClick() {
+    if (confirming) {
+      // Second click — execute import
+      setConfirming(false)
+      if (confirmTimer.current) clearTimeout(confirmTimer.current)
+      onImport()
+    } else {
+      // First click — enter confirm state
+      setConfirming(true)
+      confirmTimer.current = setTimeout(() => setConfirming(false), 4000)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Title row */}
@@ -69,15 +91,21 @@ export function ImportHeader({
           </div>
         </div>
         <button
-          onClick={onImport}
+          onClick={handleImportClick}
           disabled={selectedCount === 0 || isImporting}
           className={`px-4 py-2 text-sm font-medium rounded transition ${
-            selectedCount > 0 && !isImporting
-              ? 'bg-sage text-white hover:bg-sage-dk'
-              : 'bg-cream-dk text-ink-lt cursor-not-allowed'
+            confirming
+              ? 'bg-amber-600 text-white hover:bg-amber-700'
+              : selectedCount > 0 && !isImporting
+                ? 'bg-sage text-white hover:bg-sage-dk'
+                : 'bg-cream-dk text-ink-lt cursor-not-allowed'
           }`}
         >
-          {isImporting ? 'Importing...' : `Import ${selectedCount} listing${selectedCount !== 1 ? 's' : ''}`}
+          {isImporting
+            ? 'Importing...'
+            : confirming
+              ? `Confirm import ${selectedCount}?`
+              : `Import ${selectedCount} listing${selectedCount !== 1 ? 's' : ''}`}
         </button>
       </div>
 

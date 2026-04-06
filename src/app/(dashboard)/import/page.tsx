@@ -34,7 +34,7 @@ export default function ImportPage() {
   const [totalCount, setTotalCount] = useState(0)
 
   // Filters
-  const [showOnlyNew, setShowOnlyNew] = useState(false)
+  const [showOnlyNew, setShowOnlyNew] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
@@ -343,13 +343,27 @@ export default function ImportPage() {
 
   const toggleAll = useCallback(() => {
     setItems((prev) => {
-      const selectableItems = prev.filter((i) => !i.alreadyImported)
-      const allChecked = selectableItems.every((i) => i.checked)
+      // Build set of currently visible item IDs
+      const visibleIds = new Set(
+        prev.filter((item) => {
+          if (showOnlyNew && item.alreadyImported) return false
+          if (statusFilter !== 'all' && item.listingStatus !== statusFilter) return false
+          if (searchQuery) {
+            if (!item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
+          }
+          return true
+        }).map((i) => i.id)
+      )
+      // Only toggle items that are both visible and selectable
+      const visibleSelectable = prev.filter((i) => visibleIds.has(i.id) && !i.alreadyImported)
+      const allChecked = visibleSelectable.every((i) => i.checked)
       return prev.map((item) =>
-        item.alreadyImported ? item : { ...item, checked: !allChecked }
+        visibleIds.has(item.id) && !item.alreadyImported
+          ? { ...item, checked: !allChecked }
+          : item
       )
     })
-  }, [])
+  }, [showOnlyNew, statusFilter, searchQuery])
 
   // --- Filtered items ---
   const filteredItems = items.filter((item) => {
