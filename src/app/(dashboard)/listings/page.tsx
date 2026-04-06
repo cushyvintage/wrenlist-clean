@@ -252,7 +252,7 @@ export default function ListingsPage() {
       setPlatformStatuses((prev) => {
         const next = { ...prev }
         for (const p of expired) {
-          next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: 'session expired' }
+          next[p] = patchEntry(prev, p, { status: 'failed', error: 'session expired' })
         }
         return next
       })
@@ -267,7 +267,7 @@ export default function ListingsPage() {
     setPlatformStatuses((prev) => {
       const next = { ...prev }
       for (const p of valid) {
-        next[p] = { ...(next[p] ?? emptyEntry), status: 'waiting' }
+        next[p] = patchEntry(prev, p, { status: 'waiting' })
       }
       return next
     })
@@ -286,7 +286,7 @@ export default function ListingsPage() {
         const next = { ...prev }
         for (const p of valid) {
           if (next[p]?.status !== 'failed' || !expired.includes(p as Platform)) {
-            next[p] = { ...(next[p] ?? emptyEntry), status: 'publishing' }
+            next[p] = patchEntry(prev, p, { status: 'publishing' })
           }
         }
         return next
@@ -319,18 +319,18 @@ export default function ListingsPage() {
             if (isLast) {
               // Final status
               if (t(p).failed > 0 && t(p).succeeded === 0) {
-                next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: t(p).lastError, succeeded: t(p).succeeded, failed: t(p).failed }
+                next[p] = patchEntry(prev, p, { status: 'failed', error: t(p).lastError, succeeded: t(p).succeeded, failed: t(p).failed })
               } else if (t(p).failed > 0) {
-                next[p] = { ...(next[p] ?? emptyEntry), status: 'failed', error: `${t(p).failed} failed`, succeeded: t(p).succeeded, failed: t(p).failed }
+                next[p] = patchEntry(prev, p, { status: 'failed', error: `${t(p).failed} failed`, succeeded: t(p).succeeded, failed: t(p).failed })
               } else {
                 // Extension platforms (vinted, etsy, depop, facebook) queue rather than list directly
                 const extensionPlatforms: Platform[] = ['vinted', 'etsy', 'depop', 'facebook']
                 const finalStatus: PlatformPublishStatus = extensionPlatforms.includes(p as Platform) ? 'queued' : 'listed'
-                next[p] = { ...(next[p] ?? emptyEntry), status: finalStatus, succeeded: t(p).succeeded, failed: 0 }
+                next[p] = patchEntry(prev, p, { status: finalStatus, succeeded: t(p).succeeded, failed: 0 })
               }
             } else {
               // Intermediate — show progress
-              next[p] = { ...(next[p] ?? emptyEntry), status: 'publishing', succeeded: t(p).succeeded, failed: t(p).failed }
+              next[p] = patchEntry(prev, p, { status: 'publishing', succeeded: t(p).succeeded, failed: t(p).failed })
             }
           }
           return next
@@ -341,7 +341,7 @@ export default function ListingsPage() {
         setPlatformStatuses((prev) => {
           const next = { ...prev }
           for (const p of valid) {
-            next[p] = { ...(next[p] ?? emptyEntry), succeeded: t(p).succeeded, failed: t(p).failed }
+            next[p] = patchEntry(prev, p, { succeeded: t(p).succeeded, failed: t(p).failed })
           }
           return next
         })
