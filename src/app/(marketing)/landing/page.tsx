@@ -140,29 +140,29 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#f5f0e8]">
       {/* NAV */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] px-10 py-4">
+      <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] px-4 sm:px-10 py-4">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="h-9 w-9 flex-shrink-0 bg-[#3d5c3a]"></div>
           <div className="font-serif text-xl font-medium tracking-wider text-[#1e2e1c]">
             WREN<em className="font-light italic text-[#5a7a57]">list</em>
           </div>
         </Link>
-        <div className="flex items-center gap-6">
+        <div className="hidden sm:flex items-center gap-6">
           <div className="text-xs font-medium text-[#1e2e1c]">home</div>
           <Link href="/pricing" className="text-xs font-normal text-[#6b7d6a] hover:text-[#1e2e1c]">pricing</Link>
           <Link href="/about" className="text-xs font-normal text-[#6b7d6a] hover:text-[#1e2e1c]">why wrenlist</Link>
         </div>
         <div className="flex gap-2 items-center">
-          <a href="/login" className="border border-[rgba(61,92,58,0.2)] rounded text-xs font-normal text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]">log in</a>
+          <a href="/login" className="hidden sm:inline-block border border-[rgba(61,92,58,0.2)] rounded text-xs font-normal text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]">log in</a>
           <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-5 py-2 hover:bg-[#2c4428] uppercase tracking-wider">start free</a>
         </div>
       </nav>
 
       {/* HERO */}
-      <div className="grid grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
-        <div className="flex flex-col justify-center px-12 py-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
+        <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
           <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter's operating system</p>
-          <h1 className="mb-5 font-serif text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
+          <h1 className="mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
             Every find,<br />
             <em className="italic text-[#5a7a57]">accounted</em>
             <br />
@@ -181,7 +181,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="flex flex-col justify-center gap-4 bg-[#ede8de] px-10 py-10">
+        <div className="flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
           <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88]">your inventory · march 2026</div>
 
           {/* Inventory Cards */}
@@ -206,7 +206,7 @@ export default function LandingPage() {
           ))}
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-2.5 mt-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-2">
             {[
               { n: '147', l: 'active finds', up: '+12 this week' },
               { n: '68%', l: 'avg margin', up: 'up from 61%' },
@@ -223,14 +223,14 @@ export default function LandingPage() {
       </div>
 
       {/* FEATURES STRIP */}
-      <div className="grid grid-cols-3 border-b border-[rgba(61,92,58,0.12)]">
+      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-[rgba(61,92,58,0.12)]">
         {[
           { num: '01', title: 'Log every find instantly', body: 'Snap a photo, enter cost, done. Wrenlist fills in category, condition, and comparable sold prices before you leave the shop floor.' },
           { num: '02', title: 'Price with confidence', body: 'Live comp data from Vinted, eBay, Etsy and more. Know what your piece is worth before you list it, not after it sits for 60 days.' },
           { num: '03', title: 'List everywhere at once', body: 'Cross-post to Vinted, eBay, Etsy & Shopify from one screen. When it sells, every other listing comes down automatically.' },
         ].map((feat, i) => (
-          <div key={i} className={`px-10 py-9 ${i < 2 ? 'border-r border-[rgba(61,92,58,0.12)]' : ''}`}>
-            <div className="font-serif text-5xl text-[#e0d9cc] mb-2.5">{feat.num}</div>
+          <div key={i} className={`px-5 sm:px-10 py-9 ${i < 2 ? 'border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.12)]' : ''}`}>
+            <div className="font-serif text-4xl md:text-5xl text-[#e0d9cc] mb-2.5">{feat.num}</div>
             <div className="text-sm font-medium text-[#1e2e1c] mb-2">{feat.title}</div>
             <div className="text-sm font-normal leading-relaxed text-[#6b7d6a]">{feat.body}</div>
           </div>
@@ -238,23 +238,20 @@ export default function LandingPage() {
       </div>
 
       {/* FEATURES GRID SECTION */}
-      <section className="bg-[#f5f0e8] px-12 py-12">
+      <section className="bg-[#f5f0e8] px-5 sm:px-8 lg:px-12 py-12">
         <div className="mx-auto max-w-4xl">
           <div className="mb-12 text-center">
             <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">everything included</div>
-            <h2 className="font-serif text-3xl font-normal text-[#1e2e1c]">
+            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c]">
               One product. <em className="italic">Every tool.</em>
             </h2>
           </div>
 
-          <div className="grid grid-cols-4 gap-0 border border-[rgba(61,92,58,0.12)] rounded-lg overflow-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border border-[rgba(61,92,58,0.12)] rounded-lg overflow-hidden">
             {features.map((feat, i) => {
               const Icon = feat.icon
               return (
-                <div key={i} className="border-r border-b border-[rgba(61,92,58,0.12)] p-5 flex gap-3 hover:bg-[#f5f0e8]" style={{
-                  borderRight: i % 4 === 3 ? 'none' : '1px solid rgba(61,92,58,0.12)',
-                  borderBottom: Math.floor(i / 4) === Math.floor(features.length / 4) - (features.length % 4 === 0 ? 1 : 0) && i >= features.length - (features.length % 4 || 4) ? 'none' : '1px solid rgba(61,92,58,0.12)',
-                }}>
+                <div key={i} className="border-b sm:border-r border-[rgba(61,92,58,0.12)] p-5 flex gap-3 hover:bg-[#f5f0e8] last:border-b-0">
                   <div className="w-8 h-8 bg-[#d4e2d2] rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Icon />
                   </div>
@@ -274,22 +271,22 @@ export default function LandingPage() {
       </section>
 
       {/* TESTIMONIAL */}
-      <div className="grid grid-cols-2 border-b border-[rgba(61,92,58,0.12)] bg-[#d4e2d2] px-12 py-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 border-b border-[rgba(61,92,58,0.12)] bg-[#d4e2d2] px-5 sm:px-8 lg:px-12 py-10 lg:py-12">
         <div>
-          <p className="font-serif text-xl font-normal leading-relaxed text-[#1e2e1c]">
-            "I used to track everything in a Notes app. Wrenlist made me realise how much money I was leaving at the bottom of the pile."
+          <p className="font-serif text-lg sm:text-xl font-normal leading-relaxed text-[#1e2e1c]">
+            &ldquo;I used to track everything in a Notes app. Wrenlist made me realise how much money I was leaving at the bottom of the pile.&rdquo;
           </p>
           <p className="mt-4 text-xs text-[#8a9e88]">— Jordan K., full-time reseller · London, UK</p>
         </div>
-        <div className="text-center">
-          <div className="font-serif text-5xl font-medium text-[#3d5c3a]">68%</div>
+        <div className="text-center flex flex-col items-center justify-center">
+          <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">68%</div>
           <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-2">avg user margin</div>
         </div>
       </div>
 
       {/* FOOTER */}
-      <footer className="bg-[#1e2e1c] text-[#7a9a78] px-12 py-10">
-        <div className="grid grid-cols-5 gap-10 max-w-6xl mx-auto mb-10">
+      <footer className="bg-[#1e2e1c] text-[#7a9a78] px-5 sm:px-8 lg:px-12 py-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10 max-w-6xl mx-auto mb-10">
           <div>
             <div className="font-serif text-lg font-medium text-[#f5f0e8] mb-2">
               WREN<em className="italic font-light text-[#5a7a57]">list</em>
