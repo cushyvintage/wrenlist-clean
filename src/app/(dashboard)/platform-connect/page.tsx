@@ -221,9 +221,9 @@ export default function PlatformConnectPage() {
     }
   }, [searchParams, ebay])
 
-  // Fetch policies when connected but not setup
+  // Fetch policies when connected but not setup, or when changing policies
   useEffect(() => {
-    if (ebay.connected && !ebay.setupComplete) {
+    if (ebay.connected && (!ebay.setupComplete || ebayChangingPolicies)) {
       const fetchPolicies = async () => {
         setEbayPoliciesLoading(true)
         try {
@@ -272,7 +272,7 @@ export default function PlatformConnectPage() {
 
       fetchPolicies()
     }
-  }, [ebay.connected, ebay.setupComplete])
+  }, [ebay.connected, ebay.setupComplete, ebayChangingPolicies])
 
   const handleSaveEbayPolicies = async () => {
     setPolicyIsLoading(true)
