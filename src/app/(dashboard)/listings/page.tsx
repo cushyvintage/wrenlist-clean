@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
@@ -62,15 +63,11 @@ export default function ListingsPage() {
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistError, setCrosslistError] = useState<string | null>(null)
   const [crosslistProgress, setCrosslistProgress] = useState<string | null>(null)
-  const [shopifyConnected, setShopifyConnected] = useState(false)
+  const { connected: connectedPlatforms, loading: platformsLoading } = useConnectedPlatforms()
 
-  // Set page title + fetch Shopify connection status
+  // Set page title
   useEffect(() => {
     document.title = 'Listings | Wrenlist'
-    fetch('/api/shopify/connect')
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.data?.connected) setShopifyConnected(true) })
-      .catch(() => {})
   }, [])
 
   // Load listings from API
@@ -395,44 +392,47 @@ export default function ListingsPage() {
               Select marketplaces to publish to:
             </p>
             <div className="space-y-2 mb-4">
-              {(['vinted', 'ebay', 'etsy', 'depop', 'facebook', 'shopify', 'poshmark', 'mercari', 'whatnot', 'grailed'] as Platform[]).map((platform) => {
-                // Shopify requires a stored connection; others work via the extension
-                const connected = platform === 'shopify' ? shopifyConnected : true
-                return (
-                  <label
-                    key={platform}
-                    className={`flex items-center gap-2 ${connected ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+              {platformsLoading ? (
+                <p className="text-sm" style={{ color: '#8A9E88' }}>Checking connections...</p>
+              ) : connectedPlatforms.length === 0 ? (
+                <div className="py-3 text-center">
+                  <p className="text-sm mb-2" style={{ color: '#6B7D6A' }}>No marketplaces connected</p>
+                  <Link
+                    href="/platform-connect"
+                    className="text-sm font-medium text-sage hover:text-sage-dk underline"
                   >
+                    Connect marketplaces →
+                  </Link>
+                </div>
+              ) : (
+                connectedPlatforms.map((platform) => (
+                  <label key={platform} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={crosslistTargets.includes(platform)}
                       onChange={() =>
-                        connected && setCrosslistTargets((prev) =>
+                        setCrosslistTargets((prev) =>
                           prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
                         )
                       }
-                      disabled={!connected}
-                      className="rounded disabled:cursor-not-allowed"
+                      className="rounded"
                     />
                     <MarketplaceIcon platform={platform} size="sm" />
-                    <span className={`text-sm font-medium capitalize ${connected ? '' : 'text-ink/50'}`} style={connected ? { color: '#1E2E1C' } : undefined}>
-                      {platform}
-                      {!connected && (
-                        <>
-                          <span className="ml-1 text-xs text-ink/40 normal-case">(not connected)</span>
-                          <Link
-                            href="/platform-connect"
-                            className="ml-1.5 text-xs text-sage hover:text-sage-dk underline normal-case"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Connect →
-                          </Link>
-                        </>
-                      )}
+                    <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                      {platform === 'ebay' ? 'eBay' : platform.charAt(0).toUpperCase() + platform.slice(1)}
                     </span>
                   </label>
-                )
-              })}
+                ))
+              )}
+              {!platformsLoading && connectedPlatforms.length > 0 && (
+                <Link
+                  href="/platform-connect"
+                  className="block text-xs mt-1"
+                  style={{ color: '#8A9E88' }}
+                >
+                  Manage connections →
+                </Link>
+              )}
             </div>
             {crosslistProgress && (
               <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>

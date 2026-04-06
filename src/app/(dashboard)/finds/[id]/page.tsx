@@ -17,6 +17,7 @@ import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 
 interface PlatformFieldsData {
   vinted?: {
@@ -115,19 +116,8 @@ export default function InventoryDetailPage() {
   const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
-  const [shopifyConnected, setShopifyConnected] = useState(false)
-
   const extensionInfo = useExtensionInfo()
-
-  // Fetch Shopify connection status
-  useEffect(() => {
-    fetch('/api/shopify/connect')
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.data?.connected) setShopifyConnected(true)
-      })
-      .catch(() => {})
-  }, [])
+  const { connected: allConnectedPlatforms } = useConnectedPlatforms()
 
   // Fetch find details
   useEffect(() => {
@@ -274,9 +264,8 @@ export default function InventoryDetailPage() {
     }
   }
 
-  const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed').map((m) => m.marketplace))
-  const connectedPlatforms: Platform[] = ['ebay', 'vinted', ...(shopifyConnected ? ['shopify' as Platform] : [])]
-  const availableForCrosslist: Platform[] = connectedPlatforms.filter((m) => !listedMarketplaces.has(m))
+  const listedMarketplaces = new Set(marketplaceData.filter((m) => m.status === 'listed' || m.status === 'draft').map((m) => m.marketplace))
+  const availableForCrosslist: Platform[] = allConnectedPlatforms.filter((m) => !listedMarketplaces.has(m))
 
   const handleInputChange = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -1300,9 +1289,9 @@ export default function InventoryDetailPage() {
                           </p>
                           <span
                             className="text-xs capitalize"
-                            style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
+                            style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'draft' ? '#B8860B' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
                           >
-                            {md.status === 'error' ? 'Error' : md.status.replace('_', ' ')}
+                            {md.status === 'error' ? 'Error' : md.status === 'draft' ? 'Draft' : md.status.replace('_', ' ')}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1316,7 +1305,7 @@ export default function InventoryDetailPage() {
                               View →
                             </a>
                           )}
-                          {md.status === 'listed' && (
+                          {(md.status === 'listed' || md.status === 'draft') && (
                             <>
                               {delistConfirm === md.marketplace ? (
                                 <span className="flex items-center gap-1">
