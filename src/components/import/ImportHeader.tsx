@@ -59,15 +59,21 @@ export function ImportHeader({
   }, [selectedCount])
 
   function handleImportClick() {
+    console.log('[ImportHeader] handleImportClick called, confirming =', confirming)
     if (confirming) {
       // Second click — execute import
+      console.log('[ImportHeader] Executing import')
       setConfirming(false)
       if (confirmTimer.current) clearTimeout(confirmTimer.current)
       onImport()
     } else {
       // First click — enter confirm state
+      console.log('[ImportHeader] Entering confirm state')
       setConfirming(true)
-      confirmTimer.current = setTimeout(() => setConfirming(false), 4000)
+      confirmTimer.current = setTimeout(() => {
+        console.log('[ImportHeader] Confirm timeout expired')
+        setConfirming(false)
+      }, 4000)
     }
   }
 
