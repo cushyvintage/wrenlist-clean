@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import type { Find, Platform } from '@/types'
@@ -17,13 +18,12 @@ interface InventoryItemHeaderProps {
   find: Find
   isEditing: boolean
   isSyncing: boolean
-  isListingOnVinted?: boolean
-  isListingOnEbay?: boolean
   isCrosslisting?: boolean
   showCrosslistPicker?: boolean
   crosslistTargets?: Platform[]
   availableForCrosslist?: Platform[]
   platformUsernames?: Map<Platform, string | undefined>
+  extensionDetected?: boolean | null
   marketplaceData?: MarketplaceDataItem[]
   onMarkAsSoldClick: () => void
   onEditClick: () => void
@@ -38,12 +38,6 @@ interface InventoryItemHeaderProps {
   onCrosslistCancel?: () => void
 }
 
-const PLATFORM_COLORS: Record<string, { border: string; text: string; bg: string }> = {
-  vinted: { border: 'rgba(0,102,153,.3)', text: '#006699', bg: 'rgba(0,102,153,.08)' },
-  ebay: { border: 'rgba(255,80,0,.3)', text: '#E05200', bg: 'rgba(255,80,0,.08)' },
-  shopify: { border: 'rgba(100,170,70,.3)', text: '#5E8E3E', bg: 'rgba(100,170,70,.08)' },
-}
-
 export default function InventoryItemHeader({
   find,
   isEditing,
@@ -53,6 +47,7 @@ export default function InventoryItemHeader({
   crosslistTargets = [],
   availableForCrosslist = [],
   platformUsernames,
+  extensionDetected,
   marketplaceData = [],
   onMarkAsSoldClick,
   onEditClick,
@@ -212,6 +207,14 @@ export default function InventoryItemHeader({
                 </label>
               )
             })}
+            {extensionDetected === false && (
+              <p className="text-xs py-1" style={{ color: '#8A9E88' }}>
+                Install the extension to connect more platforms
+              </p>
+            )}
+            <Link href="/platform-connect" className="block text-xs py-1" style={{ color: '#8A9E88' }} onClick={(e) => e.stopPropagation()}>
+              Manage connections →
+            </Link>
             <div className="flex gap-2 mt-3 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
               <button
                 onClick={onCrosslistConfirm}

@@ -1047,13 +1047,12 @@ export default function InventoryDetailPage() {
         find={find}
         isEditing={isEditing}
         isSyncing={isSyncing}
-        isListingOnVinted={isListingOnVinted}
-        isListingOnEbay={isListingOnEbay}
         isCrosslisting={isCrosslisting}
         showCrosslistPicker={showCrosslistPicker}
         crosslistTargets={crosslistTargets}
         availableForCrosslist={availableForCrosslist}
         platformUsernames={new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp.username]))}
+        extensionDetected={extensionInfo.detected}
         marketplaceData={marketplaceData}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
