@@ -259,16 +259,16 @@ export default function ListingsPage() {
     <div className="flex flex-col gap-6">
       {/* Page Header */}
       <div className="border-b border-sage/14 pb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h1 className="font-serif text-2xl italic text-ink">listings</h1>
-            <p className="text-[13px] mt-1" style={{ color: '#8A9E88' }}>
+            <p className="text-[13px] mt-1 hidden sm:block" style={{ color: '#8A9E88' }}>
               Where your items are listed — every platform listing across Vinted, eBay, and more. Crosslist items to new platforms from here.
             </p>
           </div>
           <Link
             href="/add-find"
-            className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
+            className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition whitespace-nowrap self-start"
           >
             + new listing
           </Link>
@@ -513,7 +513,7 @@ export default function ListingsPage() {
             return (
               <div
                 key={group.find_id}
-                className="bg-white border border-sage/14 rounded-md p-4 grid grid-cols-[auto_60px_1fr_auto] gap-4 items-start hover:bg-cream transition-colors"
+                className="bg-white border border-sage/14 rounded-md p-3 sm:p-4 grid grid-cols-[auto_48px_1fr] sm:grid-cols-[auto_60px_1fr_auto] gap-3 sm:gap-4 items-start hover:bg-cream transition-colors"
               >
                 {/* Checkbox */}
                 <div className="flex items-center pt-4">
@@ -526,7 +526,7 @@ export default function ListingsPage() {
                 </div>
 
                 {/* Thumbnail */}
-                <div className="w-16 h-16 bg-cream-md rounded-sm flex items-center justify-center text-xs font-medium tracking-wide flex-shrink-0 overflow-hidden" style={{ color: '#6B7D6A' }}>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-cream-md rounded-sm flex items-center justify-center text-xs font-medium tracking-wide flex-shrink-0 overflow-hidden" style={{ color: '#6B7D6A' }}>
                   {group.find?.photos?.[0] ? (
                     <img
                       src={group.find.photos[0]}
@@ -576,7 +576,7 @@ export default function ListingsPage() {
                 </div>
 
                 {/* Price + Meta (Right side) */}
-                <div className="text-right flex flex-col gap-1.5 items-end">
+                <div className="col-span-full sm:col-span-1 flex sm:flex-col gap-2 sm:gap-1.5 items-start sm:items-end sm:text-right flex-wrap pl-0 sm:pl-0">
                   <div className="font-serif font-medium text-ink text-xl">
                     {displayPrice != null ? `£${displayPrice.toFixed(2)}` : '—'}
                   </div>

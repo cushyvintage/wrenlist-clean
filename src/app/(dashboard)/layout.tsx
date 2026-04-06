@@ -1,10 +1,11 @@
 'use client'
 
 import { Sidebar } from '@/components/layout/Sidebar'
+import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { AppTopbar } from '@/components/layout/AppTopbar'
 import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { NavIcons } from '@/components/layout/NavIcons'
 
@@ -14,6 +15,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext()
   const [activeNav, setActiveNav] = useState('dashboard')
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
 
   const navItems = [
     // WORKSPACE
@@ -60,6 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   const handleNavClick = (id: string, path: string) => {
+    setMobileMenuOpen(false)
     router.push(path)
   }
 
@@ -122,11 +127,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         ))}
       </Sidebar>
 
+      {/* Mobile Sidebar Drawer */}
+      <MobileSidebar
+        open={mobileMenuOpen}
+        onClose={closeMobileMenu}
+        userInfo={{
+          name: user?.full_name || user?.email?.split('@')[0] || 'User',
+          plan: 'Nester',
+        }}
+      >
+        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS'].map((section) => (
+          <div key={section}>
+            {navItems.some((item) => item.section === section) && (
+              <>
+                <div
+                  className="text-[9px] uppercase tracking-[.12em] px-[18px] py-5 font-semibold"
+                  style={{ color: '#3D5C3A' }}
+                >
+                  {section}
+                </div>
+                {navItems
+                  .filter((item) => item.section === section)
+                  .map((item) => (
+                    <SidebarItem
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      active={activeNav === item.id}
+                      onClick={() => handleNavClick(item.id, item.path)}
+                    />
+                  ))}
+                {section !== 'SETTINGS' && (
+                  <div
+                    className="h-px mx-3 my-1"
+                    style={{ backgroundColor: 'rgba(255,255,255,.06)' }}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </MobileSidebar>
+
       {/* Main content area */}
       <div className="md:ml-[210px] flex flex-col min-h-screen">
         {/* Top bar with user menu */}
         <AppTopbar
           title={pageTitle}
+          onMenuClick={() => setMobileMenuOpen(true)}
           actions={activeNav === 'add-find' ? [] : [{ label: '+ Add find', onClick: handleAddFind, variant: 'primary' }]}
           rightSlot={
             <div className="relative">
@@ -193,7 +241,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
 
         {/* Page content */}
-        <main className="flex-1 mt-[60px] p-7" style={{ backgroundColor: '#F5F0E8' }}>
+        <main className="flex-1 mt-[60px] p-4 sm:p-5 md:p-7" style={{ backgroundColor: '#F5F0E8' }}>
           {children}
         </main>
       </div>

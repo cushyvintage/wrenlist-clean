@@ -43,17 +43,17 @@ export function MarketingNav({
     <nav
       className={`sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-sage/14 ${className}`}
     >
-      <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="text-2xl font-serif text-ink font-medium">Wrenlist</div>
-          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium">
+          <div className="hidden sm:block text-xs uppercase tracking-widest text-sage-dim font-medium">
             Thrifter&apos;s OS
           </div>
         </div>
 
-        {/* Center nav links */}
-        <div className="flex gap-8 items-center">
+        {/* Center nav links - hidden on mobile */}
+        <div className="hidden md:flex gap-8 items-center">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -73,13 +73,13 @@ export function MarketingNav({
         <div className="flex items-center gap-3">
           <button
             onClick={onLoginClick}
-            className="text-sm uppercase tracking-wide text-ink-lt hover:text-sage transition-colors"
+            className="hidden sm:block text-sm uppercase tracking-wide text-ink-lt hover:text-sage transition-colors"
           >
             log in
           </button>
           <button
             onClick={onStartClick}
-            className="px-5 py-2.5 text-sm bg-sage text-white hover:bg-sage-dk rounded transition-colors uppercase tracking-wide font-medium"
+            className="px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm bg-sage text-white hover:bg-sage-dk rounded transition-colors uppercase tracking-wide font-medium"
           >
             start free
           </button>
