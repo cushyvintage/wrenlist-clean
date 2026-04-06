@@ -140,41 +140,43 @@ export default function SettingsPage() {
     loadWorkspace()
   }, [])
 
-  // Load real platform connection statuses
+  // Load real platform connection statuses from single endpoint
   useEffect(() => {
     const loadPlatforms = async () => {
       try {
-        const results: PlatformConnection[] = []
+        interface PlatformStatus {
+          platforms: {
+            vinted: { connected: boolean; username?: string | null }
+            ebay: { connected: boolean; username?: string | null }
+            shopify: { connected: boolean; shopName?: string | null }
+            etsy: { connected: boolean; username?: string | null }
+          }
+        }
+        const data = await fetchApi<PlatformStatus>('/api/platforms/status')
+        const p = data.platforms
 
-        // Check eBay
-        try {
-          const ebay = await fetchApi<{ connected: boolean; ebayUser?: string }>('/api/ebay/status')
-          results.push({
+        setPlatforms([
+          {
+            platform: 'Vinted',
+            status: p.vinted.connected ? 'connected' : 'not_connected',
+            accountName: p.vinted.username || undefined,
+          },
+          {
             platform: 'eBay',
-            status: ebay.connected ? 'connected' : 'not_connected',
-            accountName: ebay.ebayUser || undefined,
-          })
-        } catch {
-          results.push({ platform: 'eBay', status: 'not_connected' })
-        }
-
-        // Check Shopify
-        try {
-          const shopify = await fetchApi<{ connected: boolean; shopName?: string }>('/api/shopify/connect')
-          results.push({
+            status: p.ebay.connected ? 'connected' : 'not_connected',
+            accountName: p.ebay.username || undefined,
+          },
+          {
             platform: 'Shopify',
-            status: shopify.connected ? 'connected' : 'not_connected',
-            accountName: shopify.shopName || undefined,
-          })
-        } catch {
-          results.push({ platform: 'Shopify', status: 'not_connected' })
-        }
-
-        // Vinted and Etsy — no connection API yet, show as not_connected
-        results.unshift({ platform: 'Vinted', status: 'not_connected' })
-        results.push({ platform: 'Etsy', status: 'not_connected' })
-
-        setPlatforms(results)
+            status: p.shopify.connected ? 'connected' : 'not_connected',
+            accountName: p.shopify.shopName || undefined,
+          },
+          {
+            platform: 'Etsy',
+            status: p.etsy.connected ? 'connected' : 'not_connected',
+            accountName: p.etsy.username || undefined,
+          },
+        ])
       } catch (error) {
         console.error('Failed to load platforms:', error)
       } finally {
