@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { Loader2, X } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Panel } from '@/components/wren/Panel'
 import { useRouter } from 'next/navigation'
-import { BarcodeDetector } from 'barcode-detector/ponyfill'
+import { fetchApi } from '@/lib/api-utils'
+import { CameraScanner } from '@/components/scanner/CameraScanner'
+import type { ScanPriceData, ScanHistoryRecord } from '@/types'
 
 // ---------- Types ----------
 
@@ -17,13 +19,6 @@ interface LookupResult {
   source: 'isbn' | 'ai' | 'manual'
 }
 
-interface PriceData {
-  ebay_avg: string
-  vinted_recent: string
-  depop_avg: string
-  suggested_ask: string
-}
-
 interface WrenInsight {
   text: string
 }
@@ -33,166 +28,14 @@ interface RecentScan {
   identified: string
   time: Date
   lookupResult?: LookupResult
-  priceData?: PriceData
+  priceData?: ScanPriceData
   insight?: WrenInsight
 }
 
-// ---------- Barcode Scanner (inline) ----------
-
-function CameraScanner({ onDetected, onClose }: { onDetected: (code: string) => void; onClose: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
-
-  useEffect(() => {
-    const startCamera = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        })
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          streamRef.current = stream
-
-          // Wait for video metadata to load (required for iOS Safari)
-          await new Promise<void>((resolve) => {
-            const video = videoRef.current!
-            if (video.readyState >= 2) {
-              resolve()
-            } else {
-              video.addEventListener('loadeddata', () => resolve(), { once: true })
-            }
-          })
-
-          // Explicit play() for iOS Safari
-          await videoRef.current.play()
-          setIsScanning(true)
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to access camera'
-        setError(message)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    startCamera()
-
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-        streamRef.current = null
-      }
-    }
-  }, [])
-
-  // Scanning loop
-  useEffect(() => {
-    if (!isScanning || !videoRef.current || !canvasRef.current) return
-
-    const detector = new BarcodeDetector({
-      formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
-    })
-
-    let animationId: number
-    const scan = async () => {
-      try {
-        if (!videoRef.current || !canvasRef.current) return
-
-        // Wait for video to have dimensions (iOS can be slow)
-        if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
-          animationId = requestAnimationFrame(scan)
-          return
-        }
-
-        const ctx = canvasRef.current.getContext('2d')
-        if (!ctx) return
-
-        canvasRef.current.width = videoRef.current.videoWidth
-        canvasRef.current.height = videoRef.current.videoHeight
-        ctx.drawImage(videoRef.current, 0, 0)
-
-        const barcodes = await detector.detect(canvasRef.current)
-
-        if (barcodes.length > 0 && barcodes[0]) {
-          const code = barcodes[0].rawValue
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop())
-            streamRef.current = null
-          }
-          setIsScanning(false)
-          onDetected(code)
-          return
-        }
-      } catch {
-        // continue scanning
-      }
-      animationId = requestAnimationFrame(scan)
-    }
-
-    animationId = requestAnimationFrame(scan)
-    return () => cancelAnimationFrame(animationId)
-  }, [isScanning, onDetected])
-
-  return (
-    <div className="relative w-full min-h-[250px]" style={{ aspectRatio: '4/3' }}>
-      {/* Camera feed */}
-      <div className="absolute inset-0 bg-[#2a3a28] rounded-lg overflow-hidden flex items-center justify-center min-h-[250px]">
-        {loading && <Loader2 className="w-8 h-8 text-white/40 animate-spin" />}
-
-        {error && (
-          <div className="text-center px-6">
-            <p className="text-white/60 text-sm mb-3">{error}</p>
-          </div>
-        )}
-
-        {/* Video element always rendered so ref is available for getUserMedia */}
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className={`w-full h-full object-cover ${isScanning ? '' : 'hidden'}`}
-        />
-
-        {/* Viewfinder overlay when scanning */}
-        {isScanning && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p className="text-white/70 text-xs uppercase tracking-widest mb-4">
-              Scanning...
-            </p>
-            <div className="w-48 h-32 border-2 border-white/30 rounded-lg" />
-          </div>
-        )}
-
-        {!isScanning && !loading && !error && (
-          <p className="text-white/70 text-xs uppercase tracking-widest">
-            Starting camera...
-          </p>
-        )}
-      </div>
-
-      <canvas ref={canvasRef} className="hidden" />
-
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-3 p-1 bg-black/30 hover:bg-black/50 rounded transition-colors"
-      >
-        <X className="w-4 h-4 text-white" />
-      </button>
-    </div>
-  )
-}
-
 // ---------- Helpers ----------
+
+const RECENT_SCANS_KEY = 'wrenlist:recent-scans'
+const MAX_STORED_SCANS = 50
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
@@ -200,22 +43,112 @@ function timeAgo(date: Date): string {
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} min ago`
   const hours = Math.floor(minutes / 60)
-  return `${hours}h ago`
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function loadRecentScans(): RecentScan[] {
+  try {
+    const raw = localStorage.getItem(RECENT_SCANS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Array<RecentScan & { time: string }>
+    return parsed.map((s) => ({ ...s, time: new Date(s.time) }))
+  } catch {
+    return []
+  }
+}
+
+function saveRecentScans(scans: RecentScan[]) {
+  try {
+    localStorage.setItem(RECENT_SCANS_KEY, JSON.stringify(scans.slice(0, MAX_STORED_SCANS)))
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+/** In-flight save tracking to prevent duplicate Supabase writes */
+const inFlightSaves = new Set<string>()
+
+/** Fire-and-forget save to Supabase (deduped by barcode) */
+function saveScanToApi(scan: {
+  barcode: string
+  title?: string
+  category?: string
+  brand?: string
+  details?: string
+  source?: string
+  price_data?: ScanPriceData | null
+}) {
+  if (inFlightSaves.has(scan.barcode)) return
+  inFlightSaves.add(scan.barcode)
+
+  fetchApi('/api/scans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(scan),
+  })
+    .catch(() => {
+      // non-blocking — localStorage is the fallback
+    })
+    .finally(() => {
+      inFlightSaves.delete(scan.barcode)
+    })
+}
+
+/** Fetch scan history from API and merge with localStorage scans */
+async function fetchAndMergeScans(
+  setScans: (fn: (prev: RecentScan[]) => RecentScan[]) => void,
+) {
+  try {
+    const remote = await fetchApi<ScanHistoryRecord[]>('/api/scans?limit=100')
+
+    // Convert remote records to RecentScan format
+    const remoteMapped: RecentScan[] = remote.map((r) => ({
+      barcode: r.barcode,
+      identified: r.title
+        ? `${r.title}${r.brand ? ` · ${r.brand}` : ''}${r.details ? ` · ${r.details}` : ''}`
+        : `Unknown (${r.barcode})`,
+      time: new Date(r.created_at),
+      lookupResult: r.title ? { title: r.title, category: '', brand: r.brand ?? '', details: r.details ?? '', ean: r.barcode, source: (r.source ?? 'manual') as LookupResult['source'] } : undefined,
+      priceData: r.price_data ?? undefined,
+    }))
+
+    // Merge: local wins on barcode collision, add any remote-only barcodes
+    setScans((prev) => {
+      const localBarcodes = new Set(prev.map((s) => s.barcode))
+      const newFromRemote = remoteMapped.filter((s) => !localBarcodes.has(s.barcode))
+      if (newFromRemote.length === 0) return prev
+      const merged = [...prev, ...newFromRemote]
+        .sort((a, b) => b.time.getTime() - a.time.getTime())
+        .slice(0, MAX_STORED_SCANS)
+      saveRecentScans(merged)
+      return merged
+    })
+  } catch {
+    // API unavailable — localStorage is enough
+  }
 }
 
 // ---------- Main Page ----------
 
 export default function ScannerPage() {
   const router = useRouter()
-  const [cameraOpen, setCameraOpen] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(true)
   const [manualInput, setManualInput] = useState('')
   const [looking, setLooking] = useState(false)
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null)
-  const [priceData, setPriceData] = useState<PriceData | null>(null)
+  const [priceData, setPriceData] = useState<ScanPriceData | null>(null)
   const [insight, setInsight] = useState<WrenInsight | null>(null)
   const [priceLoading, setPriceLoading] = useState(false)
   const [recentScans, setRecentScans] = useState<RecentScan[]>([])
   const [lastScan, setLastScan] = useState<{ code: string; result: LookupResult } | null>(null)
+
+  // Load recent scans: localStorage first (instant), then merge from API
+  useEffect(() => {
+    setRecentScans(loadRecentScans())
+    fetchAndMergeScans(setRecentScans)
+  }, [])
 
   // Perform barcode lookup
   const doLookup = useCallback(async (code: string) => {
@@ -226,6 +159,7 @@ export default function ScannerPage() {
     setLastScan(null)
 
     try {
+      // Raw fetch — barcode/lookup returns unwrapped JSON (not ApiResponseHelper)
       const res = await fetch(`/api/barcode/lookup?code=${encodeURIComponent(code)}`)
       if (!res.ok) throw new Error('Lookup failed')
 
@@ -243,12 +177,17 @@ export default function ScannerPage() {
         lookupResult: result,
       }
 
-      setRecentScans((prev) => [scan, ...prev.slice(0, 19)])
+      setRecentScans((prev) => {
+        const next = [scan, ...prev.slice(0, MAX_STORED_SCANS - 1)]
+        saveRecentScans(next)
+        return next
+      })
 
       // Fetch price research if we got a title
       if (result.title) {
         setPriceLoading(true)
         try {
+          // Raw fetch — price-research returns unwrapped JSON (not ApiResponseHelper)
           const priceQuery = [result.title, result.brand, result.details].filter(Boolean).join(' ')
           const priceRes = await fetch('/api/price-research', {
             method: 'POST',
@@ -258,7 +197,7 @@ export default function ScannerPage() {
 
           if (priceRes.ok) {
             const data = await priceRes.json()
-            const pd: PriceData = {
+            const pd: ScanPriceData = {
               ebay_avg: `£${data.ebay?.avg_price ?? '—'}`,
               vinted_recent: data.vinted?.min_price && data.vinted?.max_price
                 ? `£${data.vinted.min_price}–£${data.vinted.max_price}`
@@ -280,14 +219,48 @@ export default function ScannerPage() {
               if (updated[0]) {
                 updated[0] = { ...updated[0], priceData: pd }
               }
+              saveRecentScans(updated)
               return updated
+            })
+
+            // Save to Supabase (with price data)
+            saveScanToApi({
+              barcode: code,
+              title: result.title,
+              category: result.category,
+              brand: result.brand,
+              details: result.details,
+              source: result.source,
+              price_data: pd,
+            })
+          } else {
+            // No price data — still save to Supabase
+            saveScanToApi({
+              barcode: code,
+              title: result.title,
+              category: result.category,
+              brand: result.brand,
+              details: result.details,
+              source: result.source,
             })
           }
         } catch {
           // price research is optional, don't block
+          // Save scan without price data
+          saveScanToApi({
+            barcode: code,
+            title: result.title,
+            category: result.category,
+            brand: result.brand,
+            details: result.details,
+            source: result.source,
+          })
         } finally {
           setPriceLoading(false)
         }
+      } else {
+        // No title — save barcode-only scan
+        saveScanToApi({ barcode: code })
       }
     } catch {
       setLookupResult(null)
@@ -296,10 +269,9 @@ export default function ScannerPage() {
     }
   }, [])
 
-  // Camera detected barcode
+  // Camera detected barcode — keep camera open for continuous scanning
   const handleBarcodeDetected = useCallback(
     (code: string) => {
-      setCameraOpen(false)
       setManualInput(code)
       doLookup(code)
     },

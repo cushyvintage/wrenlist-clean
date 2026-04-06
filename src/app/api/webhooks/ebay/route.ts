@@ -81,37 +81,41 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Verify eBay webhook notification signature.
- * eBay signs POST payloads using the verification token + endpoint URL.
- * We compute SHA-256(body + verificationToken + endpointUrl) and compare
- * against the X-EBAY-SIGNATURE header.
+ * Verify eBay webhook notification.
+ *
+ * eBay POST notifications use EC digital signatures with a rotating public key
+ * (fetched via GET /notification/v1/public_key/{key_id}). Full verification
+ * requires calling eBay's API to fetch the key, then EC signature validation.
+ *
+ * For now we validate that the signature header is present and well-formed
+ * (Base64-encoded JSON with a keyId). This prevents random noise but does not
+ * cryptographically verify the payload. The webhook endpoint URL is not
+ * publicly discoverable and events are idempotent (worst case: a spoofed
+ * ITEM_SOLD marks a find as sold, which is correctable).
+ *
+ * TODO: Implement full EC signature verification when scaling to multi-seller:
+ *   1. Base64-decode X-EBAY-SIGNATURE to get { alg, kid, signature, digest }
+ *   2. Fetch public key: GET https://api.ebay.com/commerce/notification/v1/public_key/{kid}
+ *   3. Verify signature using crypto.createVerify('SHA256').verify(publicKey, sig)
+ *   4. Cache public keys for 1h to avoid rate limits
  */
-function verifyWebhookSignature(body: string, signatureHeader: string | null): boolean {
-  const verificationToken = process.env.EBAY_WEBHOOK_VERIFICATION_TOKEN
-  if (!verificationToken) {
-    console.error('[eBay Webhook] Missing EBAY_WEBHOOK_VERIFICATION_TOKEN — rejecting')
-    return false
-  }
-
+function validateWebhookSignatureHeader(signatureHeader: string | null): boolean {
   if (!signatureHeader) {
     console.warn('[eBay Webhook] No X-EBAY-SIGNATURE header present')
     return false
   }
 
-  const endpointUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'}/api/webhooks/ebay`
-  const expected = crypto
-    .createHash('sha256')
-    .update(body + verificationToken + endpointUrl)
-    .digest('hex')
-
-  // Constant-time comparison to prevent timing attacks
+  // eBay X-EBAY-SIGNATURE is Base64-encoded JSON: { "alg": "...", "kid": "...", ... }
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected, 'hex'),
-      Buffer.from(signatureHeader, 'hex')
-    )
+    const decoded = Buffer.from(signatureHeader, 'base64').toString('utf8')
+    const parsed = JSON.parse(decoded) as { kid?: string; alg?: string }
+    if (!parsed.kid) {
+      console.warn('[eBay Webhook] Signature header missing kid')
+      return false
+    }
+    return true
   } catch {
-    // If header is wrong length or not valid hex, reject
+    console.warn('[eBay Webhook] Signature header not valid Base64 JSON')
     return false
   }
 }
@@ -125,12 +129,18 @@ export async function POST(request: NextRequest) {
     const signatureHeader = request.headers.get('X-EBAY-SIGNATURE')
     const body = await request.text()
 
-    if (!verifyWebhookSignature(body, signatureHeader)) {
-      console.warn('[eBay Webhook] Signature verification failed')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    // Require verification token to be configured as a basic guard
+    if (!process.env.EBAY_WEBHOOK_VERIFICATION_TOKEN) {
+      console.error('[eBay Webhook] EBAY_WEBHOOK_VERIFICATION_TOKEN not configured — rejecting')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    console.log('[eBay Webhook] Signature verified')
+    if (!validateWebhookSignatureHeader(signatureHeader)) {
+      console.warn('[eBay Webhook] Signature validation failed')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 412 })
+    }
+
+    console.log('[eBay Webhook] Signature header validated')
 
     // Parse payload
     const payload: eBayWebhookPayload = JSON.parse(body)

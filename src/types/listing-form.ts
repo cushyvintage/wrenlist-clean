@@ -5,6 +5,8 @@
 import type { FindCondition, Platform } from './index'
 
 export interface PlatformFieldsData {
+  /** Shared marketplace fields (colour text, type, style, etc.) — platform-agnostic input values */
+  shared?: Record<string, string | string[] | boolean | undefined>
   vinted?: {
     primaryColor?: number
     secondaryColor?: number

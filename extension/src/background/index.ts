@@ -212,44 +212,60 @@ type ExternalMessage = Record<string, unknown>;
   });
 
   /**
-   * Fetch wrapper that reads Supabase auth cookies via chrome.cookies API
-   * and injects them as a Cookie header.
+   * Fetch wrapper for queue API calls.
    *
-   * MV3 service-worker `fetch()` with `credentials: "include"` does NOT
-   * reliably send first-party cookies for host_permissions origins.
-   * Using `chrome.cookies.getAll()` + an explicit Cookie header works.
+   * MV3 service workers have no cookie jar — both `credentials: "include"`
+   * and manually setting the `Cookie` header are silently ignored.
+   *
+   * Workaround: read the Supabase JWT from the chunked auth cookie via
+   * `chrome.cookies.getAll()`, reassemble it, decode the base64 wrapper,
+   * extract the access_token, and send it as `Authorization: Bearer`.
+   * Supabase's `getUser()` accepts Bearer tokens from the Authorization header.
    */
-  let _cachedCookieStr: string | null = null;
-  let _cachedCookieTs = 0;
   async function queueFetch(url: string, init?: RequestInit): Promise<Response> {
-    // Cache cookies for 30s to avoid hammering chrome.cookies on every POST
-    const now = Date.now();
-    if (!_cachedCookieStr || now - _cachedCookieTs > 30_000) {
-      try {
-        // Use `url` filter — more reliable than `domain` for matching cookies
-        // set with or without a leading dot on the domain.
-        const allCookies = await chrome.cookies.getAll({ url });
-        _cachedCookieStr = allCookies.map((c) => `${c.name}=${c.value}`).join("; ");
-        _cachedCookieTs = now;
-        console.log(`[QueuePoll] Loaded ${allCookies.length} cookies for ${new URL(url).origin}`);
-      } catch (e) {
-        console.warn("[QueuePoll] Failed to read cookies:", e);
-        _cachedCookieStr = "";
+    const headers = new Headers(init?.headers);
+
+    try {
+      const baseOrigin = new URL(url).origin;
+      const allCookies = await chrome.cookies.getAll({ url: baseOrigin });
+
+      // Supabase SSR stores the session as base64-encoded JSON in a cookie
+      // named sb-{ref}-auth-token (possibly chunked with .0, .1 suffixes).
+      const authPrefix = "sb-";
+      const authSuffix = "-auth-token";
+
+      // Collect chunks: sb-xxx-auth-token.0, sb-xxx-auth-token.1, etc.
+      const chunks = allCookies
+        .filter((c) => c.name.startsWith(authPrefix) && c.name.includes(authSuffix))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (chunks.length > 0) {
+        // Join chunk values (the cookie value is base64-encoded JSON)
+        const raw = chunks.map((c) => c.value).join("");
+        // Supabase SSR wraps the value as "base64-{base64data}"
+        const b64 = raw.startsWith("base64-") ? raw.slice(7) : raw;
+        try {
+          const json = atob(b64);
+          const session = JSON.parse(json);
+          const accessToken = session.access_token ?? session[0]; // array format: [access_token, refresh_token]
+          if (accessToken) {
+            headers.set("Authorization", `Bearer ${accessToken}`);
+          }
+        } catch {
+          // Could not decode — fall through without auth
+          console.warn("[QueuePoll] Failed to decode Supabase auth cookie");
+        }
       }
+    } catch {
+      // chrome.cookies failed — no auth available
     }
 
-    const headers = new Headers(init?.headers);
-    if (_cachedCookieStr) {
-      headers.set("Cookie", _cachedCookieStr);
-    }
     return fetch(url, { ...init, headers });
   }
 
   /** Extracted so it can be invoked by both the alarm and check_queue message. */
   async function runQueuePoll(): Promise<{ publish: number; delist: number; error?: string }> {
     const baseUrl = await getWrenlistBaseUrl();
-    // Reset cookie cache at start of each poll so we pick up fresh tokens
-    _cachedCookieStr = null;
     let publishCount = 0;
     let delistCount = 0;
 
@@ -561,6 +577,25 @@ type ExternalMessage = Record<string, unknown>;
         .catch((error) => sendResponse(withError(error)));
       return true;
     }
+    if (cmd === "debug_cookies") {
+      void (async () => {
+        const baseUrl = await getWrenlistBaseUrl();
+        const cookies = await chrome.cookies.getAll({ url: baseUrl });
+        const names = cookies.map((c) => c.name);
+        // Try the fetch and report the status
+        const res = await queueFetch(`${baseUrl}/api/marketplace/publish-queue`);
+        const body = await res.text();
+        sendResponse(withExtensionVersion({
+          success: true,
+          baseUrl,
+          cookieCount: cookies.length,
+          cookieNames: names,
+          fetchStatus: res.status,
+          fetchBody: body.substring(0, 200),
+        }));
+      })().catch((error) => sendResponse(withError(error)));
+      return true;
+    }
 
     void dispatchExternalMessage(message as ExternalMessage)
       .then(sendResponse)
@@ -745,10 +780,12 @@ async function dispatchExternalMessage(message: ExternalMessage) {
 async function handlePublishCommand(message: ExternalMessage) {
   const marketplace = resolveMarketplace(message);
   const product = resolveProduct(message);
+  const publishMode = (message.publishMode as "draft" | "publish" | undefined) ?? "draft";
   return withExtensionVersion(
     await publishToMarketplace(marketplace, product, {
       settings: resolveSettings(message),
       tld: resolveTldFromMessage(message, marketplace),
+      publishMode,
     }),
   );
 }

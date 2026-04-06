@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getServerUser } from './supabase-server'
 import { ApiResponseHelper } from './api-response'
 import type { User } from '@supabase/supabase-js'
@@ -16,14 +17,37 @@ type AuthedHandler = (
 type RouteContext = { params: Promise<Record<string, string>> }
 
 /**
+ * Try to authenticate via Authorization: Bearer header.
+ * Used by the Chrome extension's MV3 service worker which cannot send cookies.
+ */
+async function getUserFromBearerToken(req: NextRequest): Promise<User | null> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const token = authHeader.slice(7)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user } } = await supabase.auth.getUser(token)
+  return user
+}
+
+/**
  * HOF wrapper for authenticated API routes.
- * Checks user auth and injects user into handler.
+ * Checks user auth via cookies first, then falls back to Authorization header.
  * Returns 401 if not authenticated.
  */
 export function withAuth(handler: AuthedHandler) {
   return async (req: NextRequest, context: RouteContext) => {
     try {
-      const user = await getServerUser()
+      let user = await getServerUser()
+
+      // Fallback: Bearer token from Authorization header (extension service worker)
+      if (!user) {
+        user = await getUserFromBearerToken(req)
+      }
 
       if (!user) {
         return ApiResponseHelper.unauthorized()

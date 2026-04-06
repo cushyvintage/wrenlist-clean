@@ -29,7 +29,7 @@ export async function publishToMarketplace(marketplace, product, options = {}) {
             case "whatnot":
                 return publishViaWhatnot(product, tld);
             case "etsy":
-                return publishViaEtsy(product);
+                return publishViaEtsy(product, options);
             default:
                 throw new Error(`${marketplace} is not supported`);
         }
@@ -216,9 +216,11 @@ async function delistViaWhatnot(id, tld) {
     const services = createWhatnotServices(tld);
     return withAuthRetry("whatnot", () => services.client.delistListing(id));
 }
-async function publishViaEtsy(product) {
+async function publishViaEtsy(product, options = {}) {
     const services = createEtsyServices();
-    return services.client.publishProduct(product);
+    return services.client.publishProduct(product, {
+        publishMode: options.publishMode ?? "draft",
+    });
 }
 async function delistViaEtsy(id) {
     const services = createEtsyServices();

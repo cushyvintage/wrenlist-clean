@@ -213,7 +213,10 @@ export class EtsyClient {
    * Opens the listing editor, fills all fields, uploads images,
    * selects category, and clicks Publish.
    */
-  public async publishProduct(product: Product): Promise<ListingActionResult> {
+  public async publishProduct(
+    product: Product,
+    options?: { publishMode?: "draft" | "publish" },
+  ): Promise<ListingActionResult> {
     try {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
@@ -278,15 +281,26 @@ export class EtsyClient {
         // Step 4: Select the first delivery profile
         await this.selectDeliveryProfile(tabId);
 
-        // Step 5: Save as draft (avoids $0.20 fee, user publishes from Etsy when ready)
+        // Step 5: Click Save as draft or Publish depending on mode
+        const mode = options?.publishMode ?? "draft";
         await wait(1000);
         await chrome.scripting.executeScript({
           target: { tabId },
           func: clickPublishButton,
+          args: [mode],
         });
 
+        // If publishing directly, handle the $0.20 fee confirmation dialog
+        if (mode === "publish") {
+          await wait(2000);
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            func: clickPublishConfirmation,
+          });
+        }
+
         // Step 6: Wait for save to complete.
-        // After saving as draft, Etsy redirects to the listings manager
+        // After saving/publishing, Etsy redirects to the listings manager
         // (/your/shops/me/tools/listings) — the listing ID is NOT in the
         // redirect URL. We poll for the URL to change away from the create
         // page, then scrape the most recent draft listing ID from the page.
@@ -301,8 +315,8 @@ export class EtsyClient {
             const updatedTab = await chrome.tabs.get(tabId);
             const tabUrl = updatedTab?.url || "";
 
-            // Check for listing-editor/{id} redirect (edit page)
-            const editorMatch = tabUrl.match(/listing-editor\/(\d+)/);
+            // Check for listing-editor/{id} or listing-editor/edit/{id} redirect
+            const editorMatch = tabUrl.match(/listing-editor\/(?:edit\/)?(\d+)/);
             if (editorMatch?.[1]) {
               listingId = editorMatch[1];
               break;
@@ -334,7 +348,7 @@ export class EtsyClient {
                     const titlePrefix = title.slice(0, 30);
                     for (const link of links) {
                       const href = link.getAttribute("href") || "";
-                      const idMatch = href.match(/listing-editor\/(\d+)/);
+                      const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
                       if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
                         return idMatch[1];
                       }
@@ -342,7 +356,7 @@ export class EtsyClient {
                     // Pass 2: first listing-editor link (most recent draft)
                     for (const link of links) {
                       const href = link.getAttribute("href") || "";
-                      const idMatch = href.match(/listing-editor\/(\d+)/);
+                      const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
                       if (idMatch?.[1]) return idMatch[1];
                     }
                     return null;
@@ -370,11 +384,12 @@ export class EtsyClient {
 
         // Even without a listing ID, if we got past validation the save worked.
         // The redirect to /tools/listings confirms it.
+        const modeLabel = mode === "publish" ? "published" : "saved as draft";
         return {
           success: true,
           message: listingId
-            ? "Listing saved as draft on Etsy."
-            : "Listing saved as draft on Etsy (ID not captured — check Etsy dashboard).",
+            ? `Listing ${modeLabel} on Etsy.`
+            : `Listing ${modeLabel} on Etsy (ID not captured — check Etsy dashboard).`,
           product: listingId
             ? { id: listingId, url: listingUrl || this.getProductUrl(listingId) }
             : undefined,
@@ -1084,34 +1099,53 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
 }
 
 /**
- * Click the Publish button (or Save as draft if Publish is disabled).
- * Scrolls the button into view first.
+ * Click Save as draft or Publish depending on mode.
+ * @param mode "draft" saves without fee; "publish" lists live ($0.20 fee).
  */
-function clickPublishButton(): { success: boolean; message?: string } {
+function clickPublishButton(
+  mode: "draft" | "publish" = "draft",
+): { success: boolean; message?: string } {
   try {
     const buttons = Array.from(document.querySelectorAll("button"));
 
-    // Save as draft first — safer for automated flow, avoids $0.20 fee
-    // until user explicitly publishes from Etsy dashboard
-    const draftBtn = buttons.find((b) =>
-      b.textContent?.trim()?.includes("Save as draft"),
-    );
-
-    if (draftBtn && !draftBtn.disabled) {
-      draftBtn.scrollIntoView({ block: "center" });
-      draftBtn.click();
-      return { success: true, message: "Saved as draft" };
-    }
-
-    // Fallback: try Publish if no draft button
-    const publishBtn = buttons.find(
-      (b) => b.textContent?.trim() === "Publish",
-    );
-
-    if (publishBtn && !publishBtn.disabled) {
-      publishBtn.scrollIntoView({ block: "center" });
-      publishBtn.click();
-      return { success: true, message: "Clicked Publish" };
+    if (mode === "publish") {
+      // Publish directly — user accepted the $0.20 listing fee
+      const publishBtn = buttons.find(
+        (b) => b.textContent?.trim() === "Publish",
+      );
+      if (publishBtn && !publishBtn.disabled) {
+        publishBtn.scrollIntoView({ block: "center" });
+        publishBtn.click();
+        return { success: true, message: "Clicked Publish" };
+      }
+      // Fallback to draft if Publish is disabled
+      const draftBtn = buttons.find((b) =>
+        b.textContent?.trim()?.includes("Save as draft"),
+      );
+      if (draftBtn && !draftBtn.disabled) {
+        draftBtn.scrollIntoView({ block: "center" });
+        draftBtn.click();
+        return { success: true, message: "Publish disabled — saved as draft instead" };
+      }
+    } else {
+      // Save as draft — avoids $0.20 fee
+      const draftBtn = buttons.find((b) =>
+        b.textContent?.trim()?.includes("Save as draft"),
+      );
+      if (draftBtn && !draftBtn.disabled) {
+        draftBtn.scrollIntoView({ block: "center" });
+        draftBtn.click();
+        return { success: true, message: "Saved as draft" };
+      }
+      // Fallback to Publish if draft button not available
+      const publishBtn = buttons.find(
+        (b) => b.textContent?.trim() === "Publish",
+      );
+      if (publishBtn && !publishBtn.disabled) {
+        publishBtn.scrollIntoView({ block: "center" });
+        publishBtn.click();
+        return { success: true, message: "Draft not available — clicked Publish" };
+      }
     }
 
     return { success: false, message: "Save/Publish button not found or disabled" };

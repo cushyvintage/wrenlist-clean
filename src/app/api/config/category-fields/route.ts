@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
-import { CategoryFieldConfig, FieldConfig, Platform } from '@/types'
+import { FieldConfig, Platform } from '@/types'
+import { getRequiredFields } from '@/data/marketplace-required-fields'
 
-// Default field config for unknown categories
-const DEFAULT_FIELD_CONFIG: Record<string, FieldConfig> = {
-  colour: { show: true, required: false },
-  material: { show: false },
-  size: { show: false },
-  condition_description: { show: true, required: false },
-  brand: { show: false },
+const CACHE_HEADERS = {
+  'Cache-Control': 'private, max-age=3600, stale-while-revalidate=86400',
 }
 
 export const GET = async (req: NextRequest) => {
@@ -24,46 +20,41 @@ export const GET = async (req: NextRequest) => {
       )
     }
 
-    const supabase = await createSupabaseServerClient()
+    // Static required fields as base (covers all 130 categories × 5 platforms)
+    const staticFields = getRequiredFields(category.toLowerCase(), marketplace)
 
-    const { data, error } = await supabase
+    // Check DB for overrides (extension PATCH writes here)
+    const supabase = await createSupabaseServerClient()
+    const { data } = await supabase
       .from('marketplace_category_config')
       .select('*')
       .eq('category', category.toLowerCase())
       .eq('marketplace', marketplace)
       .single()
 
-    if (error) {
-      // Return default config if category not found
-      if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          {
-            category,
-            marketplace,
-            fields: DEFAULT_FIELD_CONFIG,
-          },
-          {
-            status: 200,
-            headers: {
-              'Cache-Control': 'private, max-age=3600, stale-while-revalidate=86400',
-            },
-          }
-        )
+    if (data?.fields) {
+      // Merge DB overrides on top of static data
+      const dbFields = data.fields as unknown as Record<string, FieldConfig>
+      const merged = { ...staticFields }
+      for (const [key, val] of Object.entries(dbFields)) {
+        merged[key] = { ...merged[key], ...val }
       }
-      throw error
+
+      return NextResponse.json(
+        { ...data, fields: merged },
+        { headers: CACHE_HEADERS }
+      )
     }
 
-    // Cast the JSONB fields to correct type
-    const config: CategoryFieldConfig = {
-      ...data,
-      fields: (data.fields as unknown as Record<string, FieldConfig>) || DEFAULT_FIELD_CONFIG,
-    }
-
-    return NextResponse.json(config, {
-      headers: {
-        'Cache-Control': 'private, max-age=3600, stale-while-revalidate=86400',
+    // No DB override — return static fields directly
+    return NextResponse.json(
+      {
+        category: category.toLowerCase(),
+        marketplace,
+        fields: staticFields,
       },
-    })
+      { status: 200, headers: CACHE_HEADERS }
+    )
   } catch (err) {
     const error = err instanceof Error ? err.message : 'Unknown error'
     console.error('Error fetching category config:', error)

@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
@@ -11,14 +10,31 @@ import { logMarketplaceEvent } from '@/lib/marketplace-events'
  * Extension polls this to find listings to publish.
  */
 export const GET = withAuth(async (_req, user) => {
-  const supabase = await createSupabaseServerClient()
+  // Use service role client with explicit user_id filter instead of RLS.
+  // The extension's MV3 service worker authenticates via Bearer token, so
+  // the cookie-based Supabase client has no session and RLS blocks queries.
+  // withAuth already verified the user, so filtering by user_id is safe.
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  // Get marketplace data with needs_publish status for this user's finds
-  // RLS on product_marketplace_data already filters by user via the finds FK policy
-  const { data, error } = await supabase
+  // First get this user's find IDs, then get their marketplace data
+  const { data: userFinds } = await supabaseAdmin
+    .from('finds')
+    .select('id')
+    .eq('user_id', user.id)
+
+  const userFindIds = (userFinds || []).map((f) => f.id)
+  if (userFindIds.length === 0) {
+    return ApiResponseHelper.success([])
+  }
+
+  const { data, error } = await supabaseAdmin
     .from('product_marketplace_data')
     .select('find_id, marketplace, fields, listing_price, platform_category_id')
     .eq('status', 'needs_publish')
+    .in('find_id', userFindIds)
 
   if (error) {
     console.error('[PublishQueue] Marketplace data query failed:', error)
@@ -30,13 +46,8 @@ export const GET = withAuth(async (_req, user) => {
     return ApiResponseHelper.success([])
   }
 
-  // Enrich with find data using service role (bypasses RLS — safe since
-  // product_marketplace_data RLS already verified user ownership)
+  // Enrich with find data
   const findIds = [...new Set(items.map((d) => d.find_id))]
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
   const { data: finds } = await supabaseAdmin
     .from('finds')
     .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size')
@@ -54,7 +65,7 @@ export const GET = withAuth(async (_req, user) => {
   const hasShopify = items.some((item) => item.marketplace === 'shopify')
   let shopifyStoreDomain: string | null = null
   if (hasShopify) {
-    const { data: conn } = await supabase
+    const { data: conn } = await supabaseAdmin
       .from('shopify_connections')
       .select('store_domain')
       .eq('user_id', user.id)
@@ -110,10 +121,15 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.badRequest('find_id and marketplace are required')
   }
 
-  const supabase = await createSupabaseServerClient()
+  // Use service role client — extension authenticates via Bearer token so
+  // the cookie-based Supabase client has no session. withAuth verified the user.
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // Verify ownership
-  const { data: find, error: findError } = await supabase
+  const { data: find, error: findError } = await supabaseAdmin
     .from('finds')
     .select('id')
     .eq('id', findId)
@@ -153,7 +169,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     updateData.fields = extraFields
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('product_marketplace_data')
     .update(updateData)
     .eq('find_id', findId)
@@ -164,7 +180,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const eventType = targetStatus === 'error' ? 'publish_error' : 'listed'
-  logMarketplaceEvent(supabase, user.id, {
+  logMarketplaceEvent(supabaseAdmin, user.id, {
     findId,
     marketplace,
     eventType,

@@ -18,6 +18,7 @@ import { FindCondition, Platform, CategoryFieldConfig, FieldConfig, ListingTempl
 declare const chrome: any
 
 interface PlatformFieldsData {
+  shared?: Record<string, string | string[] | boolean | undefined>
   vinted?: {
     primaryColor?: number
     secondaryColor?: number
@@ -260,33 +261,60 @@ export default function AddFindPage() {
     })
   }, [formData])
 
-  // Fetch category field config when category or marketplace changes
+  // Fetch category field config for ALL selected platforms and merge
   useEffect(() => {
+    if (!formData.category || formData.selectedPlatforms.length === 0) {
+      setFieldConfig(null)
+      return
+    }
+
+    const controller = new AbortController()
+
     const fetchFieldConfig = async () => {
-      if (!formData.category) {
-        setFieldConfig(null)
-        return
-      }
-
       try {
-        const marketplace = formData.selectedPlatforms.includes('vinted') ? 'vinted' : 'ebay'
-        // Include daily cache-bust so stale config doesn't persist beyond 24h
         const cacheBust = new Date().toISOString().slice(0, 10)
-        const response = await fetch(`/api/config/category-fields?category=${formData.category}&marketplace=${marketplace}&d=${cacheBust}`)
+        const platforms = formData.selectedPlatforms
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch field config')
+        // Fetch field config for each selected platform in parallel
+        const results = await Promise.all(
+          platforms.map(async (platform) => {
+            const res = await fetch(
+              `/api/config/category-fields?category=${formData.category}&marketplace=${platform}&d=${cacheBust}`,
+              { signal: controller.signal }
+            )
+            if (!res.ok) return null
+            const config = await res.json()
+            return config.fields as Record<string, FieldConfig>
+          })
+        )
+
+        if (controller.signal.aborted) return
+
+        // Merge: field shows if ANY platform needs it, required if ANY requires it
+        const merged: Record<string, FieldConfig> = {}
+        for (const fields of results) {
+          if (!fields) continue
+          for (const [key, val] of Object.entries(fields)) {
+            if (!merged[key]) {
+              merged[key] = { ...val }
+            } else {
+              if (val.show) merged[key].show = true
+              if (val.required) merged[key].required = true
+              if (val.options && !merged[key].options) merged[key].options = val.options
+            }
+          }
         }
 
-        const config = await response.json()
-        setFieldConfig(config.fields)
+        setFieldConfig(Object.keys(merged).length > 0 ? merged : null)
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         console.error('Error fetching field config:', err)
         setFieldConfig(null)
       }
     }
 
     fetchFieldConfig()
+    return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
   // Handle SKU regeneration
@@ -510,6 +538,23 @@ export default function AddFindPage() {
     []
   )
 
+  /** Update shared marketplace fields (colour text, type, style, etc.) */
+  const handleSharedFieldChange = useCallback(
+    (field: string, value: string | string[] | boolean | undefined) => {
+      setFormData((prev) => ({
+        ...prev,
+        platformFields: {
+          ...prev.platformFields,
+          shared: {
+            ...(prev.platformFields.shared || {}),
+            [field]: value,
+          },
+        },
+      }))
+    },
+    []
+  )
+
   // Calculate title char limit based on platforms
   const titleCharLimit = useMemo(() => {
     if (formData.selectedPlatforms.includes('ebay')) {
@@ -644,6 +689,41 @@ export default function AddFindPage() {
     if (formData.selectedPlatforms.length === 0) {
       setError('Select at least one marketplace')
       return
+    }
+
+    // Block publish if field config hasn't loaded yet
+    if (formData.category && formData.selectedPlatforms.length > 0 && !fieldConfig) {
+      setError('Loading field requirements — please try again')
+      return
+    }
+
+    // Validate required marketplace fields
+    if (fieldConfig) {
+      const missing: string[] = []
+      for (const [key, config] of Object.entries(fieldConfig)) {
+        if (!config.required) continue
+        // brand is a canonical field, not in shared
+        if (key === 'brand') {
+          if (!formData.brand.trim()) missing.push('Brand')
+          continue
+        }
+        // colour: check both Vinted picker and shared text
+        if (key === 'colour') {
+          const hasVintedColour = formData.selectedPlatforms.includes('vinted') && formData.platformFields.vinted?.primaryColor
+          const hasSharedColour = formData.platformFields.shared?.colour && String(formData.platformFields.shared.colour).trim()
+          if (!hasVintedColour && !hasSharedColour) missing.push('Colour')
+          continue
+        }
+        // All other fields live in shared
+        const val = formData.platformFields.shared?.[key]
+        if (!val || (typeof val === 'string' && !val.trim())) {
+          missing.push(key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+        }
+      }
+      if (missing.length > 0) {
+        setError(`Required fields missing: ${missing.join(', ')}`)
+        return
+      }
     }
 
     setIsLoading(true)
@@ -1140,53 +1220,70 @@ export default function AddFindPage() {
               </div>
             </div>
 
-            {/* Vinted-specific fields */}
-            {formData.selectedPlatforms.includes('vinted') && (
+            {/* Marketplace-specific fields (driven by category × platform config) */}
+            {formData.selectedPlatforms.length > 0 && fieldConfig && (
               <>
-                {/* Primary Colour */}
-                {fieldConfig?.colour?.show && (
-                  <div className="bg-white rounded-lg border border-sage/14 p-6">
-                    <label className="block text-sm font-semibold text-ink mb-2">
-                      Primary colour
-                      {fieldConfig.colour.required && <span className="text-red-500"> *</span>}
-                    </label>
-                    <select
-                      value={(formData.platformFields.vinted?.primaryColor) ?? ''}
-                      onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'primaryColor', e.target.value ? parseInt(e.target.value) : undefined)
-                      }
-                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    >
-                      <option value="">Select a colour</option>
-                      {VINTED_COLORS.map((color) => (
-                        <option key={color.id} value={color.id}>
-                          {color.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Vinted colour pickers (Vinted uses numeric colour IDs) */}
+                {fieldConfig?.colour?.show && formData.selectedPlatforms.includes('vinted') && (
+                  <>
+                    <div className="bg-white rounded-lg border border-sage/14 p-6">
+                      <label className="block text-sm font-semibold text-ink mb-2">
+                        Vinted colour
+                        {fieldConfig.colour.required && <span className="text-red-500"> *</span>}
+                      </label>
+                      <select
+                        value={(formData.platformFields.vinted?.primaryColor) ?? ''}
+                        onChange={(e) =>
+                          handlePlatformFieldChange('vinted', 'primaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                        }
+                        className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      >
+                        <option value="">Select a colour</option>
+                        {VINTED_COLORS.map((color) => (
+                          <option key={color.id} value={color.id}>
+                            {color.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="bg-white rounded-lg border border-sage/14 p-6">
+                      <label className="block text-sm font-semibold text-ink mb-2">
+                        Secondary colour <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                      </label>
+                      <select
+                        value={(formData.platformFields.vinted?.secondaryColor) ?? ''}
+                        onChange={(e) =>
+                          handlePlatformFieldChange('vinted', 'secondaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                        }
+                        className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      >
+                        <option value="">None</option>
+                        {VINTED_COLORS.map((color) => (
+                          <option key={color.id} value={color.id}>
+                            {color.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 )}
 
-                {/* Secondary Colour */}
-                {fieldConfig?.colour?.show && (
+                {/* Colour text input (for eBay/Depop/Shopify/Etsy — they use text not numeric IDs) */}
+                {fieldConfig?.colour?.show && formData.selectedPlatforms.some(p => p !== 'vinted') && (
                   <div className="bg-white rounded-lg border border-sage/14 p-6">
                     <label className="block text-sm font-semibold text-ink mb-2">
-                      Secondary colour <span className="text-xs text-sage-dim font-normal">(optional)</span>
+                      Colour
+                      {fieldConfig.colour.required && <span className="text-red-500"> *</span>}
                     </label>
-                    <select
-                      value={(formData.platformFields.vinted?.secondaryColor) ?? ''}
+                    <input
+                      type="text"
+                      value={(formData.platformFields.shared?.colour as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'secondaryColor', e.target.value ? parseInt(e.target.value) : undefined)
+                        handleSharedFieldChange('colour', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    >
-                      <option value="">None</option>
-                      {VINTED_COLORS.map((color) => (
-                        <option key={color.id} value={color.id}>
-                          {color.title}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="e.g. Blue, Red, Multicoloured..."
+                    />
                   </div>
                 )}
 
@@ -1198,9 +1295,9 @@ export default function AddFindPage() {
                       <span className="text-xs text-sage-dim font-normal">(optional)</span>
                     </label>
                     <textarea
-                      value={(formData.platformFields.vinted?.conditionDescription) ?? ''}
+                      value={(formData.platformFields.shared?.conditionDescription as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'conditionDescription', e.target.value)
+                        handleSharedFieldChange('conditionDescription', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
                       rows={3}
@@ -1209,7 +1306,7 @@ export default function AddFindPage() {
                   </div>
                 )}
 
-                {/* Size — clothing/footwear only */}
+                {/* Size */}
                 {fieldConfig?.size?.show && (
                   <div className="bg-white rounded-lg border border-sage/14 p-6">
                     <label className="block text-sm font-semibold text-ink mb-2">
@@ -1217,14 +1314,13 @@ export default function AddFindPage() {
                     </label>
                     <input
                       type="text"
-                      value={(formData.platformFields.vinted as any)?.size ?? ''}
+                      value={(formData.platformFields.shared?.size as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'size', e.target.value)
+                        handleSharedFieldChange('size', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                       placeholder="e.g. M, 12, EU 38..."
                     />
-                    <p className="text-xs text-sage-dim mt-1">Size options will be populated by the Vinted extension</p>
                   </div>
                 )}
 
@@ -1232,29 +1328,21 @@ export default function AddFindPage() {
                 {fieldConfig?.material?.show && (
                   <div className="bg-white rounded-lg border border-sage/14 p-6">
                     <label className="block text-sm font-semibold text-ink mb-2">
-                      Material{' '}
-                      <span className="text-xs text-sage-dim font-normal">
-                        (optional{fieldConfig.material.options ? ', select one' : ''})
-                      </span>
+                      Material
+                      {fieldConfig.material.required && <span className="text-red-500"> *</span>}
+                      {!fieldConfig.material.required && (
+                        <span className="text-xs text-sage-dim font-normal"> (optional)</span>
+                      )}
                     </label>
-                    {fieldConfig.material.options && fieldConfig.material.options.length > 0 ? (
-                      <select
-                        value={(formData.platformFields.vinted?.material as any)?.[0] ?? ''}
-                        onChange={(e) =>
-                          handlePlatformFieldChange('vinted', 'material', e.target.value ? [e.target.value] : undefined)
-                        }
-                        className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                      >
-                        <option value="">Select a material</option>
-                        {fieldConfig.material.options.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-xs text-sage-dim mb-3">Material selection coming soon</p>
-                    )}
+                    <input
+                      type="text"
+                      value={(formData.platformFields.shared?.material as string) ?? ''}
+                      onChange={(e) =>
+                        handleSharedFieldChange('material', e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="e.g. Ceramic, Glass, Cotton..."
+                    />
                   </div>
                 )}
 
@@ -1267,9 +1355,9 @@ export default function AddFindPage() {
                     </label>
                     <input
                       type="text"
-                      value={(formData.platformFields.vinted?.author) ?? ''}
+                      value={(formData.platformFields.shared?.author as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'author', e.target.value)
+                        handleSharedFieldChange('author', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                       placeholder="e.g. Jane Austen"
@@ -1286,9 +1374,9 @@ export default function AddFindPage() {
                     </label>
                     <input
                       type="text"
-                      value={(formData.platformFields.vinted?.isbn) ?? ''}
+                      value={(formData.platformFields.shared?.isbn as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'isbn', e.target.value)
+                        handleSharedFieldChange('isbn', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
                       placeholder="978..."
@@ -1303,22 +1391,63 @@ export default function AddFindPage() {
                       Language
                       {fieldConfig.language.required && <span className="text-red-500"> *</span>}
                     </label>
-                    <select
-                      value={(formData.platformFields.vinted?.language) ?? ''}
+                    <input
+                      type="text"
+                      value={(formData.platformFields.shared?.language as string) ?? ''}
                       onChange={(e) =>
-                        handlePlatformFieldChange('vinted', 'language', e.target.value)
+                        handleSharedFieldChange('language', e.target.value)
                       }
                       className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-                    >
-                      <option value="">Select language</option>
-                      {fieldConfig.language.options?.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="e.g. English"
+                    />
                   </div>
                 )}
+
+                {/* Dynamic additional fields — renders any fieldConfig key not already handled above */}
+                {(() => {
+                  const handledKeys = new Set(['colour', 'condition_description', 'size', 'material', 'author', 'isbn', 'language', 'brand'])
+                  const additionalFields = Object.entries(fieldConfig).filter(
+                    ([key, val]) => !handledKeys.has(key) && val.show
+                  )
+                  if (additionalFields.length === 0) return null
+                  return additionalFields.map(([key, config]) => (
+                    <div key={key} className="bg-white rounded-lg border border-sage/14 p-6">
+                      <label className="block text-sm font-semibold text-ink mb-2">
+                        {key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        {config.required && <span className="text-red-500"> *</span>}
+                        {!config.required && (
+                          <span className="text-xs text-sage-dim font-normal"> (optional)</span>
+                        )}
+                      </label>
+                      {config.options && config.options.length > 0 ? (
+                        <select
+                          value={(formData.platformFields.shared?.[key] as string) ?? ''}
+                          onChange={(e) =>
+                            handleSharedFieldChange(key, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                        >
+                          <option value="">Select...</option>
+                          {config.options.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={(formData.platformFields.shared?.[key] as string) ?? ''}
+                          onChange={(e) =>
+                            handleSharedFieldChange(key, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                          placeholder={`Enter ${key.replace(/_/g, ' ')}...`}
+                        />
+                      )}
+                    </div>
+                  ))
+                })()}
               </>
             )}
 

@@ -386,6 +386,7 @@ export interface FieldConfig {
   required?: boolean
   max?: number
   options?: string[]
+  type?: 'text' | 'select' | 'multiselect'
 }
 
 export interface CategoryFieldConfig {
@@ -397,6 +398,29 @@ export interface CategoryFieldConfig {
   fields: Record<string, FieldConfig>
   source: 'manual' | 'vinted_api' | 'ebay_api'
   last_updated: string
+  created_at: string
+}
+
+// ============================================================================
+// SCAN HISTORY
+// ============================================================================
+
+export interface ScanPriceData {
+  ebay_avg: string
+  vinted_recent: string
+  depop_avg: string
+  suggested_ask: string
+}
+
+export interface ScanHistoryRecord {
+  id: string
+  barcode: string
+  title: string | null
+  category: string | null
+  brand: string | null
+  details: string | null
+  source: 'isbn' | 'ai' | 'manual' | null
+  price_data: ScanPriceData | null
   created_at: string
 }
 

@@ -33,3 +33,14 @@ export interface CategoryNode {
 
 export type TopLevelCategory = string
 export type CategoryTree = Record<TopLevelCategory, Record<string, CategoryNode>>
+
+/** Field requirement for a single field on a specific platform */
+export interface PlatformFieldRequirement {
+  show: boolean
+  required?: boolean
+  options?: string[]
+  type?: 'text' | 'select' | 'multiselect'
+}
+
+/** Map of field name → requirement for one platform */
+export type PlatformFieldMap = Record<string, PlatformFieldRequirement>

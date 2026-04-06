@@ -30,5 +30,7 @@ export interface ListingActionResult {
 export interface PublishOptions {
   tld?: string | null;
   settings?: Record<string, unknown>;
+  /** Etsy only: "draft" saves without fee, "publish" lists live ($0.20). */
+  publishMode?: "draft" | "publish";
 }
 

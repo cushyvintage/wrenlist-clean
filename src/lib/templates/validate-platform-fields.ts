@@ -9,7 +9,27 @@ import type { Platform } from '@/types'
 /**
  * Allowlisted keys for each marketplace's platform fields
  */
-const ALLOWED_KEYS: Partial<Record<Platform, Set<string>>> = {
+const ALLOWED_KEYS: Partial<Record<Platform | 'shared', Set<string>>> = {
+  shared: new Set([
+    'colour',
+    'conditionDescription',
+    'size',
+    'material',
+    'author',
+    'isbn',
+    'language',
+    'type',
+    'style',
+    'vintage',
+    'handmade',
+    'pattern',
+    'shape',
+    'origin',
+    'theme',
+    'features',
+    'publisher',
+    'department',
+  ]),
   vinted: new Set([
     'primaryColor',
     'secondaryColor',
@@ -40,7 +60,7 @@ const ALLOWED_KEYS: Partial<Record<Platform, Set<string>>> = {
  */
 export function validatePlatformFields(
   raw: Record<string, unknown> | null | undefined,
-  marketplace: Platform
+  marketplace: Platform | 'shared'
 ): Record<string, unknown> {
   if (!raw) return {}
 
