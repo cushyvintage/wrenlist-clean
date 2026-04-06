@@ -29,6 +29,9 @@ interface ProfileResponse {
   plan?: string
   stripe_customer_id?: string
   finds_this_month?: number
+  business_name?: string
+  phone?: string
+  address?: string
 }
 
 interface AuthResponse {
@@ -106,33 +109,106 @@ export default function SettingsPage() {
   }
 
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData>({
-    businessName: 'Cushy Vintage',
-    phone: '+44 161 XXX XXXX',
-    address: 'Manchester, UK',
+    businessName: '',
+    phone: '',
+    address: '',
   })
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true)
+  const [workspaceSaveSuccess, setWorkspaceSaveSuccess] = useState(false)
+  const [workspaceSaveError, setWorkspaceSaveError] = useState<string | null>(null)
+  const [isSavingWorkspace, setIsSavingWorkspace] = useState(false)
 
-  const [platforms] = useState<PlatformConnection[]>([
-    {
-      platform: 'Vinted',
-      status: 'connected',
-      accountName: '@cushyvintage',
-      lastSync: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      platform: 'eBay',
-      status: 'connected',
-      accountName: 'cushyvintage_uk',
-      lastSync: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      platform: 'Etsy',
-      status: 'not_connected',
-    },
-    {
-      platform: 'Shopify',
-      status: 'not_connected',
-    },
-  ])
+  const [platforms, setPlatforms] = useState<PlatformConnection[]>([])
+  const [isLoadingPlatforms, setIsLoadingPlatforms] = useState(true)
+
+  // Load workspace data from profile
+  useEffect(() => {
+    const loadWorkspace = async () => {
+      try {
+        const profile = await fetchApi<ProfileResponse>('/api/profiles/me')
+        setWorkspaceData({
+          businessName: profile.business_name || '',
+          phone: profile.phone || '',
+          address: profile.address || '',
+        })
+      } catch (error) {
+        console.error('Failed to load workspace:', error)
+      } finally {
+        setIsLoadingWorkspace(false)
+      }
+    }
+    loadWorkspace()
+  }, [])
+
+  // Load real platform connection statuses
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      try {
+        const results: PlatformConnection[] = []
+
+        // Check eBay
+        try {
+          const ebay = await fetchApi<{ connected: boolean; ebayUser?: string }>('/api/ebay/status')
+          results.push({
+            platform: 'eBay',
+            status: ebay.connected ? 'connected' : 'not_connected',
+            accountName: ebay.ebayUser || undefined,
+          })
+        } catch {
+          results.push({ platform: 'eBay', status: 'not_connected' })
+        }
+
+        // Check Shopify
+        try {
+          const shopify = await fetchApi<{ connected: boolean; shopName?: string }>('/api/shopify/connect')
+          results.push({
+            platform: 'Shopify',
+            status: shopify.connected ? 'connected' : 'not_connected',
+            accountName: shopify.shopName || undefined,
+          })
+        } catch {
+          results.push({ platform: 'Shopify', status: 'not_connected' })
+        }
+
+        // Vinted and Etsy — no connection API yet, show as not_connected
+        results.unshift({ platform: 'Vinted', status: 'not_connected' })
+        results.push({ platform: 'Etsy', status: 'not_connected' })
+
+        setPlatforms(results)
+      } catch (error) {
+        console.error('Failed to load platforms:', error)
+      } finally {
+        setIsLoadingPlatforms(false)
+      }
+    }
+    loadPlatforms()
+  }, [])
+
+  const handleSaveWorkspaceChanges = async () => {
+    try {
+      setIsSavingWorkspace(true)
+      setWorkspaceSaveError(null)
+      setWorkspaceSaveSuccess(false)
+
+      await fetchApi('/api/profiles/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: workspaceData.businessName,
+          phone: workspaceData.phone,
+          address: workspaceData.address,
+        }),
+      })
+
+      setWorkspaceSaveSuccess(true)
+      setTimeout(() => setWorkspaceSaveSuccess(false), 3000)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save changes'
+      setWorkspaceSaveError(message)
+    } finally {
+      setIsSavingWorkspace(false)
+    }
+  }
 
   const formatLastSync = (dateString?: string) => {
     if (!dateString) return '—'
@@ -329,10 +405,30 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* Workspace Success Banner */}
+            {workspaceSaveSuccess && (
+              <div className="flex gap-2 items-center px-4 py-3 bg-sage/10 border border-sage/40 rounded-sm">
+                <span>✓</span>
+                <p className="text-sm text-sage-dk">Changes saved</p>
+              </div>
+            )}
+
+            {/* Workspace Error Banner */}
+            {workspaceSaveError && (
+              <div className="flex gap-2 items-center px-4 py-3 bg-red/10 border border-red/40 rounded-sm">
+                <span>✕</span>
+                <p className="text-sm text-red">{workspaceSaveError}</p>
+              </div>
+            )}
+
             {/* Save Button */}
             <div className="border-t border-sage/14 pt-6">
-              <button className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors">
-                Save changes
+              <button
+                onClick={handleSaveWorkspaceChanges}
+                disabled={isSavingWorkspace || isLoadingWorkspace}
+                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingWorkspace ? 'Saving...' : 'Save changes'}
               </button>
             </div>
           </div>

@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('Shopify connection not found')
     }
 
+    if (!connection.access_token) {
+      return ApiResponseHelper.badRequest('Shopify access token missing. Reconnect your store with an API token.')
+    }
+
     const productId = marketplaceData.platform_listing_id
 
     // Delete product from Shopify

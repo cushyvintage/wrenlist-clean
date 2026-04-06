@@ -28,11 +28,21 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
 
   const importedSkus = new Set((importedFinds || []).map(f => f.sku).filter(Boolean))
 
-  // Get already-imported eBay listing IDs
+  // Get already-imported eBay listing IDs (scoped to current user via finds)
+  const userFindIds = (importedFinds || []).map(f => (f as Record<string, string>).id).filter(Boolean)
+  // Re-query finds to get IDs (importedFinds only has sku)
+  const { data: userFindsAll } = await supabase
+    .from('finds')
+    .select('id')
+    .eq('user_id', user.id)
+
+  const allUserFindIds = (userFindsAll || []).map(f => f.id)
+
   const { data: importedMarketplace } = await supabase
     .from('product_marketplace_data')
     .select('platform_listing_id')
     .eq('marketplace', 'ebay')
+    .in('find_id', allUserFindIds.length > 0 ? allUserFindIds : ['00000000-0000-0000-0000-000000000000'])
 
   const importedListingIds = new Set(
     (importedMarketplace || []).map(m => m.platform_listing_id).filter(Boolean)

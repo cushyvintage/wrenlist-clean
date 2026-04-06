@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/shopify/connect
- * Save store_domain only (uses extension session cookies, no token needed)
+ * Save store_domain and optional access_token for Shopify Admin API
  */
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { storeDomain } = body
+    const { storeDomain, accessToken } = body
 
     if (!storeDomain) {
       return ApiResponseHelper.badRequest('Missing storeDomain')
@@ -68,18 +68,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient()
 
-    // Upsert connection
+    // Upsert connection (accessToken is optional — stored if provided)
+    const upsertData: Record<string, string> = {
+      user_id: user.id,
+      store_domain: shopifyUrl,
+      shop_name: shopName,
+      updated_at: new Date().toISOString(),
+    }
+    if (accessToken) {
+      upsertData.access_token = accessToken
+    }
+
     const { data: connection, error } = await supabase
       .from('shopify_connections')
-      .upsert(
-        {
-          user_id: user.id,
-          store_domain: shopifyUrl,
-          shop_name: shopName,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert(upsertData, { onConflict: 'user_id' })
       .select()
       .single()
 

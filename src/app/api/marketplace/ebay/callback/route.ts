@@ -6,6 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
-  const newUrl = new URL('/api/ebay/oauth/callback' + url.search, 'https://app.wrenlist.com')
+  const newUrl = new URL('/api/ebay/oauth/callback' + url.search, process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com')
   return NextResponse.redirect(newUrl)
 }

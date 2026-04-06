@@ -47,6 +47,10 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('Shopify connection not found')
     }
 
+    if (!connection.access_token) {
+      return ApiResponseHelper.badRequest('Shopify access token missing. Reconnect your store with an API token.')
+    }
+
     // Build Shopify product payload
     const shopifyProduct = buildShopifyPayload(find)
 

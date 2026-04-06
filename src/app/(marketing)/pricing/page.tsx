@@ -17,7 +17,7 @@ const PricingCard = ({ tier, price, description, limit, features, featured = fal
       <div className="text-2xl font-serif font-medium text-ink">{limit}</div>
       <div className="text-10px font-semibold uppercase text-sage-dim">finds / month</div>
     </div>
-    <a href="https://app.wrenlist.com/register" className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Get started</a>
+    <a href="/register" className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Get started</a>
     <div className="border-t border-[rgba(61,92,58,0.14)] pt-6 mb-4">
       <div className="text-10px font-semibold uppercase text-sage-dim mb-4">includes</div>
       <div className="space-y-3">
@@ -90,8 +90,8 @@ export default function PricingPage() {
           <Link href="/about" className="text-xs font-light text-ink-lt hover:text-ink">why wrenlist</Link>
         </div>
         <div className="flex gap-2 items-center">
-          <a href="https://app.wrenlist.com/login" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</a>
-          <a href="https://app.wrenlist.com/register" className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</a>
+          <a href="/login" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</a>
+          <a href="/register" className="bg-sage text-cream rounded text-xs font-medium px-4.5 py-2 hover:bg-sage-dk">start free</a>
         </div>
       </nav>
 

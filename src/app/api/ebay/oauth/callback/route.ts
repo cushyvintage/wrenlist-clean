@@ -16,6 +16,8 @@ import { config } from '@/lib/config'
  * since OAuth callback comes from external provider
  */
 export async function GET(request: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'
+
   try {
     const supabase = await createSupabaseServerClient()
 
@@ -29,13 +31,13 @@ export async function GET(request: NextRequest) {
     // Check for eBay errors
     if (error) {
       return NextResponse.redirect(
-        new URL(`https://app.wrenlist.com/platform-connect?error=${encodeURIComponent(error)}`)
+        new URL(`${appUrl}/platform-connect?error=${encodeURIComponent(error)}`)
       )
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('https://app.wrenlist.com/platform-connect?error=missing_params')
+        new URL(`${appUrl}/platform-connect?error=missing_params`)
       )
     }
 
@@ -48,14 +50,14 @@ export async function GET(request: NextRequest) {
 
     if (stateError || !stateRecord) {
       return NextResponse.redirect(
-        new URL('https://app.wrenlist.com/platform-connect?error=invalid_state')
+        new URL(`${appUrl}/platform-connect?error=invalid_state`)
       )
     }
 
     // Check state expiration
     if (new Date(stateRecord.expires_at) < new Date()) {
       return NextResponse.redirect(
-        new URL('https://app.wrenlist.com/platform-connect?error=state_expired')
+        new URL(`${appUrl}/platform-connect?error=state_expired`)
       )
     }
 
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     // Exchange code for tokens
     if (!config.ebay.clientId || !config.ebay.clientSecret) {
       return NextResponse.redirect(
-        new URL('https://app.wrenlist.com/platform-connect?error=server_error')
+        new URL(`${appUrl}/platform-connect?error=server_error`)
       )
     }
 
@@ -105,19 +107,19 @@ export async function GET(request: NextRequest) {
 
     if (upsertError) {
       return NextResponse.redirect(
-        new URL('https://app.wrenlist.com/platform-connect?error=db_error')
+        new URL(`${appUrl}/platform-connect?error=db_error`)
       )
     }
 
     // Redirect to success page
     return NextResponse.redirect(
-      new URL('https://app.wrenlist.com/platform-connect?success=ebay')
+      new URL(`${appUrl}/platform-connect?success=ebay`)
     )
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'unknown'
     console.error('[eBay callback error]', msg)
     return NextResponse.redirect(
-      new URL(`https://app.wrenlist.com/platform-connect?error=callback_error&detail=${encodeURIComponent(msg)}`)
+      new URL(`${appUrl}/platform-connect?error=callback_error&detail=${encodeURIComponent(msg)}`)
     )
   }
 }

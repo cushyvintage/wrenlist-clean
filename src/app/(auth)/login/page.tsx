@@ -54,7 +54,7 @@ function LoginInner() {
       // Redirect to app subdomain if on marketing domain
       const currentHost = typeof window !== 'undefined' ? window.location.host : ''
       if (currentHost === 'wrenlist.com' || currentHost === 'www.wrenlist.com') {
-        window.location.href = 'https://app.wrenlist.com/dashboard'
+        window.location.href = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'}/dashboard`
       } else {
         router.push('/dashboard')
       }
@@ -73,7 +73,7 @@ function LoginInner() {
       // If on marketing domain, redirect to app subdomain to initiate OAuth
       // This ensures the PKCE cookie is set on app.wrenlist.com where the callback lives
       if (typeof window !== 'undefined' && window.location.hostname === 'wrenlist.com') {
-        window.location.href = 'https://app.wrenlist.com/login?google=1'
+        window.location.href = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'}/login?google=1`
         return
       }
 

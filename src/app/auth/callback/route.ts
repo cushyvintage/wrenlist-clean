@@ -64,9 +64,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Redirect to dashboard after successful auth — use app subdomain in production
-    const dashboardUrl = process.env.NODE_ENV === 'production'
-      ? new URL('https://app.wrenlist.com/dashboard')
+    // Redirect to dashboard after successful auth
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    const dashboardUrl = appUrl
+      ? new URL('/dashboard', appUrl)
       : new URL('/dashboard', request.url)
     return NextResponse.redirect(dashboardUrl)
   } catch (err) {

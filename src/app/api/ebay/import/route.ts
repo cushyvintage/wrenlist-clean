@@ -230,10 +230,20 @@ export async function GET(request: NextRequest) {
     if (!user) return ApiResponseHelper.unauthorized()
 
     const supabase = await createSupabaseServerClient()
+
+    // Scope to current user's finds (product_marketplace_data has no user_id column)
+    const { data: userFinds } = await supabase
+      .from('finds')
+      .select('id')
+      .eq('user_id', user.id)
+
+    const userFindIds = (userFinds || []).map(f => f.id)
+
     const { count } = await supabase
       .from('product_marketplace_data')
       .select('id', { count: 'exact' })
       .eq('marketplace', 'ebay')
+      .in('find_id', userFindIds.length > 0 ? userFindIds : ['00000000-0000-0000-0000-000000000000'])
 
     return ApiResponseHelper.success({ ebayListings: count || 0 })
   } catch (error) {

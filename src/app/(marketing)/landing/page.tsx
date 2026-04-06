@@ -153,8 +153,8 @@ export default function LandingPage() {
           <Link href="/about" className="text-xs font-normal text-[#6b7d6a] hover:text-[#1e2e1c]">why wrenlist</Link>
         </div>
         <div className="flex gap-2 items-center">
-          <a href="https://app.wrenlist.com/login" className="border border-[rgba(61,92,58,0.2)] rounded text-xs font-normal text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]">log in</a>
-          <a href="https://app.wrenlist.com/register" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-5 py-2 hover:bg-[#2c4428] uppercase tracking-wider">start free</a>
+          <a href="/login" className="border border-[rgba(61,92,58,0.2)] rounded text-xs font-normal text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]">log in</a>
+          <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-5 py-2 hover:bg-[#2c4428] uppercase tracking-wider">start free</a>
         </div>
       </nav>
 
@@ -172,10 +172,10 @@ export default function LandingPage() {
             Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy & Shopify — so you can spend more time at the rack.
           </p>
           <div className="flex gap-4 items-center">
-            <a href="https://app.wrenlist.com/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
+            <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
               Start free — no card needed
             </a>
-            <a href="https://app.wrenlist.com/dashboard" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
+            <a href="/dashboard" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
               see the app →
             </a>
           </div>

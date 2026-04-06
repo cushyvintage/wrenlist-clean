@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     // eBay expects: SHA256(challengeCode + verificationToken + endpointUrl)
     // Returns challengeResponse as JSON body (not in header)
-    const endpointUrl = `https://app.wrenlist.com/api/webhooks/ebay`
+    const endpointUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'}/api/webhooks/ebay`
     const hash = crypto
       .createHash('sha256')
       .update(challengeCode + verificationToken + endpointUrl)

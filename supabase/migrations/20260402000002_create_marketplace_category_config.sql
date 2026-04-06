@@ -19,6 +19,10 @@ CREATE INDEX IF NOT EXISTS idx_mcc_category_marketplace ON marketplace_category_
 ALTER TABLE marketplace_category_config ENABLE ROW LEVEL SECURITY;
 
 -- Create a policy allowing public read access (this is config data, not sensitive)
-CREATE POLICY "marketplace_category_config_read" ON marketplace_category_config
-  FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'marketplace_category_config_read' AND tablename = 'marketplace_category_config') THEN
+    CREATE POLICY "marketplace_category_config_read" ON marketplace_category_config FOR SELECT USING (true);
+  END IF;
+END
+$$;

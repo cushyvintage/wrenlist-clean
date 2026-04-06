@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
-const APP_SUBDOMAIN = 'app.wrenlist.com'
-const MARKETING_DOMAIN = 'wrenlist.com'
+const APP_SUBDOMAIN = process.env.NEXT_PUBLIC_APP_HOSTNAME || 'app.wrenlist.com'
+const MARKETING_DOMAIN = process.env.NEXT_PUBLIC_MARKETING_HOSTNAME || 'wrenlist.com'
 
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || ''

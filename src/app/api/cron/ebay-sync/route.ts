@@ -71,12 +71,20 @@ export async function GET(request: NextRequest) {
             if (!legacyItemId) continue
 
             // Find product_marketplace_data by platform_listing_id
+            // Note: product_marketplace_data has no user_id column — scope via find_id → finds.user_id
+            const { data: userFinds } = await supabase
+              .from('finds')
+              .select('id')
+              .eq('user_id', userId)
+
+            const userFindIds = (userFinds || []).map(f => f.id)
+
             const { data: marketplaceData } = await supabase
               .from('product_marketplace_data')
               .select('find_id')
-              .eq('user_id', userId)
               .eq('marketplace', 'ebay')
               .eq('platform_listing_id', legacyItemId)
+              .in('find_id', userFindIds.length > 0 ? userFindIds : ['00000000-0000-0000-0000-000000000000'])
               .single()
 
             if (!marketplaceData) continue
