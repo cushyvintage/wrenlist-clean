@@ -1,6 +1,20 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { withAuth } from '@/lib/with-auth'
+
+interface FindWithMarketplaceJoin {
+  id: string
+  name: string
+  category: string
+  cost_gbp: number | null
+  sold_price_gbp: number | null
+  sourced_at: string | null
+  sold_at: string | null
+  product_marketplace_data: Array<{
+    marketplace: string
+    status: string
+  }>
+}
 
 interface SoldItem {
   id: string
@@ -20,15 +34,10 @@ interface SoldItem {
  * Fetch all sold items for authenticated user with marketplace data
  * Query params: timeframe? ('month' | 'quarter' | 'all')
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const timeframe = searchParams.get('timeframe') || 'month'
 
     // Calculate date range
@@ -78,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data with calculated fields
-    const items: SoldItem[] = (finds || []).map((find: any) => {
+    const items: SoldItem[] = ((finds || []) as FindWithMarketplaceJoin[]).map((find) => {
       const marginPercent =
         find.cost_gbp && find.sold_price_gbp
           ? Math.round(((find.sold_price_gbp - find.cost_gbp) / find.sold_price_gbp) * 100)
@@ -94,8 +103,8 @@ export async function GET(request: NextRequest) {
 
       // Get marketplace(s) where item was sold
       const marketplaces = find.product_marketplace_data
-        ?.filter((m: any) => m.status === 'sold')
-        .map((m: any) => m.marketplace)
+        ?.filter((m) => m.status === 'sold')
+        .map((m) => m.marketplace)
 
       return {
         id: find.id,
@@ -139,4 +148,4 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

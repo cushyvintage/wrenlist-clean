@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateListingTemplateSchema, validateBody } from '@/lib/validation'
 
@@ -7,13 +7,8 @@ import { CreateListingTemplateSchema, validateBody } from '@/lib/validation'
  * GET /api/templates
  * Fetch all templates for the authenticated user
  */
-export async function GET() {
+export const GET = withAuth(async (_req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -30,21 +25,16 @@ export async function GET() {
   } catch (error) {
     return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/templates
  * Create a new template from current form state
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate request body
     const validation = validateBody(CreateListingTemplateSchema, body)
@@ -73,4 +63,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return ApiResponseHelper.internalError()
   }
-}
+})

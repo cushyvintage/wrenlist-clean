@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateExpenseSchema, validateBody } from '@/lib/validation'
+import { withAuth } from '@/lib/with-auth'
 import type { Expense } from '@/types'
 
 /**
@@ -9,15 +10,10 @@ import type { Expense } from '@/types'
  * Fetch all expenses for the authenticated user
  * Query params: category?, start_date?, end_date?, limit?, offset?
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const category = searchParams.get('category')
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
@@ -65,21 +61,16 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/expenses
  * Create a new expense
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate request body
     const validation = validateBody(CreateExpenseSchema, body)
@@ -134,4 +125,4 @@ export async function POST(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

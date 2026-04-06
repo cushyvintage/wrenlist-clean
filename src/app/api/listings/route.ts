@@ -1,6 +1,51 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { withAuth } from '@/lib/with-auth'
+
+interface ListingFindJoin {
+  id: string
+  user_id: string
+  name: string
+  photos: string[] | null
+  cost_gbp: number | null
+  asking_price_gbp: number | null
+  category: string | null
+  brand: string | null
+  condition: string | null
+  description: string | null
+  status: string
+  platform_fields: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+interface FindSummary {
+  id: string
+  user_id: string
+  name: string
+  photos: string[] | null
+  cost_gbp: number | null
+  asking_price_gbp: number | null
+  category: string | null
+  brand: string | null
+  condition: string | null
+  description: string | null
+}
+
+interface MarketplaceListing {
+  id: string
+  find_id: string
+  marketplace: string
+  platform_listing_id: string | null
+  platform_listing_url: string | null
+  listing_price: number | null
+  status: string
+  fields: Record<string, unknown> | null
+  error_message: string | null
+  created_at: string
+  updated_at: string
+  finds: FindSummary | FindSummary[]
+}
 
 /**
  * GET /api/listings
@@ -10,15 +55,10 @@ import { ApiResponseHelper } from '@/lib/api-response'
  * 2. finds with status in ('listed', 'sold') not yet in product_marketplace_data
  * Query params: marketplace?, status?, search?, limit?, offset?
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const marketplace = searchParams.get('marketplace')
     const status = searchParams.get('status')
     const search = searchParams.get('search')
@@ -91,17 +131,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Get find IDs already in product_marketplace_data to avoid duplicates
-    const findIdsInMarketplaceData = new Set((marketplaceListings || []).map((item: any) => item.find_id))
+    const typedMarketplaceListings = (marketplaceListings || []) as MarketplaceListing[]
+    const findIdsInMarketplaceData = new Set(typedMarketplaceListings.map((item) => item.find_id))
 
     // Filter out finds already in product_marketplace_data
-    const finds = (allFinds || []).filter((find: any) => !findIdsInMarketplaceData.has(find.id))
+    const typedFinds = (allFinds || []) as ListingFindJoin[]
+    const finds = typedFinds.filter((find) => !findIdsInMarketplaceData.has(find.id))
 
     // 3. Map finds to ListingWithFind shape
-    const findListings = finds.map((find: any) => {
+    const findListings = finds.map((find) => {
       // Derive marketplace from platform_fields
       let derivedMarketplace: string = 'vinted' // default
       if (find.platform_fields && typeof find.platform_fields === 'object') {
-        const fields = find.platform_fields as Record<string, any>
+        const fields = find.platform_fields as Record<string, unknown>
         // Try selectedPlatforms array first
         const selectedPlatforms = fields.selectedPlatforms
         if (Array.isArray(selectedPlatforms) && selectedPlatforms.length > 0) {
@@ -124,7 +166,7 @@ export async function GET(request: NextRequest) {
       return {
         id: `find-${find.id}`,
         find_id: find.id,
-        marketplace: derivedMarketplace as any, // Type cast to Platform
+        marketplace: derivedMarketplace,
         platform_listing_id: null,
         platform_listing_url: null,
         platform_category_id: null,
@@ -149,23 +191,24 @@ export async function GET(request: NextRequest) {
     })
 
     // 4. Merge both arrays
-    const allListings = [...(marketplaceListings || []), ...findListings]
+    const allListings = [...typedMarketplaceListings, ...findListings]
 
     // 5. Apply filters and search
     let filtered = allListings
 
     if (marketplace && marketplace !== 'all') {
-      filtered = filtered.filter((item: any) => item.marketplace === marketplace)
+      filtered = filtered.filter((item) => item.marketplace === marketplace)
     }
 
     if (status && status !== 'all') {
-      filtered = filtered.filter((item: any) => item.status === status)
+      filtered = filtered.filter((item) => item.status === status)
     }
 
     if (search) {
       const searchLower = search.toLowerCase()
-      filtered = filtered.filter((item: any) => {
-        const find = item.finds
+      filtered = filtered.filter((item) => {
+        const find = Array.isArray(item.finds) ? item.finds[0] : item.finds
+        if (!find) return false
         return (
           find.name.toLowerCase().includes(searchLower) ||
           (find.brand && find.brand.toLowerCase().includes(searchLower))
@@ -174,7 +217,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort by created_at desc
-    filtered.sort((a: any, b: any) => {
+    filtered.sort((a, b) => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
@@ -188,5 +231,5 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})
 

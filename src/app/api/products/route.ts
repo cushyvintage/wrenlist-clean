@@ -3,9 +3,11 @@
  * POST /api/products - Create a new find (legacy endpoint, use /api/finds)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { getFinds, createFind, getFindStats } from '@/services/products.service'
+import type { Find, FindStatus } from '@/types'
 
 /**
  * GET /api/products
@@ -14,25 +16,20 @@ import { getFinds, createFind, getFindStats } from '@/services/products.service'
  *   - search: search term
  *   - stats: true to include statistics
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status') as any
+    const { searchParams } = new URL(req.url)
+    const status = searchParams.get('status') as FindStatus | 'all' | null
     const search = searchParams.get('search')
     const includeStats = searchParams.get('stats') === 'true'
 
     // Get finds (scoped to authenticated user)
     const finds = await getFinds(user.id, {
-      status,
+      status: status || undefined,
       search: search || undefined,
     })
 
-    const response: any = { finds }
+    const response: { finds: Find[]; stats?: Awaited<ReturnType<typeof getFindStats>> } = { finds }
 
     // Include stats if requested (scoped to authenticated user)
     if (includeStats) {
@@ -41,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(response)
-  } catch (error: any) {
+  } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/products error:', error)
     }
@@ -50,20 +47,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * POST /api/products
  * Create a new find (legacy endpoint, use /api/finds)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate required fields
     if (!body.name) {
@@ -80,7 +72,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ find }, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('POST /api/products error:', error)
     }
@@ -89,4 +81,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

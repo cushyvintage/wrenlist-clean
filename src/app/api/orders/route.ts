@@ -1,6 +1,18 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
+
+interface FindWithMarketplaceJoin {
+  id: string
+  name: string
+  sold_price_gbp: number | null
+  cost_gbp: number | null
+  sold_at: string
+  product_marketplace_data: Array<{
+    marketplace: string
+    platform_listing_url: string | null
+  }>
+}
 
 interface Order {
   id: string
@@ -20,13 +32,8 @@ interface Order {
  * Joined with product_marketplace_data to get platform info
  * Returns: array of orders with marketplace data and margin calculations
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
 
     // Fetch finds with status='sold', join with marketplace data
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data and calculate margins
-    const orders: Order[] = (finds || []).flatMap((find: any) => {
+    const orders: Order[] = ((finds || []) as FindWithMarketplaceJoin[]).flatMap((find) => {
       const marketplaceDataArray = find.product_marketplace_data || []
 
       // If no marketplace data, create a generic order entry
@@ -76,7 +83,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Create an order entry for each marketplace the item was listed on
-      return marketplaceDataArray.map((md: any) => ({
+      return marketplaceDataArray.map((md) => ({
         id: find.id,
         name: find.name,
         sold_price_gbp: find.sold_price_gbp,
@@ -99,4 +106,4 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError('Failed to fetch orders')
   }
-}
+})

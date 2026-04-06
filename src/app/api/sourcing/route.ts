@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { withAuth } from '@/lib/with-auth'
 import type { SourcingTrip, SourcingTripWithStats } from '@/types'
 
 /**
@@ -8,15 +8,10 @@ import type { SourcingTrip, SourcingTripWithStats } from '@/types'
  * Fetch all sourcing trips for the authenticated user with stats
  * Query params: limit?, offset?
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
@@ -82,21 +77,16 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/sourcing
  * Create a new sourcing trip
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
+    const body = await req.json()
 
     const { name, type, location, date, miles, entry_fee_gbp, notes, supplier_id } = body
 
@@ -139,4 +129,4 @@ export async function POST(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

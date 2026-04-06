@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 
 /**
@@ -10,13 +10,8 @@ import { ApiResponseHelper } from '@/lib/api-response'
  * - All profile fields (id, plan, finds_this_month, etc.)
  * - finds_limit: derived from plan (free: 10, nester: 100, forager: 500, flock: null)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -52,4 +47,4 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

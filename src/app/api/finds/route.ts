@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { withAuth } from '@/lib/with-auth'
 import { CreateFindSchema, validateBody } from '@/lib/validation'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { generateUniqueSKU } from '@/lib/sku.server'
@@ -11,15 +12,10 @@ import type { Find } from '@/types'
  * Fetch all finds for the authenticated user
  * Query params: status?, source_type?, search?, limit?, offset?
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const sourceType = searchParams.get('source_type')
     const search = searchParams.get('search')
@@ -64,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/finds
@@ -85,13 +81,8 @@ export async function GET(request: NextRequest) {
  * - Increments finds_this_month after successful insert
  * - Handles missing profile gracefully (fails open)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     // Rate limiting: 30 per minute per user
     const { success } = await checkRateLimit(`user:${user.id}:finds`, 30)
     if (!success) {
@@ -99,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate request body
     const validation = validateBody(CreateFindSchema, body)
@@ -187,4 +178,4 @@ export async function POST(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

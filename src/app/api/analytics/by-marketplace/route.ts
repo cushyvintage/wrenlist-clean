@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 
 interface MarketplaceAnalytics {
   marketplace: string
@@ -8,14 +9,8 @@ interface MarketplaceAnalytics {
   total_revenue: number
 }
 
-export async function GET() {
+export const GET = withAuth(async (_req, user) => {
   try {
-    // Get authenticated user
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const supabase = await createSupabaseServerClient()
     const userId = user.id
 
@@ -40,8 +35,14 @@ export async function GET() {
       }
     >()
 
+    interface MarketplaceDataJoin {
+      marketplace: string
+      status: string
+      finds: { id: string; user_id: string; status: string; sold_price_gbp: number | null }
+    }
+
     if (marketplaceData && Array.isArray(marketplaceData)) {
-      marketplaceData.forEach((item: any) => {
+      (marketplaceData as MarketplaceDataJoin[]).forEach((item) => {
         const market = item.marketplace
         const existing = marketplaceMap.get(market) || { listed: 0, sold: 0, revenue: 0 }
 
@@ -75,4 +76,4 @@ export async function GET() {
     console.error('Marketplace analytics error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

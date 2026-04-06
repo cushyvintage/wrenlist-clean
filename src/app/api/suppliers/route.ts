@@ -1,19 +1,14 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { withAuth } from '@/lib/with-auth'
 import type { Supplier } from '@/types'
 
 /**
  * GET /api/suppliers
  * Fetch all suppliers for the authenticated user
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -36,20 +31,15 @@ export async function GET(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/suppliers
  * Create a new supplier for the authenticated user
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate required fields
     if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
@@ -95,4 +85,4 @@ export async function POST(request: NextRequest) {
     }
     return ApiResponseHelper.internalError()
   }
-}
+})

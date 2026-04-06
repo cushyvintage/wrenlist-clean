@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { CreateMileageSchema, validateBody } from '@/lib/validation'
 import type { Mileage } from '@/types'
@@ -9,15 +10,10 @@ import type { Mileage } from '@/types'
  * Fetch all mileage entries for the authenticated user
  * Query params: start_date?, end_date?, limit?, offset?
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
     const limit = parseInt(searchParams.get('limit') || '50', 10)
@@ -54,21 +50,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/mileage error:', error) }    return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * POST /api/mileage
  * Create a new mileage entry
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
+    const body = await req.json()
 
     // Validate request body
     const validation = validateBody(CreateMileageSchema, body)
@@ -105,4 +96,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (process.env.NODE_ENV !== 'production')  { console.error('POST /api/mileage error:', error) }    return ApiResponseHelper.internalError()
   }
-}
+})

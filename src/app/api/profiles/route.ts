@@ -1,18 +1,13 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 
 /**
  * GET /api/profiles
  * Fetch the authenticated user's profile
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -29,20 +24,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (process.env.NODE_ENV !== 'production')  { console.error('GET /api/profiles error:', error) }    return ApiResponseHelper.internalError()
   }
-}
+})
 
 /**
  * PATCH /api/profiles
  * Update the authenticated user's profile
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) {
-      return ApiResponseHelper.unauthorized()
-    }
-
-    const body = await request.json()
+    const body = await req.json()
     const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -60,4 +50,4 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     if (process.env.NODE_ENV !== 'production')  { console.error('PATCH /api/profiles error:', error) }    return ApiResponseHelper.internalError()
   }
-}
+})
