@@ -411,6 +411,33 @@ export class eBayClient {
   }
 
   /**
+   * Raw API request that returns the fetch Response directly.
+   * Use for endpoints that return 204 No Content (e.g. DELETE).
+   */
+  async rawApiRequest(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<Response> {
+    const url = `${this.baseUrl}${endpoint}`
+    const baseHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Accept-Language': 'en-GB',
+      'Authorization': `Bearer ${this.getAccessToken()}`,
+    }
+    const extraHeaders = (options.headers as Record<string, string>) || {}
+    const headers = { ...baseHeaders, ...extraHeaders }
+
+    const response = await undiciFetch(url, {
+      method: options.method || 'GET',
+      headers: new UndiciHeaders(headers),
+      body: options.body as string | undefined,
+    })
+
+    return response as unknown as Response
+  }
+
+  /**
    * Create an inventory item on eBay
    */
   async createInventoryItem(

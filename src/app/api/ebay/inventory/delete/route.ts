@@ -30,15 +30,23 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.badRequest('eBay not connected')
   }
 
-  const results: Array<{ sku: string; success: boolean; error?: string }> = []
+  const results: Array<{ sku: string; success: boolean; status?: number; error?: string }> = []
 
   for (const sku of skus) {
     try {
-      await ebayClient.apiRequest(
+      // Use rawApiRequest to handle 204 No Content (delete returns empty body)
+      const response = await ebayClient.rawApiRequest(
         `/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`,
         { method: 'DELETE' }
       )
-      results.push({ sku, success: true })
+      if (response.ok || response.status === 204) {
+        results.push({ sku, success: true, status: response.status })
+      } else {
+        const error = await response.json().catch(() => ({ message: response.statusText })) as Record<string, unknown>
+        const errors = error.errors as Array<Record<string, string>> | undefined
+        const msg = errors?.[0]?.message || (error.message as string) || response.statusText
+        results.push({ sku, success: false, status: response.status, error: msg })
+      }
     } catch (err) {
       results.push({
         sku,
