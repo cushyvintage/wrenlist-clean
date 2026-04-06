@@ -149,6 +149,7 @@ export default function SettingsPage() {
             vinted: { connected: boolean; username?: string | null }
             ebay: { connected: boolean; username?: string | null }
             shopify: { connected: boolean; shopName?: string | null }
+            depop: { connected: boolean; username?: string | null }
             etsy: { connected: boolean; username?: string | null }
           }
         }
@@ -165,6 +166,11 @@ export default function SettingsPage() {
             platform: 'eBay',
             status: p.ebay.connected ? 'connected' : 'not_connected',
             accountName: p.ebay.username || undefined,
+          },
+          {
+            platform: 'Depop',
+            status: p.depop.connected ? 'connected' : 'not_connected',
+            accountName: p.depop.username || undefined,
           },
           {
             platform: 'Shopify',

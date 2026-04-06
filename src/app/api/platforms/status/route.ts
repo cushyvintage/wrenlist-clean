@@ -10,7 +10,7 @@ import { withAuth } from '@/lib/with-auth'
 export const GET = withAuth(async (_req: NextRequest, user) => {
   const supabase = await createSupabaseServerClient()
 
-  const [ebayResult, vintedResult, shopifyResult] = await Promise.all([
+  const [ebayResult, vintedResult, shopifyResult, depopResult, etsyResult] = await Promise.all([
     supabase
       .from('ebay_tokens')
       .select('ebay_user')
@@ -24,6 +24,16 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     supabase
       .from('shopify_connections')
       .select('shop_name, store_domain')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('depop_connections')
+      .select('depop_username')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('etsy_connections')
+      .select('etsy_username')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -43,9 +53,13 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
         shopName: shopifyResult.data?.shop_name ?? null,
         storeDomain: shopifyResult.data?.store_domain ?? null,
       },
+      depop: {
+        connected: !!depopResult.data,
+        username: depopResult.data?.depop_username ?? null,
+      },
       etsy: {
-        connected: false,
-        username: null,
+        connected: !!etsyResult.data,
+        username: etsyResult.data?.etsy_username ?? null,
       },
     },
   })
