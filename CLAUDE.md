@@ -8,6 +8,10 @@
 - **Project ID:** prj_npEAJ4fDntlbTtTmkCryTrcQkdmh
 - **Team ID:** team_5klHjx1qdqPBtT5i8oAdlA8U
 
+### Missing Vercel Env Vars (TODO)
+- **`EBAY_WEBHOOK_VERIFICATION_TOKEN`** — Required for eBay webhook signature validation. Without it, incoming eBay events (ITEM_SOLD, account deletion) are rejected with 500. eBay publishing still works; only inbound webhooks are affected.
+- **`EBAY_TOKEN_ENCRYPTION_KEY`** — Required for encrypting stored eBay OAuth tokens at rest.
+
 ## Dev Server
 - **Port:** 3004 (Next.js picks this if 3000 is busy)
 - **Start:** `npm run dev` from `/Volumes/ExternalAI/github/wrenlist-clean`
