@@ -16,6 +16,12 @@ type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low' | 'days_liste
 /** Statuses that indicate an item is still pending extension action */
 const PENDING_STATUSES: MarketplaceDataStatus[] = ['needs_publish', 'needs_delist']
 
+/** Per-platform publish status tracking */
+type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
+interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
+const EMPTY_STATUS_ENTRY: PlatformStatusEntry = { status: 'waiting', succeeded: 0, failed: 0, total: 0 }
+const EXTENSION_PLATFORMS: readonly Platform[] = ['vinted', 'etsy', 'depop', 'facebook'] as const
+
 interface ListingWithFind extends ProductMarketplaceData {
   finds: {
     id: string
@@ -70,10 +76,6 @@ export default function ListingsPage() {
   const [successToast, setSuccessToast] = useState<string | null>(null)
   const [failedTargets, setFailedTargets] = useState<Platform[]>([])
 
-  // Per-platform publish statuses shown during crosslist
-  type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
-  interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
-  const emptyEntry: PlatformStatusEntry = { status: 'waiting', succeeded: 0, failed: 0, total: 0 }
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
 
   // Set page title
@@ -229,7 +231,7 @@ export default function ListingsPage() {
     const total = findIds.length
     const initStatuses: Record<string, PlatformStatusEntry> = {}
     const patchEntry = (prev: Record<string, PlatformStatusEntry>, p: string, patch: Partial<PlatformStatusEntry>): PlatformStatusEntry => {
-      const base: PlatformStatusEntry = prev[p] ?? { ...emptyEntry, total }
+      const base: PlatformStatusEntry = prev[p] ?? { ...EMPTY_STATUS_ENTRY, total }
       return { ...base, ...patch }
     }
     for (const p of targets) {
@@ -275,17 +277,17 @@ export default function ListingsPage() {
 
     // Track per-platform tallies across all finds
     type Tally = { succeeded: number; failed: number; lastError?: string }
-    const defaultTally: Tally = { succeeded: 0, failed: 0 }
     const tallies = new Map<string, Tally>()
     for (const p of valid) tallies.set(p, { succeeded: 0, failed: 0 })
-    const t = (p: string): Tally => tallies.get(p) ?? defaultTally
+    // Safe accessor — every valid platform is pre-initialised above
+    const t = (p: string): Tally => tallies.get(p)!
 
     for (let i = 0; i < findIds.length; i++) {
       // Mark all valid platforms as publishing for this item
       setPlatformStatuses((prev) => {
         const next = { ...prev }
         for (const p of valid) {
-          if (next[p]?.status !== 'failed' || !expired.includes(p as Platform)) {
+          if (prev[p]?.status !== 'failed') {
             next[p] = patchEntry(prev, p, { status: 'publishing' })
           }
         }
@@ -301,47 +303,47 @@ export default function ListingsPage() {
         const data = await res.json()
         const results: Record<string, { ok: boolean; error?: string; listingUrl?: string; alreadyListed?: boolean }> = data.data?.results || {}
 
-        // Update tallies + live statuses per platform from this item's results
+        // Update tallies (outside state setter — no side effects in updaters)
+        for (const p of valid) {
+          const r = results[p]
+          if (r?.ok) { t(p).succeeded++ }
+          else if (r) { t(p).failed++; t(p).lastError = r.error }
+          else { t(p).succeeded++ } // not in results = extension-queued
+        }
+
+        const isLast = i === findIds.length - 1
         setPlatformStatuses((prev) => {
           const next = { ...prev }
           for (const p of valid) {
-            const r = results[p]
-            if (r?.ok) {
-              t(p).succeeded++
-            } else if (r) {
-              t(p).failed++
-              t(p).lastError = r.error
-            } else {
-              // Platform not in results — treat as still queued (extension-based)
-              t(p).succeeded++
-            }
-            const isLast = i === findIds.length - 1
+            const tp = t(p)
             if (isLast) {
-              // Final status
-              if (t(p).failed > 0 && t(p).succeeded === 0) {
-                next[p] = patchEntry(prev, p, { status: 'failed', error: t(p).lastError, succeeded: t(p).succeeded, failed: t(p).failed })
-              } else if (t(p).failed > 0) {
-                next[p] = patchEntry(prev, p, { status: 'failed', error: `${t(p).failed} failed`, succeeded: t(p).succeeded, failed: t(p).failed })
+              if (tp.failed > 0) {
+                const errMsg = tp.succeeded === 0 ? (tp.lastError || 'failed') : `${tp.failed} failed`
+                next[p] = patchEntry(prev, p, { status: 'failed', error: errMsg, succeeded: tp.succeeded, failed: tp.failed })
               } else {
-                // Extension platforms (vinted, etsy, depop, facebook) queue rather than list directly
-                const extensionPlatforms: Platform[] = ['vinted', 'etsy', 'depop', 'facebook']
-                const finalStatus: PlatformPublishStatus = extensionPlatforms.includes(p as Platform) ? 'queued' : 'listed'
-                next[p] = patchEntry(prev, p, { status: finalStatus, succeeded: t(p).succeeded, failed: 0 })
+                const finalStatus: PlatformPublishStatus = EXTENSION_PLATFORMS.includes(p as Platform) ? 'queued' : 'listed'
+                next[p] = patchEntry(prev, p, { status: finalStatus, succeeded: tp.succeeded, failed: 0 })
               }
             } else {
-              // Intermediate — show progress
-              next[p] = patchEntry(prev, p, { status: 'publishing', succeeded: t(p).succeeded, failed: t(p).failed })
+              next[p] = patchEntry(prev, p, { status: 'publishing', succeeded: tp.succeeded, failed: tp.failed })
             }
           }
           return next
         })
       } catch {
-        // Network error — mark all platforms as failed for this item
+        // Network error — increment failure tally for all platforms
         for (const p of valid) t(p).failed++
+        const isLast = i === findIds.length - 1
         setPlatformStatuses((prev) => {
           const next = { ...prev }
           for (const p of valid) {
-            next[p] = patchEntry(prev, p, { succeeded: t(p).succeeded, failed: t(p).failed })
+            const tp = t(p)
+            if (isLast) {
+              const errMsg = tp.succeeded === 0 ? 'network error' : `${tp.failed} failed`
+              next[p] = patchEntry(prev, p, { status: 'failed', error: errMsg, succeeded: tp.succeeded, failed: tp.failed })
+            } else {
+              next[p] = patchEntry(prev, p, { status: 'publishing', succeeded: tp.succeeded, failed: tp.failed })
+            }
           }
           return next
         })
