@@ -102,16 +102,15 @@ export function CameraScanner({ onDetected, onClose }: CameraScannerProps) {
 
         if (barcodes.length > 0 && barcodes[0]) {
           const code = barcodes[0].rawValue
-          // Only fire if it's a different barcode than last detected
+          // Skip if same barcode still in frame — only fire on new barcode
           if (code !== lastDetectedRef.current) {
             lastDetectedRef.current = code
             cooldownRef.current = true
             onDetected(code)
-            // 2s cooldown before scanning again, then allow same barcode
-            setTimeout(() => {
-              cooldownRef.current = false
-              lastDetectedRef.current = null
-            }, 2000)
+            // 5s cooldown before resuming detection (gives time to move item away)
+            // lastDetectedRef stays set — same barcode won't re-fire until a
+            // different one is scanned or the field is empty for a full cycle
+            setTimeout(() => { cooldownRef.current = false }, 5000)
           }
         }
       } catch {
