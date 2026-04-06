@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import type { Platform } from '@/types'
 import type { ListingStatus } from './types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -46,36 +46,30 @@ export function ImportHeader({
   statusFilter,
   onStatusFilterChange,
 }: ImportHeaderProps) {
-  const [confirming, setConfirming] = useState(false)
+  // Use a ref to track confirm state to avoid React re-render race conditions
+  const confirmingRef = useRef(false)
+  const [, forceUpdate] = useState(0)
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevCountRef = useRef(selectedCount)
-
-  // Reset confirm state when selection count actually changes
-  useEffect(() => {
-    if (prevCountRef.current !== selectedCount) {
-      setConfirming(false)
-      prevCountRef.current = selectedCount
-    }
-  }, [selectedCount])
 
   function handleImportClick() {
-    console.log('[ImportHeader] handleImportClick called, confirming =', confirming)
-    if (confirming) {
+    if (confirmingRef.current) {
       // Second click — execute import
-      console.log('[ImportHeader] Executing import')
-      setConfirming(false)
+      confirmingRef.current = false
       if (confirmTimer.current) clearTimeout(confirmTimer.current)
+      forceUpdate(n => n + 1)
       onImport()
     } else {
       // First click — enter confirm state
-      console.log('[ImportHeader] Entering confirm state')
-      setConfirming(true)
+      confirmingRef.current = true
+      forceUpdate(n => n + 1)
       confirmTimer.current = setTimeout(() => {
-        console.log('[ImportHeader] Confirm timeout expired')
-        setConfirming(false)
+        confirmingRef.current = false
+        forceUpdate(n => n + 1)
       }, 4000)
     }
   }
+
+  const confirming = confirmingRef.current
 
   return (
     <div className="space-y-4">
