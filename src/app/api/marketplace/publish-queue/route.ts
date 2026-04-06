@@ -113,7 +113,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     platform_listing_id?: string
     platform_listing_url?: string
     fields?: Record<string, unknown>
-    status?: 'listed' | 'error' | 'needs_publish'
+    status?: 'draft' | 'listed' | 'error' | 'needs_publish'
     error_message?: string
   }
 
@@ -140,14 +140,17 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.notFound('Find not found')
   }
 
+  // draft = saved as draft on marketplace (not live yet)
+  // listed = published live on marketplace
   // needs_publish = retry (keep in queue with updated retry_count)
   // error = exhausted retries
-  // listed = success (default)
   const targetStatus = reportedStatus === 'error'
     ? 'error'
     : reportedStatus === 'needs_publish'
       ? 'needs_publish'
-      : 'listed'
+      : reportedStatus === 'draft'
+        ? 'draft'
+        : 'listed'
 
   // Update marketplace data (merge any extra fields like collection_name, retry_count)
   const updateData: Record<string, unknown> = {
@@ -155,7 +158,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     updated_at: new Date().toISOString(),
   }
 
-  if (targetStatus === 'listed') {
+  if (targetStatus === 'listed' || targetStatus === 'draft') {
     updateData.platform_listing_id = platform_listing_id || null
     updateData.platform_listing_url = platform_listing_url || null
     updateData.last_synced_at = new Date().toISOString()

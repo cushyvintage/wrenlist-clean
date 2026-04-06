@@ -385,9 +385,13 @@ type ExternalMessage = Record<string, unknown>;
           // Report back to Wrenlist API
           try {
             if (result.success) {
+              // Etsy queue poll always saves as draft (default publishMode).
+              // Other marketplaces publish directly via API.
+              const reportStatus = mp === "etsy" ? "draft" : "listed";
               const reportBody: Record<string, unknown> = {
                 find_id: item.find_id,
                 marketplace: mp,
+                status: reportStatus,
                 platform_listing_id: result.product?.id ? String(result.product.id) : null,
                 platform_listing_url: result.product?.url ?? null,
               };

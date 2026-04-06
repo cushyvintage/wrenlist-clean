@@ -46,6 +46,8 @@ export type ListingActionResult = {
   product?: { id: string | number; url: string };
   error?: string;
   needsLogin?: boolean;
+  /** Etsy only: whether the listing was saved as draft or published live. */
+  publishMode?: "draft" | "publish";
 };
 
 /** Data passed into the injected form-fill script */
@@ -330,43 +332,52 @@ export class EtsyClient {
             }
 
             // Redirected to listings manager — save succeeded but no ID in URL.
-            // Navigate to the draft filter and wait for listing cards to load.
+            // Navigate to the draft filter and poll for listing cards to appear.
             if (tabUrl.includes("/tools/listings")) {
               try {
-                // Navigate to drafts sorted by most recent update
                 await chrome.tabs.update(tabId, {
                   url: "https://www.etsy.com/your/shops/me/tools/listings/state:draft,sort:update_date",
                 });
-                // Wait for the draft listings page to render cards
-                await wait(5000);
 
-                const scrapeResult = await chrome.scripting.executeScript({
-                  target: { tabId },
-                  func: (title: string) => {
-                    const links = Array.from(document.querySelectorAll("a"));
-                    // Pass 1: match by title prefix
-                    const titlePrefix = title.slice(0, 30);
-                    for (const link of links) {
-                      const href = link.getAttribute("href") || "";
-                      const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
-                      if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
-                        return idMatch[1];
-                      }
+                // Poll for listing-editor links to appear (up to 10s)
+                const scrapeStart = Date.now();
+                while (Date.now() - scrapeStart < 10000) {
+                  await wait(2000);
+                  try {
+                    const scrapeResult = await chrome.scripting.executeScript({
+                      target: { tabId },
+                      func: (title: string) => {
+                        const links = Array.from(document.querySelectorAll("a"));
+                        const titlePrefix = title.slice(0, 30);
+                        // Pass 1: match by title
+                        for (const link of links) {
+                          const href = link.getAttribute("href") || "";
+                          const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
+                          if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
+                            return idMatch[1];
+                          }
+                        }
+                        // Pass 2: first listing-editor/edit link (most recent draft)
+                        for (const link of links) {
+                          const href = link.getAttribute("href") || "";
+                          const idMatch = href.match(/listing-editor\/edit\/(\d+)/);
+                          if (idMatch?.[1]) return idMatch[1];
+                        }
+                        return null;
+                      },
+                      args: [product.title || ""],
+                    });
+                    const scrapedId = scrapeResult?.[0]?.result;
+                    if (scrapedId) {
+                      listingId = scrapedId;
+                      break;
                     }
-                    // Pass 2: first listing-editor link (most recent draft)
-                    for (const link of links) {
-                      const href = link.getAttribute("href") || "";
-                      const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
-                      if (idMatch?.[1]) return idMatch[1];
-                    }
-                    return null;
-                  },
-                  args: [product.title || ""],
-                });
-                const scrapedId = scrapeResult?.[0]?.result;
-                if (scrapedId) listingId = scrapedId;
+                  } catch {
+                    // Page not ready yet — keep polling
+                  }
+                }
               } catch {
-                // Scrape failed — listing was still saved
+                // Navigation/scrape failed — listing was still saved
               }
               break;
             }
@@ -379,7 +390,11 @@ export class EtsyClient {
         await chrome.tabs.remove(tabId).catch(() => {});
 
         if (listingId) {
-          listingUrl = this.getProductUrl(listingId);
+          // Drafts aren't viewable at /listing/{id} — use the edit URL instead.
+          // Published listings use the public URL.
+          listingUrl = mode === "draft"
+            ? `${ETSY_EDIT_LISTING_URL}/edit/${listingId}`
+            : this.getProductUrl(listingId);
         }
 
         // Even without a listing ID, if we got past validation the save worked.
@@ -387,6 +402,7 @@ export class EtsyClient {
         const modeLabel = mode === "publish" ? "published" : "saved as draft";
         return {
           success: true,
+          publishMode: mode,
           message: listingId
             ? `Listing ${modeLabel} on Etsy.`
             : `Listing ${modeLabel} on Etsy (ID not captured — check Etsy dashboard).`,
@@ -731,26 +747,19 @@ export class EtsyClient {
       return;
     }
 
-    // Inject the base64 data into the page and set files on the input
+    // Inject the base64 data into the page and trigger the upload.
+    // Etsy's form has both a hidden file input and a drag-drop zone.
+    // We try both: setting files on the input AND dispatching a drop
+    // event on the upload area, since Etsy may listen on either.
     await chrome.scripting.executeScript({
       target: { tabId },
       func: (
         images: Array<{ base64: string; mimeType: string }>,
       ) => {
         try {
-          const fileInput = document.querySelector(
-            'input[type="file"]',
-          ) as HTMLInputElement;
-          if (!fileInput) {
-            console.warn("[Etsy] File input not found");
-            return;
-          }
-
-          const dt = new DataTransfer();
-
+          const files: File[] = [];
           for (let i = 0; i < images.length; i++) {
             const { base64, mimeType } = images[i];
-            // Decode base64 to binary
             const binary = atob(base64);
             const bytes = new Uint8Array(binary.length);
             for (let j = 0; j < binary.length; j++) {
@@ -758,15 +767,36 @@ export class EtsyClient {
             }
             const blob = new Blob([bytes], { type: mimeType });
             const ext = mimeType.split("/")[1] || "jpg";
-            const file = new File([blob], `photo_${i + 1}.${ext}`, {
-              type: mimeType,
-            });
-            dt.items.add(file);
+            files.push(
+              new File([blob], `photo_${i + 1}.${ext}`, { type: mimeType }),
+            );
           }
 
-          fileInput.files = dt.files;
-          fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-          fileInput.dispatchEvent(new Event("input", { bubbles: true }));
+          // Method 1: Set files on the hidden file input
+          const fileInput = document.querySelector(
+            'input[type="file"]',
+          ) as HTMLInputElement;
+          if (fileInput) {
+            const dt = new DataTransfer();
+            for (const f of files) dt.items.add(f);
+            fileInput.files = dt.files;
+            fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+            fileInput.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+
+          // Method 2: Dispatch a drop event on the upload area
+          // Etsy's wt-upload component may listen for drag-drop events
+          const dropZone = document.querySelector(".wt-upload__area");
+          if (dropZone) {
+            const dropDt = new DataTransfer();
+            for (const f of files) dropDt.items.add(f);
+            const dropEvent = new DragEvent("drop", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer: dropDt,
+            });
+            dropZone.dispatchEvent(dropEvent);
+          }
         } catch (err) {
           console.error("[Etsy] Image upload error:", err);
         }
@@ -774,8 +804,9 @@ export class EtsyClient {
       args: [imageDataList],
     });
 
-    // Wait for Etsy to process the uploaded images
-    await wait(3000);
+    // Wait for Etsy to process and upload images to their servers.
+    // 5s base + 2s per image for server-side processing.
+    await wait(5000 + imageDataList.length * 2000);
   }
 
   /**

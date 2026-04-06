@@ -38,3 +38,4 @@ extension/dist/
 # Misc
 .eslintcache
 .vercel
+.env*.local
