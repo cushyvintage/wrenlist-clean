@@ -1062,103 +1062,93 @@ export class EtsyClient {
    * protocol's Input.dispatchKeyEvent sends events indistinguishable
    * from real user keyboard input, which React processes correctly.
    */
+  /**
+   * Fill tags by injecting a page-level script that types into the input
+   * and clicks Add, all within a single MAIN-world execution context.
+   *
+   * The key insight: the entire set+click sequence must happen inside ONE
+   * function running in the page's MAIN world, with async delays between
+   * value set and button click so React can process the state change.
+   */
   private async fillTags(tabId: number, tags: string): Promise<void> {
     const tagList = tags
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean)
-      .slice(0, 13); // Etsy max 13 tags
+      .slice(0, 13) // Etsy max 13 tags
+      .map((t) => t.slice(0, 20)); // Etsy max 20 chars per tag
 
     if (tagList.length === 0) return;
 
-    const debugTarget = { tabId };
-
     try {
-      // Attach the debugger to the tab
-      await chrome.debugger.attach(debugTarget, "1.3");
-      await remoteLog("info", "etsy.tags", `Debugger attached, filling ${tagList.length} tags`);
-
-      // Focus the tag input field first
-      await chrome.scripting.executeScript({
+      const result = await chrome.scripting.executeScript({
         target: { tabId },
-        func: () => {
+        world: "MAIN" as chrome.scripting.ExecutionWorld,
+        func: async (tagArray: string[]) => {
+          const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const input = document.getElementById("listing-tags-input") as HTMLInputElement | null;
-          if (input) {
+          if (!input) return { filled: 0, error: "tag input not found" };
+
+          // Find the Add button
+          let addBtn: HTMLButtonElement | undefined;
+          let container: HTMLElement | null = input.parentElement;
+          for (let d = 0; d < 5 && container && !addBtn; d++) {
+            addBtn = Array.from(container.querySelectorAll("button")).find(
+              (b) => b.textContent?.trim() === "Add",
+            );
+            container = container.parentElement;
+          }
+          if (!addBtn) return { filled: 0, error: "Add button not found" };
+
+          const setter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype, "value",
+          )?.set;
+
+          let filled = 0;
+          for (const tag of tagArray) {
+            // Focus and set value
             input.focus();
             input.click();
+            await delay(50);
+
+            if (setter) {
+              setter.call(input, tag);
+            } else {
+              input.value = tag;
+            }
+            input.dispatchEvent(new InputEvent("input", {
+              bubbles: true, cancelable: true, inputType: "insertText", data: tag,
+            }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+
+            // Wait for React to process the value into its state
+            await delay(200);
+
+            // Click Add
+            addBtn.click();
+            filled++;
+
+            // Wait for the tag chip to render and input to clear
+            await delay(300);
           }
+
+          return { filled, error: null };
         },
+        args: [tagList],
       });
-      await wait(300);
 
-      for (const tag of tagList) {
-        const trimmedTag = tag.slice(0, 20);
-
-        // Type each character using debugger key events
-        for (const char of trimmedTag) {
-          await chrome.debugger.sendCommand(debugTarget, "Input.dispatchKeyEvent", {
-            type: "keyDown",
-            text: char,
-            key: char,
-            code: `Key${char.toUpperCase()}`,
-          });
-          await chrome.debugger.sendCommand(debugTarget, "Input.dispatchKeyEvent", {
-            type: "keyUp",
-            key: char,
-            code: `Key${char.toUpperCase()}`,
-          });
-        }
-
-        // Brief pause for React to process the typed text
-        await wait(150);
-
-        // Click the "Add" button via executeScript (debugger typed the text,
-        // now the button click should work since React state is correct)
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          func: () => {
-            const input = document.getElementById("listing-tags-input");
-            if (!input) return;
-            let addBtn: HTMLButtonElement | undefined;
-            let container: HTMLElement | null = input.parentElement;
-            for (let depth = 0; depth < 5 && container && !addBtn; depth++) {
-              addBtn = Array.from(
-                container.querySelectorAll("button"),
-              ).find((b) => b.textContent?.trim() === "Add");
-              container = container.parentElement;
-            }
-            if (addBtn) addBtn.click();
-          },
-        });
-
-        await wait(300);
-
-        // Re-focus the tag input for the next tag
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          func: () => {
-            const input = document.getElementById("listing-tags-input") as HTMLInputElement | null;
-            if (input) {
-              input.focus();
-              input.click();
-            }
-          },
-        });
-        await wait(150);
+      const execResult = result?.[0]?.result as { filled: number; error: string | null } | undefined;
+      if (execResult?.error) {
+        console.warn("[Etsy] Tag fill issue:", execResult.error);
+        await remoteLog("warn", "etsy.tags", `Tag fill: ${execResult.error}`);
+      } else {
+        console.log(`[Etsy] Filled ${execResult?.filled ?? 0} tags`);
+        await remoteLog("info", "etsy.tags", `Filled ${execResult?.filled ?? 0} tags`);
       }
-
-      await remoteLog("info", "etsy.tags", `Filled ${tagList.length} tags successfully`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Etsy] Tag fill failed:", msg);
       await remoteLog("error", "etsy.tags", `Tag fill error: ${msg}`);
-      console.error("[Etsy] Tag fill via debugger failed:", err);
-    } finally {
-      // Always detach the debugger
-      try {
-        await chrome.debugger.detach(debugTarget);
-      } catch {
-        // Already detached or tab closed
-      }
     }
   }
 }
