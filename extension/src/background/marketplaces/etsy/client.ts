@@ -304,6 +304,11 @@ export class EtsyClient {
         // Step 4b: Set processing profile (required for publishing)
         await this.selectProcessingProfile(tabId);
 
+        // Step 4c: Fill tags (separate step — React Add button needs its own script context)
+        if (formData.tags) {
+          await this.fillTags(tabId, formData.tags);
+        }
+
         // Step 5: Click Save as draft or Publish depending on mode
         await remoteLog("info", "etsy.publish", `Clicking ${mode} button`);
         await wait(1000);
@@ -698,9 +703,12 @@ export class EtsyClient {
     // might be new/handmade (craft_supplies, health_beauty) default to recent.
     const categoryRoot = rawCategory.split("_")[0];
     const VINTAGE_CATEGORIES = new Set([
-      "ceramics", "glassware", "jewellery", "collectibles", "antiques",
-      "art", "furniture", "homeware", "toys", "clothing", "books",
-      "music_media", "electronics", "sports", "medals", "teapots", "jugs",
+      // Phase 3 first-segment roots
+      "antiques", "art", "collectibles", "clothing", "electronics",
+      "home", "books", "sports", "toys", "musical", "vehicles",
+      // Legacy roots (still in DB)
+      "ceramics", "glassware", "jewellery", "furniture", "homeware",
+      "music", "medals", "teapots", "jugs",
     ]);
     const isLikelyVintage =
       product.dynamicProperties?.is_vintage === "true" ||
@@ -1042,6 +1050,79 @@ export class EtsyClient {
 
     await wait(500);
   }
+
+  /**
+   * Fill tags one at a time by setting the input value and clicking the
+   * "Add" button. Each tag is a separate executeScript call so React has
+   * time to process the value change between tags.
+   */
+  private async fillTags(tabId: number, tags: string): Promise<void> {
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 13); // Etsy max 13 tags
+
+    for (const tag of tagList) {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN" as chrome.scripting.ExecutionWorld,
+        func: (tagText: string) => {
+          const input = document.getElementById(
+            "listing-tags-input",
+          ) as HTMLInputElement | null;
+          if (!input) return;
+
+          // Set value via native setter
+          const setter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            "value",
+          )?.set;
+          input.focus();
+          input.click();
+          if (setter) {
+            setter.call(input, tagText);
+          } else {
+            input.value = tagText;
+          }
+          input.dispatchEvent(
+            new InputEvent("input", {
+              bubbles: true,
+              cancelable: true,
+              inputType: "insertText",
+              data: tagText,
+            }),
+          );
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        },
+        args: [tag.slice(0, 20)],
+      });
+
+      // Small delay for React to register the value
+      await wait(200);
+
+      // Click the Add button in a separate script call
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN" as chrome.scripting.ExecutionWorld,
+        func: () => {
+          const input = document.getElementById("listing-tags-input");
+          if (!input) return;
+          let addBtn: HTMLButtonElement | undefined;
+          let container: HTMLElement | null = input.parentElement;
+          for (let depth = 0; depth < 5 && container && !addBtn; depth++) {
+            addBtn = Array.from(
+              container.querySelectorAll("button"),
+            ).find((b) => b.textContent?.trim() === "Add");
+            container = container.parentElement;
+          }
+          if (addBtn) addBtn.click();
+        },
+      });
+
+      await wait(200);
+    }
+  }
 }
 
 // ─── Injected functions (run in page context) ──────────────────────
@@ -1139,51 +1220,9 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
       }
     }
 
-    // ── Tags ──
-    if (data.tags) {
-      const tagsInput = document.getElementById(
-        "listing-tags-input",
-      ) as HTMLInputElement | null;
-      if (tagsInput) {
-        // Etsy's 2026 listing form has a text input + "Add" button for tags.
-        // Type the tag into the input, then click the Add button to commit.
-        const tagList = data.tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean)
-          .slice(0, 13); // Etsy max 13 tags
-
-        // Find the "Add" button near the tags input. Walk up from the
-        // input until we find a container that holds an "Add" button.
-        let addBtn: HTMLButtonElement | undefined;
-        let container: HTMLElement | null = tagsInput.parentElement;
-        for (let depth = 0; depth < 5 && container && !addBtn; depth++) {
-          addBtn = Array.from(container.querySelectorAll("button")).find(
-            (b) => b.textContent?.trim() === "Add",
-          );
-          container = container.parentElement;
-        }
-
-        for (const tag of tagList) {
-          const trimmed = tag.slice(0, 20); // Etsy max 20 chars per tag
-          // Set value via native setter
-          setNativeValue(tagsInput, trimmed);
-
-          if (addBtn) {
-            // Click the Add button to commit the tag
-            addBtn.click();
-          } else {
-            // Fallback: try Enter key
-            tagsInput.dispatchEvent(
-              new KeyboardEvent("keydown", {
-                key: "Enter", code: "Enter", keyCode: 13, bubbles: true,
-              }),
-            );
-          }
-        }
-        filled.push("tags");
-      }
-    }
+    // Tags are filled in a separate step (fillTags) because the Add button
+    // click needs React event processing that works better as a standalone
+    // executeScript call rather than inline in this function.
 
     // ── Who made it (radio: index 0 = "I did") ──
     const whoMadeRadios = document.querySelectorAll(

@@ -34,44 +34,64 @@ function mapCategoryToShopify(category?: string | null): string[] {
 }
 
 const PRODUCT_TYPE_MAP: Record<string, string> = {
+  // Phase 3 top-level keys
+  antiques: "Antiques",
+  art: "Art & Prints",
+  baby_toddler: "Baby & Toddler",
+  books_media: "Books & Media",
+  clothing: "Vintage Clothing",
+  craft_supplies: "Craft Supplies",
+  collectibles: "Collectibles",
+  electronics: "Electronics",
+  health_beauty: "Health & Beauty",
+  home_garden: "Home & Garden",
+  musical_instruments: "Musical Instruments",
+  pet_supplies: "Pet Supplies",
+  sports_outdoors: "Sports & Outdoors",
+  toys_games: "Toys & Games",
+  vehicles_parts: "Vehicles & Parts",
+  other: "",
+  // Legacy keys (backward compat)
   ceramics: "Vintage Ceramics",
   glassware: "Vintage Glassware",
   books: "Books",
   jewellery: "Vintage Jewellery",
-  clothing: "Vintage Clothing",
   homeware: "Vintage Homeware",
   furniture: "Vintage Furniture",
   toys: "Vintage Toys",
-  collectibles: "Collectibles",
-  art: "Art & Prints",
-  antiques: "Antiques",
-  electronics: "Electronics",
   sports: "Sports & Outdoors",
   music_media: "Music & Media",
-  craft_supplies: "Craft Supplies",
-  health_beauty: "Health & Beauty",
-  other: "",
 };
 
 // Facebook Marketplace category IDs (scraped from facebook.com/marketplace/create/item)
 const FACEBOOK_CATEGORY_MAP: Record<string, string> = {
-  ceramics: "307201127289111",     // Antique and collectible home goods
-  glassware: "585516622131197",    // Home decor
-  books: "298538951209945",        // Books
-  jewellery: "3151136201666261",   // Jewellery
-  clothing: "2730276503872246",    // Clothing, shoes and accessories
-  homeware: "3299126870312336",    // Home and kitchen
-  furniture: "685207502348028",    // Furniture
-  toys: "852990988564103",        // Toys and games
-  collectibles: "694812561109098", // Antiques and collectibles
-  art: "230517141491149",         // Arts and crafts
-  antiques: "694812561109098",    // Antiques and collectibles
-  electronics: "585516622131197", // Home decor (closest match)
-  sports: "852990988564103",      // Toys and games (closest match)
-  music_media: "298538951209945", // Books (media)
-  craft_supplies: "230517141491149", // Arts and crafts
-  health_beauty: "585516622131197",  // Home decor (closest match)
-  other: "684964985564453",       // Miscellaneous
+  // Phase 3 top-level keys
+  antiques: "694812561109098",
+  art: "230517141491149",
+  baby_toddler: "852990988564103",
+  books_media: "298538951209945",
+  clothing: "2730276503872246",
+  craft_supplies: "230517141491149",
+  collectibles: "694812561109098",
+  electronics: "585516622131197",
+  health_beauty: "585516622131197",
+  home_garden: "3299126870312336",
+  musical_instruments: "230517141491149",
+  pet_supplies: "684964985564453",
+  sports_outdoors: "852990988564103",
+  toys_games: "852990988564103",
+  vehicles_parts: "684964985564453",
+  other: "684964985564453",
+  // Legacy keys
+  ceramics: "307201127289111",
+  glassware: "585516622131197",
+  books: "298538951209945",
+  jewellery: "3151136201666261",
+  homeware: "3299126870312336",
+  furniture: "685207502348028",
+  toys: "852990988564103",
+  sports: "852990988564103",
+  music_media: "298538951209945",
 };
 
 function mapCategoryToFacebook(category?: string | null, platformCategoryId?: string | null): string[] {
@@ -86,23 +106,33 @@ function mapCategoryToFacebook(category?: string | null, platformCategoryId?: st
 // Depop API product types — discovered from real Depop listings via userProductView API
 // Note: "decor-home-accesories" is Depop's actual spelling (missing 's')
 const DEPOP_CATEGORY_MAP: Record<string, string[]> = {
+  // Phase 3 top-level keys
+  antiques: ["everything-else", "home", "decor-home-accesories"],
+  art: ["everything-else", "art", "painting"],
+  baby_toddler: ["everything-else", "toys", "other-toys"],
+  books_media: ["everything-else", "books-and-magazines", "books"],
+  clothing: ["womenswear", "tops", "blouses"],
+  craft_supplies: ["everything-else", "home", "other-home"],
+  collectibles: ["everything-else", "home", "decor-home-accesories"],
+  electronics: ["everything-else", "tech-accessories", "other-tech-accessories"],
+  health_beauty: ["everything-else", "beauty", "other-beauty"],
+  home_garden: ["everything-else", "home", "decor-home-accesories"],
+  musical_instruments: ["everything-else", "music", "vinyl"],
+  pet_supplies: ["everything-else", "home", "other-home"],
+  sports_outdoors: ["everything-else", "sports-equipment"],
+  toys_games: ["everything-else", "toys", "other-toys"],
+  vehicles_parts: ["everything-else", "home", "other-home"],
+  other: ["everything-else", "home", "other-home"],
+  // Legacy keys
   ceramics: ["everything-else", "home", "dinnerware"],
   glassware: ["everything-else", "home", "drinkware"],
   books: ["everything-else", "books-and-magazines", "books"],
   jewellery: ["womenswear", "jewellery", "necklaces"],
-  clothing: ["womenswear", "tops", "blouses"],
   homeware: ["everything-else", "home", "decor-home-accesories"],
   furniture: ["everything-else", "home", "furniture"],
   toys: ["everything-else", "toys", "other-toys"],
-  collectibles: ["everything-else", "home", "decor-home-accesories"],
-  art: ["everything-else", "art", "painting"],
-  antiques: ["everything-else", "home", "decor-home-accesories"],
-  electronics: ["everything-else", "tech-accessories", "other-tech-accessories"],
   sports: ["everything-else", "sports-equipment"],
   music_media: ["everything-else", "music", "vinyl"],
-  craft_supplies: ["everything-else", "home", "other-home"],
-  health_beauty: ["everything-else", "beauty", "other-beauty"],
-  other: ["everything-else", "home", "other-home"],
 };
 
 function mapCategoryToDepop(category?: string | null): string[] {
@@ -253,7 +283,8 @@ type ExternalMessage = Record<string, unknown>;
         groups.get(prefix)!.push(c);
       }
 
-      // Pick the first group that produces a valid token (try each prefix)
+      // Pick the first group with a non-expired token (try each prefix).
+      // Expired tokens still parse but Supabase returns empty data for them.
       const chunks: typeof authCookies = [];
       for (const [, group] of groups) {
         const sorted = group.sort((a, b) => a.name.localeCompare(b.name));
@@ -262,10 +293,18 @@ type ExternalMessage = Record<string, unknown>;
         try {
           const json = atob(b64);
           const session = JSON.parse(json);
-          if (session.access_token || session[0]) {
-            chunks.push(...sorted);
-            break;
+          const token = session.access_token ?? session[0];
+          if (!token) continue;
+          // Check JWT expiry: decode payload (second segment) and check exp
+          const payloadB64 = token.split(".")[1];
+          if (payloadB64) {
+            const payload = JSON.parse(atob(payloadB64));
+            if (payload.exp && payload.exp * 1000 < Date.now()) {
+              continue; // Token expired — try next group
+            }
           }
+          chunks.push(...sorted);
+          break;
         } catch {
           // Try next group
         }
