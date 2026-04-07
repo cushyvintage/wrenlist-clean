@@ -35,7 +35,7 @@ export const POST = withAuth(async (request, user) => {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image_url', image_url: { url: photoUrl, detail: 'high' } },
+            { type: 'image_url', image_url: { url: photoUrl, detail: 'low' } },
             {
               type: 'text',
               text: `Which single category best fits this item: ${topLevelList}? Reply with ONLY the category name (lowercase with underscores), nothing else.`,
@@ -88,7 +88,7 @@ export const POST = withAuth(async (request, user) => {
       }),
     })
 
-    let category = topLevel
+    let category = subcatNodes[0]?.value ?? topLevel
     if (step2Response.ok) {
       const step2Data = await step2Response.json() as { choices: Array<{ message: { content: string } }> }
       let subcategory = step2Data.choices[0]?.message?.content?.toLowerCase().trim() ?? ''

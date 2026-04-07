@@ -136,7 +136,7 @@ Return ONLY valid JSON:
 
     return NextResponse.json({
       ...result,
-      category: subcategory ?? topLevel,
+      category: subcategory ?? subcatValues[0] ?? topLevel,
       topLevel,
       confidence: result.confidence,
     })
