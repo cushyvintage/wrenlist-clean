@@ -225,9 +225,11 @@ export default function AddFindPage() {
 
   // ── Auto-identify from first photo (title + description + category) ──
   useEffect(() => {
+    let cancelled = false
+    const abortController = new AbortController()
+
     const identifyFromPhoto = async () => {
       if (!formData.photoPreviews.length || dismissedAutoFill) return
-      // Skip if user already has title + category (e.g. from URL params / scanner)
       if (formData.title && formData.category) return
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto) return
@@ -243,7 +245,7 @@ export default function AddFindPage() {
             img.onerror = reject
             img.src = firstPhoto
           })
-          // Resize to max 1024px on longest side (keeps data URL under ~500KB)
+          if (cancelled) return
           const MAX = 1024
           let { width, height } = img
           if (width > MAX || height > MAX) {
@@ -259,19 +261,22 @@ export default function AddFindPage() {
           ctx.drawImage(img, 0, 0, width, height)
           imageUrl = canvas.toDataURL('image/jpeg', 0.8)
         } catch {
-          return // Can't process image — skip
+          return
         }
       } else if (!firstPhoto.startsWith('http')) {
-        return // Not a usable URL
+        return
       }
 
+      if (cancelled) return
       setIsIdentifying(true)
       try {
         const response = await fetch('/api/ai/identify-from-photo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: [imageUrl] }),
+          signal: abortController.signal,
         })
+        if (cancelled) return
         if (response.ok) {
           const data = await response.json()
           setAiAutoFill({
@@ -281,18 +286,19 @@ export default function AddFindPage() {
             suggestedQuery: data.suggestedQuery,
             confidence: data.confidence,
           })
-          // Also set the old category banner for backward compat
           if (data.category && !formData.category) {
             setAutoDetectedCategory({ category: data.category, confidence: data.confidence })
           }
         }
       } catch (err) {
-        console.error('Failed to identify from photo:', err)
+        if (!cancelled) console.error('Failed to identify from photo:', err)
       } finally {
-        setIsIdentifying(false)
+        if (!cancelled) setIsIdentifying(false)
       }
     }
+
     identifyFromPhoto()
+    return () => { cancelled = true; abortController.abort() }
   }, [formData.photoPreviews, formData.title, formData.category, dismissedAutoFill])
 
   // ── Handlers ──

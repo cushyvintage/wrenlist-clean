@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCategoryNode, getTopLevelCategory } from '@/data/marketplace-category-map'
 
 export interface AIAutoFillData {
@@ -43,6 +43,11 @@ export default function AIAutoFillBanner({
   const [applyTitle, setApplyTitle] = useState(!hasTitle)
   const [applyDescription, setApplyDescription] = useState(!hasDescription)
   const [applyCategory, setApplyCategory] = useState(!hasCategory)
+
+  // Sync: if user starts typing in a field while banner is visible, uncheck it
+  useEffect(() => { if (hasTitle) setApplyTitle(false) }, [hasTitle])
+  useEffect(() => { if (hasDescription) setApplyDescription(false) }, [hasDescription])
+  useEffect(() => { if (hasCategory) setApplyCategory(false) }, [hasCategory])
 
   if (!data) return null
 
