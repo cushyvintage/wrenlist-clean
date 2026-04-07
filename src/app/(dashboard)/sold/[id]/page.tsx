@@ -8,6 +8,7 @@ import { Panel } from '@/components/wren/Panel'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
+import { getCategoryNode } from '@/data/marketplace-category-map'
 import type { Platform, FindCondition } from '@/types'
 
 interface SoldDetail {
@@ -61,9 +62,21 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
 }
 
+/** Normalise Vinted status strings like "Package delivered." → "delivered" */
+function normaliseShipmentStatus(raw: string): string {
+  const s = raw.toLowerCase().replace(/\.$/, '').trim()
+  if (s.includes('delivered')) return 'delivered'
+  if (s.includes('in transit') || s.includes('on its way')) return 'in transit'
+  if (s.includes('label sent') || s.includes('shipping label')) return 'label sent'
+  if (s.includes('shipped')) return 'shipped'
+  if (s.includes('refund')) return 'refunded'
+  if (s.includes('cancel')) return 'cancelled'
+  return s
+}
+
 function ShipmentBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-ink-lt text-sm">--</span>
-  const key = status.toLowerCase()
+  const key = normaliseShipmentStatus(status)
   const style = SHIPMENT_STYLES[key] || { bg: 'bg-cream', text: 'text-ink-lt', label: status }
   return (
     <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${style.bg} ${style.text}`}>
@@ -92,10 +105,8 @@ function formatDate(dateString: string | null): string {
 
 function formatCategory(slug: string | null): string {
   if (!slug) return '--'
-  return slug
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' > ')
+  const node = getCategoryNode(slug)
+  return node?.label || slug.replace(/_/g, ' ')
 }
 
 export default function SoldDetailPage() {
@@ -141,7 +152,11 @@ export default function SoldDetailPage() {
   const daysListed = data.sourced_at && data.sold_at
     ? Math.round((new Date(data.sold_at).getTime() - new Date(data.sourced_at).getTime()) / (1000 * 60 * 60 * 24))
     : null
+  const roiPct = profit != null && data.cost_gbp && data.cost_gbp > 0
+    ? Math.round((profit / data.cost_gbp) * 100)
+    : null
   const photos = (data.photos || []).filter((p): p is string => !!p)
+  const hasItemDetails = !!(data.brand || data.size || data.colour || data.condition || data.source_type || data.sourced_at || data.asking_price_gbp != null)
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -149,6 +164,30 @@ export default function SoldDetailPage() {
       <Link href="/sold" className="inline-flex items-center gap-1 text-xs text-sage hover:underline">
         &larr; back to sold
       </Link>
+
+      {/* Profit highlight */}
+      {profit != null && (
+        <div className={`flex items-center justify-between rounded-md border px-5 py-3 ${
+          profit > 0 ? 'bg-green-50 border-green-200' : profit < 0 ? 'bg-red-50 border-red-200' : 'bg-cream border-border'
+        }`}>
+          <div>
+            <span className="text-xs text-ink-lt">profit on this sale</span>
+            <span className={`ml-3 text-xl font-mono font-semibold ${
+              profit > 0 ? 'text-green-700' : profit < 0 ? 'text-red-700' : 'text-ink'
+            }`}>
+              {profit >= 0 ? '+' : ''}£{profit.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            {marginPct != null && (
+              <span className="text-ink-lt">{marginPct}% margin</span>
+            )}
+            {roiPct != null && (
+              <span className="text-ink-lt">{roiPct}% ROI</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Header: photos + title */}
       <div className="flex gap-5">
@@ -261,7 +300,7 @@ export default function SoldDetailPage() {
               <span className="font-mono">£{sale.grossAmount.toFixed(2)}</span>
             </DetailRow>
           )}
-          {sale.serviceFee != null && (
+          {sale.serviceFee != null && sale.serviceFee > 0 && sale.grossAmount != null && sale.netAmount != null && sale.grossAmount !== sale.netAmount && (
             <DetailRow label="service fee">
               <span className="font-mono text-red-600">-£{sale.serviceFee.toFixed(2)}</span>
             </DetailRow>
@@ -286,6 +325,13 @@ export default function SoldDetailPage() {
               {marginPct != null ? `${marginPct}%` : '--'}
             </span>
           </DetailRow>
+          {roiPct != null && (
+            <DetailRow label="ROI">
+              <span className={`font-mono ${roiPct > 0 ? 'text-green-600' : roiPct < 0 ? 'text-red-600' : ''}`}>
+                {roiPct}%
+              </span>
+            </DetailRow>
+          )}
           {daysListed != null && (
             <DetailRow label="days listed">
               {daysListed} {daysListed === 1 ? 'day' : 'days'}
@@ -294,33 +340,33 @@ export default function SoldDetailPage() {
         </Panel>
 
         {/* Item Details */}
-        <Panel title="item details">
-          {data.brand && <DetailRow label="brand">{data.brand}</DetailRow>}
-          {data.size && <DetailRow label="size">{data.size}</DetailRow>}
-          {data.colour && <DetailRow label="colour">{data.colour}</DetailRow>}
-          {data.condition && (
-            <DetailRow label="condition">
-              {CONDITION_LABELS[data.condition] || data.condition}
-            </DetailRow>
-          )}
-          {data.source_type && (
-            <DetailRow label="sourced from">
-              {data.source_name
-                ? `${data.source_name} (${data.source_type.replace(/_/g, ' ')})`
-                : data.source_type.replace(/_/g, ' ')}
-            </DetailRow>
-          )}
-          {data.sourced_at && (
-            <DetailRow label="sourced date">{formatDate(data.sourced_at)}</DetailRow>
-          )}
-          {data.asking_price_gbp != null && (
-            <DetailRow label="asking price">
-              <span className="font-mono">£{data.asking_price_gbp.toFixed(2)}</span>
-            </DetailRow>
-          )}
-        </Panel>
-
-
+        {hasItemDetails && (
+          <Panel title="item details">
+            {data.brand && <DetailRow label="brand">{data.brand}</DetailRow>}
+            {data.size && <DetailRow label="size">{data.size}</DetailRow>}
+            {data.colour && <DetailRow label="colour">{data.colour}</DetailRow>}
+            {data.condition && (
+              <DetailRow label="condition">
+                {CONDITION_LABELS[data.condition] || data.condition}
+              </DetailRow>
+            )}
+            {data.source_type && (
+              <DetailRow label="sourced from">
+                {data.source_name
+                  ? `${data.source_name} (${data.source_type.replace(/_/g, ' ')})`
+                  : data.source_type.replace(/_/g, ' ')}
+              </DetailRow>
+            )}
+            {data.sourced_at && (
+              <DetailRow label="sourced date">{formatDate(data.sourced_at)}</DetailRow>
+            )}
+            {data.asking_price_gbp != null && (
+              <DetailRow label="asking price">
+                <span className="font-mono">£{data.asking_price_gbp.toFixed(2)}</span>
+              </DetailRow>
+            )}
+          </Panel>
+        )}
       </div>
 
       {/* Description (full width) */}
