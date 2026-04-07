@@ -116,7 +116,6 @@ export default function AddFindPage() {
   const [showPriceOverrides, setShowPriceOverrides] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
-  const [shopifyShopId, setShopifyShopId] = useState<string | null>(null)
   const [incompleteRequiredFields, setIncompleteRequiredFields] = useState<Set<string>>(new Set())
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
   const [templateAppliedBanner, setTemplateAppliedBanner] = useState<string | null>(null)
@@ -130,26 +129,6 @@ export default function AddFindPage() {
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
 
-  // Fetch Shopify store domain on component mount
-  useEffect(() => {
-    const fetchShopifyConnection = async () => {
-      try {
-        const response = await fetch('/api/shopify/connect')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.data.connected && data.data.storeDomain) {
-            // Extract shop ID from domain (e.g., "pyedpp-i5" from "pyedpp-i5.myshopify.com")
-            const shopId = data.data.storeDomain.split('.')[0]
-            setShopifyShopId(shopId)
-          }
-        }
-      } catch (err) {
-        // Silently fail — Shopify not connected
-      }
-    }
-
-    fetchShopifyConnection()
-  }, [])
 
   // Handle URL params on mount
   useEffect(() => {
@@ -873,7 +852,6 @@ export default function AddFindPage() {
               <PlatformSelector
                 selectedPlatforms={formData.selectedPlatforms}
                 onPlatformToggle={handlePlatformToggle}
-                connectedPlatforms={shopifyShopId ? ['vinted', 'ebay', 'shopify'] : ['vinted', 'ebay']}
               />
             </div>
           </div>
