@@ -20,6 +20,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  const now = new Date().toISOString()
+
   const { error } = await supabase
     .from('extension_heartbeats')
     .upsert(
@@ -27,7 +29,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         user_id: user.id,
         extension_version: extension_version || null,
         user_agent: user_agent || null,
-        last_seen_at: new Date().toISOString(),
+        last_seen_at: now,
       },
       { onConflict: 'user_id' }
     )
@@ -37,7 +39,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.internalError()
   }
 
-  return ApiResponseHelper.success({ last_seen_at: new Date().toISOString() })
+  return ApiResponseHelper.success({ last_seen_at: now })
 })
 
 /**

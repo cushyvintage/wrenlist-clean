@@ -777,12 +777,16 @@ type ExternalMessage = Record<string, unknown>;
             continue;
           }
 
-          // 2. Start
-          await queueFetch(`${baseUrl}/api/jobs/poll`, {
+          // 2. Start — abort if another worker already took it
+          const startRes = await queueFetch(`${baseUrl}/api/jobs/poll`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ job_id: job.id, action: "start" }),
           });
+          if (!startRes.ok) {
+            console.warn(`[JobQueue] Failed to start job ${job.id}: ${startRes.status}`);
+            continue;
+          }
 
           // 3. Execute
           const mp = job.platform as SupportedMarketplace;

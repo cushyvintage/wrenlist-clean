@@ -136,8 +136,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     case 'complete': {
       const jobResult = result || {}
 
-      // Update the job
-      await supabase
+      // Atomic: only complete if currently running (prevents double-complete)
+      const { data: completed } = await supabase
         .from('publish_jobs')
         .update({
           status: 'completed',
@@ -146,8 +146,16 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           updated_at: now,
         })
         .eq('id', job_id)
+        .eq('user_id', user.id)
+        .eq('status', 'running')
+        .select('id')
+        .single()
 
-      // Side effect: update PMD
+      if (!completed) {
+        return ApiResponseHelper.error('Job is not running or already completed', 409)
+      }
+
+      // Side effect: update PMD (only fires once due to atomic guard above)
       await updatePmdOnComplete(supabase, user.id, job, jobResult)
 
       return ApiResponseHelper.success({ status: 'completed' })
