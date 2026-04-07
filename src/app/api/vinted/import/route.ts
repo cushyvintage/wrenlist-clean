@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('No items provided')
     }
 
+    const startTime = Date.now()
     let imported = 0, skipped = 0, errors = 0
+    const itemErrors: Array<{ listingId: string; title: string; error: string }> = []
 
     for (const item of items) {
       try {
@@ -86,7 +88,13 @@ export async function POST(request: NextRequest) {
           .select('id')
           .single()
 
-        if (findError || !find) { errors++; continue }
+        if (findError || !find) {
+          errors++
+          const errMsg = findError?.message || 'Find creation returned null'
+          itemErrors.push({ listingId: String(item.id), title: item.title || 'Untitled', error: errMsg })
+          logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item.id), error: errMsg } })
+          continue
+        }
 
         // Create marketplace data row
         await supabase.from('product_marketplace_data').insert({
@@ -99,13 +107,19 @@ export async function POST(request: NextRequest) {
           status: item.is_sold ? 'sold' : item.is_hidden ? 'hidden' : 'listed',
         })
 
-        logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api' })
+        logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api', details: { listingId: String(item.id) } })
 
         imported++
-      } catch { errors++ }
+      } catch (err) {
+        errors++
+        const errMsg = err instanceof Error ? err.message : 'Unknown error'
+        itemErrors.push({ listingId: String(item?.id || 'unknown'), title: item?.title || 'Untitled', error: errMsg })
+        logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item?.id), error: errMsg } })
+      }
     }
 
-    return ApiResponseHelper.success({ imported, skipped, errors, total: items.length })
+    const durationMs = Date.now() - startTime
+    return ApiResponseHelper.success({ imported, skipped, errors, total: items.length, durationMs, itemErrors: itemErrors.length > 0 ? itemErrors : undefined })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Import failed'
     return ApiResponseHelper.internalError(message)

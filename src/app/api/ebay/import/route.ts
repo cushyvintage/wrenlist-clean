@@ -72,7 +72,9 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.badRequest('eBay not connected. Reconnect in Platform Connect.')
     }
 
+    const startTime = Date.now()
     let imported = 0, skipped = 0, errors = 0
+    const itemErrors: Array<{ sku: string; title: string; error: string }> = []
     let offset = 0
     const limit = 100
 
@@ -147,7 +149,13 @@ export async function POST(request: NextRequest) {
             .select('id')
             .single()
 
-          if (findError || !find) { errors++; continue }
+          if (findError || !find) {
+            errors++
+            const errMsg = findError?.message || 'Find creation returned null'
+            itemErrors.push({ sku, title: product.title || sku, error: errMsg })
+            logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, title: product.title, error: errMsg } })
+            continue
+          }
 
           // Create marketplace data
           if (listingId) {
@@ -196,10 +204,16 @@ export async function POST(request: NextRequest) {
             })()
           }
 
-          logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'ebay', eventType: 'imported', source: 'api' })
+          logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'ebay', eventType: 'imported', source: 'api', details: { sku, listingId, photoCount: photos.length } })
 
           imported++
-        } catch { errors++ }
+        } catch (err) {
+          errors++
+          const sku = item?.sku || 'unknown'
+          const errMsg = err instanceof Error ? err.message : 'Unknown error'
+          itemErrors.push({ sku, title: item?.product?.title || sku, error: errMsg })
+          logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, error: errMsg } })
+        }
       }
 
       if (items.length < limit) break
@@ -213,7 +227,8 @@ export async function POST(request: NextRequest) {
       items_sold: 0,
     })
 
-    return ApiResponseHelper.success({ imported, skipped, errors })
+    const durationMs = Date.now() - startTime
+    return ApiResponseHelper.success({ imported, skipped, errors, durationMs, itemErrors: itemErrors.length > 0 ? itemErrors : undefined })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Import failed'
     return ApiResponseHelper.internalError(message)

@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
+import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
 // Vinted condition map
 const CONDITION_MAP: Record<string, string> = {
@@ -105,7 +106,9 @@ export async function POST(request: NextRequest) {
 
     if (!listings.length) return ApiResponseHelper.badRequest('No listings provided')
 
+    const startTime = Date.now()
     let imported = 0, skipped = 0, errors = 0
+    const itemErrors: Array<{ listingId: string; title: string; error: string }> = []
 
     for (const item of listings) {
       try {
@@ -200,7 +203,13 @@ export async function POST(request: NextRequest) {
           .select('id')
           .single()
 
-        if (findError || !find) { errors++; continue }
+        if (findError || !find) {
+          errors++
+          const errMsg = findError?.message || 'Find creation returned null'
+          itemErrors.push({ listingId, title: item.title || 'Untitled', error: errMsg })
+          logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, title: item.title, error: errMsg } })
+          continue
+        }
 
         // Mirror photos to Supabase Storage (sync, not fire-and-forget)
         const mirroredPhotos = await mirrorPhotosToStorage(user.id, sku, photos)
@@ -225,16 +234,25 @@ export async function POST(request: NextRequest) {
           status: pmdStatus,
         })
 
+        logMarketplaceEvent(supabase, user.id, {
+          findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api',
+          details: { listingId, sku, pmdStatus, photoCount: photos.length, mirroredPhotoCount: mirroredPhotos.length },
+        })
         imported++
-      } catch {
+      } catch (err) {
         errors++
+        const listingId = String(item?.id || 'unknown')
+        const errMsg = err instanceof Error ? err.message : 'Unknown error'
+        itemErrors.push({ listingId, title: item?.title || 'Untitled', error: errMsg })
+        logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, error: errMsg } })
       }
     }
 
+    const durationMs = Date.now() - startTime
     return NextResponse.json({
       success: true,
-      message: `Imported ${imported} of ${listings.length} listings.`,
-      results: { success: imported, skipped, errors, total: listings.length },
+      message: `Imported ${imported} of ${listings.length} listings in ${(durationMs / 1000).toFixed(1)}s.`,
+      results: { success: imported, skipped, errors, total: listings.length, durationMs, itemErrors: itemErrors.length > 0 ? itemErrors : undefined },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Import failed'
