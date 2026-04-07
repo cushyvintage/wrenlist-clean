@@ -374,9 +374,14 @@ export class EtsyClient {
               break;
             }
 
-            // Redirected to listings manager — save succeeded but no ID in URL.
-            // Navigate to the draft filter and poll for listing cards to appear.
+            // Redirected to listings manager — save succeeded.
+            // Check for newly-listed-listing-id query param first (publish mode).
             if (tabUrl.includes("/tools/listings")) {
+              const newlyListedMatch = tabUrl.match(/newly-listed-listing-id=(\d+)/);
+              if (newlyListedMatch?.[1]) {
+                listingId = newlyListedMatch[1];
+                break;
+              }
               try {
                 await chrome.tabs.update(tabId, {
                   url: "https://www.etsy.com/your/shops/me/tools/listings/state:draft,sort:update_date",
