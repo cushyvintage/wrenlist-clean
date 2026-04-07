@@ -1145,33 +1145,41 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
         "listing-tags-input",
       ) as HTMLInputElement | null;
       if (tagsInput) {
-        // Etsy tags: type each tag and press Enter/comma to add as chip
+        // Etsy's 2026 listing form has a text input + "Add" button for tags.
+        // Type the tag into the input, then click the Add button to commit.
         const tagList = data.tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean)
           .slice(0, 13); // Etsy max 13 tags
 
+        // Find the "Add" button near the tags input. Walk up from the
+        // input until we find a container that holds an "Add" button.
+        let addBtn: HTMLButtonElement | undefined;
+        let container: HTMLElement | null = tagsInput.parentElement;
+        for (let depth = 0; depth < 5 && container && !addBtn; depth++) {
+          addBtn = Array.from(container.querySelectorAll("button")).find(
+            (b) => b.textContent?.trim() === "Add",
+          );
+          container = container.parentElement;
+        }
+
         for (const tag of tagList) {
-          tagsInput.focus();
-          setNativeValue(tagsInput, tag.slice(0, 20)); // Etsy max 20 chars per tag
-          // Press Enter to add the tag as a chip
-          tagsInput.dispatchEvent(
-            new KeyboardEvent("keydown", {
-              key: "Enter",
-              code: "Enter",
-              keyCode: 13,
-              bubbles: true,
-            }),
-          );
-          tagsInput.dispatchEvent(
-            new KeyboardEvent("keyup", {
-              key: "Enter",
-              code: "Enter",
-              keyCode: 13,
-              bubbles: true,
-            }),
-          );
+          const trimmed = tag.slice(0, 20); // Etsy max 20 chars per tag
+          // Set value via native setter
+          setNativeValue(tagsInput, trimmed);
+
+          if (addBtn) {
+            // Click the Add button to commit the tag
+            addBtn.click();
+          } else {
+            // Fallback: try Enter key
+            tagsInput.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key: "Enter", code: "Enter", keyCode: 13, bubbles: true,
+              }),
+            );
+          }
         }
         filled.push("tags");
       }
