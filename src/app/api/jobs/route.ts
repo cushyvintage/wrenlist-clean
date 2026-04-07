@@ -103,3 +103,27 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   return ApiResponseHelper.created({ id: result.id })
 })
+
+/**
+ * DELETE /api/jobs
+ * Clear job history — deletes all completed, failed, and cancelled jobs for the user.
+ */
+export const DELETE = withAuth(async (_req: NextRequest, user) => {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data, error } = await supabase
+    .from('publish_jobs')
+    .delete()
+    .eq('user_id', user.id)
+    .in('status', ['completed', 'failed', 'cancelled'])
+    .select('id')
+
+  if (error) {
+    return ApiResponseHelper.internalError()
+  }
+
+  return ApiResponseHelper.success({ deleted: (data || []).length })
+})

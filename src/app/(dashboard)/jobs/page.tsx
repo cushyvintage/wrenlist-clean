@@ -106,6 +106,15 @@ export default function JobsPage() {
     }
   }, [loadJobs, activeTab])
 
+  const hasHistory = jobs.some((j) => ['completed', 'failed', 'cancelled'].includes(j.status))
+
+  const handleClearHistory = async () => {
+    try {
+      await fetch('/api/jobs', { method: 'DELETE' })
+      loadJobs()
+    } catch { /* ignore */ }
+  }
+
   const handleCancel = async (jobId: string) => {
     try {
       await fetch(`/api/jobs/${jobId}`, {
@@ -158,21 +167,31 @@ export default function JobsPage() {
         )}
       </div>
 
-      {/* Tab filters */}
-      <div className="flex gap-1 border-b border-border">
-        {TAB_FILTERS.map((tab) => (
+      {/* Tab filters + clear history */}
+      <div className="flex items-center border-b border-border">
+        <div className="flex gap-1 flex-1">
+          {TAB_FILTERS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-sage text-sage'
+                  : 'border-transparent text-ink-lt hover:text-ink'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {hasHistory && (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-sage text-sage'
-                : 'border-transparent text-ink-lt hover:text-ink'
-            }`}
+            onClick={handleClearHistory}
+            className="px-3 py-1.5 text-xs font-medium text-ink-lt hover:text-red transition-colors"
           >
-            {tab.label}
+            Clear history
           </button>
-        ))}
+        )}
       </div>
 
       {/* Jobs table */}
