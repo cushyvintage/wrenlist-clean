@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { fetchApi } from '@/lib/api-utils'
 import type { PriceResearchRecord } from '@/types'
@@ -12,6 +13,7 @@ import AICaveatBanner from '@/components/price-research/AICaveatBanner'
 import type { PriceResearchData, ImageIdentification } from '@/components/price-research/types'
 
 export default function PriceResearchPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [results, setResults] = useState<PriceResearchData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -135,11 +137,40 @@ export default function PriceResearchPage() {
     }
   }
 
-  const handleReplay = (query: string) => {
-    setSearchTerm(query)
+  const handleReplay = (entry: PriceResearchRecord) => {
+    // If we have cached results, show them instantly
+    if (entry.raw_response) {
+      const cached = entry.raw_response as unknown as PriceResearchData
+      if (cached.vinted && cached.ebay && cached.recommendation) {
+        setSearchTerm(entry.query)
+        setResults(cached)
+        setIdentification(null)
+        setIdentifyImageUrl(null)
+        return
+      }
+    }
+    // Otherwise re-run the search
+    setSearchTerm(entry.query)
     setIdentification(null)
     setIdentifyImageUrl(null)
-    handleSearch(query)
+    handleSearch(entry.query)
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/price-research/history?id=${id}`, { method: 'DELETE' })
+      setRecentSearches((prev) => prev.filter((s) => s.id !== id))
+    } catch {
+      // Silently fail
+    }
+  }
+
+  const handleUsePrice = () => {
+    if (!results) return
+    const params = new URLSearchParams()
+    params.set('price', results.recommendation.suggested_price.toString())
+    params.set('title', searchTerm)
+    router.push(`/add-find?${params.toString()}`)
   }
 
   return (
@@ -195,7 +226,10 @@ export default function PriceResearchPage() {
             reasoning={results.recommendation.reasoning}
           />
 
-          <button className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition">
+          <button
+            onClick={handleUsePrice}
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition"
+          >
             use this price in a new find →
           </button>
         </>
@@ -205,6 +239,7 @@ export default function PriceResearchPage() {
       <RecentSearches
         searches={recentSearches}
         onReplay={handleReplay}
+        onDelete={handleDelete}
         isLoading={historyLoading}
       />
     </div>

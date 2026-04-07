@@ -60,3 +60,28 @@ export const POST = withAuth(async (req, user) => {
 
   return ApiResponseHelper.created(data as PriceResearchRecord)
 })
+
+// DELETE /api/price-research/history?id=uuid — delete a history entry
+export const DELETE = withAuth(async (req, user) => {
+  const url = new URL(req.url)
+  const id = url.searchParams.get('id')
+
+  if (!id) {
+    return ApiResponseHelper.badRequest('id is required')
+  }
+
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from('price_research_history')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('DELETE /api/price-research/history error:', error)
+    return ApiResponseHelper.internalError()
+  }
+
+  return ApiResponseHelper.success({ deleted: true })
+})

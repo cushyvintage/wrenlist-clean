@@ -112,12 +112,14 @@ export default function AddFindPage() {
     const categoryParam = searchParams.get('category')
     const brandParam = searchParams.get('brand')
     const eanParam = searchParams.get('ean')
-    if (titleParam || categoryParam || brandParam || eanParam) {
+    const priceParam = searchParams.get('price')
+    if (titleParam || categoryParam || brandParam || eanParam || priceParam) {
       setFormData((prev) => ({
         ...prev,
         ...(titleParam && { title: titleParam }),
         ...(categoryParam && { category: categoryParam }),
         ...(brandParam && { brand: brandParam }),
+        ...(priceParam && { price: parseFloat(priceParam) }),
         ...(eanParam && {
           platformFields: {
             ...prev.platformFields,

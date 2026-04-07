@@ -206,6 +206,7 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
           user_id: user.id,
           query,
           title: query,
+          description: recommendation.reasoning,
           suggested_price: recommendation.suggested_price,
           best_platform: recommendation.best_platform,
           ebay_avg: ebay.avg_price,
