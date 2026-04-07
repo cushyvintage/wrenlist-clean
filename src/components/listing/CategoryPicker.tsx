@@ -20,6 +20,7 @@ export default function CategoryPicker({
 }: CategoryPickerProps) {
   const [step, setStep] = useState<'category' | 'subcategory'>('category')
   const [search, setSearch] = useState('')
+  const [browsing, setBrowsing] = useState<string | null>(null)
 
   const topLevelCategories = useMemo(
     () => Object.keys(CATEGORY_TREE).sort(),
@@ -33,16 +34,24 @@ export default function CategoryPicker({
         if (node.value === value) return topKey
       }
     }
+    // Try progressively longer prefixes for multi-segment keys (home_garden, books_media, etc.)
     const parts = value.split('_')
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const prefix = parts.slice(0, i).join('_')
+      if (prefix in CATEGORY_TREE) return prefix
+    }
     return parts[0] ?? null
   }, [value])
 
+  // Use browsing override when user clicked a top-level but hasn't picked a subcategory yet
+  const activeTopLevel = browsing ?? selectedTopLevel
+
   const subcategories = useMemo(() => {
-    if (!selectedTopLevel) return []
-    const catTree = CATEGORY_TREE[selectedTopLevel]
+    if (!activeTopLevel) return []
+    const catTree = CATEGORY_TREE[activeTopLevel]
     if (!catTree) return []
     return Object.values(catTree)
-  }, [selectedTopLevel])
+  }, [activeTopLevel])
 
   // Filter subcategories by search query
   const filteredSubcategories = useMemo(() => {
@@ -58,7 +67,7 @@ export default function CategoryPicker({
   // Group subcategories by L2 prefix when the list is large
   // e.g. "advertising_general" and "advertising_food_and_bev" → group "Advertising"
   const groupedSubcategories = useMemo(() => {
-    if (!selectedTopLevel) return []
+    if (!activeTopLevel) return []
     const items = filteredSubcategories
     if (items.length <= SEARCH_THRESHOLD) {
       // Small list — no grouping needed
@@ -67,7 +76,7 @@ export default function CategoryPicker({
 
     // Extract the group prefix from subcategory keys
     // key format: "advertising_general" → group = "advertising"
-    const catTree = CATEGORY_TREE[selectedTopLevel]
+    const catTree = CATEGORY_TREE[activeTopLevel]
     if (!catTree) return [{ group: null, items }]
 
     const groups: { group: string | null; items: CategoryNode[] }[] = []
@@ -75,7 +84,7 @@ export default function CategoryPicker({
 
     for (const node of items) {
       // Get the subcategory key by removing the top-level prefix from the value
-      const suffix = node.value.replace(`${selectedTopLevel}_`, '')
+      const suffix = node.value.replace(`${activeTopLevel}_`, '')
       const parts = suffix.split('_')
       // Group key is the first segment of the suffix (e.g. "advertising", "womenswear")
       const groupKey = parts.length > 1 ? (parts[0] ?? '__ungrouped') : '__ungrouped'
@@ -100,7 +109,7 @@ export default function CategoryPicker({
     }
 
     return groups.sort((a, b) => (a.group ?? '').localeCompare(b.group ?? ''))
-  }, [filteredSubcategories, selectedTopLevel])
+  }, [filteredSubcategories, activeTopLevel])
 
   const selectedNode = useMemo(() => {
     if (!value || !selectedTopLevel) return null
@@ -114,11 +123,13 @@ export default function CategoryPicker({
 
   const handleSelectSubcategory = (node: CategoryNode) => {
     onChange(node.value, node)
+    setBrowsing(null)
     setStep('category')
     setSearch('')
   }
 
   const handleBack = () => {
+    setBrowsing(null)
     setStep('category')
     setSearch('')
   }
@@ -131,10 +142,8 @@ export default function CategoryPicker({
       onChange(subs[0].value, subs[0])
       return
     }
-    const firstSub = subs[0]
-    if (firstSub) {
-      onChange(firstSub.value, firstSub)
-    }
+    // Don't fire onChange — let the user pick from the subcategory list
+    setBrowsing(cat)
     setStep('subcategory')
   }
 
@@ -209,7 +218,7 @@ export default function CategoryPicker({
               ← Back
             </button>
             <span className="text-sm font-medium text-ink">
-              {selectedTopLevel ? formatLabel(selectedTopLevel) : ''}
+              {activeTopLevel ? formatLabel(activeTopLevel) : ''}
             </span>
             <span className="text-xs text-sage-dim">
               ({filteredSubcategories.length})

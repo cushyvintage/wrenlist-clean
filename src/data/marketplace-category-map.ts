@@ -29,10 +29,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'antiques_antique_books_and_incunabulas',
       label: "Antique books & incunabulas",
       platforms: {
-        ebay: { id: "261186", name: "Books", path: "Root > Books, Comics & Magazines > Books" },
-        vinted: { id: "2312", name: "Books", path: "Entertainment > Books" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/me-1", name: "Books", path: "Media > Books" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
+        ebay: { id: "22422", name: "Incunabula", path: "Root > Antiques > Incunabula" },
       },
     },
     antique_cleaners_and_polishes: {
@@ -76,17 +73,15 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'antiques_antique_home_improvement',
       label: "Antique home improvement",
       platforms: {
-        ebay: { id: "159122", name: "Men", path: "Root > Sporting Goods > Field, Ice & Roller Hockey > Clothing > Men" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        ebay: { id: "37910", name: "Doors", path: "Root > Antiques > Architectural Antiques > Doors" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-9-2", name: "Doors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Frame & Body Parts > Doors" },
-        depop: { id: "everything-else|home", name: "Home" },
       },
     },
     antique_manuscripts: {
       value: 'antiques_antique_manuscripts',
       label: "Antique manuscripts",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
+        ebay: { id: "23048", name: "Manuscripts", path: "Root > Antiques > Manuscripts" },
       },
     },
     antique_toys: {
@@ -113,27 +108,19 @@ export const CATEGORY_TREE: CategoryTree = {
     ceramic_art: {
       value: 'art_ceramic_art',
       label: "Ceramic art",
-      platforms: {
-        ebay: { id: "550", name: "Art", path: "Root > Art" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-3", name: "RAM", path: "Electronics > Electronics Accessories > Memory > RAM" },
-        depop: { id: "everything-else|art", name: "Art" },
-      },
+      platforms: {},
     },
     drawings_and_illustrations: {
       value: 'art_drawings_and_illustrations',
       label: "Drawings & illustrations",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
         depop: { id: "everything-else|art|drawing-and-illustration", name: "Drawing" },
       },
     },
     fiber_and_textile_art: {
       value: 'art_fiber_and_textile_art',
       label: "Fiber & textile art",
-      platforms: {
-        ebay: { id: "550", name: "Art", path: "Root > Art" },
-        depop: { id: "everything-else|art", name: "Art" },
-      },
+      platforms: {},
     },
     general: {
       value: 'art_general',
@@ -148,9 +135,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'art_glass_art',
       label: "Glass art",
       platforms: {
-        ebay: { id: "91352", name: "Glass", path: "Root > Collectables > Sewing > Thimbles > Glass" },
+        ebay: { id: "3099", name: "Glass Art Supplies", path: "Root > Crafts > Glass Art Supplies" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-2-6", name: "Glass", path: "Hardware > Building Materials > Glass" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     mixed_media: {
@@ -186,7 +172,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "41511", name: "Posters & Prints", path: "Root > Home, Furniture & DIY > Home D\u00e9cor > Posters & Prints" },
         vinted: { id: "3849", name: "Posters & prints", path: "Home > Home accessories > Wall decor > Posters & prints" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-4-2-1", name: "Posters", path: "Home & Garden > Decor > Artwork > Posters, Prints, & Visual Artwork > Posters" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-4-2-2", name: "Prints", path: "Home & Garden > Decor > Artwork > Posters, Prints, & Visual Artwork > Prints" },
         depop: { id: "everything-else|art|posters", name: "Posters" },
       },
     },
@@ -206,7 +192,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'baby_toddler_baby_bath',
       label: "Baby bath",
       platforms: {
-        ebay: { id: "48757", name: "Baby", path: "Root > Wholesale & Job Lots > Baby" },
+        ebay: { id: "20394", name: "Baby Bathing/Grooming", path: "Root > Baby > Baby Bathing/Grooming" },
         vinted: { id: "3413", name: "Bath tubs & seats", path: "Kids > Bathing & changing > Bathing > Bath tubs & seats" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bt-1-1-2", name: "Bath Seats", path: "Baby & Toddler > Baby Bathing > Baby Bathtubs & Bath Seats > Bath Seats" },
       },
@@ -215,7 +201,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'baby_toddler_baby_carriers',
       label: "Baby carriers",
       platforms: {
-        ebay: { id: "48757", name: "Baby", path: "Root > Wholesale & Job Lots > Baby" },
+        ebay: { id: "100982", name: "Baby Carriers/Backpacks", path: "Root > Baby > Baby Carriers/Backpacks" },
         vinted: { id: "3461", name: "Baby carriers & wraps", path: "Kids > Pushchairs, carriers & car seats > Baby carriers & wraps" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bt-6-2", name: "Baby Carriers", path: "Baby & Toddler > Baby Transport > Baby Carriers" },
       },
@@ -280,10 +266,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'baby_toddler_general',
       label: "Other Baby & toddler",
       platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        ebay: { id: "1261", name: "Other Baby", path: "Root > Baby > Other Baby" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bt", name: "Baby & Toddler", path: "Baby & Toddler" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     nursery_bedding: {
@@ -341,19 +325,12 @@ export const CATEGORY_TREE: CategoryTree = {
     catalogs: {
       value: 'books_media_catalogs',
       label: "Catalogs",
-      platforms: {
-        vinted: { id: "2312", name: "Books", path: "Entertainment > Books" },
-      },
+      platforms: {},
     },
     general: {
       value: 'books_media_general',
       label: "Other Books, movies & music",
-      platforms: {
-        ebay: { id: "261186", name: "Books", path: "Root > Books, Comics & Magazines > Books" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/me-1", name: "Books", path: "Media > Books" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
-      },
+      platforms: {},
     },
     magazines: {
       value: 'books_media_magazines',
@@ -380,7 +357,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "70097", name: "Music", path: "Root > Stamps > Thematics > Music" },
         vinted: { id: "3036", name: "Music", path: "Entertainment > Music" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-7", name: "Musical Instrument & Orchestra Accessories", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instrument & Orchestra Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-13", name: "Musical Toys", path: "Toys & Games > Toys > Musical Toys" },
         depop: { id: "everything-else|music", name: "Music" },
       },
     },
@@ -410,7 +387,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_general',
       label: "Other Menswear",
       platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
+        ebay: { id: "181333", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Men's" },
         vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
@@ -429,7 +406,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_mens_activewear',
       label: "Men's activewear",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "185099", name: "Activewear", path: "Root > Clothes, Shoes & Accessories > Men > Men's Clothing > Activewear" },
         vinted: { id: "1204", name: "Activewear", path: "Kids > Boys clothing > Activewear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-1", name: "Activewear", path: "Apparel & Accessories > Clothing > Activewear" },
         depop: { id: "menswear|bottoms|shorts", name: "Shorts" },
@@ -450,7 +427,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's intimates & sleepwear",
       platforms: {
         ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "2910", name: "Sleepwear", path: "Men > Clothing > Sleepwear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-8-2", name: "Men's Undershirts", path: "Apparel & Accessories > Clothing > Men's Undergarments > Men's Undershirts" },
         depop: { id: "menswear|underwear|briefs", name: "Briefs" },
       },
@@ -459,7 +436,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_mens_jeans',
       label: "Men's jeans",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "11483", name: "Jeans", path: "Root > Clothes, Shoes & Accessories > Men > Men's Clothing > Jeans" },
         vinted: { id: "1696", name: "Jeans", path: "Kids > Boys clothing > Trousers, shorts & dungarees > Jeans" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-12-4", name: "Jeans", path: "Apparel & Accessories > Clothing > Pants > Jeans" },
         depop: { id: "menswear|bottoms|jeans", name: "Jeans" },
@@ -469,7 +446,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_mens_outerwear',
       label: "Men's outerwear",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "51933", name: "Outerwear", path: "Root > Clothes, Shoes & Accessories > Kids > Boys > Boys' Clothing (2-16 Years) > Outerwear" },
         vinted: { id: "581", name: "Outerwear", path: "Men > Clothing > Activewear > Outerwear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-10", name: "Outerwear", path: "Apparel & Accessories > Clothing > Outerwear" },
         depop: { id: "menswear|coats-and-jackets|bomber-jackets", name: "Bomber jackets" },
@@ -480,7 +457,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's pants",
       platforms: {
         ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "1131", name: "Jumpsuits", path: "Women > Clothing > Jumpsuits & playsuits > Jumpsuits" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-12", name: "Pants", path: "Apparel & Accessories > Clothing > Pants" },
         depop: { id: "womenswear|jumpsuits-and-playsuits|jumpsuits", name: "Jumpsuits" },
       },
@@ -490,7 +467,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's shoes",
       platforms: {
         ebay: { id: "93427", name: "Men's Shoes", path: "Root > Clothes, Shoes & Accessories > Men > Men's Shoes" },
-        vinted: { id: "16", name: "Shoes", path: "Women > Shoes" },
+        vinted: { id: "4099", name: "Hoes", path: "Home > Outdoor & garden > Outdoor hand tools > Hoes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-8", name: "Shoes", path: "Apparel & Accessories > Shoes" },
         depop: { id: "menswear|footwear|boots", name: "Boots" },
       },
@@ -510,7 +487,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's suits & blazers",
       platforms: {
         ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "8", name: "Suits & blazers", path: "Women > Clothing > Suits & blazers" },
+        vinted: { id: "2571", name: "Blazers", path: "Kids > Boys clothing > Outerwear > Jackets > Blazers" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-19", name: "Suits", path: "Apparel & Accessories > Clothing > Suits" },
         depop: { id: "menswear|coats-and-jackets|blazers", name: "Blazers" },
       },
@@ -520,7 +497,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's sweaters",
       platforms: {
         ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "266", name: "Cardigans", path: "Men > Clothing > Jumpers & sweaters > Cardigans" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-13-12", name: "Sweaters", path: "Apparel & Accessories > Clothing > Clothing Tops > Sweaters" },
         depop: { id: "menswear|tops|cardigans", name: "Cardigans" },
       },
@@ -529,9 +506,9 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_mens_sweatshirts_and_hoodies',
       label: "Men's sweatshirts & hoodies",
       platforms: {
-        ebay: { id: "105512", name: "Shirts", path: "Root > Clothes, Shoes & Accessories > Specialty > Wedding & Formal Occasion > Men's Formal Occasion > Shirts" },
+        ebay: { id: "155200", name: "Sweatshirts & Hoodies", path: "Root > Clothes, Shoes & Accessories > Kids > Unisex Kids > Unisex Kids' Clothing (2-16 Years) > Sweatshirts & Hoodies" },
         vinted: { id: "1664", name: "Shirts", path: "Kids > Boys clothing > Tops & t-shirts > Shirts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-10-1-7", name: "Hoodies", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Sports Collectibles > Sports Fan Accessories > Hoodies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-13-14", name: "Sweatshirts", path: "Apparel & Accessories > Clothing > Clothing Tops > Sweatshirts" },
         depop: { id: "menswear|tops|hoodies", name: "Hoodies" },
       },
     },
@@ -549,7 +526,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_menswear_mens_tops_and_shirts',
       label: "Men's tops & shirts",
       platforms: {
-        ebay: { id: "105512", name: "Shirts", path: "Root > Clothes, Shoes & Accessories > Specialty > Wedding & Formal Occasion > Men's Formal Occasion > Shirts" },
+        ebay: { id: "53159", name: "Tops & Shirts", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Tops & Shirts" },
         vinted: { id: "1664", name: "Shirts", path: "Kids > Boys clothing > Tops & t-shirts > Shirts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-7-8-7", name: "Shirts", path: "Apparel & Accessories > Clothing > Maternity Clothing > Maternity Tops > Shirts" },
         depop: { id: "menswear|tops|shirts", name: "Shirts" },
@@ -569,8 +546,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_general',
       label: "Other Womenswear",
       platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "260010", name: "Women", path: "Root > Clothes, Shoes & Accessories > Women" },
+        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
@@ -579,7 +556,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's accessories",
       platforms: {
         ebay: { id: "4251", name: "Women's Accessories", path: "Root > Clothes, Shoes & Accessories > Women > Women's Accessories" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-2-6", name: "Belts", path: "Apparel & Accessories > Clothing Accessories > Belts" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
@@ -588,8 +565,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_activewear',
       label: "Women's activewear",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "185098", name: "Activewear", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Activewear" },
+        vinted: { id: "1204", name: "Activewear", path: "Kids > Boys clothing > Activewear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-1", name: "Activewear", path: "Apparel & Accessories > Clothing > Activewear" },
         depop: { id: "menswear|underwear|bras", name: "Bras" },
       },
@@ -599,7 +576,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's bags",
       platforms: {
         ebay: { id: "45055", name: "Women's Bags", path: "Root > Wholesale & Job Lots > Clothes, Shoes & Accessories > Women's Bags" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "5138", name: "Bags", path: "Home > Pet care > Dogs > Training accessories > Bags" },
         shopify: { id: "gid://shopify/TaxonomyCategory/lb-1", name: "Backpacks", path: "Luggage & Bags > Backpacks" },
         depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
@@ -609,7 +586,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's dresses",
       platforms: {
         ebay: { id: "63861", name: "Dresses", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Dresses" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "574", name: "Dresses", path: "Women > Clothing > Activewear > Dresses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-4", name: "Dresses", path: "Apparel & Accessories > Clothing > Dresses" },
         depop: { id: "womenswear|dresses", name: "Dresses" },
       },
@@ -618,8 +595,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_intimates_and_sleepwear',
       label: "Women's intimates & sleepwear",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "159060", name: "Women's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Women's" },
+        vinted: { id: "2910", name: "Sleepwear", path: "Men > Clothing > Sleepwear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-6-3", name: "Bras", path: "Apparel & Accessories > Clothing > Lingerie > Bras" },
         depop: { id: "menswear|underwear|bras", name: "Bras" },
       },
@@ -628,8 +605,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_jeans',
       label: "Women's jeans",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "11554", name: "Jeans", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Jeans" },
+        vinted: { id: "1696", name: "Jeans", path: "Kids > Boys clothing > Trousers, shorts & dungarees > Jeans" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-12-4", name: "Jeans", path: "Apparel & Accessories > Clothing > Pants > Jeans" },
         depop: { id: "menswear|bottoms|jeans", name: "Jeans" },
       },
@@ -638,7 +615,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_jewelry',
       label: "Women's jewelry",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "260010", name: "Women", path: "Root > Clothes, Shoes & Accessories > Women" },
         vinted: { id: "1904", name: "Women", path: "Women" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-6", name: "Jewelry", path: "Apparel & Accessories > Jewelry" },
       },
@@ -647,7 +624,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_maternity',
       label: "Women's maternity",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "260010", name: "Women", path: "Root > Clothes, Shoes & Accessories > Women" },
         vinted: { id: "1904", name: "Women", path: "Women" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-1", name: "Activewear", path: "Apparel & Accessories > Clothing > Activewear" },
         depop: { id: "womenswear|dresses", name: "Dresses" },
@@ -657,8 +634,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_outerwear',
       label: "Women's outerwear",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "51933", name: "Outerwear", path: "Root > Clothes, Shoes & Accessories > Kids > Boys > Boys' Clothing (2-16 Years) > Outerwear" },
+        vinted: { id: "581", name: "Outerwear", path: "Men > Clothing > Activewear > Outerwear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-10", name: "Outerwear", path: "Apparel & Accessories > Clothing > Outerwear" },
         depop: { id: "menswear|coats-and-jackets|bomber-jackets", name: "Bomber jackets" },
       },
@@ -667,7 +644,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_pants',
       label: "Women's pants",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "260010", name: "Women", path: "Root > Clothes, Shoes & Accessories > Women" },
         vinted: { id: "1904", name: "Women", path: "Women" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-12", name: "Pants", path: "Apparel & Accessories > Clothing > Pants" },
         depop: { id: "womenswear|jumpsuits-and-playsuits|jumpsuits", name: "Jumpsuits" },
@@ -678,7 +655,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's shoes",
       platforms: {
         ebay: { id: "3034", name: "Women's Shoes", path: "Root > Clothes, Shoes & Accessories > Women > Women's Shoes" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "4099", name: "Hoes", path: "Home > Outdoor & garden > Outdoor hand tools > Hoes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-8", name: "Shoes", path: "Apparel & Accessories > Shoes" },
         depop: { id: "menswear|footwear|boots", name: "Boots" },
       },
@@ -688,7 +665,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's shorts",
       platforms: {
         ebay: { id: "11555", name: "Shorts", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Shorts" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "586", name: "Shorts", path: "Men > Clothing > Activewear > Shorts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-17-2-1-4", name: "Shorts", path: "Apparel & Accessories > Clothing > Sleepwear & Loungewear > Loungewear > Loungewear Bottoms > Shorts" },
         depop: { id: "menswear|bottoms|shorts", name: "Shorts" },
       },
@@ -697,8 +674,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_skirts',
       label: "Women's skirts",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "63864", name: "Skirts", path: "Root > Clothes, Shoes & Accessories > Women > Women's Clothing > Skirts" },
+        vinted: { id: "1248", name: "Skirts", path: "Kids > Girls clothing > Skirts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-17-2-1-5", name: "Skirts", path: "Apparel & Accessories > Clothing > Sleepwear & Loungewear > Loungewear > Loungewear Bottoms > Skirts" },
         depop: { id: "menswear|bottoms|skirts", name: "Skirts" },
       },
@@ -707,8 +684,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_suits_and_blazers',
       label: "Women's suits & blazers",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "159060", name: "Women's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Women's" },
+        vinted: { id: "2571", name: "Blazers", path: "Kids > Boys clothing > Outerwear > Jackets > Blazers" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-19", name: "Suits", path: "Apparel & Accessories > Clothing > Suits" },
         depop: { id: "menswear|coats-and-jackets|blazers", name: "Blazers" },
       },
@@ -717,7 +694,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_sweaters',
       label: "Women's sweaters",
       platforms: {
-        ebay: { id: "159059", name: "Men's", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories > Footwear & Cleats > Men's" },
+        ebay: { id: "260010", name: "Women", path: "Root > Clothes, Shoes & Accessories > Women" },
         vinted: { id: "1904", name: "Women", path: "Women" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-13-12", name: "Sweaters", path: "Apparel & Accessories > Clothing > Clothing Tops > Sweaters" },
         depop: { id: "menswear|tops|cardigans", name: "Cardigans" },
@@ -727,10 +704,10 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_sweatshirts_and_hoodies',
       label: "Women's sweatshirts & hoodies",
       platforms: {
-        ebay: { id: "105512", name: "Shirts", path: "Root > Clothes, Shoes & Accessories > Specialty > Wedding & Formal Occasion > Men's Formal Occasion > Shirts" },
+        ebay: { id: "155200", name: "Sweatshirts & Hoodies", path: "Root > Clothes, Shoes & Accessories > Kids > Unisex Kids > Unisex Kids' Clothing (2-16 Years) > Sweatshirts & Hoodies" },
         vinted: { id: "1904", name: "Women", path: "Women" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-10-1-7", name: "Hoodies", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Sports Collectibles > Sports Fan Accessories > Hoodies" },
-        depop: { id: "menswear|tops|hoodies", name: "Hoodies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-13-14", name: "Sweatshirts", path: "Apparel & Accessories > Clothing > Clothing Tops > Sweatshirts" },
+        depop: { id: "menswear|tops|sweatshirts", name: "Sweatshirts" },
       },
     },
     womenswear_womens_swimwear: {
@@ -738,7 +715,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's swimwear",
       platforms: {
         ebay: { id: "140051", name: "Women's Swimwear", path: "Root > Sporting Goods > Swimming > Swimwear > Women's Swimwear" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        vinted: { id: "84", name: "Swimwear", path: "Men > Clothing > Swimwear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-20", name: "Swimwear", path: "Apparel & Accessories > Clothing > Swimwear" },
         depop: { id: "menswear|swimwear", name: "Swimwear" },
       },
@@ -747,8 +724,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'clothing_womenswear_womens_tops_and_blouses',
       label: "Women's tops & blouses",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
-        vinted: { id: "1904", name: "Women", path: "Women" },
+        ebay: { id: "80961", name: "Tops & Blouses", path: "Root > Clothes, Shoes & Accessories > Specialty > World & Traditional Clothing > Germany > Women's Traditional Clothing > Tops & Blouses" },
+        vinted: { id: "1043", name: "Blouses", path: "Women > Clothing > Tops & t-shirts > Blouses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-7-8-1", name: "Blouses", path: "Apparel & Accessories > Clothing > Maternity Clothing > Maternity Tops > Blouses" },
         depop: { id: "menswear|tops|blouses", name: "Blouses" },
       },
@@ -760,7 +737,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Agriculture advertising",
       platforms: {
         ebay: { id: "29755", name: "Ford", path: "Root > Cars, Motorcycles & Vehicles > Classic Cars > Ford" },
-        vinted: { id: "2941", name: "Briefcases", path: "Women > Bags > Briefcases" },
+        vinted: { id: "5200", name: "Needle cases", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Tools > Needle cases" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bi-2", name: "Agriculture", path: "Business & Industrial > Agriculture" },
         depop: { id: "everything-else|tech-accessories|phone-cases", name: "Phone cases" },
       },
@@ -777,7 +754,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Clothing, shoes & accessories",
       platforms: {
         ebay: { id: "159052", name: "Clothing, Shoes & Accessories", path: "Root > Sporting Goods > Baseball > Clothing, Shoes & Accessories" },
-        vinted: { id: "5182", name: "Clothing", path: "Home > Pet care > Cats > Clothing & accessories > Clothing" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1", name: "Clothing", path: "Apparel & Accessories > Clothing" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
@@ -787,8 +764,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Communication & utility advertising",
       platforms: {
         ebay: { id: "985", name: "Telephone", path: "Root > Collectables > Radio, Television & Telephony > Telephone" },
-        vinted: { id: "4037", name: "Jobsite radios", path: "Home > Tools & DIY > Workshop & worksite equipment > Jobsite radios" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-2-1-7", name: "Satellite Radio Accessories", path: "Electronics > Audio > Audio Accessories > Satellite Radio Accessories" },
+        vinted: { id: "3676", name: "Shortwave radios", path: "Electronics > Mobile phones & communication > Radio communication > Shortwave radios" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-4-4-4", name: "Two-Way Radios", path: "Electronics > Communications > Communication Radios > Two-Way Radios" },
         depop: { id: "menswear|accessories|ties", name: "Ties" },
       },
     },
@@ -820,8 +797,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Gas & oil advertising",
       platforms: {
         ebay: { id: "13627", name: "Eagle", path: "Root > Collectables > Animal Collectables > Bird Collectables > Eagle" },
-        vinted: { id: "1847", name: "Lingerie accessories", path: "Women > Clothing > Lingerie & nightwear > Lingerie accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-1-4-4", name: "Oil", path: "Hardware > Building Consumables > Lubricants > Oil" },
+        vinted: { id: "5370", name: "Kiln accessories", path: "Hobbies & collectables > Arts & crafts > Sculpting & pottery > Kiln accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/co-1-5-2-1", name: "Accessory Cases", path: "Cameras & Optics > Camera & Optic Accessories > Optic Accessories > Optics Bags & Cases > Accessory Cases" },
         depop: { id: "menswear|accessories|hair-accessories", name: "Hair accessories" },
       },
     },
@@ -837,19 +814,15 @@ export const CATEGORY_TREE: CategoryTree = {
     advertising_government_advertising: {
       value: 'collectibles_advertising_government_advertising',
       label: "Government advertising",
-      platforms: {
-        ebay: { id: "260012", name: "Men", path: "Root > Clothes, Shoes & Accessories > Men" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-      },
+      platforms: {},
     },
     advertising_health_and_beauty_advertising: {
       value: 'collectibles_advertising_health_and_beauty_advertising',
       label: "Health & beauty advertising",
       platforms: {
         ebay: { id: "31822", name: "Health & Beauty", path: "Root > Wholesale & Job Lots > Health & Beauty" },
-        vinted: { id: "146", name: "Beauty", path: "Women > Beauty" },
+        vinted: { id: "140", name: "Hair care", path: "Men > Grooming > Hair care" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb", name: "Health & Beauty", path: "Health & Beauty" },
-        depop: { id: "everything-else|beauty", name: "Beauty" },
       },
     },
     advertising_hotel_and_motel_advertising: {
@@ -875,12 +848,7 @@ export const CATEGORY_TREE: CategoryTree = {
     advertising_jewelry_and_watches_advertising: {
       value: 'collectibles_advertising_jewelry_and_watches_advertising',
       label: "Jewelry & watches advertising",
-      platforms: {
-        ebay: { id: "261067", name: "Watches", path: "Root > Collectables > Animation Art & Merchandise > Animation Merchandise > Watches" },
-        vinted: { id: "97", name: "Watches", path: "Men > Accessories > Watches" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-6", name: "Jewelry", path: "Apparel & Accessories > Jewelry" },
-        depop: { id: "menswear|accessories|watches", name: "Watches" },
-      },
+      platforms: {},
     },
     advertising_merchandise_and_memorabilia: {
       value: 'collectibles_advertising_merchandise_and_memorabilia',
@@ -893,12 +861,7 @@ export const CATEGORY_TREE: CategoryTree = {
     advertising_musical_instrument_advertising: {
       value: 'collectibles_advertising_musical_instrument_advertising',
       label: "Musical instrument advertising",
-      platforms: {
-        ebay: { id: "96817", name: "Music", path: "Root > Collectables > Autographs > Uncertified Originals > Music" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-5", name: "Rum", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Rum" },
-        depop: { id: "everything-else|music", name: "Music" },
-      },
+      platforms: {},
     },
     advertising_pet_advertising: {
       value: 'collectibles_advertising_pet_advertising',
@@ -910,7 +873,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Price guides & publications",
       platforms: {
         ebay: { id: "261748", name: "Price Guides & Publications", path: "Root > Collectables > Linens & Textiles > Price Guides & Publications" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
       },
     },
     advertising_restaurants_and_fast_food_advertising: {
@@ -924,10 +886,9 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_advertising_retail_store_advertising',
       label: "Retail store advertising",
       platforms: {
-        ebay: { id: "7896", name: "Art", path: "Root > Stamps > Thematics > Art" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        ebay: { id: "45510", name: "Rugs", path: "Root > Home, Furniture & DIY > Rugs & Carpets > Rugs" },
+        vinted: { id: "1954", name: "Rugs", path: "Home > Textiles > Rugs & mats > Rugs" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bi-22", name: "Retail", path: "Business & Industrial > Retail" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     advertising_soda_advertising: {
@@ -996,7 +957,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "10882", name: "Dolphins", path: "Root > Collectables > Animal Collectables > Fish & Marine Life > Dolphins" },
         vinted: { id: "5112", name: "Fish", path: "Home > Pet care > Fish" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-4", name: "Fish & Aquatic Supplies", path: "Animals & Pet Supplies > Pet Supplies > Fish & Aquatic Supplies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-11-1", name: "Fish Finders", path: "Electronics > Marine Electronics > Fish Finders" },
       },
     },
     animals_general: {
@@ -1023,7 +984,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Insects & butterflies",
       platforms: {
         ebay: { id: "10868", name: "Insects & Butterflies", path: "Root > Collectables > Animal Collectables > Insects & Butterflies" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-17-1-1-1", name: "Beeswax", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Olfactory Arts Materials > Candle Making Materials > Raw Candle Wax > Beeswax" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-4-7-5", name: "Beeswax Wraps", path: "Home & Garden > Kitchen & Dining > Food Storage > Food Wraps > Beeswax Wraps" },
       },
     },
     animals_prehistoric_and_dinosaurs: {
@@ -1038,7 +999,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Price guides & publications",
       platforms: {
         ebay: { id: "261748", name: "Price Guides & Publications", path: "Root > Collectables > Linens & Textiles > Price Guides & Publications" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
       },
     },
     animals_small_pets: {
@@ -1047,7 +1007,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "12509", name: "Ferrets", path: "Root > Collectables > Animal Collectables > Farm & Countryside Animals > Ferrets" },
         vinted: { id: "5111", name: "Small pets", path: "Home > Pet care > Small pets" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-9-11-4", name: "Mice & Trackball Accessories", path: "Electronics > Electronics Accessories > Computer Components > Input Device Accessories > Mice & Trackball Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-2-5-3-4", name: "Pumice Stones", path: "Health & Beauty > Personal Care > Cosmetics > Cosmetic Tools > Skin Care Tools > Pumice Stones" },
       },
     },
     animals_wild_animals: {
@@ -1072,9 +1032,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Arcade, jukeboxes & pinball",
       platforms: {
         ebay: { id: "4684", name: "Manuals & Guides", path: "Root > Cameras & Photography > Manuals & Guides" },
-        vinted: { id: "1963", name: "Boxes", path: "Home > Home accessories > Storage & organisation > Boxes" },
+        vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-2-3-4", name: "Jukeboxes", path: "Electronics > Audio > Audio Players & Recorders > Jukeboxes" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     autographs: {
@@ -1118,7 +1077,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Bottles & insulators",
       platforms: {
         ebay: { id: "148495", name: "Beer", path: "Root > Home, Furniture & DIY > Food & Drink > Beer, Wine & Spirits > Beer" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "4241", name: "Kitchen sinks", path: "Home > Tools & DIY > Hardware > Kitchen fixtures > Kitchen sinks" },
         shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-1", name: "Beer", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Beer" },
       },
     },
@@ -1165,7 +1124,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Coin publications",
       platforms: {
         ebay: { id: "4259", name: "Publications", path: "Root > Collectables > Rocks, Fossils & Minerals > Publications" },
-        vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
       },
     },
     coins_and_money_coin_supplies_equipment: {
@@ -1173,7 +1131,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Coin supplies/equipment",
       platforms: {
         ebay: { id: "427", name: "Equipment", path: "Root > Collectables > Fantasy, Myth & Magic > Magic > Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
       },
     },
     coins_and_money_coins_ancient: {
@@ -1182,7 +1139,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "3364", name: "Byzantine", path: "Root > Coins > Coins > Ancient > Byzantine" },
         vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-4", name: "ROM", path: "Electronics > Electronics Accessories > Memory > ROM" },
       },
     },
     coins_and_money_coins_british: {
@@ -1192,7 +1148,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "58523", name: "Anglo-Saxon Coins (c.600-1066)", path: "Root > Coins > Coins > British > Hammered (Pre-c.1662) > Anglo-Saxon Coins (c.600-1066)" },
         vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-1-5-1", name: "Crown Bottle Caps", path: "Home & Garden > Kitchen & Dining > Barware > Bottle Caps > Crown Bottle Caps" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     coins_and_money_coins_collections: {
@@ -1208,7 +1163,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Coins: European",
       platforms: {
         ebay: { id: "122491", name: "Albania", path: "Root > Coins > Coins > European > Albania" },
-        vinted: { id: "4247", name: "Rope", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Rope" },
+        vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
       },
     },
     coins_and_money_coins_ireland: {
@@ -1223,7 +1178,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_coins_and_money_coins_novelty',
       label: "Coins: Novelty",
       platforms: {
-        ebay: { id: "58520", name: "Coins", path: "Root > Coins > Coins" },
+        ebay: { id: "58533", name: "Novelty", path: "Root > Coins > Coins > Novelty" },
         vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
       },
     },
@@ -1248,9 +1203,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_coins_and_money_general',
       label: "Other Coins & money",
       platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        ebay: { id: "58520", name: "Coins", path: "Root > Coins > Coins" },
+        vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
       },
     },
     coins_and_money_historical_medals_medallions: {
@@ -1285,7 +1239,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Virtual currency",
       platforms: {
         ebay: { id: "179197", name: "Virtual Currency", path: "Root > Coins > Virtual Currency" },
-        vinted: { id: "4897", name: "Coins", path: "Hobbies & collectables > Coins & banknotes > Coins" },
         shopify: { id: "gid://shopify/TaxonomyCategory/so-2-7", name: "Virtual Currency", path: "Software > Digital Goods & Currency > Virtual Currency" },
       },
     },
@@ -1294,9 +1247,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Collectible figures & supplies",
       platforms: {
         ebay: { id: "263079", name: "Display Cases & Stands", path: "Root > Collectables > Collectable Figures & Supplies > Collectable Figures Supplies & Storage > Display Cases & Stands" },
-        vinted: { id: "3312", name: "Figures", path: "Kids > Toys > Toy figures & accessories > Figures" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-13-13-1-2", name: "Heads", path: "Home & Garden > Lighting > Track Lighting > Track Lighting Accessories > Heads" },
-        depop: { id: "everything-else|art", name: "Art" },
+        vinted: { id: "3793", name: "Surge protectors & power strips", path: "Electronics > Other devices & accessories > Surge protectors & power strips" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-11-5", name: "Screen Protectors", path: "Electronics > Electronics Accessories > Electronics Films & Shields > Screen Protectors" },
       },
     },
     comic_books_and_memorabilia: {
@@ -1304,7 +1256,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Comic books & memorabilia",
       platforms: {
         ebay: { id: "63", name: "Comic Books & Memorabilia", path: "Root > Books, Comics & Magazines > Comic Books & Memorabilia" },
-        vinted: { id: "2312", name: "Books", path: "Entertainment > Books" },
+        vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-36-8", name: "Dividers", path: "Hardware > Tools > Measuring Tools & Sensors > Dividers" },
         depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
       },
@@ -1330,7 +1282,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_cultures_and_ethnicities_australian',
       label: "Australian",
       platforms: {
-        ebay: { id: "29411", name: "Australian Shepherd", path: "Root > Collectables > Animal Collectables > Dog Collectables > Australian Shepherd" },
+        ebay: { id: "103960", name: "Australia", path: "Root > Collectables > Flags > Country Flags > Australia" },
       },
     },
     cultures_and_ethnicities_black_americana: {
@@ -1355,14 +1307,12 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Canada: Aboriginal",
       platforms: {
         ebay: { id: "66525", name: "Canada", path: "Root > Collectables > Flags > Country Flags > Canada" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
       },
     },
     cultures_and_ethnicities_celtic: {
       value: 'collectibles_cultures_and_ethnicities_celtic',
       label: "Celtic",
       platforms: {
-        ebay: { id: "122475", name: "Celtic Coins (c.100BC-c.100AD)", path: "Root > Coins > Coins > British > Hammered (Pre-c.1662) > Celtic Coins (c.100BC-c.100AD)" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-7-3-1", name: "Celtic Harps", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > String Instruments > Harps > Celtic Harps" },
       },
     },
@@ -1386,7 +1336,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_cultures_and_ethnicities_ethnic_americana',
       label: "Ethnic Americana",
       platforms: {
-        ebay: { id: "36074", name: "American", path: "Root > Collectables > Militaria > Current Militaria (1991-Now) > American" },
+        ebay: { id: "987", name: "Americana", path: "Root > Collectables > Memorabilia > Americana" },
       },
     },
     cultures_and_ethnicities_european: {
@@ -1401,11 +1351,7 @@ export const CATEGORY_TREE: CategoryTree = {
     cultures_and_ethnicities_general: {
       value: 'collectibles_cultures_and_ethnicities_general',
       label: "Other Cultures & ethnicities",
-      platforms: {
-        ebay: { id: "109246", name: "Other", path: "Root > Toys & Games > Outdoor Toys & Activities > Juggling > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
-      },
+      platforms: {},
     },
     cultures_and_ethnicities_guatemala: {
       value: 'collectibles_cultures_and_ethnicities_guatemala',
@@ -1479,21 +1425,19 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "4173", name: "Native American", path: "Root > Antiques > Ethnographic Antiques > Native American" },
         vinted: { id: "1962", name: "Baskets", path: "Home > Home accessories > Storage & organisation > Baskets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-6", name: "Baskets", path: "Home & Garden > Decor > Baskets" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     cultures_and_ethnicities_nepalese_and_tibetan: {
       value: 'collectibles_cultures_and_ethnicities_nepalese_and_tibetan',
       label: "Nepalese & Tibetan",
       platforms: {
-        ebay: { id: "91577", name: "Nepal", path: "Root > Stamps > Asia > Nepal" },
+        ebay: { id: "79947", name: "Tibetan", path: "Root > Antiques > Asian/Oriental Antiques > Tibetan" },
       },
     },
     cultures_and_ethnicities_pacific_islands: {
       value: 'collectibles_cultures_and_ethnicities_pacific_islands',
       label: "Pacific islands",
       platforms: {
-        ebay: { id: "183488", name: "AC", path: "Root > Cars, Motorcycles & Vehicles > Classic Cars > AC" },
         shopify: { id: "gid://shopify/TaxonomyCategory/fr-5-2", name: "Islands", path: "Furniture > Carts & Islands > Islands" },
       },
     },
@@ -1517,14 +1461,13 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Price guides & publications",
       platforms: {
         ebay: { id: "86696", name: "Price Guides & Publications", path: "Root > Collectables > Postcards & Supplies > Price Guides & Publications" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
       },
     },
     cultures_and_ethnicities_russian: {
       value: 'collectibles_cultures_and_ethnicities_russian',
       label: "Russian",
       platforms: {
-        ebay: { id: "13629", name: "Borzoi/Russian Wolfhound", path: "Root > Collectables > Animal Collectables > Dog Collectables > Borzoi/Russian Wolfhound" },
+        ebay: { id: "103973", name: "Russia", path: "Root > Collectables > Flags > Country Flags > Russia" },
       },
     },
     cultures_and_ethnicities_thai_and_siamese: {
@@ -1569,7 +1512,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Emerging NFTs",
       platforms: {
         ebay: { id: "262050", name: "Emerging NFTs", path: "Root > Collectables > Emerging NFTs" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
       },
     },
     fantasy_mythical_and_magic: {
@@ -1596,7 +1538,6 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_historical_memorabilia_accounting_and_taxation',
       label: "Accounting & taxation",
       platforms: {
-        ebay: { id: "10950", name: "Tin", path: "Root > Collectables > Metalware > Tin" },
         vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
       },
     },
@@ -1604,8 +1545,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_historical_memorabilia_astronauts_and_space_travel',
       label: "Astronauts & space travel",
       platforms: {
-        ebay: { id: "65213", name: "Space", path: "Root > Stamps > Thematics > Space" },
-        vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
+        ebay: { id: "69496", name: "Maps & Atlases", path: "Root > Books, Comics & Magazines > Textbooks, Education & Reference > Maps & Atlases" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-36-4-3", name: "Mercury Barometers", path: "Hardware > Tools > Measuring Tools & Sensors > Barometers > Mercury Barometers" },
       },
     },
@@ -1633,9 +1573,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Fairs, parks & architecture",
       platforms: {
         ebay: { id: "262322", name: "Buildings", path: "Root > Toys & Games > Models & Kits > Buildings" },
-        vinted: { id: "5", name: "Men", path: "Men" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-58-12-1", name: "Seasonal Village Buildings", path: "Home & Garden > Decor > Seasonal & Holiday Decorations > Seasonal Village Sets & Accessories > Seasonal Village Buildings" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|art|posters", name: "Posters" },
       },
     },
     historical_memorabilia_firefighting_and_rescue: {
@@ -1653,7 +1592,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Flags & pennants",
       platforms: {
         ebay: { id: "103960", name: "Australia", path: "Root > Collectables > Flags > Country Flags > Australia" },
-        vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-33-1", name: "Decorative Flags", path: "Home & Garden > Decor > Flags & Windsocks > Decorative Flags" },
       },
     },
@@ -1672,15 +1610,13 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Historical memorabilia",
       platforms: {
         ebay: { id: "259144", name: "Other Historical Memorabilia", path: "Root > Collectables > Historical Memorabilia > Other Historical Memorabilia" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
       },
     },
     historical_memorabilia_inventors_and_geniuses: {
       value: 'collectibles_historical_memorabilia_inventors_and_geniuses',
       label: "Inventors & geniuses",
       platforms: {
-        ebay: { id: "4100", name: "US", path: "Root > Collectables > Historical Memorabilia > Political > US" },
         vinted: { id: "4901", name: "Memorabilia", path: "Hobbies & collectables > Memorabilia" },
       },
     },
@@ -1705,7 +1641,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "7192", name: "Canada", path: "Root > Collectables > Historical Memorabilia > Political > Canada" },
         vinted: { id: "88", name: "Hats & caps", path: "Women > Accessories > Hats & caps" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-2-2-8-1-3", name: "Police Vehicles", path: "Vehicles & Parts > Vehicles > Motor Vehicles > Service & Utility Vehicles > Emergency Vehicles > Police Vehicles" },
-        depop: { id: "menswear|accessories|belts", name: "Belts" },
+        depop: { id: "menswear|accessories|hats", name: "Hats" },
       },
     },
     historical_memorabilia_political: {
@@ -1714,8 +1650,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "259136", name: "Political", path: "Root > Collectables > Historical Memorabilia > Political" },
         vinted: { id: "4247", name: "Rope", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Rope" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-4-3-1", name: "European Collectible Swords", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Weapons > Collectible Swords > European Collectible Swords" },
-        depop: { id: "menswear|accessories|ties", name: "Ties" },
       },
     },
     historical_memorabilia_royalty_collectibles: {
@@ -1732,9 +1666,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Teaching & education",
       platforms: {
         ebay: { id: "9919", name: "Ducati", path: "Root > Cars, Motorcycles & Vehicles > Motorcycles & Scooters > Ducati" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-14-2", name: "Tea", path: "Food, Beverages & Tobacco > Beverages > Tea & Infusions > Tea" },
-        depop: { id: "menswear|accessories|ties", name: "Ties" },
       },
     },
     historical_memorabilia_veterinary_medicine: {
@@ -1766,7 +1697,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Bakeware",
       platforms: {
         ebay: { id: "261756", name: "Bakeware", path: "Root > Collectables > Kitchen & Home > Bakeware" },
-        vinted: { id: "3476", name: "Cookware & bakeware", path: "Home > Cookware & bakeware" },
+        vinted: { id: "3507", name: "Pots", path: "Home > Cookware & bakeware > Pots" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-2-1", name: "Bakeware", path: "Home & Garden > Kitchen & Dining > Cookware & Bakeware > Bakeware" },
       },
     },
@@ -1795,7 +1726,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Cookware",
       platforms: {
         ebay: { id: "974", name: "Cookware", path: "Root > Collectables > Kitchen & Home > Cookware" },
-        vinted: { id: "3332", name: "Toy food, cookware, & dishes", path: "Kids > Toys > Dress up & pretend play > Toy food, cookware, & dishes" },
+        vinted: { id: "3507", name: "Pots", path: "Home > Cookware & bakeware > Pots" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-2-3", name: "Cookware", path: "Home & Garden > Kitchen & Dining > Cookware & Bakeware > Cookware" },
       },
     },
@@ -1823,8 +1754,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Kitchen & home",
       platforms: {
         ebay: { id: "13905", name: "Kitchen & Home", path: "Root > Collectables > Kitchen & Home" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        depop: { id: "everything-else|home|kitchen", name: "Kitchen" },
       },
     },
     kitchen_and_home_glassware_and_drinkware: {
@@ -1842,9 +1772,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Kitchen storage & organization",
       platforms: {
         ebay: { id: "261686", name: "Kitchen Storage & Organization", path: "Root > Collectables > Kitchen & Home > Kitchen Storage & Organization" },
-        vinted: { id: "5268", name: "Storage", path: "Hobbies & collectables > Arts & crafts > Painting > Storage" },
+        vinted: { id: "1963", name: "Boxes", path: "Home > Home accessories > Storage & organisation > Boxes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-4-1-2", name: "Bread Boxes", path: "Home & Garden > Kitchen & Dining > Food Storage > Bread Boxes & Bags > Bread Boxes" },
-        depop: { id: "everything-else|home|kitchen", name: "Kitchen" },
+        depop: { id: "everything-else|home|storage", name: "Storage" },
       },
     },
     kitchen_and_home_kitchen_tools_and_gadgets: {
@@ -1864,7 +1794,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "261709", name: "Major Appliances & Bathroom Fixtures", path: "Root > Collectables > Kitchen & Home > Major Appliances & Bathroom Fixtures" },
         vinted: { id: "4231", name: "Bathtubs", path: "Home > Tools & DIY > Hardware > Bathroom fixtures > Bathtubs" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-10-3-2", name: "Bathtubs", path: "Hardware > Plumbing > Plumbing Fixtures > Bathtubs" },
-        depop: { id: "everything-else|home|bathroom", name: "Bathroom" },
       },
     },
     kitchen_and_home_small_appliances: {
@@ -1881,9 +1810,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Knives, swords & blades",
       platforms: {
         ebay: { id: "182971", name: "Blade Maintenance & Care", path: "Root > Collectables > Blade Accs, Armours & Shields > Blade Accessories > Blade Maintenance & Care" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-4-4-1-2", name: "Blades", path: "Home & Garden > Lawn & Garden > Outdoor Power Equipment Accessories > Lawn Mower Accessories > Brush Mower Attachments > Blades" },
-        depop: { id: "everything-else|art", name: "Art" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ma-2-2-9", name: "Swords", path: "Mature > Weapons & Weapon Accessories > Weapons > Swords" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     lamps_lighting: {
@@ -1912,7 +1841,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "1430", name: "Metalware", path: "Root > Collectables > Metalware" },
         vinted: { id: "4942", name: "Brass", path: "Hobbies & collectables > Musical instruments & gear > Wind instruments > Brass" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-6-3", name: "Bras", path: "Apparel & Accessories > Clothing > Lingerie > Bras" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/os-4-1", name: "Brass Fasteners", path: "Office Supplies > General Office Supplies > Brass Fasteners" },
         depop: { id: "menswear|underwear|bras", name: "Bras" },
       },
     },
@@ -1932,7 +1861,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "1552", name: "Ancient/ Medieval (Pre-1500)", path: "Root > Collectables > Militaria > Ancient/ Medieval (Pre-1500)" },
         vinted: { id: "5231", name: "Buttons", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Closures > Buttons" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-2-1-1", name: "Buttons", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Craft Fasteners & Closures > Buttons & Snaps > Buttons" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     militaria_price_guides_and_publications: {
@@ -1940,7 +1868,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Price guides & publications",
       platforms: {
         ebay: { id: "171186", name: "Price Guides & Publications", path: "Root > Collectables > Kitchen & Home > Barware > Price Guides & Publications" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
       },
     },
     militaria_reproductions: {
@@ -1948,9 +1875,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Reproductions",
       platforms: {
         ebay: { id: "72395", name: "Reproductions", path: "Root > Collectables > Tobacciana & Smoking Supplies > Cigarette Cards > Reproductions" },
-        vinted: { id: "1743", name: "Belts", path: "Kids > Boys clothing > Accessories > Belts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-10-1-4", name: "Flags", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Sports Collectibles > Sports Fan Accessories > Flags" },
-        depop: { id: "menswear|accessories|belts", name: "Belts" },
       },
     },
     militaria_surplus: {
@@ -1973,8 +1898,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Paper",
       platforms: {
         ebay: { id: "122494", name: "Pre-1920", path: "Root > Coins > Coins > Ireland > Pre-1920" },
-        vinted: { id: "5445", name: "Paperweights", path: "Home > Office supplies > Desk accessories > Paperweights" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-1", name: "Art & Craft Paper", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Art & Craft Paper" },
+        vinted: { id: "5322", name: "Papercraft", path: "Hobbies & collectables > Arts & crafts > Papercraft" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/os-12", name: "Paper Handling", path: "Office Supplies > Paper Handling" },
       },
     },
     pens_and_writing_instruments: {
@@ -1994,7 +1919,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "2529", name: "Vintage (Pre-1970)", path: "Root > Toys & Games > Preschool Toys & Pretend Play > Vintage (Pre-1970)" },
         vinted: { id: "1471", name: "Glasses", path: "Men > Clothing > Activewear > Sports accessories > Glasses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-10-1-9", name: "Keychains", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Sports Collectibles > Sports Fan Accessories > Keychains" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     phone_cards: {
@@ -2010,7 +1934,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Photographic images",
       platforms: {
         ebay: { id: "262413", name: "Photographic Images", path: "Root > Collectables > Photographic Images" },
-        vinted: { id: "2734", name: "Slides", path: "Kids > Boys clothing > Shoes > Flip-flops, sandals & slides > Slides" },
+        vinted: { id: "3071", name: "Film", path: "Electronics > Cameras & accessories > Accessories > Film" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-4-2-5", name: "Photographs", path: "Home & Garden > Decor > Artwork > Posters, Prints, & Visual Artwork > Photographs" },
         depop: { id: "everything-else|cameras-and-film|film", name: "Film" },
       },
@@ -2030,7 +1954,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "914", name: "Postcards & Supplies", path: "Root > Collectables > Postcards & Supplies" },
         vinted: { id: "4894", name: "Postcards", path: "Hobbies & collectables > Postcards" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -2040,7 +1963,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "171186", name: "Price Guides & Publications", path: "Root > Collectables > Kitchen & Home > Barware > Price Guides & Publications" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-11-9", name: "Rice", path: "Food, Beverages & Tobacco > Food Items > Grains, Rice & Cereal > Rice" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-2-3-7", name: "Radios", path: "Electronics > Audio > Audio Players & Recorders > Radios" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -2059,7 +1982,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Rocks, fossils & minerals",
       platforms: {
         ebay: { id: "3213", name: "Rocks, Fossils & Minerals", path: "Root > Collectables > Rocks, Fossils & Minerals" },
-        vinted: { id: "5", name: "Men", path: "Men" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-8-8-3", name: "Crystals", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Embellishments & Trims > Loose Stones > Crystals" },
       },
     },
@@ -2084,7 +2006,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Sewing (1930-now)",
       platforms: {
         ebay: { id: "72397", name: "Bakelite", path: "Root > Collectables > Vintage & Retro Collectables > Bakelite" },
-        vinted: { id: "1962", name: "Baskets", path: "Home > Home accessories > Storage & organisation > Baskets" },
+        vinted: { id: "1963", name: "Boxes", path: "Home > Home accessories > Storage & organisation > Boxes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-2-6", name: "Glass", path: "Hardware > Building Materials > Glass" },
         depop: { id: "menswear|accessories|sunglasses", name: "Sunglasses" },
       },
@@ -2103,7 +2025,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Africa",
       platforms: {
         ebay: { id: "181423", name: "Africa", path: "Root > Stamps > Africa" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_asia: {
@@ -2111,7 +2032,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Asia",
       platforms: {
         ebay: { id: "181416", name: "Asia", path: "Root > Stamps > Asia" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-5-2-1", name: "China Cymbals", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > Percussion > Cymbals > China Cymbals" },
       },
     },
@@ -2121,7 +2042,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "181424", name: "Australia & Oceania", path: "Root > Stamps > Australia & Oceania" },
         vinted: { id: "1945", name: "Sheets", path: "Home > Textiles > Bedding > Sheets" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-24-1", name: "Can Covers", path: "Animals & Pet Supplies > Pet Supplies > Pet Food Containers > Can Covers" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-11-1", name: "Dust Covers", path: "Electronics > Electronics Accessories > Electronics Films & Shields > Dust Covers" },
       },
     },
     stamps_british_colonies_and_territories: {
@@ -2129,7 +2050,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "British Colonies & Territories",
       platforms: {
         ebay: { id: "65174", name: "British Colonies & Territories", path: "Root > Stamps > British Colonies & Territories" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_caribbean: {
@@ -2137,7 +2057,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Caribbean",
       platforms: {
         ebay: { id: "179377", name: "Caribbean", path: "Root > Stamps > Caribbean" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_central_and_south_america: {
@@ -2145,7 +2064,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Central & South America",
       platforms: {
         ebay: { id: "181417", name: "Central & South America", path: "Root > Stamps > Central & South America" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_europe: {
@@ -2154,7 +2072,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "4742", name: "Europe", path: "Root > Stamps > Europe" },
         vinted: { id: "4247", name: "Rope", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Rope" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-4-3-1", name: "European Collectible Swords", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Weapons > Collectible Swords > European Collectible Swords" },
       },
     },
     stamps_general: {
@@ -2162,7 +2079,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Stamps",
       platforms: {
         ebay: { id: "170137", name: "Other Stamps", path: "Root > Stamps > Other Stamps" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
@@ -2171,7 +2088,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Great Britain",
       platforms: {
         ebay: { id: "3499", name: "Great Britain", path: "Root > Stamps > Great Britain" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_ireland: {
@@ -2187,8 +2103,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Middle East",
       platforms: {
         ebay: { id: "181422", name: "Middle East", path: "Root > Stamps > Middle East" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fr-14", name: "Ottomans", path: "Furniture > Ottomans" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/fr-15-3-14", name: "Storage Ottomans", path: "Furniture > Outdoor Furniture > Outdoor Ottomans > Storage Ottomans" },
       },
     },
     stamps_north_america: {
@@ -2196,7 +2111,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "North America",
       platforms: {
         ebay: { id: "181444", name: "North America", path: "Root > Stamps > North America" },
-        vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
       },
     },
     stamps_philately: {
@@ -2232,9 +2146,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "United States",
       platforms: {
         ebay: { id: "261", name: "United States", path: "Root > Stamps > United States" },
-        vinted: { id: "3378", name: "Covers, canopies & parasols", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Covers, canopies & parasols" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-24-1", name: "Can Covers", path: "Animals & Pet Supplies > Pet Supplies > Pet Food Containers > Can Covers" },
-        depop: { id: "menswear|accessories|ties", name: "Ties" },
+        vinted: { id: "4891", name: "First day covers", path: "Hobbies & collectables > Stamps > First day covers" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-5-3", name: "First Day Covers", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Postage Stamps > First Day Covers" },
       },
     },
     stamps_worldwide: {
@@ -2250,10 +2163,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_stickers_collections_and_albums',
       label: "Stickers, collections & albums",
       platforms: {
-        ebay: { id: "108948", name: "Stickers", path: "Root > Collectables > Transportation Collectables > Aeronautica > Airlines > Stickers" },
+        ebay: { id: "262344", name: "Non-Sport Stickers, Collections & Albums", path: "Root > Collectables > Non-Sport Stickers, Collections & Albums" },
         vinted: { id: "5393", name: "Stickers", path: "Hobbies & collectables > Arts & crafts > Crafting supplies > Stickers" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/me-1", name: "Books", path: "Media > Books" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
       },
     },
     tobacciana: {
@@ -2281,8 +2192,8 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "182982", name: "Non-Sport Trading Cards", path: "Root > Collectables > Non-Sport Trading Cards" },
         vinted: { id: "4874", name: "Trading cards", path: "Hobbies & collectables > Trading cards" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-3", name: "Collectible Trading Cards", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Trading Cards" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-3-3", name: "Non-Sports Trading Cards", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Trading Cards > Non-Sports Trading Cards" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     transportation_automobilia: {
@@ -2290,9 +2201,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Automobilia",
       platforms: {
         ebay: { id: "60814", name: "Automobilia", path: "Root > Collectables > Transportation Collectables > Automobilia" },
-        vinted: { id: "4247", name: "Rope", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Rope" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-1-2-12", name: "Toppers", path: "Electronics > Arcade Equipment > Pinball Machine Accessories > Toppers" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
       },
     },
     transportation_aviation: {
@@ -2300,7 +2209,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Aviation",
       platforms: {
         ebay: { id: "65210", name: "Aviation", path: "Root > Stamps > Thematics > Transport > Aviation" },
-        vinted: { id: "4491", name: "American football", path: "Sports > Team sports > American football" },
+        vinted: { id: "4528", name: "American football kicking tees", path: "Sports > Team sports > American football > American football kicking tees" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-2-2-7-2-1", name: "Aviation Headsets", path: "Electronics > Audio > Audio Components > Headphones & Headsets > Headsets > Aviation Headsets" },
       },
     },
@@ -2326,7 +2235,6 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_transportation_buses_and_taxi_cabs',
       label: "Buses & taxi cabs",
       platforms: {
-        ebay: { id: "4100", name: "US", path: "Root > Collectables > Historical Memorabilia > Political > US" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-2-2-7-1", name: "Buses", path: "Vehicles & Parts > Vehicles > Motor Vehicles > Commercial Vehicles > Buses" },
       },
     },
@@ -2345,7 +2253,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "69496", name: "Maps & Atlases", path: "Root > Books, Comics & Magazines > Textbooks, Education & Reference > Maps & Atlases" },
         vinted: { id: "4247", name: "Rope", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Rope" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-4-3-1", name: "European Collectible Swords", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Weapons > Collectible Swords > European Collectible Swords" },
       },
     },
     transportation_motorcycles: {
@@ -2353,7 +2260,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycles",
       platforms: {
         ebay: { id: "9805", name: "Harley Davidson", path: "Root > Cars, Motorcycles & Vehicles > Motorcycles & Scooters > Harley Davidson" },
-        vinted: { id: "4526", name: "American footballs", path: "Sports > Team sports > American football > American footballs" },
+        vinted: { id: "3358", name: "Other educational toys", path: "Kids > Toys > Educational toys > Other educational toys" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-8-8", name: "Motorcycles", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Scale Models > Motorcycles" },
       },
     },
@@ -2373,7 +2280,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "11330", name: "Scooters", path: "Root > Sporting Goods > Scooters" },
         vinted: { id: "4818", name: "Scooters", path: "Sports > Skateboards & scooters > Scooters" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hb-1-17-1-1", name: "Mobility Scooters", path: "Health & Beauty > Health Care > Mobility & Accessibility > Accessibility Equipment > Mobility Scooters" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-2-2-3", name: "Motorcycles & Scooters", path: "Vehicles & Parts > Vehicles > Motor Vehicles > Motorcycles & Scooters" },
       },
     },
     transportation_signs: {
@@ -2382,7 +2289,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "60646", name: "Signs", path: "Root > Collectables > Advertising Collectables > Food Advertising > Signs" },
         vinted: { id: "3851", name: "Signs", path: "Home > Home accessories > Wall decor > Signs" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/bi-19-4-8", name: "Vital Signs Monitor Accessories", path: "Business & Industrial > Medical > Medical Equipment > Vital Signs Monitor Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/bi-24-3-1", name: "LED Signs", path: "Business & Industrial > Signage > Electric Signs > LED Signs" },
       },
     },
     transportation_subways: {
@@ -2394,7 +2301,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'collectibles_transportation_traction_and_trolleys',
       label: "Traction & trolleys",
       platforms: {
-        ebay: { id: "183488", name: "AC", path: "Root > Cars, Motorcycles & Vehicles > Classic Cars > AC" },
+        ebay: { id: "98978", name: "Trolleys", path: "Root > Home, Furniture & DIY > Luggage & Travel Accessories > Luggage > Trolleys" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bi-18-2-1-4", name: "Trolleys", path: "Business & Industrial > Material Handling > Lifts & Hoists > Hoists, Cranes & Trolleys > Trolleys" },
       },
     },
@@ -2413,7 +2320,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "14081", name: "Hand Mirrors", path: "Root > Collectables > Vanity, Perfume & Grooming > Hand Mirrors" },
         vinted: { id: "152", name: "Perfume", path: "Women > Beauty > Perfume" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-7-12-7-1", name: "Brushes", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instrument & Orchestra Accessories > Percussion Accessories > Drum Sticks & Brushes > Brushes" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-26-1-2", name: "Combs", path: "Animals & Pet Supplies > Pet Supplies > Pet Grooming Supplies > Pet Combs & Brushes > Combs" },
       },
     },
     vintage_retro_mid_century: {
@@ -2421,7 +2328,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Vintage, retro, mid-century",
       platforms: {
         ebay: { id: "69852", name: "1940s", path: "Root > Collectables > Vintage & Retro Collectables > 1940s" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-14-1-3", name: "Plastic Canvas", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Textiles > Crafting Canvas > Plastic Canvas" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-4-7-3", name: "Plastic Wrap", path: "Home & Garden > Kitchen & Dining > Food Storage > Food Wraps > Plastic Wrap" },
       },
     },
     virtual_and_crypto_collectibles: {
@@ -2440,7 +2347,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "11783", name: "Art Supplies", path: "Root > Crafts > Art Supplies" },
         vinted: { id: "5290", name: "Loose art paper", path: "Hobbies & collectables > Arts & crafts > Drawing & sketching > Loose art paper" },
         shopify: { id: "gid://shopify/TaxonomyCategory/os-11-11-6", name: "Pastels", path: "Office Supplies > Office Instruments > Writing & Drawing Instruments > Pastels" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|art|drawing-and-illustration", name: "Drawing" },
       },
     },
     basketry_and_chair_caning: {
@@ -2448,9 +2355,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Basketry & chair caning",
       platforms: {
         ebay: { id: "134304", name: "Basketry & Chair Caning", path: "Root > Crafts > Basketry & Chair Caning" },
-        vinted: { id: "2312", name: "Books", path: "Entertainment > Books" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/me", name: "Media", path: "Media" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
       },
     },
     beading_and_jewelry_making: {
@@ -2458,7 +2362,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Beading & jewelry making",
       platforms: {
         ebay: { id: "162091", name: "Beading Kits", path: "Root > Crafts > Beads & Jewellery Making > Beading & Jewellery Kits > Beading Kits" },
-        vinted: { id: "3862", name: "Trays", path: "Home > Tableware > Serveware > Trays" },
+        vinted: { id: "3916", name: "Hammers", path: "Home > Tools & DIY > Hand tools > Hammers" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-1-5", name: "Jewelry Making Kits", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Craft Kits > Jewelry Making Kits" },
       },
     },
@@ -2468,8 +2372,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "183683", name: "Candle Making & Soap Making", path: "Root > Crafts > Candle Making & Soap Making" },
         vinted: { id: "5349", name: "Candle making", path: "Hobbies & collectables > Arts & crafts > Candle making" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-1-1", name: "Chemicals", path: "Hardware > Building Consumables > Chemicals" },
       },
     },
     decorative_and_tole_painting: {
@@ -2496,7 +2399,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Fabric painting & decorating",
       platforms: {
         ebay: { id: "183118", name: "Fabric Painting & Decorating", path: "Root > Crafts > Fabric Painting & Decorating" },
-        vinted: { id: "5154", name: "Fabric", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Fabric" },
+        vinted: { id: "5251", name: "Painting", path: "Hobbies & collectables > Arts & crafts > Painting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-14-2", name: "Fabric", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Textiles > Fabric" },
         depop: { id: "everything-else|art|painting", name: "Painting" },
       },
@@ -2506,25 +2409,22 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Floral crafts",
       platforms: {
         ebay: { id: "16491", name: "Floral Crafts", path: "Root > Crafts > Floral Crafts" },
-        vinted: { id: "5314", name: "Pins", path: "Hobbies & collectables > Arts & crafts > Jewellery-making > Jewellery findings > Pins" },
+        vinted: { id: "5177", name: "Tools", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Tools" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-28", name: "Dried Flowers", path: "Home & Garden > Decor > Dried Flowers" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     framing_and_matting: {
       value: 'craft_supplies_framing_and_matting',
       label: "Framing & matting",
       platforms: {
-        ebay: { id: "63548", name: "Tin", path: "Root > Antiques > Metalware > Tin" },
-        vinted: { id: "5177", name: "Tools", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Tools" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-3", name: "RAM", path: "Electronics > Electronics Accessories > Memory > RAM" },
+        ebay: { id: "105902", name: "Frames", path: "Root > Antiques > Silver > Solid Silver > Frames" },
       },
     },
     general: {
       value: 'craft_supplies_general',
       label: "Other Craft supplies",
       platforms: {
-        ebay: { id: "112473", name: "RAF", path: "Root > Collectables > Militaria > World War II (1939-1945) > RAF" },
+        ebay: { id: "3807", name: "Other", path: "Root > Crafts > Beads & Jewellery Making > Crystal/ Cut Glass > Other" },
         vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
@@ -2533,7 +2433,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'craft_supplies_glass_and_mosaics',
       label: "Glass & mosaics",
       platforms: {
-        ebay: { id: "91352", name: "Glass", path: "Root > Collectables > Sewing > Thimbles > Glass" },
+        ebay: { id: "11787", name: "Mosaic", path: "Root > Crafts > Mosaic" },
         vinted: { id: "5177", name: "Tools", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Tools" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-11-2", name: "Glass Cutters", path: "Hardware > Tools > Cutters > Glass Cutters" },
       },
@@ -2542,8 +2442,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'craft_supplies_handcrafted_and_finished_pieces',
       label: "Handcrafted & finished pieces",
       platforms: {
-        ebay: { id: "112473", name: "RAF", path: "Root > Collectables > Militaria > World War II (1939-1945) > RAF" },
-        vinted: { id: "5201", name: "Toys", path: "Home > Pet care > Birds > Toys" },
+        ebay: { id: "20741", name: "Toys", path: "Root > Pet Supplies > Cat Supplies > Toys" },
+        vinted: { id: "3327", name: "Dolls", path: "Kids > Toys > Dolls & accessories > Dolls" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5", name: "Toys", path: "Toys & Games > Toys" },
         depop: { id: "everything-else|toys", name: "Toys" },
       },
@@ -2553,7 +2453,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Leathercrafts",
       platforms: {
         ebay: { id: "28131", name: "Leathercrafts", path: "Root > Crafts > Leathercrafts" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "3447", name: "Sets", path: "Kids > Nursing & feeding > Cups, dishes & utensils > Sets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-10-13-1", name: "Conditioners", path: "Health & Beauty > Personal Care > Hair Care > Shampoo & Conditioner > Conditioners" },
       },
     },
@@ -2561,7 +2461,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'craft_supplies_metalworking',
       label: "Metalworking",
       platforms: {
-        ebay: { id: "42437", name: "Metal", path: "Root > Music > Music Memorabilia > Metal" },
+        ebay: { id: "41369", name: "Metalworking/ Metal Crafts", path: "Root > Crafts > More Crafts > Metalworking/ Metal Crafts" },
       },
     },
     multi_purpose_craft_supplies: {
@@ -2580,7 +2480,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "160706", name: "Needlecrafts & Yarn", path: "Root > Crafts > Needlecrafts & Yarn" },
         vinted: { id: "5168", name: "Crochet hooks", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Needles & hooks > Crochet hooks" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-4-13-1", name: "Crochet Hooks", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Tools > Needles & Hooks > Crochet Hooks" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     scrapbooking_and_paper_crafts: {
@@ -2590,7 +2489,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "11788", name: "Scrapbooking & Paper Crafts", path: "Root > Crafts > Scrapbooking & Paper Crafts" },
         vinted: { id: "5339", name: "Die cutting", path: "Hobbies & collectables > Arts & crafts > Die cutting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-1-1-1", name: "Cardstock", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Art & Craft Paper > Cardstock & Scrapbooking Paper > Cardstock" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|music|vinyl", name: "Vinyl" },
       },
     },
     sculpting_molding_and_ceramics: {
@@ -2599,8 +2498,8 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "160640", name: "Instruction Books & Media", path: "Root > Crafts > Art Supplies > Instruction Books & Media" },
         vinted: { id: "5363", name: "Pottery wheels", path: "Hobbies & collectables > Arts & crafts > Sculpting & pottery > Pottery wheels" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-3", name: "RAM", path: "Electronics > Electronics Accessories > Memory > RAM" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-12-1-1", name: "Clay", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Pottery & Sculpting Materials > Clay & Modeling Dough > Clay" },
+        depop: { id: "menswear|footwear|heels", name: "Heels" },
       },
     },
     sewing: {
@@ -2610,7 +2509,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "160737", name: "Sewing", path: "Root > Crafts > Sewing" },
         vinted: { id: "5231", name: "Buttons", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Closures > Buttons" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-2-1-1", name: "Buttons", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Craft Fasteners & Closures > Buttons & Snaps > Buttons" },
-        depop: { id: "everything-else|face-masks-and-coverings", name: "Face masks and coverings" },
       },
     },
     stamping_and_embossing: {
@@ -2620,16 +2518,13 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "160640", name: "Instruction Books & Media", path: "Root > Crafts > Art Supplies > Instruction Books & Media" },
         vinted: { id: "4888", name: "Stamps", path: "Hobbies & collectables > Stamps" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-9", name: "Embossing Powder", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Embossing Powder" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
       },
     },
     upholstery_tools_and_equipment: {
       value: 'craft_supplies_upholstery_tools_and_equipment',
       label: "Upholstery tools & equipment",
       platforms: {
-        ebay: { id: "261848", name: "Tools", path: "Root > Sporting Goods > Hunting > Tools" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15", name: "Tools", path: "Hardware > Tools" },
+        ebay: { id: "79793", name: "Equipment", path: "Root > Sporting Goods > Gymnastics > Equipment" },
       },
     },
     wall_decor_and_tatouage: {
@@ -2637,7 +2532,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Wall decor & tatouage",
       platforms: {
         vinted: { id: "3283", name: "Wall decor", path: "Kids > Furniture & decor > Decor & keepsakes > Wall decor" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3", name: "Decor", path: "Home & Garden > Decor" },
       },
     },
     woodworking: {
@@ -2645,9 +2539,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Woodworking",
       platforms: {
         ebay: { id: "3127", name: "Woodworking", path: "Root > Crafts > Woodworking" },
-        vinted: { id: "2312", name: "Books", path: "Entertainment > Books" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/me", name: "Media", path: "Media" },
-        depop: { id: "everything-else|books-and-magazines|books", name: "Books" },
+        vinted: { id: "3876", name: "Hand tools", path: "Home > Tools & DIY > Hand tools" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-1-2-4-2-3", name: "Craft Wood Dowels", path: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Craft Shapes & Bases > Craft Wood & Shapes > Craft Wood Dowels" },
       },
     },
   },
@@ -2657,7 +2550,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Cameras & photography",
       platforms: {
         ebay: { id: "625", name: "Cameras & Photography", path: "Root > Cameras & Photography" },
-        vinted: { id: "3848", name: "Photography", path: "Home > Home accessories > Wall decor > Photography" },
+        vinted: { id: "3060", name: "Cameras", path: "Electronics > Cameras & accessories > Cameras" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-9-2-7", name: "Telescopes", path: "Toys & Games > Toys > Educational Toys > Astronomy Toys & Models > Telescopes" },
         depop: { id: "everything-else|cameras-and-film|cameras", name: "Cameras" },
       },
@@ -2707,7 +2600,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "7275", name: "Components & Parts", path: "Root > Collectables > Radio, Television & Telephony > Radio Collectables > Components & Parts" },
         vinted: { id: "3598", name: "Computer cases", path: "Electronics > Computers & accessories > Computer parts & components > Computer cases" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-7-9-7-2", name: "Computer Case Fans", path: "Electronics > Electronics Accessories > Computer Components > Computer System Cooling Parts > Computer Case Fans" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     computers_and_tablets_computer_accessories: {
@@ -2735,8 +2628,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Desktops & all-in-ones",
       platforms: {
         ebay: { id: "171957", name: "Desktops & All-in-Ones", path: "Root > Computers/Tablets & Networking > Desktops & All-in-Ones" },
-        vinted: { id: "2994", name: "Electronics", path: "Electronics" },
-        depop: { id: "menswear|tops", name: "Tops" },
       },
     },
     computers_and_tablets_drives_and_storage: {
@@ -2761,10 +2652,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'electronics_computers_and_tablets_general',
       label: "Other Computers & tablets",
       platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "3728", name: "Tablets", path: "Electronics > Tablets, e-readers & accessories > Tablets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-6", name: "Computers", path: "Electronics > Computers" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     computers_and_tablets_home_networking: {
@@ -2794,7 +2683,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "16191", name: "Ink Cartridges", path: "Root > Computers/Tablets & Networking > Printers, Scanners & Supplies > Printer Ink, Toner & Paper > Ink Cartridges" },
         vinted: { id: "5298", name: "Ink refills", path: "Hobbies & collectables > Arts & crafts > Calligraphy > Ink refills" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-13-6", name: "Scanners", path: "Electronics > Print, Copy, Scan & Fax > Scanners" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     computers_and_tablets_smart_glasses: {
@@ -2804,7 +2692,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "178894", name: "Smart Glasses", path: "Root > Sound & Vision > Smart Glasses" },
         vinted: { id: "3033", name: "Smart glasses", path: "Electronics > Wearables > Smart glasses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-6-7", name: "Smart Glasses", path: "Electronics > Computers > Smart Glasses" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     computers_and_tablets_software: {
@@ -2820,7 +2707,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'electronics_computers_and_tablets_tablets',
       label: "Tablets",
       platforms: {
-        ebay: { id: "58058", name: "Computers/Tablets & Networking", path: "Root > Computers/Tablets & Networking" },
+        ebay: { id: "171485", name: "Tablets & eBook Readers", path: "Root > Computers/Tablets & Networking > Tablets & eBook Readers" },
         vinted: { id: "3728", name: "Tablets", path: "Electronics > Tablets, e-readers & accessories > Tablets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-7-9-12-7", name: "Graphics Tablets", path: "Electronics > Electronics Accessories > Computer Components > Input Devices > Graphics Tablets" },
       },
@@ -2839,9 +2726,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'electronics_computers_and_tablets_tablets_and_ebook_reader_parts',
       label: "Tablets & eBook reader parts",
       platforms: {
-        ebay: { id: "183072", name: "Parts", path: "Root > Sound & Vision > Virtual Reality > Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        depop: { id: "everything-else|art", name: "Art" },
+        vinted: { id: "2994", name: "Electronics", path: "Electronics" },
       },
     },
     drones_and_accessories: {
@@ -2881,7 +2766,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "183502", name: "Antennas", path: "Root > Mobile Phones & Communication > Radio Communication Equipment > Antennas" },
         vinted: { id: "3676", name: "Shortwave radios", path: "Electronics > Mobile phones & communication > Radio communication > Shortwave radios" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-7-3", name: "Antennas", path: "Electronics > Electronics Accessories > Antennas" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     smart_home_and_security: {
@@ -2891,7 +2775,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "75395", name: "Dummy Cameras", path: "Root > Home, Furniture & DIY > Smart Home & Surveillance > Home Surveillance > Dummy Cameras" },
         vinted: { id: "3887", name: "Smart home & security", path: "Home > Tools & DIY > Smart home & security" },
         shopify: { id: "gid://shopify/TaxonomyCategory/co-2", name: "Cameras", path: "Cameras & Optics > Cameras" },
-        depop: { id: "everything-else|home", name: "Home" },
+        depop: { id: "everything-else|cameras-and-film|cameras", name: "Cameras" },
       },
     },
     tv_video_and_home_audio: {
@@ -2899,7 +2783,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "TV, video & home audio",
       platforms: {
         ebay: { id: "39804", name: "Cable TV Boxes", path: "Root > Sound & Vision > TV Reception & Set-Top Boxes > Cable TV Boxes" },
-        vinted: { id: "1918", name: "Home", path: "Home" },
+        vinted: { id: "1963", name: "Boxes", path: "Home > Home accessories > Storage & organisation > Boxes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-2-3-3", name: "Home Theater Systems", path: "Electronics > Audio > Audio Players & Recorders > Home Theater Systems" },
         depop: { id: "everything-else|home", name: "Home" },
       },
@@ -2920,7 +2804,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "1249", name: "Video Games & Consoles", path: "Root > Video Games & Consoles" },
         vinted: { id: "3002", name: "Video games & consoles", path: "Electronics > Video games & consoles" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-17", name: "Video", path: "Electronics > Video" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-2", name: "Batteries", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Batteries" },
         depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
     },
@@ -2929,7 +2813,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Virtual reality headsets & accessories",
       platforms: {
         ebay: { id: "184645", name: "Standalone VR Headsets", path: "Root > Sound & Vision > Virtual Reality > Standalone VR Headsets" },
-        vinted: { id: "3447", name: "Sets", path: "Kids > Nursing & feeding > Cups, dishes & utensils > Sets" },
+        vinted: { id: "3576", name: "Virtual reality", path: "Electronics > Video games & consoles > Virtual reality" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-2-2-7-2", name: "Headsets", path: "Electronics > Audio > Audio Components > Headphones & Headsets > Headsets" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
@@ -2941,7 +2825,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Bath",
       platforms: {
         ebay: { id: "26677", name: "Bath", path: "Root > Home, Furniture & DIY > Bath" },
-        vinted: { id: "1593", name: "Bathrobes", path: "Kids > Girls clothing > Swimwear > Bathrobes" },
+        vinted: { id: "3412", name: "Bathing", path: "Kids > Bathing & changing > Bathing" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-2-1-11", name: "Bath Bombs", path: "Health & Beauty > Personal Care > Cosmetics > Bath & Body > Bath Bombs" },
         depop: { id: "everything-else|home|bathroom", name: "Bathroom" },
       },
@@ -2950,9 +2834,9 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'health_beauty_fragrance',
       label: "Fragrance",
       platforms: {
-        ebay: { id: "132998", name: "Fluids & Fragrances", path: "Root > Musical Instruments & DJ Equipment > Stage Lighting & Effects > Fluids & Fragrances" },
+        ebay: { id: "180345", name: "Fragrances", path: "Root > Health & Beauty > Fragrances" },
         vinted: { id: "1935", name: "Candles & home fragrance", path: "Home > Home accessories > Candles & home fragrance" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-26-2", name: "Pet Fragrances & Deodorizing Sprays", path: "Animals & Pet Supplies > Pet Supplies > Pet Grooming Supplies > Pet Fragrances & Deodorizing Sprays" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-40", name: "Home Fragrances", path: "Home & Garden > Decor > Home Fragrances" },
         depop: { id: "everything-else|beauty|fragrances", name: "Fragrances" },
       },
     },
@@ -2961,9 +2845,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Health & beauty",
       platforms: {
         ebay: { id: "1277", name: "Other Health & Beauty", path: "Root > Health & Beauty > Other Health & Beauty" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "146", name: "Beauty", path: "Women > Beauty" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb", name: "Health & Beauty", path: "Health & Beauty" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        depop: { id: "everything-else|beauty", name: "Beauty" },
       },
     },
     hair_care: {
@@ -3001,7 +2885,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "47945", name: "Nail Care, Manicure & Pedicure", path: "Root > Health & Beauty > Nail Care, Manicure & Pedicure" },
         vinted: { id: "960", name: "Nail care", path: "Women > Beauty > Nail care" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-2-7", name: "Nail Care", path: "Health & Beauty > Personal Care > Cosmetics > Nail Care" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     shaving_and_hair_removal: {
@@ -3011,7 +2894,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "31762", name: "Shaving & Hair Removal", path: "Root > Health & Beauty > Shaving & Hair Removal" },
         vinted: { id: "3760", name: "Shaving & hair removal", path: "Electronics > Beauty & personal care electronics > Shaving & hair removal" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-14-1", name: "Aftershave", path: "Health & Beauty > Personal Care > Shaving & Grooming > Aftershave" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     skin_care: {
@@ -3019,9 +2901,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Skin care",
       platforms: {
         ebay: { id: "11863", name: "Skin Care", path: "Root > Health & Beauty > Skin Care" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "3770", name: "Powered cleansing brushes & exfoliators", path: "Electronics > Beauty & personal care electronics > Beauty tools > Powered cleansing brushes & exfoliators" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hb-3-2-9", name: "Skin Care", path: "Health & Beauty > Personal Care > Cosmetics > Skin Care" },
-        depop: { id: "everything-else|face-masks-and-coverings", name: "Face masks and coverings" },
       },
     },
   },
@@ -3042,7 +2923,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "26677", name: "Bath", path: "Root > Home, Furniture & DIY > Bath" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-1-1-1", name: "Bird Cage Bird Baths", path: "Animals & Pet Supplies > Pet Supplies > Bird Supplies > Bird Cage Accessories > Bird Cage Bird Baths" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-11", name: "Bird Baths", path: "Home & Garden > Decor > Bird Baths" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -3061,7 +2942,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Cleaning supplies",
       platforms: {
         ebay: { id: "22700", name: "Cleaning Supplies", path: "Root > Sporting Goods > Hunting > Gun Smithing & Maintenance > Cleaning Supplies" },
-        vinted: { id: "3956", name: "Paint buckets & trays", path: "Home > Tools & DIY > Painting tools & accessories > Paint buckets & trays" },
+        vinted: { id: "4313", name: "Sauna buckets", path: "Home > Outdoor & garden > Spas, pools & equipment > Sauna accessories > Sauna buckets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-10-6-4", name: "Buckets", path: "Home & Garden > Household Supplies > Household Cleaning Supplies > Buckets" },
         depop: { id: "menswear|accessories|gloves", name: "Gloves" },
       },
@@ -3081,9 +2962,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Home & garden",
       platforms: {
         ebay: { id: "14883", name: "Other Home & Garden", path: "Root > Wholesale & Job Lots > Home & Garden > Other Home & Garden" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "1918", name: "Home", path: "Home" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg", name: "Home & Garden", path: "Home & Garden" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     home_decor: {
@@ -3103,7 +2983,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "59032", name: "Bricks, Stones & Concrete Blocks", path: "Root > Home, Furniture & DIY > DIY Materials > Bricks, Stones & Concrete Blocks" },
         vinted: { id: "3886", name: "Hardware", path: "Home > Tools & DIY > Hardware" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-6-2-2", name: "Cabinet Backplates", path: "Hardware > Hardware Accessories > Cabinet Hardware > Cabinet Backplates" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     home_improvement_electrical_supplies: {
@@ -3111,19 +2990,13 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Electrical supplies",
       platforms: {
         ebay: { id: "259482", name: "Electrical Supplies", path: "Root > Home, Furniture & DIY > DIY Materials > Electrical Supplies" },
-        vinted: { id: "3008", name: "Chargers", path: "Electronics > Other devices & accessories > Chargers" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-11", name: "Power & Electrical Supplies", path: "Hardware > Power & Electrical Supplies" },
-        depop: { id: "everything-else|art", name: "Art" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-11-22", name: "Solar Energy Kits", path: "Hardware > Power & Electrical Supplies > Solar Energy Kits" },
       },
     },
     home_improvement_general: {
       value: 'home_garden_home_improvement_general',
       label: "Other Home improvement",
-      platforms: {
-        ebay: { id: "180348", name: "Other", path: "Root > Toys & Games > Games > Chess > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
-      },
+      platforms: {},
     },
     home_improvement_heating_cooling_and_air: {
       value: 'home_garden_home_improvement_heating_cooling_and_air',
@@ -3149,7 +3022,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Plumbing & fixtures",
       platforms: {
         ebay: { id: "20601", name: "Plumbing & Fixtures", path: "Root > Home, Furniture & DIY > Plumbing & Fixtures" },
-        vinted: { id: "3447", name: "Sets", path: "Kids > Nursing & feeding > Cups, dishes & utensils > Sets" },
+        vinted: { id: "3154", name: "Furniture", path: "Home > Furniture" },
         shopify: { id: "gid://shopify/TaxonomyCategory/fr-10-1", name: "Bathroom Furniture Sets", path: "Furniture > Furniture Sets > Bathroom Furniture Sets" },
         depop: { id: "everything-else|home|bathroom", name: "Bathroom" },
       },
@@ -3179,9 +3052,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Composting & yard waste",
       platforms: {
         ebay: { id: "181021", name: "Compost Accelerators", path: "Root > Garden & Patio > Composting & Garden Waste > Compost Accelerators" },
-        vinted: { id: "5138", name: "Bags", path: "Home > Pet care > Dogs > Training accessories > Bags" },
+        vinted: { id: "3812", name: "Outdoor & garden", path: "Home > Outdoor & garden" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-1-2", name: "Compost Aerators", path: "Home & Garden > Lawn & Garden > Gardening > Composting > Compost Aerators" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
     },
     outdoor_and_garden_garden_clothing_and_protective_gear: {
@@ -3191,7 +3063,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "159473", name: "Garden Clothing & Protective Gear", path: "Root > Garden & Patio > Garden Clothing & Protective Gear" },
         vinted: { id: "3883", name: "Protective gear", path: "Home > Tools & DIY > Protective gear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-1", name: "Clothing", path: "Apparel & Accessories > Clothing" },
-        depop: { id: "menswear|footwear|boots", name: "Boots" },
       },
     },
     outdoor_and_garden_garden_fencing_privacy_screens_and_gates: {
@@ -3209,18 +3080,17 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Garden structures & shade",
       platforms: {
         ebay: { id: "177017", name: "Garden Structures & Shade", path: "Root > Garden & Patio > Garden Structures & Shade" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
+        vinted: { id: "4142", name: "Gazebos", path: "Home > Outdoor & garden > Outdoor & garden decor > Gazebos" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-2-8-3", name: "Shade Sails", path: "Home & Garden > Lawn & Garden > Outdoor Living > Outdoor Umbrellas & Sunshades > Shade Sails" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     outdoor_and_garden_general: {
       value: 'home_garden_outdoor_and_garden_general',
       label: "Other Outdoor & garden",
       platforms: {
-        ebay: { id: "109246", name: "Other", path: "Root > Toys & Games > Outdoor Toys & Activities > Juggling > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        ebay: { id: "40145", name: "Garden", path: "Root > Wholesale & Job Lots > Home & Garden > Garden" },
+        vinted: { id: "3812", name: "Outdoor & garden", path: "Home > Outdoor & garden" },
       },
     },
     outdoor_and_garden_hydroponics: {
@@ -3228,9 +3098,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Hydroponics",
       platforms: {
         ebay: { id: "43554", name: "Hydroponics", path: "Root > Garden & Patio > Hydroponics" },
-        vinted: { id: "5138", name: "Bags", path: "Home > Pet care > Dogs > Training accessories > Bags" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-19", name: "Hydroponics", path: "Home & Garden > Lawn & Garden > Gardening > Hydroponics" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     outdoor_and_garden_landscaping_and_garden_materials: {
@@ -3238,9 +3108,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Landscaping & garden materials",
       platforms: {
         ebay: { id: "181027", name: "Landscaping & Garden Materials", path: "Root > Garden & Patio > Landscaping & Garden Materials" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "5154", name: "Fabric", path: "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Fabric" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-10", name: "Landscape Fabric", path: "Home & Garden > Lawn & Garden > Gardening > Landscape Fabric" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     outdoor_and_garden_outdoor_and_garden_decor: {
@@ -3257,7 +3126,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'home_garden_outdoor_and_garden_outdoor_and_garden_lighting',
       label: "Outdoor & garden lighting",
       platforms: {
-        ebay: { id: "63548", name: "Tin", path: "Root > Antiques > Metalware > Tin" },
+        ebay: { id: "42154", name: "Garden Lighting", path: "Root > Garden & Patio > Garden Lighting" },
         vinted: { id: "4131", name: "Outdoor & garden lighting", path: "Home > Outdoor & garden > Outdoor & garden decor > Outdoor & garden lighting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-13", name: "Lighting", path: "Home & Garden > Lighting" },
         depop: { id: "everything-else|home|lighting", name: "Lighting" },
@@ -3327,7 +3196,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Plants, seeds & bulbs",
       platforms: {
         ebay: { id: "181003", name: "Plants, Seeds & Bulbs", path: "Root > Garden & Patio > Plants, Seeds & Bulbs" },
-        vinted: { id: "1918", name: "Home", path: "Home" },
+        vinted: { id: "3812", name: "Outdoor & garden", path: "Home > Outdoor & garden" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-17", name: "Plants", path: "Home & Garden > Plants" },
       },
     },
@@ -3336,9 +3205,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Ponds & water features",
       platforms: {
         ebay: { id: "93632", name: "Ponds & Water Features", path: "Root > Garden & Patio > Ponds & Water Features" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-16", name: "Water", path: "Food, Beverages & Tobacco > Beverages > Water" },
-        depop: { id: "everything-else|art", name: "Art" },
+        vinted: { id: "3812", name: "Outdoor & garden", path: "Home > Outdoor & garden" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-35-2-1", name: "Fountains", path: "Home & Garden > Decor > Fountains & Ponds > Fountains & Waterfalls > Fountains" },
       },
     },
     outdoor_and_garden_snow_removal_tools: {
@@ -3367,7 +3235,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "29521", name: "Watering Equipment", path: "Root > Garden & Patio > Watering Equipment" },
         vinted: { id: "3892", name: "Watering equipment", path: "Home > Outdoor & garden > Watering equipment" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-6-3", name: "Garden Hoses", path: "Home & Garden > Lawn & Garden > Watering & Irrigation > Garden Hoses" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     outdoor_and_garden_weather_instruments: {
@@ -3384,7 +3251,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Weed & pest control",
       platforms: {
         ebay: { id: "181034", name: "Weed & Pest Control", path: "Root > Garden & Patio > Weed & Pest Control" },
-        vinted: { id: "1918", name: "Home", path: "Home" },
+        vinted: { id: "3812", name: "Outdoor & garden", path: "Home > Outdoor & garden" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-10-11", name: "Pest Control", path: "Home & Garden > Household Supplies > Pest Control" },
       },
     },
@@ -3393,7 +3260,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Party supplies",
       platforms: {
         ebay: { id: "3205", name: "Party Supplies", path: "Root > Home, Furniture & DIY > Celebrations & Occasions > Party Supplies" },
-        vinted: { id: "288", name: "Hats", path: "Men > Accessories > Hats & caps > Hats" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-3-2", name: "Party Supplies", path: "Arts & Entertainment > Party & Celebration > Party Supplies" },
         depop: { id: "everything-else|party-supplies", name: "Party supplies" },
       },
@@ -3422,7 +3289,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Tools & DIY",
       platforms: {
         ebay: { id: "23643", name: "Tools", path: "Root > Toys & Games > Models & Kits > Tools, Supplies & Engines > Tools" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "3811", name: "Tools & DIY", path: "Home > Tools & DIY" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15", name: "Tools", path: "Hardware > Tools" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
@@ -3440,7 +3307,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'home_garden_tools_and_diy_masonry_tools',
       label: "Masonry tools",
       platforms: {
-        ebay: { id: "23643", name: "Tools", path: "Root > Toys & Games > Models & Kits > Tools, Supplies & Engines > Tools" },
+        ebay: { id: "260222", name: "Concrete, Tiling & Masonry Tools", path: "Root > Home, Furniture & DIY > DIY Tools & Workshop Equipment > Hand Tools > Concrete, Tiling & Masonry Tools" },
         vinted: { id: "3881", name: "Masonry tools", path: "Home > Tools & DIY > Masonry tools" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-34", name: "Masonry Tools", path: "Hardware > Tools > Masonry Tools" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
@@ -3480,7 +3347,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "27653", name: "Power Tools", path: "Root > Toys & Games > Models & Kits > Tools, Supplies & Engines > Tools > Power Tools" },
         vinted: { id: "3875", name: "Power tools", path: "Home > Tools & DIY > Power tools" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-15", name: "Power", path: "Electronics > Electronics Accessories > Power" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-38", name: "Multifunction Power Tools", path: "Hardware > Tools > Multifunction Power Tools" },
       },
     },
     tools_and_diy_protective_gear: {
@@ -3490,7 +3357,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "261766", name: "Protective Gear", path: "Root > Sporting Goods > Cheerleading > Protective Gear" },
         vinted: { id: "3883", name: "Protective gear", path: "Home > Tools & DIY > Protective gear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bi-25-6-1", name: "Face Shields", path: "Business & Industrial > Work Safety Protective Gear > Protective Eyewear > Face Shields" },
-        depop: { id: "menswear|accessories|belts", name: "Belts" },
+        depop: { id: "menswear|accessories|hats", name: "Hats" },
       },
     },
     tools_and_diy_tool_accessories: {
@@ -3541,7 +3408,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "48458", name: "DJ Equipment", path: "Root > Musical Instruments & DJ Equipment > DJ Equipment" },
         vinted: { id: "5093", name: "DJ bags & cases", path: "Hobbies & collectables > Musical instruments & gear > DJ gear > DJ bags & cases" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-2-5-4", name: "DJ Controllers", path: "Electronics > Audio > DJ & Specialty Audio > DJ Controllers" },
-        depop: { id: "everything-else|music|vinyl", name: "Vinyl" },
+        depop: { id: "everything-else|tech-accessories|headphones-and-earphones", name: "Headphones" },
       },
     },
     general: {
@@ -3549,9 +3416,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Musical instruments",
       platforms: {
         ebay: { id: "308", name: "Other Musical Instruments", path: "Root > Musical Instruments & DJ Equipment > Other Musical Instruments" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "4825", name: "Musical instruments & gear", path: "Hobbies & collectables > Musical instruments & gear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8", name: "Musical Instruments", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     guitars_and_basses: {
@@ -3561,7 +3427,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "3858", name: "Guitars & Basses", path: "Root > Musical Instruments & DJ Equipment > Guitars & Basses" },
         vinted: { id: "4848", name: "Acoustic guitars", path: "Hobbies & collectables > Musical instruments & gear > Guitars & bass guitars > Acoustic guitars" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-7-2-1", name: "Acoustic Guitars", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > String Instruments > Guitars > Acoustic Guitars" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
     },
     karaoke: {
@@ -3580,7 +3445,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "37976", name: "Percussion", path: "Root > Antiques > Musical Instruments > Percussion" },
         vinted: { id: "4964", name: "Bass drums", path: "Hobbies & collectables > Musical instruments & gear > Drums & percussion > Drums > Bass drums" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-5", name: "Percussion", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > Percussion" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     pianos_and_keyboards: {
@@ -3590,7 +3455,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "181269", name: "Accordions", path: "Root > Musical Instruments & DJ Equipment > Pianos, Keyboards & Organs > Folk & World > Accordions" },
         vinted: { id: "4855", name: "Accordions", path: "Hobbies & collectables > Musical instruments & gear > Keyboards & synths > Accordions" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-13-12", name: "Pianos & Keyboards", path: "Toys & Games > Toys > Musical Toys > Pianos & Keyboards" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
     },
     string: {
@@ -3600,7 +3464,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "181727", name: "String", path: "Root > Antiques > Musical Instruments > String" },
         vinted: { id: "4885", name: "Banjos", path: "Hobbies & collectables > Musical instruments & gear > String instruments > Banjos" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-7-7", name: "Banjos", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > String Instruments > Banjos" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     wind_and_woodwind: {
@@ -3610,7 +3474,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "10181", name: "Wind & Woodwind", path: "Root > Musical Instruments & DJ Equipment > Wind & Woodwind" },
         vinted: { id: "5072", name: "Bassoons", path: "Hobbies & collectables > Musical instruments & gear > Wind instruments > Woodwinds > Bassoons" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-8-8-1", name: "Bassoons", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instruments > Woodwinds > Bassoons" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
   },
@@ -3667,8 +3531,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'pet_supplies_fish_and_aquariums',
       label: "Fish & aquariums",
       platforms: {
-        ebay: { id: "3898", name: "Fish", path: "Root > Collectables > Animal Collectables > Fish & Marine Life > Fish" },
-        vinted: { id: "5112", name: "Fish", path: "Home > Pet care > Fish" },
+        ebay: { id: "20754", name: "Fish & Aquarium", path: "Root > Pet Supplies > Fish & Aquarium" },
+        vinted: { id: "3834", name: "Lighting", path: "Home > Home accessories > Lighting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-4-3", name: "Aquarium Cleaning Supplies", path: "Animals & Pet Supplies > Pet Supplies > Fish & Aquatic Supplies > Aquarium Cleaning Supplies" },
         depop: { id: "everything-else|home|lighting", name: "Lighting" },
       },
@@ -3686,9 +3550,7 @@ export const CATEGORY_TREE: CategoryTree = {
     memorials_and_urns: {
       value: 'pet_supplies_memorials_and_urns',
       label: "Memorials & urns",
-      platforms: {
-        ebay: { id: "261631", name: "Urns", path: "Root > Collectables > Decorative Collectables > Urns" },
-      },
+      platforms: {},
     },
     reptiles: {
       value: 'pet_supplies_reptiles',
@@ -3716,7 +3578,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "15263", name: "Accessories", path: "Root > Vehicle Parts & Accessories > Boats Parts & Accessories > Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ma-2-2-12", name: "Guns", path: "Mature > Weapons & Weapon Accessories > Weapons > Guns" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-2-16", name: "Tent Accessories", path: "Sporting Goods > Outdoor Recreation > Camping & Hiking > Tent Accessories" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -3737,7 +3599,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "20835", name: "Archery", path: "Root > Sporting Goods > Archery" },
         vinted: { id: "4927", name: "Strings", path: "Hobbies & collectables > Musical instruments & gear > String instruments > Strings" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-9-1", name: "Archery", path: "Sporting Goods > Outdoor Recreation > Hunting & Shooting > Archery" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     backyard_games: {
@@ -3756,7 +3618,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "258711", name: "Knives", path: "Root > Business, Office & Industrial > Restaurant & Food Service > Tabletop & Serving > Tabletop > Restaurant Flatware > Knives" },
         vinted: { id: "1740", name: "Gloves", path: "Kids > Boys clothing > Accessories > Gloves" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ma-2-2-9", name: "Swords", path: "Mature > Weapons & Weapon Accessories > Weapons > Swords" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "menswear|accessories|gloves", name: "Gloves" },
       },
     },
     camping_and_hiking: {
@@ -3766,7 +3628,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "16034", name: "Camping & Hiking", path: "Root > Sporting Goods > Camping & Hiking" },
         vinted: { id: "4672", name: "Camping cookware", path: "Sports > Outdoor sports > Camping stoves & cookware > Camping cookware" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-2", name: "Camping & Hiking", path: "Sporting Goods > Outdoor Recreation > Camping & Hiking" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     climbing_and_caving: {
@@ -3786,7 +3647,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "7294", name: "Cycling", path: "Root > Sporting Goods > Cycling" },
         vinted: { id: "4333", name: "Cycling", path: "Sports > Cycling" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-4", name: "Cycling", path: "Sporting Goods > Outdoor Recreation > Cycling" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        depop: { id: "everything-else|home|storage", name: "Storage" },
       },
     },
     disc_golf: {
@@ -3796,7 +3657,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "184355", name: "Disc Golf", path: "Root > Sporting Goods > Disc Golf" },
         vinted: { id: "4339", name: "Golf", path: "Sports > Golf" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-14-3", name: "Disc Golf", path: "Sporting Goods > Outdoor Recreation > Outdoor Games > Disc Golf" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
       },
     },
     equestrian_driving_equipment: {
@@ -3806,7 +3666,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "85178", name: "Driving Equipment", path: "Root > Sporting Goods > Equestrian > Driving Equipment" },
         vinted: { id: "5134", name: "Harnesses", path: "Home > Pet care > Dogs > Collars & leads > Harnesses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/bt-4-4-1", name: "Harnesses", path: "Baby & Toddler > Baby Safety > Baby Safety Harnesses & Leashes > Harnesses" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     equestrian_english_saddles_and_tack: {
@@ -3833,7 +3692,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Equestrian",
       platforms: {
         ebay: { id: "1048", name: "Other Equestrian", path: "Root > Sporting Goods > Equestrian > Other Equestrian" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        vinted: { id: "4340", name: "Equestrian", path: "Sports > Equestrian" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-5", name: "Equestrian", path: "Sporting Goods > Outdoor Recreation > Equestrian" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
@@ -3863,7 +3722,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Horse feed & supplements",
       platforms: {
         ebay: { id: "139576", name: "Horse Feed & Supplements", path: "Root > Sporting Goods > Equestrian > Horse Feed & Supplements" },
-        vinted: { id: "5", name: "Men", path: "Men" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-5-1-3", name: "Horse Feed", path: "Sporting Goods > Outdoor Recreation > Equestrian > Horse Care > Horse Feed" },
       },
     },
@@ -3871,7 +3729,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'sports_outdoors_equestrian_horse_trailers_and_accessories',
       label: "Horse trailers & accessories",
       platforms: {
-        ebay: { id: "182162", name: "Accessories", path: "Root > Musical Instruments & DJ Equipment > String > Accessories" },
+        ebay: { id: "151531", name: "Trailers", path: "Root > Sporting Goods > Equestrian > Horse Trailers & Horseboxes > Trailers" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
@@ -3891,8 +3749,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Lunging & training equipment",
       platforms: {
         ebay: { id: "183421", name: "Lunging & Training Equipment", path: "Root > Sporting Goods > Equestrian > Lunging & Training Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-9-3", name: "Caves", path: "Animals & Pet Supplies > Pet Supplies > Pet Beds > Caves" },
       },
     },
     equestrian_riding_boots_and_accessories: {
@@ -3900,9 +3757,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Riding boots & accessories",
       platforms: {
         ebay: { id: "27031", name: "Riding Boots & Accessories", path: "Root > Sporting Goods > Equestrian > Riding Boots & Accessories" },
-        vinted: { id: "1049", name: "Boots", path: "Women > Shoes > Boots" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-7-7", name: "Spurs", path: "Apparel & Accessories > Shoe Accessories > Spurs" },
-        depop: { id: "menswear|footwear|boots", name: "Boots" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     equestrian_riding_gloves: {
@@ -3920,7 +3777,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Rodeo & roping equipment",
       platforms: {
         ebay: { id: "79793", name: "Equipment", path: "Root > Sporting Goods > Gymnastics > Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "4340", name: "Equestrian", path: "Sports > Equestrian" },
       },
     },
     equestrian_stable_accessories: {
@@ -3938,8 +3795,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Western chaps/full chaps",
       platforms: {
         ebay: { id: "183358", name: "Western Chaps/Full Chaps", path: "Root > Sporting Goods > Equestrian > Clothing & Accessories > Western Chaps/Full Chaps" },
-        vinted: { id: "4332", name: "Sports", path: "Sports" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-1-10-1", name: "Chaps", path: "Apparel & Accessories > Clothing > Outerwear > Chaps" },
+        vinted: { id: "4340", name: "Equestrian", path: "Sports > Equestrian" },
       },
     },
     equestrian_western_hats: {
@@ -3976,7 +3832,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Whips & crops",
       platforms: {
         ebay: { id: "22176", name: "Whips & Crops", path: "Root > Sporting Goods > Equestrian > Whips & Crops" },
-        vinted: { id: "4332", name: "Sports", path: "Sports" },
+        vinted: { id: "4340", name: "Equestrian", path: "Sports > Equestrian" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ma-2-2-11", name: "Whips", path: "Mature > Weapons & Weapon Accessories > Weapons > Whips" },
       },
     },
@@ -3995,7 +3851,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Fishing",
       platforms: {
         ebay: { id: "1492", name: "Fishing", path: "Root > Sporting Goods > Fishing" },
-        vinted: { id: "5112", name: "Fish", path: "Home > Pet care > Fish" },
+        vinted: { id: "4644", name: "Fishing nets", path: "Sports > Outdoor sports > Fishing & hunting > Fishing nets" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-6", name: "Fishing", path: "Sporting Goods > Outdoor Recreation > Fishing" },
       },
     },
@@ -4013,10 +3869,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'sports_outdoors_general',
       label: "Other Sports & outdoors",
       platforms: {
-        ebay: { id: "96820", name: "Sport", path: "Root > Collectables > Autographs > Uncertified Originals > Sport" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-9-2", name: "Doors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Frame & Body Parts > Doors" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
+        ebay: { id: "65208", name: "Sports", path: "Root > Stamps > Thematics > Sports" },
+        vinted: { id: "4332", name: "Sports", path: "Sports" },
       },
     },
     geocaching: {
@@ -4035,8 +3889,8 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "36317", name: "Protective Gear", path: "Root > Sporting Goods > Skateboarding > Protective Gear" },
         vinted: { id: "3883", name: "Protective gear", path: "Home > Tools & DIY > Protective gear" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/bi-2-1-5-3-1", name: "Beekeeping Protective Gear", path: "Business & Industrial > Agriculture > Animal Husbandry > Beekeeping > Beekeeping Equipment > Beekeeping Protective Gear" },
-        depop: { id: "everything-else|art", name: "Art" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-16-5", name: "Skateboarding Protective Gear", path: "Sporting Goods > Outdoor Recreation > Skateboarding > Skateboarding Protective Gear" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     golf: {
@@ -4066,7 +3920,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "182164", name: "Bows", path: "Root > Musical Instruments & DJ Equipment > String > Parts > Bows" },
         vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-9-1-5-1", name: "Arrows", path: "Sporting Goods > Outdoor Recreation > Hunting & Shooting > Archery > Arrows & Bolts > Arrows" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     hunting_decoys: {
@@ -4074,7 +3928,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Decoys",
       platforms: {
         ebay: { id: "36249", name: "Decoys", path: "Root > Sporting Goods > Hunting > Decoys" },
-        vinted: { id: "4332", name: "Sports", path: "Sports" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-6-13-1-1", name: "Artificial Fish Decoys", path: "Sporting Goods > Outdoor Recreation > Fishing > Fishing Tackle > Fishing Baits & Lures > Artificial Fish Decoys" },
       },
     },
@@ -4083,7 +3936,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Falconry equipment",
       platforms: {
         ebay: { id: "90871", name: "Falconry Equipment", path: "Root > Sporting Goods > Hunting > Falconry Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
       },
     },
     hunting_game_and_trail_cameras: {
@@ -4101,7 +3953,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Game calls",
       platforms: {
         ebay: { id: "36252", name: "Game Calls", path: "Root > Sporting Goods > Hunting > Game Calls" },
-        vinted: { id: "4332", name: "Sports", path: "Sports" },
         shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-12-2-2-2", name: "Game", path: "Food, Beverages & Tobacco > Food Items > Meat, Seafood & Eggs > Meat > Fresh & Frozen Meats > Game" },
       },
     },
@@ -4122,7 +3973,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "96273", name: "Manuals", path: "Root > Sound & Vision > TV & Home Audio Parts > Speaker Parts & Components > Manuals" },
         vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-9-7-1", name: "Airsoft Gun Parts & Accessories", path: "Sporting Goods > Outdoor Recreation > Hunting & Shooting > Airsoft > Airsoft Gun Parts & Accessories" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|books-and-magazines|magazines", name: "Magazines" },
       },
     },
     hunting_gun_smithing_and_maintenance: {
@@ -4130,8 +3981,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Gun smithing & maintenance",
       platforms: {
         ebay: { id: "177880", name: "Gun Smithing & Maintenance", path: "Root > Sporting Goods > Hunting > Gun Smithing & Maintenance" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-4-3", name: "Aquarium Cleaning Supplies", path: "Animals & Pet Supplies > Pet Supplies > Fish & Aquatic Supplies > Aquarium Cleaning Supplies" },
+        vinted: { id: "287", name: "Caps", path: "Men > Accessories > Hats & caps > Caps" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-10-6-13", name: "Mops", path: "Home & Garden > Household Supplies > Household Cleaning Supplies > Mops" },
       },
     },
     hunting_gun_storage: {
@@ -4149,9 +4000,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Holsters, belts & pouches",
       platforms: {
         ebay: { id: "262433", name: "Holsters, Belts & Pouches", path: "Root > Sporting Goods > Hunting > Holsters, Belts & Pouches" },
-        vinted: { id: "1743", name: "Belts", path: "Kids > Boys clothing > Accessories > Belts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-2-6", name: "Belts", path: "Apparel & Accessories > Clothing Accessories > Belts" },
-        depop: { id: "menswear|accessories|belts", name: "Belts" },
+        vinted: { id: "4033", name: "Drill holsters", path: "Home > Tools & DIY > Tool carrying & storage > Drill holsters" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ma-2-1-1", name: "Ammunition", path: "Mature > Weapons & Weapon Accessories > Weapon Care & Accessories > Ammunition" },
       },
     },
     hunting_hunting_accessories: {
@@ -4159,7 +4009,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Hunting accessories",
       platforms: {
         ebay: { id: "52502", name: "Hunting Accessories", path: "Root > Sporting Goods > Hunting > Hunting Accessories" },
-        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
+        vinted: { id: "4651", name: "Other fishing & hunting accessories", path: "Sports > Outdoor sports > Fishing & hunting > Other fishing & hunting accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-9-3", name: "Hunting", path: "Sporting Goods > Outdoor Recreation > Hunting & Shooting > Hunting" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
@@ -4169,8 +4019,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Hunting dog supplies",
       platforms: {
         ebay: { id: "71110", name: "Hunting Dog Supplies", path: "Root > Sporting Goods > Hunting > Hunting Dog Supplies" },
-        vinted: { id: "4332", name: "Sports", path: "Sports" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-3", name: "Dog Supplies", path: "Animals & Pet Supplies > Pet Supplies > Dog Supplies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-9-3", name: "Hunting", path: "Sporting Goods > Outdoor Recreation > Hunting & Shooting > Hunting" },
       },
     },
     hunting_knives_and_tools: {
@@ -4198,8 +4047,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Reloading press & equipment",
       platforms: {
         ebay: { id: "31823", name: "Reloading Press & Equipment", path: "Root > Sporting Goods > Hunting > Reloading Press & Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-6-8", name: "Pet Hoodies", path: "Animals & Pet Supplies > Pet Supplies > Pet Apparel > Pet Hoodies" },
+        vinted: { id: "5341", name: "Cutting dies", path: "Hobbies & collectables > Arts & crafts > Die cutting > Cutting dies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-69-1", name: "Hex Dies", path: "Hardware > Tools > Taps & Dies > Hex Dies" },
         depop: { id: "menswear|tops|hoodies", name: "Hoodies" },
       },
     },
@@ -4219,7 +4068,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "36271", name: "Taxidermy", path: "Root > Collectables > Animal Collectables > Taxidermy" },
         vinted: { id: "5110", name: "Birds", path: "Home > Pet care > Birds" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-4", name: "Fish & Aquatic Supplies", path: "Animals & Pet Supplies > Pet Supplies > Fish & Aquatic Supplies" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-6-13", name: "Fishing Tackle", path: "Sporting Goods > Outdoor Recreation > Fishing > Fishing Tackle" },
       },
     },
     hunting_vintage_hunting: {
@@ -4249,7 +4098,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "16258", name: "Inline & Roller Skating", path: "Root > Sporting Goods > Inline & Roller Skating" },
         vinted: { id: "3883", name: "Protective gear", path: "Home > Tools & DIY > Protective gear" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-12", name: "Inline & Roller Skating", path: "Sporting Goods > Outdoor Recreation > Inline & Roller Skating" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "menswear|footwear|heels", name: "Heels" },
       },
     },
     paintball: {
@@ -4289,7 +4138,6 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "184369", name: "Skydiving, Para & Hang Gliding", path: "Root > Sporting Goods > Skydiving, Para & Hang Gliding" },
         vinted: { id: "5134", name: "Harnesses", path: "Home > Pet care > Dogs > Collars & leads > Harnesses" },
         shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-8-3", name: "Parachutes", path: "Sporting Goods > Outdoor Recreation > Hang Gliding & Skydiving > Parachutes" },
-        depop: { id: "menswear|suits", name: "Suits" },
       },
     },
     tactical_and_duty_gear: {
@@ -4299,7 +4147,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "62175", name: "Hats & Headwear", path: "Root > Sporting Goods > Winter Sports > Clothing, Hats & Gloves > Hats & Headwear" },
         vinted: { id: "1960", name: "Plates", path: "Home > Tableware > Dinnerware > Plates" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-10-4-3", name: "Plates", path: "Home & Garden > Kitchen & Dining > Tableware > Dinnerware > Plates" },
-        depop: { id: "menswear|tops|vests-tanks-camis", name: "Vests" },
+        depop: { id: "menswear|accessories|belts", name: "Belts" },
       },
     },
     team_sports_american_football: {
@@ -4356,7 +4204,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Coach & referee equipment",
       platforms: {
         ebay: { id: "81538", name: "Coach & Referee Equipment", path: "Root > Sporting Goods > Coach & Referee Equipment" },
-        vinted: { id: "5", name: "Men", path: "Men" },
+        vinted: { id: "4337", name: "Team sports", path: "Sports > Team sports" },
       },
     },
     team_sports_cricket: {
@@ -4403,9 +4251,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'sports_outdoors_team_sports_general',
       label: "Other Team sports",
       platforms: {
-        ebay: { id: "93538", name: "Sport", path: "Root > Collectables > Autographs > Pre-Printed Autographs > Sport" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-14-2", name: "Tea", path: "Food, Beverages & Tobacco > Beverages > Tea & Infusions > Tea" },
+        ebay: { id: "65208", name: "Sports", path: "Root > Stamps > Thematics > Sports" },
+        vinted: { id: "4337", name: "Team sports", path: "Sports > Team sports" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
@@ -4434,7 +4281,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "23563", name: "Accessories", path: "Root > Sporting Goods > Field, Ice & Roller Hockey > Accessories" },
         vinted: { id: "4715", name: "Ice hockey", path: "Sports > Winter sports > Ice hockey" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-1-1", name: "Bird Cage Accessories", path: "Animals & Pet Supplies > Pet Supplies > Bird Supplies > Bird Cage Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-22", name: "Sports Toy Accessories", path: "Toys & Games > Toys > Sports Toy Accessories" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -4568,7 +4415,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'toys_games_beanbag_plushies',
       label: "Beanbag plushies",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
+        ebay: { id: "439", name: "Bean Bag Plush", path: "Root > Toys & Games > Beanies > Bean Bag Plush" },
         vinted: { id: "2964", name: "Beanies", path: "Men > Accessories > Hats & caps > Beanies" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-2-17-2", name: "Beanies", path: "Apparel & Accessories > Clothing Accessories > Hats > Beanies" },
         depop: { id: "everything-else|toys|plushies", name: "Plushies" },
@@ -4579,7 +4426,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Building toys",
       platforms: {
         ebay: { id: "263012", name: "LEGO (R) Minifigures", path: "Root > Toys & Games > Construction & Building Toys > LEGO (R) Building Toys > LEGO (R) Minifigures" },
-        vinted: { id: "5201", name: "Toys", path: "Home > Pet care > Birds > Toys" },
+        vinted: { id: "1767", name: "Blocks & building toys", path: "Kids > Toys > Blocks & building toys" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-7", name: "Building Toys", path: "Toys & Games > Toys > Building Toys" },
         depop: { id: "everything-else|toys", name: "Toys" },
       },
@@ -4601,7 +4448,7 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "19180", name: "Puppets", path: "Root > Toys & Games > Vintage & Classic Toys > Puppets" },
         vinted: { id: "3329", name: "Dress up & pretend play", path: "Kids > Toys > Dress up & pretend play" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-16", name: "Pretend Play", path: "Toys & Games > Toys > Pretend Play" },
-        depop: { id: "everything-else|toys", name: "Toys" },
+        depop: { id: "everything-else|home|kitchen", name: "Kitchen" },
       },
     },
     educational_toys: {
@@ -4618,9 +4465,9 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'toys_games_electronic_and_rc_toys',
       label: "Electronic & RC toys",
       platforms: {
-        ebay: { id: "20736", name: "Toys", path: "Root > Pet Supplies > Birds > Toys" },
-        vinted: { id: "5201", name: "Toys", path: "Home > Pet care > Birds > Toys" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/tg-5", name: "Toys", path: "Toys & Games > Toys" },
+        ebay: { id: "29526", name: "Planes", path: "Root > Business, Office & Industrial > Hand Tools > Planes" },
+        vinted: { id: "3468", name: "Cars", path: "Kids > Toys > Toy cars, trains & other vehicles > Cars" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-48", name: "Planes", path: "Hardware > Tools > Planes" },
         depop: { id: "everything-else|toys", name: "Toys" },
       },
     },
@@ -4638,8 +4485,8 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Toys & games",
       platforms: {
         ebay: { id: "1039", name: "Other Toys & Games", path: "Root > Toys & Games > Other Toys & Games" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-2-12-2-2-2", name: "Game", path: "Food, Beverages & Tobacco > Food Items > Meat, Seafood & Eggs > Meat > Fresh & Frozen Meats > Game" },
+        vinted: { id: "3026", name: "Games", path: "Electronics > Video games & consoles > Games" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/tg", name: "Toys & Games", path: "Toys & Games" },
         depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
@@ -4647,7 +4494,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'toys_games_miniature_toys',
       label: "Miniature toys",
       platforms: {
-        ebay: { id: "20741", name: "Toys", path: "Root > Pet Supplies > Cat Supplies > Toys" },
+        ebay: { id: "38708", name: "Mini", path: "Root > Cars, Motorcycles & Vehicles > Cars > Mini" },
         vinted: { id: "5201", name: "Toys", path: "Home > Pet care > Birds > Toys" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5", name: "Toys", path: "Toys & Games > Toys" },
         depop: { id: "everything-else|toys", name: "Toys" },
@@ -4659,14 +4506,14 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "1188", name: "Models & Kits", path: "Root > Toys & Games > Models & Kits" },
         vinted: { id: "3468", name: "Cars", path: "Kids > Toys > Toy cars, trains & other vehicles > Cars" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-2-1", name: "Aircraft", path: "Vehicles & Parts > Vehicles > Aircraft" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-12-4", name: "Model Aircrafts", path: "Toys & Games > Toys > Flying Toys > Model Aircrafts" },
       },
     },
     novelty_and_gag_toys: {
       value: 'toys_games_novelty_and_gag_toys',
       label: "Novelty & gag toys",
       platforms: {
-        ebay: { id: "20736", name: "Toys", path: "Root > Pet Supplies > Birds > Toys" },
+        ebay: { id: "58533", name: "Novelty", path: "Root > Coins > Coins > Novelty" },
         vinted: { id: "5201", name: "Toys", path: "Home > Pet care > Birds > Toys" },
         shopify: { id: "gid://shopify/TaxonomyCategory/tg-5-28", name: "Wind-Up Toys", path: "Toys & Games > Toys > Wind-Up Toys" },
         depop: { id: "everything-else|toys", name: "Toys" },
@@ -4719,7 +4566,7 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "180347", name: "Parts & Accessories", path: "Root > Toys & Games > Games > Chess > Parts & Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-1-6-1", name: "Paint", path: "Hardware > Building Consumables > Painting Consumables > Paint" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-1-8-1", name: "Boat Storage Racks", path: "Sporting Goods > Outdoor Recreation > Boating & Water Sports > Watercraft Storage Racks > Boat Storage Racks" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -4727,17 +4574,15 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_a_c_and_heating',
       label: "Car & truck A/C & heating",
       platforms: {
-        ebay: { id: "10950", name: "Tin", path: "Root > Collectables > Metalware > Tin" },
-        vinted: { id: "159", name: "Clutches", path: "Women > Bags > Clutches" },
+        ebay: { id: "33543", name: "A/C Compressors & Clutches", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Air Conditioning & Heating > A/C Compressors & Clutches" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-9", name: "Compressors", path: "Hardware > Tools > Compressors" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     car_and_truck_parts_car_and_truck_accessory_belts: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_accessory_belts',
       label: "Car & truck accessory belts",
       platforms: {
-        ebay: { id: "262060", name: "Belts", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Accessory Belts > Belts" },
+        ebay: { id: "262059", name: "Accessory Belts", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Accessory Belts" },
         vinted: { id: "1743", name: "Belts", path: "Kids > Boys clothing > Accessories > Belts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-2-6", name: "Belts", path: "Apparel & Accessories > Clothing Accessories > Belts" },
         depop: { id: "menswear|accessories|belts", name: "Belts" },
@@ -4747,10 +4592,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_advanced_driver_assistance_systems',
       label: "Car & truck advanced driver assistance systems",
       platforms: {
-        ebay: { id: "177827", name: "Stems", path: "Root > Sporting Goods > Cycling > Bike Components & Parts > Stems" },
-        vinted: { id: "3060", name: "Cameras", path: "Electronics > Cameras & accessories > Cameras" },
+        ebay: { id: "262064", name: "Advanced Driver Assistance Systems", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Advanced Driver Assistance Systems" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-7-12-8-1", name: "Control Modules", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instrument & Orchestra Accessories > Percussion Accessories > Electronic Drum Modules > Control Modules" },
-        depop: { id: "everything-else|cameras-and-film|cameras", name: "Cameras" },
       },
     },
     car_and_truck_parts_car_and_truck_air_intake_and_fuel_delivery: {
@@ -4758,27 +4601,23 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Car & truck air intake & fuel delivery",
       platforms: {
         ebay: { id: "180028", name: "Air Intake & Fuel Delivery", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Air Intake & Fuel Delivery" },
-        vinted: { id: "242", name: "Rings", path: "Men > Accessories > Jewellery > Rings" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-4", name: "Fuel", path: "Hardware > Fuel" },
-        depop: { id: "everything-else|art", name: "Art" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-23-3", name: "Filters", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Range Hood Accessories > Filters" },
       },
     },
     car_and_truck_parts_car_and_truck_brakes_and_brake_parts: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_brakes_and_brake_parts',
       label: "Car & truck brakes & brake parts",
       platforms: {
-        ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-7-10", name: "Rakes", path: "Home & Garden > Lawn & Garden > Gardening > Gardening Tools > Rakes" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "33559", name: "Brakes & Brake Parts", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Brakes & Brake Parts" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-7-12-8-1", name: "Control Modules", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instrument & Orchestra Accessories > Percussion Accessories > Electronic Drum Modules > Control Modules" },
       },
     },
     car_and_truck_parts_car_and_truck_engine_cooling_components: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_engine_cooling_components',
       label: "Car & truck engine cooling components",
       platforms: {
-        ebay: { id: "258855", name: "Gin", path: "Root > Home, Furniture & DIY > Food & Drink > Beer, Wine & Spirits > Gin" },
-        vinted: { id: "287", name: "Caps", path: "Men > Accessories > Hats & caps > Caps" },
+        ebay: { id: "33599", name: "Engine Cooling Components", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engine Cooling Components" },
+        vinted: { id: "159", name: "Clutches", path: "Women > Bags > Clutches" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
       },
     },
@@ -4786,37 +4625,31 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_engines_and_engine_parts',
       label: "Car & truck engines & engine parts",
       platforms: {
-        ebay: { id: "33615", name: "Engines", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engines & Engine Parts > Engines" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "33612", name: "Engines & Engine Parts", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engines & Engine Parts" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-6-2", name: "Crankshafts", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Parts > Crankshafts" },
       },
     },
     car_and_truck_parts_car_and_truck_ev_and_hybrid_parts: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_ev_and_hybrid_parts',
       label: "Car & truck EV & hybrid parts",
       platforms: {
-        ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
+        ebay: { id: "183960", name: "Compressors", path: "Root > Business, Office & Industrial > HVAC & Refrigeration > HVAC & Refrigeration Components > Compressors" },
         shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-9", name: "Compressors", path: "Hardware > Tools > Compressors" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     car_and_truck_parts_car_and_truck_exhaust_and_emission_systems: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_exhaust_and_emission_systems',
       label: "Car & truck exhaust & emission systems",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-6-9", name: "Valves", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Parts > Valves" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "33605", name: "Exhaust & Emission Systems", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Exhaust & Emission Systems" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-5-2", name: "Converters", path: "Electronics > Components > Converters" },
       },
     },
     car_and_truck_parts_car_and_truck_exterior_parts_and_accessories: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_exterior_parts_and_accessories',
       label: "Car & truck exterior parts & accessories",
       platforms: {
-        ebay: { id: "262307", name: "Parts & Accessories", path: "Root > Collectables > Model Railways & Trains > Railways & Trains > Parts & Accessories" },
+        ebay: { id: "33637", name: "Exterior Parts & Accessories", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Exterior Parts & Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-7-3", name: "Antennas", path: "Electronics > Electronics Accessories > Antennas" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
@@ -4826,19 +4659,17 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_ignition_systems_and_components',
       label: "Car & truck ignition systems & components",
       platforms: {
-        ebay: { id: "177827", name: "Stems", path: "Root > Sporting Goods > Cycling > Bike Components & Parts > Stems" },
-        vinted: { id: "287", name: "Caps", path: "Men > Accessories > Hats & caps > Caps" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
-        depop: { id: "menswear|footwear|boots", name: "Boots" },
+        ebay: { id: "33687", name: "Ignition Systems & Components", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Ignition Systems & Components" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-6-5-4", name: "Distributors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Parts > Ignition Components > Distributors" },
       },
     },
     car_and_truck_parts_car_and_truck_interior_parts_and_accessories: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_interior_parts_and_accessories',
       label: "Car & truck interior parts & accessories",
       platforms: {
-        ebay: { id: "262307", name: "Parts & Accessories", path: "Root > Collectables > Model Railways & Trains > Railways & Trains > Parts & Accessories" },
+        ebay: { id: "33694", name: "Interior Parts & Accessories", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Interior Parts & Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-9-2", name: "Doors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Frame & Body Parts > Doors" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-2-5", name: "Door Panels", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Carpet & Upholstery > Door Panels" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -4846,7 +4677,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_lighting_and_lamps',
       label: "Car & truck lighting & lamps",
       platforms: {
-        ebay: { id: "262411", name: "Lamps", path: "Root > Pottery, Ceramics & Glass > Lamps, Lighting > Lamps" },
+        ebay: { id: "180034", name: "Lighting & Lamps", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Lighting & Lamps" },
         vinted: { id: "3834", name: "Lighting", path: "Home > Home accessories > Lighting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-13", name: "Lighting", path: "Home & Garden > Lighting" },
         depop: { id: "everything-else|home|lighting", name: "Lighting" },
@@ -4856,39 +4687,37 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_racks_and_cargo_carriers',
       label: "Car & truck racks & cargo carriers",
       platforms: {
-        ebay: { id: "75185", name: "Racks", path: "Root > Sporting Goods > Snooker & Pool > Racks" },
-        vinted: { id: "5138", name: "Bags", path: "Home > Pet care > Dogs > Training accessories > Bags" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-18-14", name: "Racks", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Microwave Oven Accessories > Racks" },
-        depop: { id: "menswear|accessories|bags", name: "Bags" },
+        ebay: { id: "262216", name: "Anchors", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Racks & Roof Boxes > Anchors" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-8-1-4", name: "Anchors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Watercraft Parts & Accessories > Docking & Anchoring > Anchors" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     car_and_truck_parts_car_and_truck_starters_alternators_ecus_and_wiring: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_starters_alternators_ecus_and_wiring',
       label: "Car & truck starters, alternators, ECUs & wiring",
       platforms: {
-        ebay: { id: "198", name: "US", path: "Root > Films & TV > Film Memorabilia > Lobby Cards > US" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-6", name: "Starters", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Starters" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "33572", name: "Starters, Alternators, ECUs & Wiring", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Starters, Alternators, ECUs & Wiring" },
+        vinted: { id: "4074", name: "Generators", path: "Home > Outdoor & garden > Outdoor power tools > Generators" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-1", name: "Alternators", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Alternators" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     car_and_truck_parts_car_and_truck_steering_and_suspension: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_steering_and_suspension',
       label: "Car & truck steering & suspension",
       platforms: {
-        ebay: { id: "7278", name: "Pens", path: "Root > Collectables > Pens & Writing Equipment > Pens" },
-        vinted: { id: "5456", name: "Pens", path: "Home > Office supplies > Writing supplies > Pens" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/os-11-11-7-3", name: "Pens", path: "Office Supplies > Office Instruments > Writing & Drawing Instruments > Pens & Pencils > Pens" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "33579", name: "Steering & Suspension", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Steering & Suspension" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-17-2", name: "Coil Springs", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Suspension Parts > Coil Springs" },
       },
     },
     car_and_truck_parts_car_and_truck_towing_parts_and_accessories: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_towing_parts_and_accessories',
       label: "Car & truck towing parts & accessories",
       platforms: {
-        ebay: { id: "262307", name: "Parts & Accessories", path: "Root > Collectables > Model Railways & Trains > Railways & Trains > Parts & Accessories" },
+        ebay: { id: "180143", name: "Towing Parts & Accessories", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Towing Parts & Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-1-10-3-1", name: "Wing Parts", path: "Sporting Goods > Outdoor Recreation > Boating & Water Sports > Wingfoiling > Wingfoil Parts > Wing Parts" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-18-3", name: "Tow Bars", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Towing > Tow Bars" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -4897,37 +4726,30 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Car & truck transmission & drivetrain",
       platforms: {
         ebay: { id: "33726", name: "Transmission & Drivetrain", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Transmission & Drivetrain" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-19-1", name: "Axles", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Transmission & Drivetrain Parts > Axles" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     car_and_truck_parts_car_and_truck_wheels_and_tires: {
       value: 'vehicles_parts_car_and_truck_parts_car_and_truck_wheels_and_tires',
       label: "Car & truck wheels & tires",
       platforms: {
-        ebay: { id: "184927", name: "Wheels", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Wheels & Tyres > Wheels" },
-        vinted: { id: "2692", name: "Heels", path: "Kids > Girls clothing > Shoes > Heels" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-8-10", name: "Heels", path: "Apparel & Accessories > Shoes > Heels" },
-        depop: { id: "menswear|footwear|heels", name: "Heels" },
+        ebay: { id: "33747", name: "Valve Stems & Caps", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Wheels, Tyres & Parts > Valve Stems & Caps" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-15-3-2", name: "Wheels & Tires", path: "Sporting Goods > Outdoor Recreation > Riding Scooters > E-Scooters Parts > Wheels & Tires" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     car_and_truck_parts_general: {
       value: 'vehicles_parts_car_and_truck_parts_general',
       label: "Other Car & truck parts",
-      platforms: {
-        ebay: { id: "7315", name: "Other", path: "Root > Toys & Games > Diecast & Vehicles > Accessories, Parts & Display > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
-      },
+      platforms: {},
     },
     commercial_truck_parts_commercial_truck_a_c_and_heating: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_a_c_and_heating',
       label: "Commercial truck A/C & heating",
       platforms: {
-        ebay: { id: "10950", name: "Tin", path: "Root > Collectables > Metalware > Tin" },
-        vinted: { id: "159", name: "Clutches", path: "Women > Bags > Clutches" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-9", name: "Compressors", path: "Hardware > Tools > Compressors" },
+        ebay: { id: "184826", name: "A/C Accumulators", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Air Conditioning & Heating > A/C Accumulators" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-3-5", name: "Blower Motors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Climate Control > Blower Motors" },
       },
     },
     commercial_truck_parts_commercial_truck_accessories: {
@@ -4936,7 +4758,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "184671", name: "Accessories", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Accessories" },
         vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-15", name: "Power", path: "Electronics > Electronics Accessories > Power" },
         depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
@@ -4945,18 +4766,16 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck air intake & fuel delivery",
       platforms: {
         ebay: { id: "184677", name: "Air Intake & Fuel Delivery", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Air Intake & Fuel Delivery" },
-        vinted: { id: "287", name: "Caps", path: "Men > Accessories > Hats & caps > Caps" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-4", name: "Fuel", path: "Hardware > Fuel" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-10-1", name: "Carburetors", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Fuel Systems > Carburetors" },
       },
     },
     commercial_truck_parts_commercial_truck_brakes_and_brake_parts: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_brakes_and_brake_parts',
       label: "Commercial truck brakes & brake parts",
       platforms: {
-        ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-7-10", name: "Rakes", path: "Home & Garden > Lawn & Garden > Gardening > Gardening Tools > Rakes" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "184694", name: "Brakes & Brake Parts", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Brakes & Brake Parts" },
+        vinted: { id: "3903", name: "Air compressors", path: "Home > Tools & DIY > Power tools > Air compressors" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-9", name: "Compressors", path: "Hardware > Tools > Compressors" },
       },
     },
     commercial_truck_parts_commercial_truck_cargo_handling: {
@@ -4964,16 +4783,13 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck cargo handling",
       platforms: {
         ebay: { id: "184716", name: "Cargo Handling", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Cargo Handling" },
-        vinted: { id: "4246", name: "Chain", path: "Home > Tools & DIY > Hardware > Chains, ropes & tie-downs > Chain" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/bi-18-1", name: "Conveyors", path: "Business & Industrial > Material Handling > Conveyors" },
       },
     },
     commercial_truck_parts_commercial_truck_cargo_heating_and_refrigeration: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_cargo_heating_and_refrigeration',
       label: "Commercial truck cargo heating & refrigeration",
       platforms: {
-        ebay: { id: "10950", name: "Tin", path: "Root > Collectables > Metalware > Tin" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
+        ebay: { id: "184724", name: "Cargo Heating", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Cargo Heating & Refrigeration > Cargo Heating" },
       },
     },
     commercial_truck_parts_commercial_truck_coupling_and_towing: {
@@ -4981,33 +4797,30 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck coupling & towing",
       platforms: {
         ebay: { id: "184735", name: "Coupling & Towing", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Coupling & Towing" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
       },
     },
     commercial_truck_parts_commercial_truck_engine_cooling_components: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_engine_cooling_components',
       label: "Commercial truck engine cooling components",
       platforms: {
-        ebay: { id: "258855", name: "Gin", path: "Root > Home, Furniture & DIY > Food & Drink > Beer, Wine & Spirits > Gin" },
-        vinted: { id: "3529", name: "Fans", path: "Home > Household care > Heating, cooling & air > Fans" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
+        ebay: { id: "33599", name: "Engine Cooling Components", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engine Cooling Components" },
+        vinted: { id: "4659", name: "Coolers", path: "Sports > Outdoor sports > Coolers" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-5-1", name: "Oil Coolers", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Oil Circulation > Oil Coolers" },
       },
     },
     commercial_truck_parts_commercial_truck_engines_and_components: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_engines_and_components',
       label: "Commercial truck engines & components",
       platforms: {
-        ebay: { id: "33615", name: "Engines", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engines & Engine Parts > Engines" },
-        vinted: { id: "1743", name: "Belts", path: "Kids > Boys clothing > Accessories > Belts" },
+        ebay: { id: "184739", name: "Engines & Components", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Engines & Components" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
-        depop: { id: "menswear|accessories|belts", name: "Belts" },
       },
     },
     commercial_truck_parts_commercial_truck_exhaust_and_emissions: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_exhaust_and_emissions',
       label: "Commercial truck exhaust & emissions",
       platforms: {
-        ebay: { id: "4100", name: "US", path: "Root > Collectables > Historical Memorabilia > Political > US" },
+        ebay: { id: "184763", name: "Exhaust & Emissions", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Exhaust & Emissions" },
         vinted: { id: "4659", name: "Coolers", path: "Sports > Outdoor sports > Coolers" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-3-3", name: "Coolers", path: "Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Coolers" },
       },
@@ -5016,9 +4829,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_exterior_body_and_frame',
       label: "Commercial truck exterior, body & frame",
       platforms: {
-        ebay: { id: "172016", name: "Body", path: "Root > Health & Beauty > Make-Up > Body" },
-        vinted: { id: "3886", name: "Hardware", path: "Home > Tools & DIY > Hardware" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-3", name: "RAM", path: "Electronics > Electronics Accessories > Memory > RAM" },
+        ebay: { id: "184792", name: "Exterior, Body & Frame", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Exterior, Body & Frame" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-3", name: "Antennas", path: "Electronics > Electronics Accessories > Antennas" },
       },
     },
     commercial_truck_parts_commercial_truck_filters: {
@@ -5026,7 +4838,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck filters",
       platforms: {
         ebay: { id: "184817", name: "Filters", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Filters" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-23-3", name: "Filters", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Range Hood Accessories > Filters" },
       },
     },
@@ -5035,7 +4846,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck gaskets",
       platforms: {
         ebay: { id: "184818", name: "Gaskets", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Gaskets" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-2-7-20", name: "Gaskets", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Coffee Maker & Espresso Machine Accessories > Coffee Maker & Espresso Machine Replacement Parts > Gaskets" },
       },
     },
@@ -5043,9 +4853,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_glass',
       label: "Commercial truck glass",
       platforms: {
-        ebay: { id: "184819", name: "Glass", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Glass" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-2-6", name: "Glass", path: "Hardware > Building Materials > Glass" },
+        ebay: { id: "184820", name: "Cab and Sleeper Windows", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Glass > Cab and Sleeper Windows" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-2-1-4-3", name: "Windshields", path: "Electronics > Audio > Audio Accessories > Microphone Accessories > Windshields" },
       },
     },
     commercial_truck_parts_commercial_truck_hydraulics: {
@@ -5053,28 +4862,24 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Commercial truck hydraulics",
       platforms: {
         ebay: { id: "184836", name: "Hydraulics", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Hydraulics" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-2-8-12", name: "Tanks", path: "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Scale Models > Tanks" },
       },
     },
     commercial_truck_parts_commercial_truck_ignition_charging_and_starting: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_ignition_charging_and_starting',
       label: "Commercial truck ignition, charging & starting",
       platforms: {
-        ebay: { id: "10950", name: "Tin", path: "Root > Collectables > Metalware > Tin" },
-        vinted: { id: "3006", name: "Cables", path: "Electronics > Other devices & accessories > Cables" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "184843", name: "Ignition, Charging & Starting", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Ignition, Charging & Starting" },
+        vinted: { id: "4074", name: "Generators", path: "Home > Outdoor & garden > Outdoor power tools > Generators" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-1", name: "Alternators", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Alternators" },
       },
     },
     commercial_truck_parts_commercial_truck_instruments_dials_and_gauges: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_instruments_dials_and_gauges',
       label: "Commercial truck instruments, dials & gauges",
       platforms: {
-        ebay: { id: "57723", name: "Dials", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts > Dials" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-5", name: "Rum", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Rum" },
-        depop: { id: "everything-else|home", name: "Home" },
+        ebay: { id: "184852", name: "Instruments, Dials & Gauges", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Instruments, Dials & Gauges" },
+        vinted: { id: "1936", name: "Clocks", path: "Home > Home accessories > Clocks" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-3-17", name: "Clocks", path: "Home & Garden > Decor > Clocks" },
       },
     },
     commercial_truck_parts_commercial_truck_interior: {
@@ -5084,26 +4889,23 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "184862", name: "Interior", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Interior" },
         vinted: { id: "3025", name: "Consoles", path: "Electronics > Video games & consoles > Consoles" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-11-3", name: "Floor Mats", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Interior Fittings > Floor Mats" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     commercial_truck_parts_commercial_truck_lighting_and_lamps: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_lighting_and_lamps',
       label: "Commercial truck lighting & lamps",
       platforms: {
-        ebay: { id: "262411", name: "Lamps", path: "Root > Pottery, Ceramics & Glass > Lamps, Lighting > Lamps" },
-        vinted: { id: "3834", name: "Lighting", path: "Home > Home accessories > Lighting" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-13", name: "Lighting", path: "Home & Garden > Lighting" },
-        depop: { id: "everything-else|home|lighting", name: "Lighting" },
+        ebay: { id: "263308", name: "Lighting & Lamps", path: "Root > Vehicle Parts & Accessories > ATV, Side-by-Side & UTV Parts & Accessories > Lighting & Lamps" },
+        vinted: { id: "3841", name: "Accent lights", path: "Home > Home accessories > Lighting > Accent lights" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-12-7", name: "Tail Lights", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Lighting > Tail Lights" },
       },
     },
     commercial_truck_parts_commercial_truck_suspension_and_steering: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_suspension_and_steering',
       label: "Commercial truck suspension & steering",
       platforms: {
-        ebay: { id: "7278", name: "Pens", path: "Root > Collectables > Pens & Writing Equipment > Pens" },
-        vinted: { id: "5456", name: "Pens", path: "Home > Office supplies > Writing supplies > Pens" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/os-11-11-7-3", name: "Pens", path: "Office Supplies > Office Instruments > Writing & Drawing Instruments > Pens & Pencils > Pens" },
+        ebay: { id: "184892", name: "Suspension & Steering", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Suspension & Steering" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-17-1", name: "Ball Joints", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Suspension Parts > Ball Joints" },
       },
     },
     commercial_truck_parts_commercial_truck_transmission_and_drivetrain: {
@@ -5113,36 +4915,29 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "184906", name: "Transmission & Drivetrain", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Transmission & Drivetrain" },
         vinted: { id: "159", name: "Clutches", path: "Women > Bags > Clutches" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-19-2", name: "Clutches", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Transmission & Drivetrain Parts > Clutches" },
-        depop: { id: "menswear|footwear|heels", name: "Heels" },
       },
     },
     commercial_truck_parts_commercial_truck_wheels_and_tires: {
       value: 'vehicles_parts_commercial_truck_parts_commercial_truck_wheels_and_tires',
       label: "Commercial truck wheels & tires",
       platforms: {
-        ebay: { id: "184927", name: "Wheels", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Wheels & Tyres > Wheels" },
-        vinted: { id: "2692", name: "Heels", path: "Kids > Girls clothing > Shoes > Heels" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/aa-8-10", name: "Heels", path: "Apparel & Accessories > Shoes > Heels" },
-        depop: { id: "menswear|footwear|heels", name: "Heels" },
+        ebay: { id: "184920", name: "Hub Caps & Wheel Covers", path: "Root > Vehicle Parts & Accessories > Commercial Vehicle Parts > Lorry/Truck Parts > Wheels & Tyres > Hub Caps & Wheel Covers" },
+        vinted: { id: "4411", name: "Wheels", path: "Sports > Cycling > Bike parts > Wheels" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/sg-4-15-3-2", name: "Wheels & Tires", path: "Sporting Goods > Outdoor Recreation > Riding Scooters > E-Scooters Parts > Wheels & Tires" },
       },
     },
     commercial_truck_parts_general: {
       value: 'vehicles_parts_commercial_truck_parts_general',
       label: "Other Commercial truck parts",
-      platforms: {
-        ebay: { id: "45354", name: "Other", path: "Root > Toys & Games > Diecast & Vehicles > Racing Cars > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
-      },
+      platforms: {},
     },
     general: {
       value: 'vehicles_parts_general',
       label: "Other Vehicles & parts",
       platforms: {
-        ebay: { id: "45354", name: "Other", path: "Root > Toys & Games > Diecast & Vehicles > Racing Cars > Other" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
+        ebay: { id: "9883", name: "Other Vehicles", path: "Root > Cars, Motorcycles & Vehicles > Other Vehicles" },
+        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp", name: "Vehicles & Parts", path: "Vehicles & Parts" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     motorcycle_and_scooter_parts_electric_motorcycle_and_scooter_parts: {
@@ -5150,9 +4945,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Electric motorcycle & scooter parts",
       platforms: {
         ebay: { id: "263193", name: "Electric Motorcycle & Scooter Parts", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Electric Motorcycle & Scooter Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
+        vinted: { id: "5189", name: "Accessories", path: "Home > Pet care > Cats > Clothing & accessories > Accessories" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-2", name: "Batteries", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Batteries" },
-        depop: { id: "everything-else|art", name: "Art" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     motorcycle_and_scooter_parts_general: {
@@ -5160,8 +4955,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Other Motorcycle & scooter parts",
       platforms: {
         ebay: { id: "69839", name: "Motorcycle & Scooter", path: "Root > Collectables > Transportation Collectables > Motorcycle & Scooter" },
-        vinted: { id: "124", name: "Other", path: "Women > Clothing > Lingerie & nightwear > Other" },
-        depop: { id: "everything-else|toys|other-toys", name: "Other" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_air_intake_and_fuel_delivery: {
@@ -5170,17 +4963,16 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "180028", name: "Air Intake & Fuel Delivery", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Air Intake & Fuel Delivery" },
         vinted: { id: "4223", name: "Air hoses", path: "Home > Tools & DIY > Tool accessories > Air tool accessories > Air hoses" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-4", name: "Fuel", path: "Hardware > Fuel" },
-        depop: { id: "everything-else|art", name: "Art" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-23-3", name: "Filters", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Range Hood Accessories > Filters" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_audio_communication_and_navigation: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_audio_communication_and_navigation',
       label: "Motorcycle audio, communication & navigation",
       platforms: {
-        ebay: { id: "9835", name: "Audi", path: "Root > Cars, Motorcycles & Vehicles > Cars > Audi" },
-        vinted: { id: "5134", name: "Harnesses", path: "Home > Pet care > Dogs > Collars & leads > Harnesses" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-2", name: "Audio", path: "Electronics > Audio" },
+        ebay: { id: "180513", name: "Audio, Communication & Navigation", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Audio, Communication & Navigation" },
+        vinted: { id: "3695", name: "Speakers", path: "Electronics > Audio, headphones & hi-fi > Home audio systems > Speakers" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-3", name: "Antennas", path: "Electronics > Electronics Accessories > Antennas" },
         depop: { id: "everything-else|tech-accessories|speakers", name: "Speakers" },
       },
     },
@@ -5188,20 +4980,17 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_body_and_frame',
       label: "Motorcycle body & frame",
       platforms: {
-        ebay: { id: "172016", name: "Body", path: "Root > Health & Beauty > Make-Up > Body" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-7-12-3", name: "RAM", path: "Electronics > Electronics Accessories > Memory > RAM" },
-        depop: { id: "everything-else|music|vinyl", name: "Vinyl" },
+        ebay: { id: "35559", name: "Body & Frame", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Body & Frame" },
+        vinted: { id: "3829", name: "Ornaments", path: "Home > Home accessories > Decorative accessories > Ornaments" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ap-2-4-4-8", name: "Ornaments", path: "Animals & Pet Supplies > Pet Supplies > Fish & Aquatic Supplies > Aquarium Decors > Ornaments" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_brakes_and_brake_parts: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_brakes_and_brake_parts',
       label: "Motorcycle brakes & brake parts",
       platforms: {
-        ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-1-7-10", name: "Rakes", path: "Home & Garden > Lawn & Garden > Gardening > Gardening Tools > Rakes" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "49790", name: "Brakes & Brake Parts", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Brakes & Brake Parts" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ae-2-7-12-8-1", name: "Control Modules", path: "Arts & Entertainment > Hobbies & Creative Arts > Musical Instrument & Orchestra Accessories > Percussion Accessories > Electronic Drum Modules > Control Modules" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_electrical_and_ignition_components: {
@@ -5209,37 +4998,32 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycle electrical & ignition components",
       platforms: {
         ebay: { id: "179853", name: "Electrical & Ignition Components", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Electrical & Ignition Components" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
-        depop: { id: "everything-else|art", name: "Art" },
+        vinted: { id: "4074", name: "Generators", path: "Home > Outdoor & garden > Outdoor power tools > Generators" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-6-5", name: "Ignition Components", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Parts > Ignition Components" },
+        depop: { id: "everything-else|cameras-and-film|camera-accessories", name: "Accessories" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_engine_cooling_components: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_engine_cooling_components',
       label: "Motorcycle engine cooling components",
       platforms: {
-        ebay: { id: "258855", name: "Gin", path: "Root > Home, Furniture & DIY > Food & Drink > Beer, Wine & Spirits > Gin" },
-        vinted: { id: "3886", name: "Hardware", path: "Home > Tools & DIY > Hardware" },
+        ebay: { id: "177962", name: "Engine Cooling", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Engine Cooling" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_engines_and_engine_parts: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_engines_and_engine_parts',
       label: "Motorcycle engines & engine parts",
       platforms: {
-        ebay: { id: "33615", name: "Engines", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Engines & Engine Parts > Engines" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "171107", name: "Engines & Engine Parts", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Engines & Engine Parts" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-6-2", name: "Crankshafts", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Engine Parts > Crankshafts" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_exhaust_and_emission_systems: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_exhaust_and_emission_systems',
       label: "Motorcycle exhaust & emission systems",
       platforms: {
-        ebay: { id: "4100", name: "US", path: "Root > Collectables > Historical Memorabilia > Political > US" },
-        vinted: { id: "3886", name: "Hardware", path: "Home > Tools & DIY > Hardware" },
+        ebay: { id: "180027", name: "Exhaust & Emission Systems", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Exhaust & Emission Systems" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-5-2", name: "Converters", path: "Electronics > Components > Converters" },
       },
     },
@@ -5247,10 +5031,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_foot_controls_pedals_and_pegs',
       label: "Motorcycle foot controls, pedals & pegs",
       platforms: {
-        ebay: { id: "137893", name: "Pedal", path: "Root > Toys & Games > Outdoor Toys & Activities > Ride-on Cars > Pedal" },
-        vinted: { id: "4404", name: "Pedals", path: "Sports > Cycling > Bike parts > Pedals" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-4-2", name: "Pedals", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Controls > Pedals" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "179752", name: "Foot Controls, Pedals & Pegs", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Foot Controls, Pedals & Pegs" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_guards_and_protection: {
@@ -5258,9 +5039,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycle guards & protection",
       platforms: {
         ebay: { id: "263144", name: "Guards & Protection", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Guards & Protection" },
-        vinted: { id: "1960", name: "Plates", path: "Home > Tableware > Dinnerware > Plates" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-3", name: "Gin", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Gin" },
-        depop: { id: "menswear|footwear|sliders-and-flip-flops", name: "Sliders" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/hg-12-4-8-20", name: "Splash Guards", path: "Home & Garden > Lawn & Garden > Outdoor Power Equipment Accessories > Pressure Washer Accessories > Splash Guards" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_handlebars_grips_and_controls: {
@@ -5269,24 +5048,21 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "178007", name: "Handlebars", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Handlebars, Grips & Controls > Handlebars" },
         vinted: { id: "4402", name: "Handlebars", path: "Sports > Cycling > Bike parts > Handlebars" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/ha-15-19", name: "Grips", path: "Hardware > Tools > Grips" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_instruments_and_gauges: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_instruments_and_gauges',
       label: "Motorcycle instruments & gauges",
       platforms: {
-        ebay: { id: "33672", name: "Gauges", path: "Root > Vehicle Parts & Accessories > Car Parts & Accessories > Interior Parts & Accessories > Gauges" },
-        vinted: { id: "5", name: "Men", path: "Men" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-1-5-5", name: "Rum", path: "Food, Beverages & Tobacco > Beverages > Alcoholic Beverages > Liquor & Spirits > Rum" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "180033", name: "Instruments & Gauges", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Instruments & Gauges" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-14-8", name: "Wiring Harnesses", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Power & Electrical Systems > Wiring Harnesses" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_lighting_and_lamps: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_lighting_and_lamps',
       label: "Motorcycle lighting & lamps",
       platforms: {
-        ebay: { id: "81255", name: "Lamps", path: "Root > Home, Furniture & DIY > Children's Home & Furniture > Lighting > Lamps" },
+        ebay: { id: "180034", name: "Lighting & Lamps", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Lighting & Lamps" },
         vinted: { id: "3834", name: "Lighting", path: "Home > Home accessories > Lighting" },
         shopify: { id: "gid://shopify/TaxonomyCategory/hg-13", name: "Lighting", path: "Home & Garden > Lighting" },
         depop: { id: "everything-else|home|lighting", name: "Lighting" },
@@ -5296,10 +5072,7 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_luggage_racks_and_storage',
       label: "Motorcycle luggage, racks & storage",
       platforms: {
-        ebay: { id: "73961", name: "Racks", path: "Root > Sporting Goods > Hunting > Gun Storage > Racks" },
-        vinted: { id: "5268", name: "Storage", path: "Hobbies & collectables > Arts & crafts > Painting > Storage" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-18-14", name: "Racks", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Microwave Oven Accessories > Racks" },
-        depop: { id: "everything-else|home|storage", name: "Storage" },
+        ebay: { id: "179715", name: "Luggage, Racks & Storage", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Luggage, Racks & Storage" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_mirror_assemblies: {
@@ -5307,7 +5080,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycle mirror assemblies",
       platforms: {
         ebay: { id: "263095", name: "Mirror Assemblies", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Mirrors > Mirror Assemblies" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_mirror_components: {
@@ -5315,7 +5087,6 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycle mirror components",
       platforms: {
         ebay: { id: "263096", name: "Mirror Components", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Mirrors > Mirror Components" },
-        vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
         shopify: { id: "gid://shopify/TaxonomyCategory/el-5", name: "Components", path: "Electronics > Components" },
       },
     },
@@ -5323,10 +5094,8 @@ export const CATEGORY_TREE: CategoryTree = {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_suspension_and_handling',
       label: "Motorcycle suspension & handling",
       platforms: {
-        ebay: { id: "7278", name: "Pens", path: "Root > Collectables > Pens & Writing Equipment > Pens" },
-        vinted: { id: "5456", name: "Pens", path: "Home > Office supplies > Writing supplies > Pens" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/os-11-11-7-3", name: "Pens", path: "Office Supplies > Office Instruments > Writing & Drawing Instruments > Pens & Pencils > Pens" },
-        depop: { id: "everything-else|art", name: "Art" },
+        ebay: { id: "178996", name: "Suspension & Handling", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Suspension & Handling" },
+        shopify: { id: "gid://shopify/TaxonomyCategory/ha-6-22", name: "Springs", path: "Hardware > Hardware Accessories > Springs" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_transmission_and_drivetrain: {
@@ -5336,17 +5105,14 @@ export const CATEGORY_TREE: CategoryTree = {
         ebay: { id: "180029", name: "Transmission & Drivetrain", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Transmission & Drivetrain" },
         vinted: { id: "242", name: "Rings", path: "Men > Accessories > Jewellery > Rings" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-6-9", name: "Rings", path: "Apparel & Accessories > Jewelry > Rings" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     motorcycle_and_scooter_parts_motorcycle_wheels_tires_and_parts: {
       value: 'vehicles_parts_motorcycle_and_scooter_parts_motorcycle_wheels_tires_and_parts',
       label: "Motorcycle wheels, tires & parts",
       platforms: {
-        ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
-        vinted: { id: "2692", name: "Heels", path: "Kids > Girls clothing > Shoes > Heels" },
+        ebay: { id: "180036", name: "Axles, Bearings, Seals & Spacers", path: "Root > Vehicle Parts & Accessories > Motorcycle & Scooter Parts & Accessories > Wheels, Tyres & Parts > Axles, Bearings, Seals & Spacers" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-1-4-20-3-2", name: "Motorcycle Tires", path: "Vehicles & Parts > Vehicle Parts & Accessories > Motor Vehicle Parts > Motor Vehicle Wheel Systems > Motor Vehicle Tires > Motorcycle Tires" },
-        depop: { id: "menswear|footwear|heels", name: "Heels" },
       },
     },
     motorcycle_maintenance_stands_and_towing: {
@@ -5354,8 +5120,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Motorcycle maintenance, stands & towing",
       platforms: {
         ebay: { id: "25622", name: "Motorcycle Maintenance, Stands & Towing", path: "Root > Vehicle Parts & Accessories > Motorcycle Maintenance, Stands & Towing" },
-        vinted: { id: "3008", name: "Chargers", path: "Electronics > Other devices & accessories > Chargers" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/hg-11-6-25-4", name: "Chargers", path: "Home & Garden > Kitchen & Dining > Kitchen Appliance Accessories > Soda Maker Accessories > Chargers" },
+        vinted: { id: "3806", name: "Battery chargers", path: "Electronics > Other devices & accessories > Batteries & power supplies > Battery chargers" },
       },
     },
     protective_gear_and_apparel: {
@@ -5374,8 +5139,6 @@ export const CATEGORY_TREE: CategoryTree = {
       platforms: {
         ebay: { id: "260327", name: "Parts", path: "Root > Jewellery & Watches > Watches, Parts & Accessories > Parts, Tools & Guides > Parts" },
         vinted: { id: "3382", name: "Parts", path: "Kids > Pushchairs, carriers & car seats > Buggy accessories > Parts" },
-        shopify: { id: "gid://shopify/TaxonomyCategory/fb-1-3", name: "Coffee", path: "Food, Beverages & Tobacco > Beverages > Coffee" },
-        depop: { id: "everything-else|art", name: "Art" },
       },
     },
     vehicles: {
@@ -5383,7 +5146,7 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Vehicles",
       platforms: {
         ebay: { id: "180103", name: "Vehicles", path: "Root > Dolls & Bears > Dolls, Clothing & Accessories > Doll Clothes & Accessories > Vehicles" },
-        vinted: { id: "3375", name: "Toy cars, trains & other vehicles", path: "Kids > Toys > Toy cars, trains & other vehicles" },
+        vinted: { id: "3473", name: "Other toy vehicles", path: "Kids > Toys > Toy cars, trains & other vehicles > Other toy vehicles" },
         shopify: { id: "gid://shopify/TaxonomyCategory/vp-2", name: "Vehicles", path: "Vehicles & Parts > Vehicles" },
       },
     },

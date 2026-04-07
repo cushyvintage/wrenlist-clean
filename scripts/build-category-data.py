@@ -443,16 +443,25 @@ def find_best_match(search_terms, lookup, context_path=""):
                 return pick_best_from_candidates(val, context_path)
             return val
 
-    # Try partial containment
+    # Try partial containment — collect candidates, require meaningful overlap
     for term in search_terms:
         key = normalize(term)
         if len(key) < 4:
             continue
+        candidates = []
         for lk, val in lookup.items():
             if key in lk or lk in key:
+                # Require the shorter string is ≥25% of the longer to reject spurious matches
+                shorter_len = min(len(key), len(lk))
+                longer_len = max(len(key), len(lk))
+                if shorter_len < 4 or shorter_len < longer_len * 0.25:
+                    continue
                 if isinstance(val, list):
-                    return pick_best_from_candidates(val, context_path)
-                return val
+                    candidates.extend(val)
+                else:
+                    candidates.append(val)
+        if candidates:
+            return pick_best_from_candidates(candidates, context_path)
 
     return None
 
