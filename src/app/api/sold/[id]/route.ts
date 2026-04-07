@@ -16,7 +16,6 @@ export const GET = withAuth(async (req, user, params) => {
       id, name, category, brand, size, colour, condition,
       description, cost_gbp, asking_price_gbp, sold_price_gbp,
       sourced_at, sold_at, photos, sku, source_type, source_name,
-      shipping_weight_grams, shipping_length_cm, shipping_width_cm, shipping_height_cm,
       status, created_at
       `
     )
@@ -26,10 +25,7 @@ export const GET = withAuth(async (req, user, params) => {
     .single()
 
   if (error || !find) {
-    return ApiResponseHelper.error(
-      `Sold item not found (id=${id}, error=${error?.message || 'none'}, code=${error?.code || 'none'})`,
-      404
-    )
+    return ApiResponseHelper.notFound('Sold item not found')
   }
 
   // Fetch PMD records separately

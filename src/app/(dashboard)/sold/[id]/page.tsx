@@ -28,10 +28,6 @@ interface SoldDetail {
   sku: string | null
   source_type: string | null
   source_name: string | null
-  shipping_weight_grams: number | null
-  shipping_length_cm: number | null
-  shipping_width_cm: number | null
-  shipping_height_cm: number | null
   created_at: string
   sale: {
     marketplace: string
@@ -324,23 +320,7 @@ export default function SoldDetailPage() {
           )}
         </Panel>
 
-        {/* Shipping */}
-        {(data.shipping_weight_grams || data.shipping_length_cm) && (
-          <Panel title="shipping">
-            {data.shipping_weight_grams && (
-              <DetailRow label="weight">
-                {data.shipping_weight_grams >= 1000
-                  ? `${(data.shipping_weight_grams / 1000).toFixed(1)} kg`
-                  : `${data.shipping_weight_grams} g`}
-              </DetailRow>
-            )}
-            {data.shipping_length_cm && (
-              <DetailRow label="dimensions">
-                {data.shipping_length_cm} x {data.shipping_width_cm || '?'} x {data.shipping_height_cm || '?'} cm
-              </DetailRow>
-            )}
-          </Panel>
-        )}
+
       </div>
 
       {/* Description (full width) */}
