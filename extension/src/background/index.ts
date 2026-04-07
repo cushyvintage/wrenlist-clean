@@ -494,6 +494,7 @@ type ExternalMessage = Record<string, unknown>;
             dynamicProperties: {
               productType: mapProductType(find.category),
               ...(vintedColorIds.length > 0 ? { colorIds: vintedColorIds } : {}),
+              ...(userWhoMade ? { whoMade: userWhoMade } : {}),
             },
           };
 

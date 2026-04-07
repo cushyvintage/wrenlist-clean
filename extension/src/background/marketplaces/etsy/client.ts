@@ -61,6 +61,7 @@ interface EtsyFormFillData {
   imageUrls: string[];
   coverUrl: string | undefined;
   whenMade: string;
+  whoMade?: string;
   sku: string;
   isVintage: boolean;
 }
@@ -745,6 +746,8 @@ export class EtsyClient {
       }
     }
 
+    const whoMade = (product.dynamicProperties?.whoMade as string) ?? undefined;
+
     return {
       title: product.title?.slice(0, 140) || "",
       description: product.description?.slice(0, 10000) || "",
@@ -755,6 +758,7 @@ export class EtsyClient {
       imageUrls: allImageUrls.slice(1), // additional images
       coverUrl: allImageUrls[0], // first image
       whenMade,
+      whoMade,
       sku: product.sku || "",
       isVintage:
         whenMade !== ETSY_WHEN_MADE_RECENT && whenMade !== "made_to_order",
@@ -1266,18 +1270,20 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
     // click needs React event processing that works better as a standalone
     // executeScript call rather than inline in this function.
 
-    // ── Who made it (radio: index 0 = "I did") ──
+    // ── Who made it (radio: 0="I did", 1="A member of my shop", 2="Another company or person") ──
     const whoMadeRadios = document.querySelectorAll(
       'input[name="whoMade"]',
     ) as NodeListOf<HTMLInputElement>;
     if (whoMadeRadios.length >= 1) {
-      whoMadeRadios[0].focus();
-      whoMadeRadios[0].checked = true;
-      whoMadeRadios[0].click();
-      whoMadeRadios[0].dispatchEvent(
-        new InputEvent("input", { bubbles: true }),
-      );
-      whoMadeRadios[0].dispatchEvent(new Event("change", { bubbles: true }));
+      // Map form value to radio index (default: "someone_else" for vintage resale)
+      const whoMadeMap: Record<string, number> = { i_did: 0, collective: 1, someone_else: 2 };
+      const radioIndex = whoMadeMap[data.whoMade ?? ""] ?? 2; // Default to "Another company or person"
+      const target = whoMadeRadios[Math.min(radioIndex, whoMadeRadios.length - 1)];
+      target.focus();
+      target.checked = true;
+      target.click();
+      target.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
       filled.push("whoMade");
     }
 
