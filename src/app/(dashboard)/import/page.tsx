@@ -443,7 +443,7 @@ export default function ImportPage() {
       .filter((i) => i.checked && !i.alreadyImported)
       .map((i) => i.id)
 
-    const CHUNK_SIZE = 100
+    const CHUNK_SIZE = 50
     const totalItems = selectedIds.length
     let totalImported = 0, totalSkipped = 0, totalErrors = 0
 

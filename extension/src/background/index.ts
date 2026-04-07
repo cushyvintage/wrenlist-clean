@@ -2776,7 +2776,8 @@ async function collectVintedListingsByIds(
 ): Promise<BatchListingPayload[]> {
   const listings: BatchListingPayload[] = [];
 
-  for (const id of listingIds) {
+  for (let i = 0; i < listingIds.length; i++) {
+    const id = listingIds[i];
     try {
       const idString = String(id);
       const detail = await client.getListing(idString);
@@ -2791,6 +2792,11 @@ async function collectVintedListingsByIds(
         tld,
       );
       listings.push(listing);
+
+      // Polite delay every 5 items to avoid Vinted rate limiting
+      if (i > 0 && i % 5 === 0) {
+        await new Promise(r => setTimeout(r, 500));
+      }
     } catch (error) {
       console.warn(`[Batch Import] Failed to fetch Vinted listing ${id}`, error);
       // Continue with other listings even if one fails
