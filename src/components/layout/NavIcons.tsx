@@ -93,6 +93,13 @@ export const NavIcons: Record<string, React.ReactNode> = {
       <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth={1.1} />
     </svg>
   ),
+  billing: (
+    <svg viewBox="0 0 14 14" fill="none">
+      <rect x="1" y="3" width="12" height="9" rx="1" stroke="currentColor" strokeWidth={1.1} />
+      <path d="M1 6h12" stroke="currentColor" {...s} />
+      <path d="M3 9h3" stroke="currentColor" {...s} />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 14 14" fill="none">
       <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth={1.1} />

@@ -70,6 +70,7 @@ export async function middleware(req: NextRequest) {
     '/suppliers',
     '/finds',
     '/settings',
+    '/billing',
     '/sourcing',
     '/import',
     '/packaging',

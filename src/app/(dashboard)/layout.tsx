@@ -39,6 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { id: 'tax', label: 'Tax', icon: NavIcons.tax, path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
     // SETTINGS
     { id: 'platform-connect', label: 'Platform Connect', icon: NavIcons['platform-connect'], path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
+    { id: 'billing', label: 'Billing', icon: NavIcons.billing, path: '/billing', section: 'SETTINGS', pageTitle: 'Billing' },
     { id: 'settings', label: 'Settings', icon: NavIcons.settings, path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
   ]
 
