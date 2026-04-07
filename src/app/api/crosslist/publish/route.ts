@@ -38,7 +38,12 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const body = await req.json()
-  const { findId, marketplaces } = body as { findId?: string; marketplaces?: string[] }
+  const { findId, marketplaces, publishMode } = body as {
+    findId?: string
+    marketplaces?: string[]
+    /** For Etsy: "draft" (default) or "publish" (live, $0.20 fee) */
+    publishMode?: 'draft' | 'publish'
+  }
 
   if (!findId) {
     return ApiResponseHelper.badRequest('findId is required')
@@ -112,6 +117,11 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
         // Queue for extension via publish-queue (only if not already listed)
         const perPlatformPrice = platformPrices?.[marketplace] ?? null
+        // Pass publishMode in fields for Etsy (defaults to "draft" in extension)
+        const queueFields: Record<string, unknown> = {}
+        if (marketplace === 'etsy' && publishMode) {
+          queueFields.publishMode = publishMode
+        }
         const { error: queueError } = await supabase
           .from('product_marketplace_data')
           .upsert(
@@ -120,6 +130,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
               marketplace,
               status: 'needs_publish',
               ...(perPlatformPrice != null ? { listing_price: perPlatformPrice } : {}),
+              ...(Object.keys(queueFields).length > 0 ? { fields: queueFields } : {}),
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'find_id,marketplace' }

@@ -62,10 +62,8 @@ export default function MarketplaceFieldsSection({
   const platformsWithTabs = useMemo(() => {
     const tabs: Platform[] = []
     for (const p of selectedPlatforms) {
-      // Vinted always has a tab (colour pickers)
       if (p === 'vinted') { tabs.push(p); continue }
-      // Other platforms get a tab if they have unique fields not in shared
-      // For now, keep it simple — show tab for any selected platform
+      if (p === 'ebay') { tabs.push(p); continue }
     }
     return tabs
   }, [selectedPlatforms])
@@ -234,10 +232,10 @@ export default function MarketplaceFieldsSection({
       )}
 
       {/* ── Platform-Specific Tabs ── */}
-      {hasVinted && (
+      {platformsWithTabs.length > 0 && (
         <div className="bg-white rounded-lg border border-sage/14 overflow-hidden">
           {/* Tab bar */}
-          {platformsWithTabs.length > 0 && (
+          {platformsWithTabs.length > 1 && (
             <div className="flex border-b border-sage/14">
               {platformsWithTabs.map((platform) => (
                 <button
@@ -253,6 +251,12 @@ export default function MarketplaceFieldsSection({
                   {PLATFORM_LABELS[platform] || platform}
                 </button>
               ))}
+            </div>
+          )}
+          {/* Single-platform header when only one tab */}
+          {platformsWithTabs.length === 1 && (
+            <div className="px-4 py-3 text-xs font-medium text-sage border-b border-sage/14 bg-sage/5">
+              {PLATFORM_LABELS[platformsWithTabs[0]!] || platformsWithTabs[0]}
             </div>
           )}
 
@@ -305,6 +309,24 @@ export default function MarketplaceFieldsSection({
                   </>
                 )}
               </>
+            )}
+
+            {/* eBay tab — listing options */}
+            {currentTab === 'ebay' && (
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={platformFields.ebay?.acceptOffers ?? true}
+                    onChange={(e) => onPlatformFieldChange('ebay', 'acceptOffers', e.target.checked)}
+                    className="w-4 h-4 rounded border-sage/30 text-sage focus:ring-sage/30"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-ink">Accept offers</span>
+                    <p className="text-xs text-sage-dim">Allow buyers to make best offers on this listing</p>
+                  </div>
+                </label>
+              </div>
             )}
           </div>
         </div>

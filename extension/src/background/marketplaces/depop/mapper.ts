@@ -106,8 +106,9 @@ export class DepopMapper {
       case Condition.Good:
         return "used_good";
       case Condition.Fair:
-      case Condition.Poor:
         return "used_fair";
+      case Condition.Poor:
+        return "used_poor";
       default:
         return null;
     }

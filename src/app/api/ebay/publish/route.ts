@@ -69,13 +69,27 @@ export async function POST(request: NextRequest) {
     // Map find to eBay inventory format
     // Condition ID mapping: Wrenlist condition → preferred eBay condition IDs (most specific first)
     const conditionPreference: Record<string, string[]> = {
-      excellent: ['3000', '2750', '1500'],   // Used, Very Good Refurb, New Other
-      good: ['3000', '2750'],                // Used, Very Good Refurb
-      fair: ['3000'],                        // Used
-      poor: ['7000', '3000'],                // For Parts, Used
       new_with_tags: ['1000', '1500'],       // New, New Other
       new_without_tags: ['1500', '1000'],    // New Other, New
+      very_good: ['3000', '2750'],           // Used, Very Good Refurb
+      good: ['3000', '2750'],               // Used, Very Good Refurb
+      fair: ['3000'],                        // Used
+      poor: ['7000', '3000'],               // For Parts, Used
     }
+
+    // Read per-platform price from PMD if set, else fall back to asking_price
+    const { data: pmd } = await supabase
+      .from('product_marketplace_data')
+      .select('listing_price')
+      .eq('find_id', findId)
+      .eq('marketplace', 'ebay')
+      .single()
+    const ebayPrice = pmd?.listing_price ?? find.asking_price_gbp ?? find.cost_gbp ?? 0
+
+    // Read eBay-specific form fields from platform_fields
+    const ebayFields = (find.platform_fields as Record<string, unknown>)?.ebay as
+      Record<string, unknown> | undefined
+    const acceptOffers = ebayFields?.acceptOffers === true
 
     const baseSku = find.sku || `WR-${find.id.substring(0, 8).toUpperCase()}`
     const sku = `${baseSku}-v5`
@@ -123,7 +137,7 @@ export async function POST(request: NextRequest) {
       sku,
       title: find.name,
       description: find.description || find.name,
-      price: find.asking_price_gbp || find.cost_gbp || 0,
+      price: ebayPrice,
       quantity: 1,
       condition: ebayCondition,
       brand: find.brand || undefined,
@@ -151,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create offer
-    const offer = {
+    const offer: Record<string, unknown> = {
       sku: inventoryItem.sku,
       marketplaceId: marketplace,
       format: 'FIXED_PRICE',
@@ -168,6 +182,7 @@ export async function POST(request: NextRequest) {
         fulfillmentPolicyId: sellerConfig.fulfillment_policy_id,
         returnPolicyId: sellerConfig.return_policy_id,
         paymentPolicyId: sellerConfig.payment_policy_id,
+        ...(acceptOffers ? { bestOfferTerms: { bestOfferEnabled: true } } : {}),
       },
       merchantLocationKey: sellerConfig.merchant_location_key,
     }
