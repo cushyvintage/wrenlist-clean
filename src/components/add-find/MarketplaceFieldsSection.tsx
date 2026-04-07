@@ -21,7 +21,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 }
 
 const CUSTOM_HANDLED_KEYS = new Set([
-  'colour', 'condition_description', 'size', 'material', 'author', 'isbn', 'language', 'brand',
+  'colour', 'condition_description', 'size', 'material', 'materialvinted', 'author', 'isbn', 'language', 'brand',
   'tags', 'who_made', 'when_made', 'source', 'style_tags', 'age',
 ])
 
@@ -58,7 +58,8 @@ export default function MarketplaceFieldsSection({
     ([key, val]) => !CUSTOM_HANDLED_KEYS.has(key) && val.show
   )
 
-  const showColour = fieldConfig.colour?.show
+  // Show colour if any platform needs it — Vinted always needs colour even if fieldConfig doesn't include 'colour'
+  const showColour = fieldConfig.colour?.show || hasVinted
   const showSecondaryColour = hasVinted || hasEtsy || hasDepop
   const showTags = hasEtsy || hasFacebook || hasShopify
   const showEtsyFields = hasEtsy
@@ -66,7 +67,7 @@ export default function MarketplaceFieldsSection({
 
   // Determine if we have anything to render at all
   const hasAnyContent = showColour || showSecondaryColour || showTags || showEtsyFields || showDepopFields ||
-    fieldConfig.condition_description?.show || fieldConfig.size?.show || fieldConfig.material?.show ||
+    fieldConfig.condition_description?.show || fieldConfig.size?.show || (fieldConfig.material?.show || fieldConfig.materialvinted?.show) ||
     fieldConfig.author?.show || fieldConfig.isbn?.show || fieldConfig.language?.show ||
     dynamicFields.length > 0 || platformsWithTabs.length > 0
 
@@ -169,11 +170,11 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* Material — multi-select chips for Vinted (numeric IDs), text for others */}
-        {fieldConfig.material?.show && (
+        {(fieldConfig.material?.show || fieldConfig.materialvinted?.show) && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
               Material
-              {fieldConfig.material.required ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional{hasVinted ? ', max 3' : ''})</span>}
+              {(fieldConfig.material?.required || fieldConfig.materialvinted?.required) ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional{hasVinted ? ', max 3' : ''})</span>}
             </label>
             {hasVinted ? (
               <>
