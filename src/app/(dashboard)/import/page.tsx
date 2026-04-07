@@ -443,59 +443,66 @@ export default function ImportPage() {
       .filter((i) => i.checked && !i.alreadyImported)
       .map((i) => i.id)
 
-    vintedImport.setFetching('Importing Vinted listings...')
+    const CHUNK_SIZE = 100
+    const totalItems = selectedIds.length
+    let totalImported = 0, totalSkipped = 0, totalErrors = 0
 
-    const since = new Date().toISOString()
-    let stopPolling: (() => void) | undefined
-
-    const pollingTimer = setTimeout(() => {
-      stopPolling = vintedImport.startPolling(since, selectedIds.length)
-    }, 10000)
+    vintedImport.runImportProgress(0, 0, 0, totalItems)
 
     try {
-      const response = await new Promise<{
-        success: boolean
-        message?: string
-        results?: { success: number; skipped: number; errors: number; total: number }
-      }>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ success: false, message: 'Timed out' }),
-          360000
-        )
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          {
-            action: 'batch_import_vinted',
-            listingIds: selectedIds,
-            limit: selectedIds.length,
-            wrenlistBaseUrl: window.location.origin,
-          },
-          (resp) => {
-            clearTimeout(timeout)
-            if (chrome.runtime.lastError) {
-              resolve({ success: false, message: chrome.runtime.lastError.message })
-            } else {
-              resolve(resp || { success: false, message: 'No response' })
+      for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
+        const chunk = selectedIds.slice(i, i + CHUNK_SIZE)
+        const chunkNum = Math.floor(i / CHUNK_SIZE) + 1
+        const totalChunks = Math.ceil(selectedIds.length / CHUNK_SIZE)
+
+        console.log(`[Import] Chunk ${chunkNum}/${totalChunks} — ${chunk.length} items`)
+
+        const response = await new Promise<{
+          success: boolean
+          message?: string
+          results?: { success: number; skipped: number; errors: number; total: number }
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: `Chunk ${chunkNum} timed out` }),
+            360000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            {
+              action: 'batch_import_vinted',
+              listingIds: chunk,
+              limit: chunk.length,
+              wrenlistBaseUrl: window.location.origin,
+            },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
             }
-          }
-        )
-      })
+          )
+        })
 
-      clearTimeout(pollingTimer)
-      if (stopPolling) stopPolling()
+        if (response.success && response.results) {
+          totalImported += response.results.success || 0
+          totalSkipped += response.results.skipped || 0
+          totalErrors += response.results.errors || 0
+        } else {
+          // Chunk failed — count all items as errors but continue with next chunk
+          console.warn(`[Import] Chunk ${chunkNum} failed: ${response.message}`)
+          totalErrors += chunk.length
+        }
 
-      if (!response.success) {
-        throw new Error(response.message || 'Vinted import failed')
+        vintedImport.runImportProgress(totalImported, totalSkipped, totalErrors, totalItems)
       }
 
-      const r = response.results || { success: 0, skipped: 0, errors: 0, total: 0 }
-      vintedImport.setDone(r.success, r.skipped, r.errors, r.total)
+      vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
 
       // Refresh list
       await loadVintedListings()
     } catch (err) {
-      clearTimeout(pollingTimer)
-      if (stopPolling) stopPolling()
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
   }
