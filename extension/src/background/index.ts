@@ -600,6 +600,20 @@ type ExternalMessage = Record<string, unknown>;
         .catch((error) => sendResponse(withError(error)));
       return true;
     }
+    if (cmd === "get_logs") {
+      void (async () => {
+        const stored = await chrome.storage.local.get(["_debugLogs"]);
+        const logs = (stored._debugLogs as Array<Record<string, unknown>>) ?? [];
+        sendResponse(withExtensionVersion({ success: true, logs }));
+      })().catch((error) => sendResponse(withError(error)));
+      return true;
+    }
+    if (cmd === "clear_logs") {
+      void chrome.storage.local.remove("_debugLogs")
+        .then(() => sendResponse(withExtensionVersion({ success: true })))
+        .catch((error) => sendResponse(withError(error)));
+      return true;
+    }
     if (cmd === "debug_cookies") {
       void (async () => {
         const baseUrl = await getWrenlistBaseUrl();

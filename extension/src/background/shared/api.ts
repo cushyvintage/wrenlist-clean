@@ -153,18 +153,31 @@ export async function remoteLog(
   message: string,
   data?: Record<string, unknown>,
 ): Promise<void> {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    level,
+    source,
+    message,
+    data,
+  };
+  // Always write to chrome.storage.local for reliable debugging
+  try {
+    const stored = await chrome.storage.local.get(["_debugLogs"]);
+    const logs = (stored._debugLogs as Array<typeof entry>) ?? [];
+    logs.push(entry);
+    // Keep last 50 entries
+    while (logs.length > 50) logs.shift();
+    await chrome.storage.local.set({ _debugLogs: logs });
+  } catch {
+    // storage write failed
+  }
+  // Also send to remote API (may hit different Vercel instance)
   try {
     const baseUrl = await getWrenlistBaseUrl();
     await fetch(`${baseUrl}/api/extension/logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level,
-        source,
-        message,
-        data,
-      }),
+      body: JSON.stringify(entry),
     });
   } catch {
     // Never fail the caller
