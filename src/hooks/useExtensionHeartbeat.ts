@@ -57,11 +57,14 @@ export function useExtensionHeartbeat(): ExtensionHeartbeat {
       }
     }
 
+    // Pause polling when tab is hidden to avoid unnecessary API calls.
+    // On tab return, do an immediate check (user expects fresh status)
+    // then resume the 30s interval.
     const handleVisibility = () => {
       if (document.hidden) {
         stopPolling()
       } else {
-        check() // immediate check on return
+        check()
         startPolling()
       }
     }

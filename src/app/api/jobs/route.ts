@@ -71,7 +71,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Verify ownership
+  // Verify ownership before creating the job. Deduplication (preventing
+  // duplicate active jobs for the same find+platform+action) is handled
+  // inside createPublishJob() so it works for both direct API calls and
+  // dual-write from crosslist/delist entry points.
   const { data: find, error: findError } = await supabase
     .from('finds')
     .select('id')

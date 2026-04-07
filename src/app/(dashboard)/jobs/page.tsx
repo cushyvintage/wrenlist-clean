@@ -1,3 +1,15 @@
+/**
+ * Jobs Dashboard — monitors publish/delist jobs processed by the desktop Chrome extension.
+ *
+ * Architecture:
+ * - Jobs are stored in the `publish_jobs` table (Supabase) and persist across sessions.
+ * - The desktop extension polls /api/jobs/poll every 60s, claims pending jobs, executes them,
+ *   and reports back (complete/fail). Jobs with `scheduled_for` are held until that time.
+ * - This page polls /api/jobs every 10s for active tabs (All/Pending/Scheduled/Running)
+ *   to show near-real-time status. Completed/Failed tabs don't auto-refresh.
+ * - Extension online/offline status comes from useExtensionHeartbeat (polls /api/extension/heartbeat).
+ * - "Clear history" bulk-deletes completed/failed/cancelled jobs via DELETE /api/jobs.
+ */
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -17,6 +29,9 @@ const TAB_FILTERS: { id: TabFilter; label: string }[] = [
   { id: 'failed', label: 'Failed' },
 ]
 
+/** Map tab filter to API query param. 'scheduled' uses client-side filtering
+ *  because the API has no scheduled_for filter — we fetch all pending then
+ *  filter for jobs with a scheduled_for timestamp. */
 function statusToQuery(tab: TabFilter): string | undefined {
   switch (tab) {
     case 'all': return undefined
@@ -49,6 +64,7 @@ function ActionBadge({ action }: { action: string }) {
   return <span className="text-xs text-ink-lt">{label}</span>
 }
 
+/** Human-readable relative time (e.g. "5m ago", "2h ago", "3d ago"). */
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
@@ -59,6 +75,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
+/** Format scheduled_for as "7 Apr, 20:30" or "ASAP" if null. */
 function formatSchedule(iso: string | null): string {
   if (!iso) return 'ASAP'
   const d = new Date(iso)

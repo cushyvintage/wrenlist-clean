@@ -1,3 +1,15 @@
+/**
+ * Publish job creation helper with deduplication.
+ *
+ * Called from dual-write entry points (crosslist/publish, crosslist/delist,
+ * mark-as-sold, eBay webhook, sync-orders) to create jobs alongside
+ * the legacy PMD status writes. During migration both systems run in parallel;
+ * after cutover, PMD writes will be removed and this becomes the sole queue.
+ *
+ * Dedup: checks for existing active jobs (pending/claimed/running) for the
+ * same find+platform+action. This prevents duplicate jobs when the user
+ * clicks crosslist multiple times or when auto-delist fires redundantly.
+ */
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { JobAction, StalePolicy } from '@/types'
 
