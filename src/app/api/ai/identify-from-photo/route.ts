@@ -60,6 +60,7 @@ Return ONLY valid JSON:
   "description": "brief description noting maker, era, style, condition observations, and any notable features (2-3 sentences max)",
   "suggestedQuery": "the best search query to find comparable sold items on eBay UK (e.g. 'Hornsea Saffron mug vintage')",
   "category": "one of: ${TOP_LEVEL_LIST}",
+  "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor — assess from visible wear, patina, chips, cracks, stains, fading. Default to good if unclear.",
   "confidence": "high if you can identify maker/brand, medium if you can identify the type but not maker, low if unsure"
 }`,
             },
@@ -86,8 +87,13 @@ Return ONLY valid JSON:
       description: string
       suggestedQuery: string
       category: string
+      condition?: string
       confidence: 'high' | 'medium' | 'low'
     }
+
+    // Validate condition
+    const VALID_CONDITIONS = ['new_with_tags', 'new_without_tags', 'very_good', 'good', 'fair', 'poor']
+    const condition = VALID_CONDITIONS.includes(result.condition ?? '') ? result.condition : undefined
 
     // Validate top-level category
     const topLevel = VALID_TOP_LEVELS.includes(result.category) ? result.category : 'other'
@@ -138,6 +144,7 @@ Return ONLY valid JSON:
       ...result,
       category: subcategory ?? subcatValues[0] ?? topLevel,
       topLevel,
+      condition,
       confidence: result.confidence,
     })
   } catch (error) {

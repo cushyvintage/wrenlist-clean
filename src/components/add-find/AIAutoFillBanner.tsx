@@ -2,22 +2,36 @@
 
 import { useState, useEffect } from 'react'
 import { getCategoryNode, getTopLevelCategory } from '@/data/marketplace-category-map'
+import { WRENLIST_CONDITIONS } from '@/data/marketplace-conditions'
 
 export interface AIAutoFillData {
   title?: string
   description?: string
   category?: string
+  condition?: string
   suggestedQuery?: string
+  suggestedPrice?: number
+  priceReasoning?: string
+  priceLoading?: boolean
   confidence: 'high' | 'medium' | 'low'
+}
+
+export interface AIAutoFillResult {
+  title?: string
+  description?: string
+  category?: string
+  condition?: string
+  price?: number
 }
 
 interface AIAutoFillBannerProps {
   data: AIAutoFillData | null
-  /** True if form already has user-entered data (don't overwrite) */
   hasTitle: boolean
   hasDescription: boolean
   hasCategory: boolean
-  onApply: (fields: { title?: string; description?: string; category?: string }) => void
+  hasCondition: boolean
+  hasPrice: boolean
+  onApply: (fields: AIAutoFillResult) => void
   onDismiss: () => void
 }
 
@@ -31,27 +45,35 @@ function formatCategory(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
+function formatCondition(value: string): string {
+  return WRENLIST_CONDITIONS.find(c => c.value === value)?.label ?? value
+}
+
 export default function AIAutoFillBanner({
   data,
   hasTitle,
   hasDescription,
   hasCategory,
+  hasCondition,
+  hasPrice,
   onApply,
   onDismiss,
 }: AIAutoFillBannerProps) {
-  // Toggle state: default ON if form field is empty, OFF if it already has data
   const [applyTitle, setApplyTitle] = useState(!hasTitle)
   const [applyDescription, setApplyDescription] = useState(!hasDescription)
   const [applyCategory, setApplyCategory] = useState(!hasCategory)
+  const [applyCondition, setApplyCondition] = useState(!hasCondition)
+  const [applyPrice, setApplyPrice] = useState(!hasPrice)
 
-  // Sync: if user starts typing in a field while banner is visible, uncheck it
   useEffect(() => { if (hasTitle) setApplyTitle(false) }, [hasTitle])
   useEffect(() => { if (hasDescription) setApplyDescription(false) }, [hasDescription])
   useEffect(() => { if (hasCategory) setApplyCategory(false) }, [hasCategory])
+  useEffect(() => { if (hasCondition) setApplyCondition(false) }, [hasCondition])
+  useEffect(() => { if (hasPrice) setApplyPrice(false) }, [hasPrice])
 
   if (!data) return null
 
-  const fields: { key: string; label: string; value: string; enabled: boolean; toggle: (v: boolean) => void; hasExisting: boolean }[] = []
+  const fields: { key: string; label: string; value: string; subtext?: string; loading?: boolean; enabled: boolean; toggle: (v: boolean) => void; hasExisting: boolean }[] = []
 
   if (data.category) {
     fields.push({
@@ -83,16 +105,41 @@ export default function AIAutoFillBanner({
       hasExisting: hasDescription,
     })
   }
+  if (data.condition) {
+    fields.push({
+      key: 'condition',
+      label: 'Condition',
+      value: formatCondition(data.condition),
+      enabled: applyCondition,
+      toggle: setApplyCondition,
+      hasExisting: hasCondition,
+    })
+  }
+  // Price: show loading state or value
+  if (data.suggestedPrice || data.priceLoading) {
+    fields.push({
+      key: 'price',
+      label: 'Price',
+      value: data.suggestedPrice ? `£${data.suggestedPrice.toFixed(2)}` : '',
+      subtext: data.priceReasoning,
+      loading: data.priceLoading,
+      enabled: applyPrice,
+      toggle: setApplyPrice,
+      hasExisting: hasPrice,
+    })
+  }
 
   if (fields.length === 0) return null
 
-  const anyEnabled = fields.some(f => f.enabled)
+  const anyEnabled = fields.some(f => f.enabled && !f.loading)
 
   const handleApply = () => {
-    const result: { title?: string; description?: string; category?: string } = {}
+    const result: AIAutoFillResult = {}
     if (applyTitle && data.title) result.title = data.title
     if (applyDescription && data.description) result.description = data.description
     if (applyCategory && data.category) result.category = data.category
+    if (applyCondition && data.condition) result.condition = data.condition
+    if (applyPrice && data.suggestedPrice) result.price = data.suggestedPrice
     onApply(result)
   }
 
@@ -133,15 +180,25 @@ export default function AIAutoFillBanner({
             <input
               type="checkbox"
               checked={field.enabled}
+              disabled={field.loading}
               onChange={(e) => field.toggle(e.target.checked)}
-              className="mt-0.5 rounded border-sage/30 text-sage focus:ring-sage/30"
+              className="mt-0.5 rounded border-sage/30 text-sage focus:ring-sage/30 disabled:opacity-40"
             />
             <div className="flex-1 min-w-0">
               <span className="text-xs font-medium text-sage-dim">{field.label}</span>
-              {field.hasExisting && (
+              {field.hasExisting && !field.loading && (
                 <span className="text-xs text-amber-600 ml-1">(will overwrite)</span>
               )}
-              <p className="text-sm text-ink truncate">{field.value}</p>
+              {field.loading ? (
+                <p className="text-sm text-sage-dim animate-pulse">Loading price...</p>
+              ) : (
+                <>
+                  <p className="text-sm text-ink truncate">{field.value}</p>
+                  {field.subtext && (
+                    <p className="text-xs text-sage-dim mt-0.5 truncate">{field.subtext}</p>
+                  )}
+                </>
+              )}
             </div>
           </label>
         ))}

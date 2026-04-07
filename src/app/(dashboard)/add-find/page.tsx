@@ -8,7 +8,7 @@ import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import PlatformSelector from '@/components/add-find/PlatformSelector'
 import AutoDetectedCategoryBanner from '@/components/add-find/AutoDetectedCategoryBanner'
-import AIAutoFillBanner, { type AIAutoFillData } from '@/components/add-find/AIAutoFillBanner'
+import AIAutoFillBanner, { type AIAutoFillData, type AIAutoFillResult } from '@/components/add-find/AIAutoFillBanner'
 import TitleDescriptionSection from '@/components/add-find/TitleDescriptionSection'
 import PricingSection from '@/components/add-find/PricingSection'
 import ItemDetailsSection from '@/components/add-find/ItemDetailsSection'
@@ -103,6 +103,7 @@ export default function AddFindPage() {
   const [aiAutoFill, setAiAutoFill] = useState<AIAutoFillData | null>(null)
   const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
   const [isIdentifying, setIsIdentifying] = useState(false)
+  const [aiPrefs, setAiPrefs] = useState<{ enabled: boolean; title: boolean; description: boolean; category: boolean; condition: boolean; price: boolean } | null>(null)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -223,6 +224,14 @@ export default function AddFindPage() {
     return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
+  // ── Load AI preferences ──
+  useEffect(() => {
+    fetch('/api/user/preferences')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setAiPrefs(data) })
+      .catch(() => {})
+  }, [])
+
   // ── Auto-identify from first photo (title + description + category) ──
   useEffect(() => {
     let cancelled = false
@@ -230,6 +239,8 @@ export default function AddFindPage() {
 
     const identifyFromPhoto = async () => {
       if (!formData.photoPreviews.length || dismissedAutoFill) return
+      // Respect user's AI preferences (skip if master toggle is off)
+      if (aiPrefs && !aiPrefs.enabled) return
       if (formData.title && formData.category) return
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto) return
@@ -279,15 +290,47 @@ export default function AddFindPage() {
         if (cancelled) return
         if (response.ok) {
           const data = await response.json()
+          // Show identification results immediately (title, description, category, condition)
           setAiAutoFill({
             title: data.title,
             description: data.description,
             category: data.category,
+            condition: data.condition,
             suggestedQuery: data.suggestedQuery,
             confidence: data.confidence,
+            priceLoading: !!data.suggestedQuery,
           })
           if (data.category && !formData.category) {
             setAutoDetectedCategory({ category: data.category, confidence: data.confidence })
+          }
+
+          // Fire price research in the background (non-blocking)
+          if (data.suggestedQuery && !cancelled) {
+            try {
+              const priceRes = await fetch('/api/price-research', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: data.suggestedQuery }),
+                signal: abortController.signal,
+              })
+              if (!cancelled && priceRes.ok) {
+                const priceData = await priceRes.json()
+                const suggested = priceData?.recommendation?.suggested_price
+                const reasoning = priceData?.recommendation?.reasoning
+                setAiAutoFill(prev => prev ? {
+                  ...prev,
+                  suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
+                  priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
+                  priceLoading: false,
+                } : null)
+              } else if (!cancelled) {
+                setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+              }
+            } catch {
+              if (!cancelled) {
+                setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+              }
+            }
           }
         }
       } catch (err) {
@@ -299,7 +342,7 @@ export default function AddFindPage() {
 
     identifyFromPhoto()
     return () => { cancelled = true; abortController.abort() }
-  }, [formData.photoPreviews, formData.title, formData.category, dismissedAutoFill])
+  }, [formData.photoPreviews, formData.title, formData.category, dismissedAutoFill, aiPrefs])
 
   // ── Handlers ──
   const handleInputChange = useCallback(
@@ -733,10 +776,14 @@ export default function AddFindPage() {
                 hasTitle={!!formData.title}
                 hasDescription={!!formData.description}
                 hasCategory={!!formData.category}
-                onApply={(fields) => {
+                hasCondition={formData.condition !== 'good'}
+                hasPrice={!!formData.price}
+                onApply={(fields: AIAutoFillResult) => {
                   if (fields.title) handleInputChange('title', fields.title)
                   if (fields.description) handleInputChange('description', fields.description)
                   if (fields.category) handleInputChange('category', fields.category)
+                  if (fields.condition) handleInputChange('condition', fields.condition)
+                  if (fields.price) handleInputChange('price', fields.price)
                   setAiAutoFill(null)
                   setDismissedAutoFill(true)
                   setAutoDetectedCategory(null)

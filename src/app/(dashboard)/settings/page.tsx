@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { fetchApi } from '@/lib/api-utils'
+import AIAutoFillSettings from '@/components/settings/AIAutoFillSettings'
 
-type SettingsTab = 'account' | 'workspace' | 'integrations' | 'billing' | 'legal'
+type SettingsTab = 'account' | 'workspace' | 'integrations' | 'ai' | 'billing' | 'legal'
 
 interface AccountData {
   email: string
@@ -239,7 +240,7 @@ export default function SettingsPage() {
       {/* Sidebar Navigation */}
       <div className="w-48 flex-shrink-0">
         <nav className="space-y-2">
-          {(['account', 'workspace', 'integrations', 'billing', 'legal'] as const).map(
+          {(['account', 'workspace', 'integrations', 'ai', 'billing', 'legal'] as const).map(
             (tab) => (
               <button
                 key={tab}
@@ -506,6 +507,11 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* AI Auto-Fill Section */}
+        {activeTab === 'ai' && (
+          <AIAutoFillSettings />
         )}
 
         {/* Billing Section */}
