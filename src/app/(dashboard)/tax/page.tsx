@@ -8,8 +8,27 @@ import { HMRC_RATES, VEHICLE_TYPE_LABELS } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { useExpenseCategories } from '@/hooks/useExpenseCategories'
 
+// Derive the current UK tax year (Apr 6 – Apr 5)
+function getCurrentTaxYear(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  // Before Apr 6 → previous tax year; on/after Apr 6 → current tax year
+  const startYear = now.getMonth() < 3 || (now.getMonth() === 3 && now.getDate() < 6) ? year - 1 : year
+  const endYear = startYear + 1
+  return `${startYear}-${String(endYear).slice(2)}`
+}
+
+function taxYearDates(taxYear: string): { start: string; end: string } {
+  const startYear = parseInt(taxYear.split('-')[0] ?? taxYear, 10)
+  return {
+    start: `${startYear}-04-06`,
+    end: `${startYear + 1}-04-05`,
+  }
+}
+
 export default function TaxPage() {
-  const [taxYear, setTaxYear] = useState('2025-26')
+  const currentTaxYear = getCurrentTaxYear()
+  const [taxYear, setTaxYear] = useState(currentTaxYear)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { categories: dbCategories, labelsMap } = useExpenseCategories()
@@ -27,9 +46,7 @@ export default function TaxPage() {
         setError(null)
 
         // Get tax year dates (6 Apr to 5 Apr)
-        const currentYear = new Date().getFullYear()
-        const startDate = taxYear === '2025-26' ? '2025-04-06' : taxYear === '2024-25' ? '2024-04-06' : '2023-04-06'
-        const endDate = taxYear === '2025-26' ? '2026-04-05' : taxYear === '2024-25' ? '2025-04-05' : '2024-04-05'
+        const { start: startDate, end: endDate } = taxYearDates(taxYear)
 
         // Fetch sold finds
         const sellsRes = await fetch('/api/finds?status=sold')
@@ -121,9 +138,16 @@ export default function TaxPage() {
           onChange={(e) => setTaxYear(e.target.value)}
           className="px-4 py-2 bg-cream-md border border-sage/14 rounded text-sm text-ink font-medium focus:outline-none focus:ring-1 focus:ring-sage"
         >
-          <option value="2025-26">Tax year 2025–26</option>
-          <option value="2024-25">Tax year 2024–25</option>
-          <option value="2023-24">Tax year 2023–24</option>
+          {/* Build 3 years of tax year options from current */}
+          {Array.from({ length: 3 }, (_, i) => {
+            const startYear = parseInt(currentTaxYear.split('-')[0] ?? currentTaxYear, 10) - i
+            const key = `${startYear}-${String(startYear + 1).slice(2)}`
+            return (
+              <option key={key} value={key}>
+                Tax year {startYear}–{String(startYear + 1).slice(2)}
+              </option>
+            )
+          })}
         </select>
         <button className="text-sm font-medium text-ink-lt hover:text-ink px-3 py-2 border border-sage/14 rounded hover:bg-cream-md transition">
           ↓ download CSV
@@ -135,7 +159,7 @@ export default function TaxPage() {
         <div className="bg-cream border border-sage/14 rounded-lg p-4">
           <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">total revenue</div>
           <div className="font-serif text-2xl text-ink mb-1">£{revenue.toLocaleString()}</div>
-          <div className="text-xs text-ink-lt">all platforms · Apr 25 – Mar 26</div>
+          <div className="text-xs text-ink-lt">all platforms · {taxYearDates(taxYear).start.slice(0,4)} tax year</div>
         </div>
 
         <div className="bg-cream border border-sage/14 rounded-lg p-4">
