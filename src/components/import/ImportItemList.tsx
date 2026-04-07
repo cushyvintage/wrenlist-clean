@@ -107,6 +107,16 @@ export function ImportItemList({
                     draft
                   </span>
                 )}
+                {item.listingStatus === 'sold' && (
+                  <span className="text-xs text-red-700 bg-red-50 px-2 py-0.5 rounded">
+                    sold
+                  </span>
+                )}
+                {item.listingStatus === 'hidden' && (
+                  <span className="text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded">
+                    hidden
+                  </span>
+                )}
                 {item.alreadyImported ? (
                   <span className="text-xs text-ink-lt bg-cream-dk px-2 py-1 rounded">
                     already in wren

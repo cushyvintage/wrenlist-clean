@@ -89,7 +89,7 @@ export function ImportHeader({
             </h1>
             {isFetching && fetchedCount !== undefined && (
               <span className="text-xs text-sage animate-pulse">
-                Fetching... ({fetchedCount} synced)
+                Fetching — {fetchedCount} found so far
               </span>
             )}
           </div>
@@ -124,9 +124,12 @@ export function ImportHeader({
           className="text-sm px-3 py-2 bg-cream-md border border-sage/14 rounded outline-none text-ink placeholder:text-ink-lt w-56"
         />
 
-        {/* Status filter pills */}
+        {/* Status filter pills — platform-aware */}
         <div className="flex items-center gap-1">
-          {([['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const).map(([value, label]) => (
+          {(platform === 'vinted'
+            ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['hidden', 'Hidden']] as const
+            : [['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const
+          ).map(([value, label]) => (
             <button
               key={value}
               onClick={() => onStatusFilterChange(value)}

@@ -129,6 +129,7 @@ export default function ImportPage() {
             photo: string | null
             url: string | null
             isSold: boolean
+            isHidden: boolean
           }>
           total?: number
           totalPages?: number
@@ -183,6 +184,7 @@ export default function ImportPage() {
 
         for (const l of listings) {
           if (allItems.length >= IMPORT_LIMIT) break
+          const status = l.isSold ? 'sold' as const : l.isHidden ? 'hidden' as const : 'active' as const
           allItems.push({
             id: l.id,
             platform: 'vinted',
@@ -192,8 +194,8 @@ export default function ImportPage() {
             listingId: l.id,
             listingUrl: l.url,
             alreadyImported: importedSet.has(l.id),
-            checked: !importedSet.has(l.id),
-            listingStatus: 'active',
+            checked: !importedSet.has(l.id) && status === 'active',
+            listingStatus: status,
           })
         }
 
