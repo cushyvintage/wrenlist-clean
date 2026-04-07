@@ -239,8 +239,9 @@ export default function AddFindPage() {
 
     const identifyFromPhoto = async () => {
       if (!formData.photoPreviews.length || dismissedAutoFill) return
-      // Respect user's AI preferences (skip if master toggle is off)
-      if (aiPrefs && !aiPrefs.enabled) return
+      // Wait for preferences to load, then respect master toggle
+      if (aiPrefs === null) return
+      if (!aiPrefs.enabled) return
       if (formData.title && formData.category) return
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto) return
@@ -776,7 +777,7 @@ export default function AddFindPage() {
                 hasTitle={!!formData.title}
                 hasDescription={!!formData.description}
                 hasCategory={!!formData.category}
-                hasCondition={formData.condition !== 'good'}
+                hasCondition={true}
                 hasPrice={!!formData.price}
                 onApply={(fields: AIAutoFillResult) => {
                   if (fields.title) handleInputChange('title', fields.title)
