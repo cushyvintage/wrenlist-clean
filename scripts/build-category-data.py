@@ -21,12 +21,17 @@ import json
 import re
 import os
 from collections import defaultdict
+from difflib import SequenceMatcher
 
 # === Config ===
 LEAF_THRESHOLD = 100  # L2 nodes with more descendants go to L3
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_TREE = os.path.join(BASE_DIR, "src/data/marketplace/crosslist-categories-full.json")
 SRC_FIELDS = os.path.join(BASE_DIR, "src/data/marketplace/crosslist-field-schemas.json")
+SRC_EBAY = os.path.join(BASE_DIR, "src/data/marketplace/ebay-uk-categories-raw.json")
+SRC_VINTED = os.path.join(BASE_DIR, "src/data/marketplace/vinted-categories.json")
+SRC_SHOPIFY = os.path.join(BASE_DIR, "src/data/marketplace/shopify-categories.json")
+SRC_DEPOP = os.path.join(BASE_DIR, "src/data/marketplace/depop-categories.json")
 OUT_TREE = os.path.join(BASE_DIR, "src/data/marketplace-category-map.ts")
 OUT_FIELDS = os.path.join(BASE_DIR, "src/data/marketplace/category-field-requirements.ts")
 OUT_UUID_MAP = os.path.join(BASE_DIR, "src/data/marketplace/wrenlist-uuid-map.json")
@@ -274,7 +279,260 @@ def build_field_requirements(uuid_map, cat_to_field_set, field_sets):
     return requirements
 
 
-# === Step 3: Output TypeScript files ===
+# === Step 3: Populate platform IDs ===
+
+def normalize(s: str) -> str:
+    """Normalize a category name for fuzzy matching."""
+    s = s.lower().strip()
+    s = re.sub(r"[''']s\b", "s", s)
+    s = re.sub(r"\s*&\s*", " and ", s)
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def load_ebay_categories():
+    """Load eBay UK categories into name→[{id, path, leaf}] lookup (multiple entries per name)."""
+    with open(SRC_EBAY) as f:
+        data = json.load(f)
+
+    cats = defaultdict(list)  # normalized_name → list of {id, name, path, leaf}
+
+    def walk(node, path=""):
+        cat = node.get("category", {})
+        name = cat.get("categoryName", "")
+        cid = cat.get("categoryId", "")
+        full = f"{path} > {name}" if path else name
+        children = node.get("childCategoryTreeNodes", [])
+        is_leaf = len(children) == 0
+        key = normalize(name)
+        cats[key].append({"id": cid, "name": name, "path": full, "leaf": is_leaf})
+        for c in children:
+            walk(c, full)
+
+    walk(data["rootCategoryNode"])
+    return dict(cats)
+
+
+def load_vinted_categories():
+    """Load Vinted categories into path-based lookup."""
+    with open(SRC_VINTED) as f:
+        data = json.load(f)
+
+    cats = {}  # normalized_name → {id, name, path, leaf}
+
+    def walk(nodes):
+        for n in nodes:
+            name = n.get("name", "")
+            key = normalize(name)
+            path = n.get("full_path", "")
+            is_leaf = n.get("is_leaf", False)
+            # Store with path to disambiguate (e.g. "Clothing" under Women vs Pets)
+            path_key = normalize(path)
+            cats[path_key] = {"id": n["id"], "name": name, "path": path, "leaf": is_leaf}
+            # Also store by name (last match wins, but prefer leaf)
+            if key not in cats or is_leaf:
+                cats[key] = {"id": n["id"], "name": name, "path": path, "leaf": is_leaf}
+            for c in n.get("children", []):
+                walk([c])
+
+    walk(data)
+    return cats
+
+
+def load_shopify_categories():
+    """Load Shopify taxonomy into name→{id, path} lookup."""
+    try:
+        with open(SRC_SHOPIFY) as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+    cats = {}
+    if isinstance(data, dict) and "verticals" in data:
+        for v in data["verticals"]:
+            for cat in v.get("categories", []):
+                if not isinstance(cat, dict):
+                    continue
+                name = cat.get("name", "")
+                key = normalize(name)
+                full = cat.get("full_name", name)
+                cats[key] = {"id": cat.get("id", ""), "name": name, "path": full}
+                # Also index by full_name for path-based matching
+                fkey = normalize(full)
+                if fkey != key:
+                    cats[fkey] = {"id": cat.get("id", ""), "name": name, "path": full}
+    return cats
+
+
+def load_depop_categories():
+    """Load Depop categories into name→slug lookup."""
+    try:
+        with open(SRC_DEPOP) as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+    cats = {}  # normalized_name → pipe-separated slug
+    # Depop structure: { departments: [{id, name}], groups: [{id, name, departments: [], productTypes: [{id, name}]}] }
+    groups = data.get("groups", [])
+    for group in groups:
+        group_id = group.get("id", "")
+        # Use first department as default
+        dept_ids = group.get("departments", [])
+        dept_id = dept_ids[0] if dept_ids else "everything-else"
+
+        for pt in group.get("productTypes", []):
+            pt_id = pt.get("id", "")
+            name = pt.get("name", "")
+            key = normalize(name)
+            slug_path = f"{dept_id}|{group_id}|{pt_id}"
+            cats[key] = {"id": slug_path, "name": name}
+
+        # Also store group level
+        g_name = group.get("name", "")
+        g_key = normalize(g_name)
+        if g_key not in cats:
+            cats[g_key] = {"id": f"{dept_id}|{group_id}", "name": g_name}
+    return cats
+
+
+def pick_best_from_candidates(candidates, context_path=""):
+    """Given multiple candidate matches, pick the one whose path best matches context."""
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    if not context_path:
+        leaves = [c for c in candidates if c.get("leaf", False)]
+        return leaves[0] if leaves else candidates[0]
+
+    # Score by path similarity using SequenceMatcher on full normalized paths
+    # This beats word-overlap because it respects word order and adjacency
+    ctx_norm = normalize(context_path)
+    best = candidates[0]
+    best_score = 0.0
+    for c in candidates:
+        c_norm = normalize(c.get("path", ""))
+        score = SequenceMatcher(None, ctx_norm, c_norm).ratio()
+        # Bonus for being a leaf node
+        if c.get("leaf", False):
+            score += 0.05
+        if score > best_score:
+            best_score = score
+            best = c
+    return best
+
+
+def find_best_match(search_terms, lookup, context_path=""):
+    """
+    Find best match for a list of search terms against a lookup dict.
+    lookup values can be a single dict OR a list of dicts (multiple matches per name).
+    Uses context_path to disambiguate when multiple matches exist.
+    """
+    # Try exact normalized matches first
+    for term in search_terms:
+        key = normalize(term)
+        if key in lookup:
+            val = lookup[key]
+            if isinstance(val, list):
+                return pick_best_from_candidates(val, context_path)
+            return val
+
+    # Try partial containment
+    for term in search_terms:
+        key = normalize(term)
+        if len(key) < 4:
+            continue
+        for lk, val in lookup.items():
+            if key in lk or lk in key:
+                if isinstance(val, list):
+                    return pick_best_from_candidates(val, context_path)
+                return val
+
+    return None
+
+
+def populate_platform_ids(tree, uuid_map, crosslist_leaves):
+    """
+    For each canonical leaf, try to match against marketplace taxonomies.
+    Modifies tree in-place, adding platforms dict entries.
+    Returns stats.
+    """
+    print("\nLoading marketplace taxonomies...")
+    ebay_cats = load_ebay_categories()
+    vinted_cats = load_vinted_categories()
+    shopify_cats = load_shopify_categories()
+    depop_cats = load_depop_categories()
+    print(f"  eBay UK: {len(ebay_cats)} nodes")
+    print(f"  Vinted: {len(vinted_cats)} nodes")
+    print(f"  Shopify: {len(shopify_cats)} nodes")
+    print(f"  Depop: {len(depop_cats)} nodes")
+
+    stats = {mp: {"matched": 0, "total": 0} for mp in ["ebay", "vinted", "shopify", "depop"]}
+
+    print("\nMatching platform IDs...")
+    for top_slug, subcats in tree.items():
+        for sub_key, node in subcats.items():
+            value = node["value"]
+            uuids = uuid_map.get(value, [])
+
+            # Build search terms from: canonical label + Crosslist leaf titles
+            search_terms = [node["label"]]
+            cl_titles = []
+            cl_paths = []
+            for uuid in uuids[:10]:
+                leaf = crosslist_leaves.get(uuid)
+                if leaf:
+                    cl_titles.append(leaf["title"])
+                    cl_paths.append(leaf["path"])
+            search_terms.extend(cl_titles)
+            # Use first Crosslist path as context for disambiguation
+            context = cl_paths[0] if cl_paths else node["label"]
+
+            platforms = {}
+
+            # eBay
+            stats["ebay"]["total"] += 1
+            match = find_best_match(search_terms, ebay_cats, context_path=context)
+            if match:
+                platforms["ebay"] = {"id": match["id"], "name": match["name"], "path": match.get("path", "")}
+                stats["ebay"]["matched"] += 1
+
+            # Vinted — also try path-based matching
+            stats["vinted"]["total"] += 1
+            vinted_terms = search_terms + cl_paths
+            match = find_best_match(vinted_terms, vinted_cats, context_path=context)
+            if match:
+                platforms["vinted"] = {"id": str(match["id"]), "name": match["name"], "path": match.get("path", "")}
+                stats["vinted"]["matched"] += 1
+
+            # Shopify
+            if shopify_cats:
+                stats["shopify"]["total"] += 1
+                match = find_best_match(search_terms, shopify_cats, context_path=context)
+                if match:
+                    platforms["shopify"] = {"id": match["id"], "name": match["name"], "path": match.get("path", "")}
+                    stats["shopify"]["matched"] += 1
+
+            # Depop
+            if depop_cats:
+                stats["depop"]["total"] += 1
+                match = find_best_match(search_terms, depop_cats, context_path=context)
+                if match:
+                    platforms["depop"] = {"id": match["id"], "name": match["name"]}
+                    stats["depop"]["matched"] += 1
+
+            node["platforms"] = platforms
+
+    return stats
+
+
+# === Step 4: Output TypeScript files ===
 
 def write_tree_ts(tree, out_path):
     """Write the expanded CATEGORY_TREE as TypeScript."""
@@ -303,12 +561,29 @@ def write_tree_ts(tree, out_path):
 
         for sub_key in sorted(subcats.keys()):
             node = subcats[sub_key]
-            # Use camelCase for TS keys with special chars
             ts_key = sub_key
             lines.append(f"    {ts_key}: {{")
             lines.append(f"      value: '{node['value']}',")
             lines.append(f"      label: {json.dumps(node['label'])},")
-            lines.append(f"      platforms: {{}},")
+
+            # Format platforms object
+            plats = node.get("platforms", {})
+            if not plats:
+                lines.append(f"      platforms: {{}},")
+            else:
+                lines.append(f"      platforms: {{")
+                for mp in ["ebay", "vinted", "shopify", "etsy", "depop"]:
+                    if mp in plats:
+                        p = plats[mp]
+                        pid = json.dumps(str(p["id"]))
+                        pname = json.dumps(p["name"])
+                        ppath = p.get("path", "")
+                        if ppath:
+                            lines.append(f"        {mp}: {{ id: {pid}, name: {pname}, path: {json.dumps(ppath)} }},")
+                        else:
+                            lines.append(f"        {mp}: {{ id: {pid}, name: {pname} }},")
+                lines.append(f"      }},")
+
             lines.append(f"    }},")
 
         lines.append(f"  }},")
@@ -646,6 +921,26 @@ def main():
     for top_slug in sorted(tree.keys()):
         count = len(tree[top_slug])
         print(f"    {top_slug}: {count} leaves")
+
+    # Step 1b: Build Crosslist leaf lookup for platform matching
+    def collect_all_leaves(nodes):
+        leaves = {}
+        for n in nodes:
+            if n["isLeaf"]:
+                leaves[n["id"]] = {"title": n["title"], "path": n.get("fullName", "")}
+            for c in n.get("children", []):
+                leaves.update(collect_all_leaves([c]))
+        return leaves
+
+    crosslist_leaves = collect_all_leaves(crosslist_tree)
+    print(f"  Crosslist leaves indexed: {len(crosslist_leaves)}")
+
+    # Step 1c: Populate platform IDs
+    platform_stats = populate_platform_ids(tree, uuid_map, crosslist_leaves)
+    print("\n  Platform ID coverage:")
+    for mp, s in platform_stats.items():
+        pct = (s["matched"] / s["total"] * 100) if s["total"] else 0
+        print(f"    {mp}: {s['matched']}/{s['total']} ({pct:.0f}%)")
 
     # Step 2: Build field requirements
     print("\nBuilding field requirements...")
