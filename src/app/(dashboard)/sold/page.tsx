@@ -284,7 +284,8 @@ export default function SoldHistoryPage() {
                 {items.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-border hover:bg-cream-md transition"
+                    className="border-b border-border hover:bg-cream-md transition cursor-pointer"
+                    onClick={() => window.location.href = `/sold/${item.id}`}
                   >
                     {/* Photo */}
                     <td className="px-3 py-2">
@@ -306,7 +307,7 @@ export default function SoldHistoryPage() {
                     {/* Name */}
                     <td className="px-3 py-2 max-w-[200px]">
                       <Link
-                        href={`/finds/${item.id}`}
+                        href={`/sold/${item.id}`}
                         className="font-medium text-sm text-sage hover:underline truncate block"
                       >
                         {item.name}

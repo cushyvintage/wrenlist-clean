@@ -91,7 +91,7 @@ export const POST = withAuth(async (req, user) => {
           // Try to match to existing find via product_marketplace_data
           const { data: existingPmd } = await supabase
             .from('product_marketplace_data')
-            .select('find_id, status')
+            .select('find_id, status, fields')
             .eq('marketplace', 'vinted')
             .eq('platform_listing_id', itemId)
             .maybeSingle()
@@ -108,11 +108,17 @@ export const POST = withAuth(async (req, user) => {
               .maybeSingle()
 
             if (!find) { skipped++; continue }
-            if (find.status === 'sold') { skipped++; continue }
+
+            // If already sold AND already enriched with this transaction, skip
+            const existingFields = existingPmd.fields as Record<string, unknown> | null
+            const existingSale = existingFields?.sale as Record<string, unknown> | undefined
+            if (find.status === 'sold' && existingSale?.transactionId === transactionId) {
+              skipped++; continue
+            }
 
             findId = find.id
 
-            // Mark find as sold
+            // Mark find as sold (or update sold data if re-enriching)
             await supabase.from('finds').update({
               status: 'sold',
               sold_price_gbp: item.price || sale.grossAmount,
