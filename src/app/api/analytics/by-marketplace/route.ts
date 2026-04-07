@@ -19,6 +19,7 @@ export const GET = withAuth(async (_req, user) => {
       .from('product_marketplace_data')
       .select('*, finds!inner(id, user_id, status, sold_price_gbp)')
       .eq('finds.user_id', userId)
+      .limit(10000)
 
     if (mpError) {
       console.error('Error fetching marketplace data:', mpError)

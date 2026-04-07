@@ -95,6 +95,7 @@ export const GET = withAuth(async (req, user) => {
       `)
       .eq('finds.user_id', user.id)
       .order('created_at', { ascending: false })
+      .limit(10000)
 
     if (marketplace && marketplace !== 'all') {
       query = query.eq('marketplace', marketplace)
@@ -122,6 +123,7 @@ export const GET = withAuth(async (req, user) => {
       .eq('user_id', user.id)
       .in('status', ['listed', 'sold'])
       .order('created_at', { ascending: false })
+      .limit(10000)
 
     if (findsError) {
       if (process.env.NODE_ENV !== 'production') {

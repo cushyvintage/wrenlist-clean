@@ -16,6 +16,7 @@ export const GET = withAuth(async (_req, user) => {
       .select('*')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
+      .limit(10000)
 
     if (error) {
       return ApiResponseHelper.internalError(error.message)

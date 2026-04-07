@@ -64,7 +64,7 @@ export async function getExpenses(filters?: {
     query = query.lte('date', filters.to_date)
   }
 
-  const { data, error } = await query.order('date', { ascending: false })
+  const { data, error } = await query.order('date', { ascending: false }).limit(10000)
 
   if (error) throw error
   return (data || []) as Expense[]
@@ -142,6 +142,7 @@ export async function getExpenseSummary(fromDate: string, toDate: string) {
     .eq('user_id', user.id)
     .gte('date', fromDate)
     .lte('date', toDate)
+    .limit(10000)
 
   if (error) throw error
 

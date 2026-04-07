@@ -21,6 +21,7 @@ export const GET = withAuth(async (req: NextRequest, _user) => {
     .from('product_marketplace_data')
     .select('platform_listing_id')
     .eq('marketplace', marketplace)
+    .limit(10000)
 
   if (error) {
     return ApiResponseHelper.internalError(`Failed to fetch imported ${marketplace} listings`)

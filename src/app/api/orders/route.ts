@@ -55,6 +55,7 @@ export const GET = withAuth(async (req, user) => {
       .eq('user_id', user.id)
       .eq('status', 'sold')
       .order('sold_at', { ascending: false })
+      .limit(10000)
 
     if (findsError) {
       if (process.env.NODE_ENV !== 'production') {

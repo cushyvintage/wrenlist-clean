@@ -10,9 +10,11 @@ interface FindWithMarketplaceJoin {
   sold_price_gbp: number | null
   sourced_at: string | null
   sold_at: string | null
+  photos: string[] | null
   product_marketplace_data: Array<{
     marketplace: string
     status: string
+    fields: Record<string, unknown> | null
   }>
 }
 
@@ -24,9 +26,16 @@ interface SoldItem {
   sold_price_gbp: number | null
   sourced_at: string | null
   sold_at: string | null
+  photo: string | null
   marketplace?: string
   margin_percent?: number
   days_listed?: number
+  shipmentStatus?: string | null
+  buyer?: string | null
+  grossAmount?: number | null
+  serviceFee?: number | null
+  netAmount?: number | null
+  trackingNumber?: string | null
 }
 
 /**
@@ -56,7 +65,7 @@ export const GET = withAuth(async (req, user) => {
         startDate.setDate(now.getDate() - 30)
     }
 
-    // Fetch sold finds with marketplace data
+    // Fetch sold finds with marketplace data including sale metadata
     const { data: finds, error: findsError } = await supabase
       .from('finds')
       .select(
@@ -68,9 +77,11 @@ export const GET = withAuth(async (req, user) => {
         sold_price_gbp,
         sourced_at,
         sold_at,
+        photos,
         product_marketplace_data (
           marketplace,
-          status
+          status,
+          fields
         )
         `
       )
@@ -78,6 +89,7 @@ export const GET = withAuth(async (req, user) => {
       .eq('status', 'sold')
       .gte('sold_at', startDate.toISOString())
       .order('sold_at', { ascending: false })
+      .limit(10000)
 
     if (findsError) {
       if (process.env.NODE_ENV !== 'production') {
@@ -101,10 +113,9 @@ export const GET = withAuth(async (req, user) => {
             )
           : 0
 
-      // Get marketplace(s) where item was sold
-      const marketplaces = find.product_marketplace_data
-        ?.filter((m) => m.status === 'sold')
-        .map((m) => m.marketplace)
+      // Get marketplace where item was sold + sale metadata
+      const soldPmd = find.product_marketplace_data?.find((m) => m.status === 'sold')
+      const sale = (soldPmd?.fields as Record<string, unknown> | null)?.sale as Record<string, unknown> | undefined
 
       return {
         id: find.id,
@@ -114,9 +125,16 @@ export const GET = withAuth(async (req, user) => {
         sold_price_gbp: find.sold_price_gbp,
         sourced_at: find.sourced_at,
         sold_at: find.sold_at,
-        marketplace: marketplaces?.[0] || 'unknown',
+        photo: find.photos?.[0] || null,
+        marketplace: soldPmd?.marketplace || 'unknown',
         margin_percent: marginPercent,
         days_listed: daysListed,
+        shipmentStatus: (sale?.shipmentStatus as string) || null,
+        buyer: (sale?.buyer as Record<string, unknown>)?.username as string || null,
+        grossAmount: (sale?.grossAmount as number) || null,
+        serviceFee: (sale?.serviceFee as number) || null,
+        netAmount: (sale?.netAmount as number) || null,
+        trackingNumber: (sale?.trackingNumber as string) || null,
       }
     })
 

@@ -31,6 +31,7 @@ export const GET = withAuth(async (_req, user) => {
       .from('finds')
       .select('*')
       .eq('user_id', userId)
+      .limit(10000)
 
     if (findsError) {
       console.error('Error fetching finds:', findsError)

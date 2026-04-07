@@ -16,6 +16,7 @@ export const GET = withAuth(async (_req, user) => {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .limit(10000)
 
     if (error) {
       if (process.env.NODE_ENV !== 'production') {
