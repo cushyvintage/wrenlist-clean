@@ -65,6 +65,7 @@ export class DepopClient {
         } else {
           reject({
             success: false,
+            needsLogin: true,
             message: "Please make sure you are signed in to your Depop account",
           });
         }
@@ -151,7 +152,14 @@ export class DepopClient {
   }
 
   public async postListing(payload: Record<string, unknown>) {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "needsLogin" in err) {
+        return err as { success: false; needsLogin: true; message: string };
+      }
+      throw err;
+    }
     await this.storeCategories(payload.countryCode as string);
 
     const response = await fetch(DEPOP_PRODUCTS_V2, {
@@ -235,7 +243,14 @@ export class DepopClient {
   }
 
   public async delistListing(id: string) {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "needsLogin" in err) {
+        return err as { success: false; needsLogin: true; message: string };
+      }
+      throw err;
+    }
 
     const response = await fetch(`${DEPOP_PRODUCTS_V1}${id}/`, {
       method: "DELETE",

@@ -525,6 +525,19 @@ type ExternalMessage = Record<string, unknown>;
               });
               console.log(`[QueuePoll] Published ${find.name} to ${mp}`);
               publishCount++;
+            } else if (result.needsLogin) {
+              // Auth failure — don't retry, report immediately
+              console.error(`[QueuePoll] ${mp} auth failure for ${find.name}: not logged in`);
+              await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                  status: "error",
+                  error_message: result.message || `Not logged in to ${mp}. Please log in and try again.`,
+                }),
+              });
             } else {
               // Publish failed — check if we should retry or mark as error
               const nextRetryCount = retryCount + 1;
@@ -629,6 +642,19 @@ type ExternalMessage = Record<string, unknown>;
               });
               console.log(`[QueuePoll] Delisted ${listingId} from ${mp}`);
               delistCount++;
+            } else if (result.needsLogin) {
+              // Auth failure — don't retry, report immediately
+              console.error(`[QueuePoll] ${mp} delist auth failure for ${listingId}: not logged in`);
+              await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                  status: "error",
+                  error_message: result.message || `Not logged in to ${mp}. Please log in and try again.`,
+                }),
+              });
             } else {
               const nextRetryCount = retryCount + 1;
               const errorMsg = result.message ?? "Unknown delist error";

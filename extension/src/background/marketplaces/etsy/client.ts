@@ -235,6 +235,10 @@ export class EtsyClient {
         };
       }
 
+      if (!product.price || product.price <= 0) {
+        return { success: false, message: "Price must be greater than \u00A30" };
+      }
+
       const mode = options?.publishMode ?? "draft";
 
       await remoteLog("info", "etsy.publish", `Starting Etsy ${mode} flow`, {

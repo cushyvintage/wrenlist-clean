@@ -26,6 +26,7 @@ import type { WhatnotListingInput } from "./mapper.js";
 interface ListingActionResult {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
 }
@@ -181,6 +182,12 @@ export class WhatnotClient {
   public async postListing(
     payload: WhatnotListingInput,
   ): Promise<ListingActionResult> {
+    try {
+      await this.startSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, needsLogin: true, message: msg || "Please make sure you are signed in to your Whatnot account" };
+    }
     const response = await this.graphql<{
       data: {
         createListing: {
@@ -266,6 +273,12 @@ export class WhatnotClient {
   }
 
   public async delistListing(id: string): Promise<ListingActionResult> {
+    try {
+      await this.startSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, needsLogin: true, message: msg || "Please make sure you are signed in to your Whatnot account" };
+    }
     const response = await this.graphql<{
       data: {
         sellerBulkListingAction: Array<{ error?: string }>;

@@ -26,6 +26,7 @@ import { FacebookMapper, type FacebookCarrierOption } from "./mapper.js";
 interface ListingActionResult {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
 }
@@ -102,7 +103,15 @@ export class FacebookClient {
   }
 
   public async postListing(product: Product): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("actorid") || msg.includes("dtsg")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Facebook account" };
+      }
+      throw err;
+    }
     await this.storeCategories();
 
     const payload = await this.mapper.map(product);
@@ -311,7 +320,15 @@ export class FacebookClient {
   }
 
   public async delistListing(id: string): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("actorid") || msg.includes("dtsg")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Facebook account" };
+      }
+      throw err;
+    }
 
     const input = {
       input: {

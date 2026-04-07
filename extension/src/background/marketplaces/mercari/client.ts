@@ -63,6 +63,7 @@ interface AvailableShippingClassesResponse {
 export type ListingActionResult = {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
 };
@@ -257,7 +258,15 @@ export class MercariClient {
   public async postListing(
     payload: MercariListingPayload,
   ): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("initialize") || msg.includes("session")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Mercari account" };
+      }
+      throw err;
+    }
 
     const response = await fetch(MERCARI_API, {
       method: "POST",
@@ -367,7 +376,15 @@ export class MercariClient {
   }
 
   public async delistListing(id: string): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("initialize") || msg.includes("session")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Mercari account" };
+      }
+      throw err;
+    }
 
     const response = await fetch(MERCARI_API, {
       method: "POST",

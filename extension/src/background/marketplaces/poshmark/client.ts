@@ -22,6 +22,7 @@ import {
 type ListingActionResult = {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
 };
@@ -142,7 +143,15 @@ export class PoshmarkClient {
   }
 
   public async postListing(product: Product): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("user state")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Poshmark account" };
+      }
+      throw err;
+    }
     const draftId = await this.createDraft();
     const payload = await this.mapper.map(product, draftId);
 
@@ -225,7 +234,15 @@ export class PoshmarkClient {
   }
 
   public async delistListing(id: string): Promise<ListingActionResult> {
-    await this.ensureSession();
+    try {
+      await this.ensureSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("user state")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Poshmark account" };
+      }
+      throw err;
+    }
     const response = await fetch(
       `${this.domain}/vm-rest/posts/${id}?app_version=${POSHMARK_APP_VERSION}&app_type=web&pm_version=${POSHMARK_PM_VERSION}`,
       {

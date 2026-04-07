@@ -31,6 +31,7 @@ import type {
 interface ListingActionResult {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
 }
@@ -353,7 +354,15 @@ export class ShopifyClient {
   public async postListing(
     payload: ShopifyCreatePayload,
   ): Promise<ListingActionResult> {
-    await this.startSession();
+    try {
+      await this.startSession();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Tokens not found") || msg.includes("Failed to fetch tokens")) {
+        return { success: false, needsLogin: true, message: "Please check you are logged in to your Shopify account in another tab." };
+      }
+      throw err;
+    }
 
     const response = await fetch(
       `${this.graphqlUrl}?operation=CreateProduct`,
@@ -373,6 +382,7 @@ export class ShopifyClient {
     if (text === "Unauthorized") {
       return {
         success: false,
+        needsLogin: true,
         message:
           "Please check you are logged in to your Shopify account in another tab.",
         internalErrors: text,
@@ -448,6 +458,7 @@ export class ShopifyClient {
     if (text === "Unauthorized") {
       return {
         success: false,
+        needsLogin: true,
         message:
           "Please check you are logged in to your Shopify account in another tab.",
         internalErrors: text,
@@ -503,6 +514,7 @@ export class ShopifyClient {
     if (response.status === 401) {
       return {
         success: false,
+        needsLogin: true,
         message:
           "Please check you are logged in to your Shopify account in another tab.",
         internalErrors: "Unauthorized",

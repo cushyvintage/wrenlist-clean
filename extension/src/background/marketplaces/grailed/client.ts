@@ -169,7 +169,7 @@ export class GrailedClient {
     const csrfToken = await this.getCSRFToken();
 
     if (!csrfToken) {
-      return { success: false, message: "CSRF cookie not present" };
+      return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Grailed account" };
     }
 
     const response = await fetch(GRAILED_LISTINGS_ENDPOINT, {
@@ -221,7 +221,7 @@ export class GrailedClient {
     const csrfToken = await this.getCSRFToken();
 
     if (!csrfToken) {
-      return { success: false, message: "CSRF cookie not present" };
+      return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Grailed account" };
     }
 
     const response = await fetch(`${GRAILED_LISTINGS_ENDPOINT}/${marketplaceId}`, {
@@ -271,7 +271,8 @@ export class GrailedClient {
     if (!csrfToken) {
       return {
         success: false,
-        message: "CSRF Cookie not found",
+        needsLogin: true,
+        message: "Please make sure you are signed in to your Grailed account",
         internalErrors: "CSRF Cookie not found",
       };
     }

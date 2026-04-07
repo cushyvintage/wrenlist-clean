@@ -151,7 +151,8 @@ async function publishViaFacebook(product: Product, tld: string) {
   const services = createFacebookServices(tld);
   await services.client.bootstrap();
   let result = await services.client.postListing(product);
-  if (!result.success) {
+  if (!result.success && !result.needsLogin && includesCsrfError(result)) {
+    // Only retry on CSRF/session errors — not on content or auth failures
     await services.client.bootstrap(true);
     result = await services.client.postListing(product);
   }
@@ -241,7 +242,8 @@ async function delistViaFacebook(id: string, tld: string) {
   const services = createFacebookServices(tld);
   await services.client.bootstrap();
   let result = await services.client.delistListing(id);
-  if (!result.success) {
+  if (!result.success && !result.needsLogin && includesCsrfError(result)) {
+    // Only retry on CSRF/session errors — not on content or auth failures
     await services.client.bootstrap(true);
     result = await services.client.delistListing(id);
   }

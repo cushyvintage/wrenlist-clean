@@ -34,6 +34,7 @@ interface VintedListingResponse {
 type ListingActionResult = {
   success: boolean;
   message?: string;
+  needsLogin?: boolean;
   type?: string;
   product?: { id: any; url: string };
   internalErrors?: string;
@@ -1107,7 +1108,15 @@ export class VintedClient {
   public async postListing(
     payload: Record<string, unknown>,
   ): Promise<ListingActionResult> {
-    await this.setTokens();
+    try {
+      await this.setTokens();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("CSRF") || msg.includes("token") || msg.includes("Anon id") || msg.includes("Failed to fetch")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Vinted account" };
+      }
+      throw err;
+    }
     this.storeCategories();
 
     const shippingAddress = payload.shippingAddress;
@@ -1381,7 +1390,15 @@ export class VintedClient {
   }
 
   public async delistListing(id: string): Promise<ListingActionResult> {
-    await this.setTokens();
+    try {
+      await this.setTokens();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("CSRF") || msg.includes("token") || msg.includes("Anon id") || msg.includes("Failed to fetch")) {
+        return { success: false, needsLogin: true, message: "Please make sure you are signed in to your Vinted account" };
+      }
+      throw err;
+    }
     const url = `${this.apiUrl}/items/${id}/delete`;
     const response = await fetch(url, {
       method: "POST",
