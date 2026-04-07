@@ -606,11 +606,10 @@ export class EtsyClient {
 
       await remoteLog("info", "etsy.delist", `Starting delist for listing ${marketplaceId}`);
 
-      // Open the listing editor for this listing — it shows an
-      // "Activate listing?" dialog with a Deactivate option, or
-      // has a "..." menu with Deactivate.
-      const editUrl = `${ETSY_EDIT_LISTING_URL}/edit/${marketplaceId}`;
-      const tab = await chrome.tabs.create({ url: editUrl, active: true });
+      // Navigate to the listing's public page — when logged in as the seller,
+      // Etsy shows "Seller listing tools" bar with a "Deactivate" link.
+      const listingUrl = `${ETSY_BASE_URL}/listing/${marketplaceId}`;
+      const tab = await chrome.tabs.create({ url: listingUrl, active: true });
       if (!tab.id) {
         clearInterval(keepAlive);
         return { success: false, message: "Failed to open Etsy listing page" };
@@ -618,11 +617,10 @@ export class EtsyClient {
       const tabId = tab.id;
 
       try {
-        // Wait for the page to load
-        await this.waitForPageReady(tabId, "button", 15000);
-        await wait(2000);
+        // Wait for page to load (seller tools bar appears with listing content)
+        await wait(5000);
 
-        // On the edit page, look for Deactivate button or "..." menu
+        // Click the "Deactivate" link in the seller listing tools bar
         const result = await chrome.scripting.executeScript({
           target: { tabId },
           func: clickDeactivateButton,
