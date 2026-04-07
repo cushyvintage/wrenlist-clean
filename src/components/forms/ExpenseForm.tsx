@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { ExpenseCategory } from '@/types'
-import { EXPENSE_LABELS } from '@/types'
+import { useExpenseCategories } from '@/hooks/useExpenseCategories'
 
 interface ExpenseFormProps {
   onSubmit?: (data: ExpenseFormData) => Promise<void>
@@ -15,16 +14,12 @@ interface ExpenseFormProps {
 
 export interface ExpenseFormData {
   date: string
-  category: ExpenseCategory
+  category: string
   description: string
   amount: number
   vat?: number | null
   receiptUrl?: string | null
 }
-
-const categories: ExpenseCategory[] = ['packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other']
-
-const getTodayDate = (): string => new Date().toISOString().split('T')[0]!
 
 export function ExpenseForm({
   onSubmit,
@@ -34,6 +29,7 @@ export function ExpenseForm({
   onSuccess,
 }: ExpenseFormProps) {
   const router = useRouter()
+  const { categories, isLoading: categoriesLoading } = useExpenseCategories()
   const defaultData: ExpenseFormData = {
     date: new Date().toISOString().split('T')[0]!,
     category: 'supplies',
@@ -141,12 +137,13 @@ export function ExpenseForm({
           <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">Category</label>
           <select
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-1 focus:ring-sage"
+            disabled={categoriesLoading}
           >
             {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {EXPENSE_LABELS[cat]}
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
               </option>
             ))}
           </select>

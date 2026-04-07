@@ -6,11 +6,13 @@ import { useState, useEffect } from 'react'
 import type { Find, Expense, Mileage, VehicleType } from '@/types'
 import { HMRC_RATES, VEHICLE_TYPE_LABELS } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { useExpenseCategories } from '@/hooks/useExpenseCategories'
 
 export default function TaxPage() {
   const [taxYear, setTaxYear] = useState('2025-26')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { categories: dbCategories, labelsMap } = useExpenseCategories()
 
   // Data from APIs
   const [sells, setSells] = useState<Find[]>([])
@@ -260,18 +262,14 @@ export default function TaxPage() {
 
         <Panel title="expense summary">
           <div className="p-4 space-y-3 text-sm">
-            {(['packaging', 'postage', 'platform_fees', 'vehicle', 'other'] as const).map((cat) => {
+            {dbCategories.map((cat) => {
               const catTotal = expenses
-                .filter((e) => e.category === cat)
+                .filter((e) => e.category === cat.id)
                 .reduce((sum, e) => sum + e.amount_gbp, 0)
               if (catTotal === 0) return null
-              const labels: Record<string, string> = {
-                packaging: 'Packaging', postage: 'Postage', platform_fees: 'Platform fees',
-                vehicle: 'Vehicle', supplies: 'Supplies', other: 'Other'
-              }
               return (
-                <div key={cat} className="flex justify-between">
-                  <span className="text-ink-lt">{labels[cat] ?? cat}</span>
+                <div key={cat.id} className="flex justify-between">
+                  <span className="text-ink-lt">{cat.label}</span>
                   <span className="font-mono font-medium text-ink">£{catTotal.toLocaleString()}</span>
                 </div>
               )

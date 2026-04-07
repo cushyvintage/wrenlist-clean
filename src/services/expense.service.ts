@@ -4,13 +4,13 @@
  */
 
 import { supabase, getAuthUser } from './supabase'
-import type { Expense, ExpenseCategory } from '@/types'
+import type { Expense } from '@/types'
 
 /**
  * Create a new expense record
  */
 export async function createExpense(data: {
-  category: ExpenseCategory
+  category: string
   amount_gbp: number
   vat_amount_gbp?: number | null
   description?: string | null
@@ -40,7 +40,7 @@ export async function createExpense(data: {
  * Get all expenses for current user
  */
 export async function getExpenses(filters?: {
-  category?: ExpenseCategory
+  category?: string
   from_date?: string
   to_date?: string
 }): Promise<Expense[]> {
@@ -148,14 +148,14 @@ export async function getExpenseSummary(fromDate: string, toDate: string) {
   const summary = {
     total_amount: 0,
     total_vat: 0,
-    by_category: {} as Record<ExpenseCategory, { count: number; total: number; vat: number }>,
+    by_category: {} as Record<string, { count: number; total: number; vat: number }>,
   }
 
   ;(data || []).forEach((expense) => {
     summary.total_amount += expense.amount_gbp
     if (expense.vat_amount_gbp) summary.total_vat += expense.vat_amount_gbp
 
-    const category = expense.category as ExpenseCategory
+    const category = expense.category as string
     if (!summary.by_category[category]) {
       summary.by_category[category] = { count: 0, total: 0, vat: 0 }
     }

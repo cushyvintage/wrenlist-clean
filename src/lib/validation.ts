@@ -52,7 +52,8 @@ export type UpdateFindInput = z.infer<typeof UpdateFindSchema>
 // EXPENSES
 // ============================================================================
 
-export const ExpenseCategoryEnum = z.enum(['packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other'])
+// Category is now DB-driven (expense_categories table) — validate as non-empty string
+export const ExpenseCategoryEnum = z.string().min(1, 'Category is required')
 
 export const CreateExpenseSchema = z.object({
   category: ExpenseCategoryEnum,

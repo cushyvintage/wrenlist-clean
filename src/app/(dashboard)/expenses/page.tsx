@@ -5,11 +5,11 @@ import { InsightCard } from '@/components/wren/InsightCard'
 import { ExpenseForm } from '@/components/forms/ExpenseForm'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Expense, ExpenseCategory } from '@/types'
-import { EXPENSE_LABELS } from '@/types'
+import type { Expense } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { useExpenseCategories } from '@/hooks/useExpenseCategories'
 
-const categoryColors: Record<ExpenseCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   packaging: 'bg-amber-lt text-amber-dk',
   postage: 'bg-blue-lt text-blue-dk',
   platform_fees: 'bg-red-lt text-red-dk',
@@ -23,14 +23,13 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<ExpenseCategory | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const { categories: dbCategories, labelsMap } = useExpenseCategories()
 
   useEffect(() => {
     document.title = 'Expenses | Wrenlist'
   }, [])
-
-  const categories: (ExpenseCategory | 'all')[] = ['all', 'packaging', 'postage', 'platform_fees', 'supplies', 'vehicle', 'other']
 
   // Fetch expenses
   useEffect(() => {
@@ -151,17 +150,26 @@ export default function ExpensesPage() {
 
       {/* Category filters */}
       <div className="flex gap-2 flex-wrap items-center">
-        {categories.map((cat) => (
+        <button
+          key="all"
+          onClick={() => setActiveCategory(null)}
+          className={`px-4 py-2 rounded text-sm font-medium transition ${
+            activeCategory === null ? 'bg-sage text-cream' : 'bg-cream-md text-ink-lt hover:bg-cream-dk'
+          }`}
+        >
+          all
+        </button>
+        {dbCategories.map((cat) => (
           <button
-            key={cat}
-            onClick={() => setActiveCategory(cat === 'all' ? null : (cat as ExpenseCategory))}
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
             className={`px-4 py-2 rounded text-sm font-medium transition ${
-              (activeCategory === null && cat === 'all') || activeCategory === cat
+              activeCategory === cat.id
                 ? 'bg-sage text-cream'
                 : 'bg-cream-md text-ink-lt hover:bg-cream-dk'
             }`}
           >
-            {cat === 'all' ? 'all' : EXPENSE_LABELS[cat as ExpenseCategory]}
+            {cat.label}
           </button>
         ))}
         <span className="ml-auto text-xs text-ink-lt">Apr 2025 – Mar 2026</span>
@@ -210,8 +218,8 @@ export default function ExpensesPage() {
                       <td className="py-3 px-4 text-xs text-ink-lt">{formatDate(expense.date)}</td>
                       <td className="py-3 px-4 text-ink">{expense.description || '—'}</td>
                       <td className="py-3 px-4">
-                        <span className={`text-xs font-medium px-2 py-1 rounded ${categoryColors[expense.category]}`}>
-                          {EXPENSE_LABELS[expense.category]}
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${CATEGORY_COLORS[expense.category] ?? 'bg-cream-md text-ink-lt'}`}>
+                          {labelsMap[expense.category] ?? expense.category}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-medium text-ink">

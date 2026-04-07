@@ -93,16 +93,18 @@ export const POST = withAuth(async (req, user) => {
     }
 
     // Create expense
-    const expense = {
+    const expense: Record<string, unknown> = {
       user_id: user.id,
       category: validation.data.category,
       amount_gbp: validation.data.amount_gbp,
-      vat_amount_gbp: validation.data.vat_amount_gbp || null,
+      vat_amount_gbp: validation.data.vat_amount_gbp ?? null,
       description: validation.data.description || null,
       date: validation.data.date || new Date().toISOString().split('T')[0],
-      find_id: validation.data.find_id || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    }
+
+    // Only include find_id if provided (column may not exist pre-migration)
+    if (validation.data.find_id) {
+      expense.find_id = validation.data.find_id
     }
 
     const { data, error } = await supabase
