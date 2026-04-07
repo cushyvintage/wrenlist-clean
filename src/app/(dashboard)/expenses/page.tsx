@@ -172,7 +172,7 @@ export default function ExpensesPage() {
             {cat.label}
           </button>
         ))}
-        <span className="ml-auto text-xs text-ink-lt">Apr 2025 – Mar 2026</span>
+        <span className="ml-auto text-xs text-ink-lt">Tax year {taxYearStart}–{taxYearStart + 1}</span>
       </div>
 
       {/* Error message */}

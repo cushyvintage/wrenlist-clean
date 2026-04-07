@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { unwrapApiResponse } from '@/lib/api-utils'
 
 export interface ExpenseCategoryOption {
@@ -47,11 +47,13 @@ export function useExpenseCategories() {
     fetchCategories()
   }, [])
 
-  // Build a labels map for easy lookups
-  const labelsMap: Record<string, string> = {}
-  for (const cat of categories) {
-    labelsMap[cat.id] = cat.label
-  }
+  const labelsMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const cat of categories) {
+      map[cat.id] = cat.label
+    }
+    return map
+  }, [categories])
 
   return { categories, labelsMap, isLoading }
 }

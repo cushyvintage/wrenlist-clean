@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useExpenseCategories } from '@/hooks/useExpenseCategories'
 
 interface ExpenseFormProps {
@@ -28,7 +27,6 @@ export function ExpenseForm({
   submitLabel = 'Add expense',
   onSuccess,
 }: ExpenseFormProps) {
-  const router = useRouter()
   const { categories, isLoading: categoriesLoading } = useExpenseCategories()
   const defaultData: ExpenseFormData = {
     date: new Date().toISOString().split('T')[0]!,
