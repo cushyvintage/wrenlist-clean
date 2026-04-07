@@ -12,8 +12,8 @@ export default function AICaveatBanner() {
     <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
       <span className="shrink-0 mt-0.5">⚠️</span>
       <p className="flex-1">
-        Prices are estimates based on eBay UK sold data and AI analysis. Actual selling prices may vary.
-        Always verify with current marketplace listings before pricing.
+        Prices are estimates based on eBay UK listed prices and AI analysis — not confirmed sales.
+        Actual selling prices may vary. Always verify before pricing.
       </p>
       <button
         onClick={() => setDismissed(true)}
