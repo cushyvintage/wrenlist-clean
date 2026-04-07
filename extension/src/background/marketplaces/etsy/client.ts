@@ -589,9 +589,14 @@ export class EtsyClient {
   public async delistProduct(
     marketplaceId: string,
   ): Promise<ListingActionResult> {
+    // MV3 keepalive
+    const keepAlive = setInterval(() => {
+      void chrome.storage.local.set({ _keepAlive: Date.now() });
+    }, 5000);
     try {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
+        clearInterval(keepAlive);
         return {
           success: false,
           message: "Not logged into Etsy. Please log in first.",
@@ -599,92 +604,88 @@ export class EtsyClient {
         };
       }
 
-      const shopId = await this.getShopId();
+      await remoteLog("info", "etsy.delist", `Starting delist for listing ${marketplaceId}`);
 
-      // Use Etsy's internal API to deactivate the listing
-      const resp = await fetch(
-        `${this.baseUrl}/api/v3/ajax/shop/${shopId}//listings/${marketplaceId}/deactivate`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        },
-      );
-
-      if (resp.ok) {
-        return {
-          success: true,
-          message: "Listing deactivated on Etsy.",
-        };
+      // Open the listing editor for this listing — it shows an
+      // "Activate listing?" dialog with a Deactivate option, or
+      // has a "..." menu with Deactivate.
+      const editUrl = `${ETSY_EDIT_LISTING_URL}/edit/${marketplaceId}`;
+      const tab = await chrome.tabs.create({ url: editUrl, active: true });
+      if (!tab.id) {
+        clearInterval(keepAlive);
+        return { success: false, message: "Failed to open Etsy listing page" };
       }
+      const tabId = tab.id;
 
-      // Fallback: try the state change endpoint
-      const fallbackResp = await fetch(
-        `${this.baseUrl}/api/v3/ajax/shop/${shopId}//listings/${marketplaceId}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-          },
-          body: JSON.stringify({ state: "inactive" }),
-        },
-      );
-
-      if (fallbackResp.ok) {
-        return {
-          success: true,
-          message: "Listing deactivated on Etsy.",
-        };
-      }
-
-      // Fallback 3: browser automation — open the listing edit page and deactivate
       try {
-        const editUrl = `${ETSY_EDIT_LISTING_URL}/${marketplaceId}/edit`;
-        const tab = await chrome.tabs.create({ url: editUrl, active: true });
-        if (tab.id) {
-          await this.waitForPageReady(tab.id, "#listing-title-input", 10000);
-          // Look for a Deactivate button on the edit page
-          const deactivateResult = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-              const buttons = Array.from(document.querySelectorAll("button, a"));
-              const deactivateBtn = buttons.find(
-                (b) => b.textContent?.trim()?.toLowerCase()?.includes("deactivate"),
-              ) as HTMLElement | undefined;
-              if (deactivateBtn) {
-                deactivateBtn.click();
-                return { success: true };
-              }
-              return { success: false };
-            },
-          });
-          await wait(2000);
-          await chrome.tabs.remove(tab.id).catch(() => {});
-          if (deactivateResult?.[0]?.result?.success) {
-            return { success: true, message: "Listing deactivated on Etsy." };
-          }
-        }
-      } catch {
-        // Browser automation fallback failed
-      }
+        // Wait for the page to load
+        await this.waitForPageReady(tabId, "button", 15000);
+        await wait(2000);
 
-      return {
-        success: false,
-        message: `Etsy deactivation failed. Please deactivate from Etsy dashboard.`,
-      };
+        // On the edit page, look for Deactivate button or "..." menu
+        const result = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickDeactivateButton,
+        });
+        const execResult = result?.[0]?.result as {
+          success: boolean;
+          message?: string;
+        };
+
+        await remoteLog("info", "etsy.delist", `Deactivate click result`, {
+          success: execResult?.success,
+          message: execResult?.message,
+        });
+
+        if (!execResult?.success) {
+          await chrome.tabs.remove(tabId).catch(() => {});
+          clearInterval(keepAlive);
+          return {
+            success: false,
+            message: execResult?.message || "Deactivate button not found",
+          };
+        }
+
+        // Wait for confirmation dialog and confirm
+        await wait(2000);
+        const confirmResult = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: clickDeactivateConfirmation,
+        });
+        const confirmExec = confirmResult?.[0]?.result as {
+          success: boolean;
+          message?: string;
+        };
+
+        await remoteLog("info", "etsy.delist", `Confirmation result`, {
+          success: confirmExec?.success,
+          message: confirmExec?.message,
+        });
+
+        // Wait for completion and close tab
+        await wait(3000);
+        await chrome.tabs.remove(tabId).catch(() => {});
+        clearInterval(keepAlive);
+
+        if (confirmExec?.success) {
+          await remoteLog("info", "etsy.delist", `Listing ${marketplaceId} deactivated`);
+          return { success: true, message: "Listing deactivated on Etsy." };
+        }
+
+        return {
+          success: false,
+          message: confirmExec?.message || "Deactivation confirmation failed",
+        };
+      } catch (error) {
+        await chrome.tabs.remove(tabId).catch(() => {});
+        throw error;
+      }
     } catch (error) {
+      clearInterval(keepAlive);
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
       console.error("[Etsy] Delist error:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
-      };
+      await remoteLog("error", "etsy.delist", `Delist failed: ${errMsg}`);
+      return { success: false, message: errMsg };
     }
   }
 
@@ -1367,6 +1368,142 @@ function clickPublishConfirmation(): { success: boolean; message?: string } {
     }
 
     return { success: false, message: "No confirmation dialog or extra Publish button found" };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Click Deactivate on the Etsy listing edit page.
+ * The edit page for an active listing shows a "..." menu or a direct
+ * Deactivate button. Also handles the "Activate listing?" dialog that
+ * appears when opening an inactive listing for edit.
+ */
+function clickDeactivateButton(): { success: boolean; message?: string } {
+  try {
+    const buttons = Array.from(document.querySelectorAll("button"));
+
+    // Look for a visible Deactivate button
+    const deactivateBtn = buttons.find(
+      (b) =>
+        b.textContent?.trim() === "Deactivate" &&
+        (b as HTMLElement).offsetHeight > 0,
+    );
+    if (deactivateBtn) {
+      deactivateBtn.click();
+      return { success: true, message: "Clicked Deactivate" };
+    }
+
+    // Try the "..." menu (three-dot/ellipsis button)
+    const moreBtn = buttons.find(
+      (b) =>
+        (b.textContent?.trim() === "…" ||
+          b.textContent?.trim() === "⋯" ||
+          b.getAttribute("aria-label")?.toLowerCase()?.includes("more") ||
+          b.getAttribute("data-testid") === "more-actions") &&
+        (b as HTMLElement).offsetHeight > 0,
+    );
+    if (moreBtn) {
+      moreBtn.click();
+      // Wait a tick for dropdown to open, then find Deactivate
+      const menuItems = Array.from(
+        document.querySelectorAll(
+          'button, [role="menuitem"], [role="option"]',
+        ),
+      );
+      const deactivateItem = menuItems.find(
+        (b) =>
+          b.textContent?.trim() === "Deactivate" &&
+          (b as HTMLElement).offsetHeight > 0,
+      );
+      if (deactivateItem) {
+        (deactivateItem as HTMLElement).click();
+        return { success: true, message: "Clicked Deactivate from menu" };
+      }
+    }
+
+    // Look for links too
+    const links = Array.from(document.querySelectorAll("a"));
+    const deactivateLink = links.find(
+      (a) =>
+        a.textContent?.trim()?.toLowerCase()?.includes("deactivate") &&
+        a.offsetHeight > 0,
+    );
+    if (deactivateLink) {
+      deactivateLink.click();
+      return { success: true, message: "Clicked Deactivate link" };
+    }
+
+    return {
+      success: false,
+      message: `Deactivate not found. Buttons: ${buttons
+        .filter((b) => (b as HTMLElement).offsetHeight > 0)
+        .map((b) => b.textContent?.trim())
+        .filter((t) => t && t.length < 30)
+        .slice(0, 10)
+        .join(", ")}`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Confirm deactivation in the Etsy dialog.
+ * Looks for "Deactivate now", "Deactivate", or "Confirm" inside a dialog.
+ */
+function clickDeactivateConfirmation(): {
+  success: boolean;
+  message?: string;
+} {
+  try {
+    // Find visible dialog
+    const dialogSelectors = [
+      '[role="alertdialog"]',
+      '[role="dialog"]',
+      '[class*="overlay"]',
+      '[class*="modal"]',
+    ];
+
+    for (const sel of dialogSelectors) {
+      const candidates = document.querySelectorAll(sel);
+      for (const c of Array.from(candidates)) {
+        if (
+          (c as HTMLElement).offsetHeight > 0 &&
+          (c.textContent?.toLowerCase()?.includes("deactivat") ||
+            c.textContent?.toLowerCase()?.includes("inactive"))
+        ) {
+          const dialogButtons = Array.from(c.querySelectorAll("button"));
+          // Try "Deactivate now" first, then "Deactivate"
+          const confirmBtn =
+            dialogButtons.find(
+              (b) => b.textContent?.trim() === "Deactivate now",
+            ) ||
+            dialogButtons.find(
+              (b) => b.textContent?.trim() === "Deactivate",
+            );
+          if (confirmBtn) {
+            confirmBtn.click();
+            return {
+              success: true,
+              message: `Confirmed: ${confirmBtn.textContent?.trim()}`,
+            };
+          }
+        }
+      }
+    }
+
+    // No dialog — maybe deactivation happened directly
+    return {
+      success: false,
+      message: "No deactivation confirmation dialog found",
+    };
   } catch (error) {
     return {
       success: false,
