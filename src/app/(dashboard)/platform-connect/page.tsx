@@ -149,6 +149,15 @@ export default function PlatformConnectPage() {
       })
 
       setEtsyConnected(response.loggedIn)
+
+      // Persist to DB so /api/platforms/status picks it up
+      if (response.loggedIn) {
+        await fetch('/api/etsy/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ etsyUserId: 'extension', etsyUsername: 'etsy' }),
+        }).catch(() => {})
+      }
     } catch {
       setEtsyConnected(false)
     }
@@ -183,6 +192,15 @@ export default function PlatformConnectPage() {
         })
       })
       setDepopConnected(response.loggedIn)
+
+      // Persist to DB so /api/platforms/status picks it up
+      if (response.loggedIn) {
+        await fetch('/api/depop/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ depopUserId: 'extension', depopUsername: 'depop' }),
+        }).catch(() => {})
+      }
     } catch {
       setDepopConnected(false)
     }
@@ -927,7 +945,9 @@ export default function PlatformConnectPage() {
         )}
       </Panel>
 
-      {/* Etsy */}
+      {/* Etsy — browser automation (Chrome extension) until API key is approved.
+         API key applied Apr 2026, pending Etsy review. Credentials in .env.local.
+         Once approved, replace this with OAuth connect flow like eBay. */}
       <Panel>
         <div className="flex items-center gap-4 mb-4">
           <div className="flex-shrink-0">
