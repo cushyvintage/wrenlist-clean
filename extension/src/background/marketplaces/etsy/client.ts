@@ -314,21 +314,32 @@ export class EtsyClient {
           message: publishExec?.message,
         });
 
-        // If publishing directly, handle the $0.20 fee confirmation dialog
+        // If publishing directly, handle the $0.20 fee confirmation dialog.
+        // Poll for the dialog to appear (up to 8 seconds).
         if (mode === "publish") {
-          await wait(2000);
-          const confirmResult = await chrome.scripting.executeScript({
-            target: { tabId },
-            func: clickPublishConfirmation,
-          });
-          const confirmExec = confirmResult?.[0]?.result as {
-            success: boolean;
-            message?: string;
-          };
-          await remoteLog("info", "etsy.publish", `Confirmation result`, {
-            success: confirmExec?.success,
-            message: confirmExec?.message,
-          });
+          let confirmed = false;
+          for (let attempt = 0; attempt < 4; attempt++) {
+            await wait(2000);
+            const confirmResult = await chrome.scripting.executeScript({
+              target: { tabId },
+              func: clickPublishConfirmation,
+            });
+            const confirmExec = confirmResult?.[0]?.result as {
+              success: boolean;
+              message?: string;
+            };
+            await remoteLog("info", "etsy.publish", `Confirmation attempt ${attempt + 1}`, {
+              success: confirmExec?.success,
+              message: confirmExec?.message,
+            });
+            if (confirmExec?.success && !confirmExec.message?.includes("No confirmation")) {
+              confirmed = true;
+              break;
+            }
+          }
+          if (!confirmed) {
+            await remoteLog("warn", "etsy.publish", "Fee confirmation dialog never appeared");
+          }
         }
 
         // Step 6: Wait for save to complete.
@@ -1283,25 +1294,64 @@ function clickPublishButton(
  */
 function clickPublishConfirmation(): { success: boolean; message?: string } {
   try {
-    // The confirmation dialog has a "Publish" button inside a modal
-    const buttons = Array.from(document.querySelectorAll("button"));
+    // Etsy shows a fee confirmation dialog: "You are about to publish a new listing"
+    // with a "Publish" button inside it. The dialog uses role="alertdialog" or role="dialog".
+    const dialogSelectors = [
+      '[role="alertdialog"]',
+      '[role="dialog"]',
+      '[class*="overlay"]',
+      '[class*="modal"]',
+      '[class*="wt-overlay"]',
+    ];
 
-    // Look for a Publish button inside a dialog/overlay (not the main footer one)
-    const confirmBtn = buttons.find((b) => {
-      const text = b.textContent?.trim();
-      if (text !== "Publish") return false;
-      // The confirmation button is inside a modal/overlay, not the sticky footer
-      const parent = b.closest('[class*="overlay"], [class*="modal"], [class*="dialog"], [role="dialog"]');
-      return !!parent;
-    });
-
-    if (confirmBtn) {
-      confirmBtn.click();
-      return { success: true, message: "Confirmed publish" };
+    // First, find any visible dialog
+    let dialog: Element | null = null;
+    for (const sel of dialogSelectors) {
+      const candidates = document.querySelectorAll(sel);
+      for (const c of Array.from(candidates)) {
+        if ((c as HTMLElement).offsetHeight > 0 &&
+            c.textContent?.includes("publish")) {
+          dialog = c;
+          break;
+        }
+      }
+      if (dialog) break;
     }
 
-    // Fallback: if no modal found, the first Publish click might have worked directly
-    return { success: true, message: "No confirmation dialog found (may have published directly)" };
+    if (dialog) {
+      // Find the Publish button INSIDE the dialog
+      const dialogButtons = Array.from(dialog.querySelectorAll("button"));
+      const publishBtn = dialogButtons.find(
+        (b) => b.textContent?.trim() === "Publish",
+      );
+      if (publishBtn) {
+        publishBtn.click();
+        return { success: true, message: "Confirmed publish in dialog" };
+      }
+      // Fallback: any button that looks like confirm
+      const confirmBtn = dialogButtons.find(
+        (b) => b.textContent?.trim() === "Activate & Renew" ||
+               b.textContent?.trim() === "Activate",
+      );
+      if (confirmBtn) {
+        confirmBtn.click();
+        return { success: true, message: `Clicked ${confirmBtn.textContent?.trim()} in dialog` };
+      }
+      return { success: false, message: `Dialog found but no Publish button inside. Buttons: ${dialogButtons.map(b => b.textContent?.trim()).join(', ')}` };
+    }
+
+    // No dialog found — try finding Publish button NOT in the sticky footer
+    const allButtons = Array.from(document.querySelectorAll("button"));
+    const publishButtons = allButtons.filter(
+      (b) => b.textContent?.trim() === "Publish" && (b as HTMLElement).offsetHeight > 0,
+    );
+    if (publishButtons.length > 1) {
+      // Multiple Publish buttons — click the last one (likely the dialog one)
+      publishButtons[publishButtons.length - 1].click();
+      return { success: true, message: `Clicked Publish button ${publishButtons.length} of ${publishButtons.length}` };
+    }
+
+    return { success: false, message: "No confirmation dialog or extra Publish button found" };
   } catch (error) {
     return {
       success: false,
