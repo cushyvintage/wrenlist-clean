@@ -27,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { id: 'import', label: 'Import', icon: NavIcons.import, path: '/import', section: 'WORKSPACE', pageTitle: 'Import' },
     { id: 'scanner', label: 'Scanner', icon: NavIcons.scanner, path: '/scanner', section: 'WORKSPACE', pageTitle: 'Barcode & ISBN Scanner' },
     { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+    { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
     // INSIGHTS
     { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
     { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },

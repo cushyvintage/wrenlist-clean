@@ -4,6 +4,8 @@ import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { createPublishJob } from '@/lib/publish-jobs'
+import { createClient } from '@supabase/supabase-js'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension.
@@ -141,6 +143,25 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         } else {
           results[marketplace] = { ok: true, listingUrl: undefined }
           logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'queued', source: 'api' })
+
+          // Dual-write: also create a publish job for the new job queue
+          const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          )
+          await createPublishJob(supabaseAdmin, {
+            user_id: user.id,
+            find_id: findId,
+            platform: marketplace,
+            action: 'publish',
+            scheduled_for: (body as Record<string, unknown>).scheduled_for as string | undefined,
+            stale_policy: ((body as Record<string, unknown>).stale_policy as 'run_if_late' | 'skip_if_late') || undefined,
+            payload: {
+              find: find,
+              listing_price: perPlatformPrice,
+              fields: queueFields,
+            },
+          })
         }
       }
     } catch (err) {

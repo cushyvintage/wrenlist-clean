@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createPublishJob } from '@/lib/publish-jobs'
 import crypto from 'crypto'
 
 /**
@@ -253,7 +254,15 @@ async function handleItemSold(ebayListingId: string) {
       return
     }
 
-    // 3. Mark all OTHER marketplaces as "needs_delist" for extension to handle
+    // 3. Fetch other listed marketplaces before marking for delist (for job creation)
+    const { data: otherListings } = await supabase
+      .from('product_marketplace_data')
+      .select('marketplace, platform_listing_id')
+      .eq('find_id', findId)
+      .neq('marketplace', 'ebay')
+      .in('status', ['listed', 'needs_publish'])
+
+    // Mark all OTHER marketplaces as "needs_delist" for extension to handle
     const { error: updateOthersError } = await supabase
       .from('product_marketplace_data')
       .update({
@@ -265,6 +274,19 @@ async function handleItemSold(ebayListingId: string) {
 
     if (updateOthersError) {
       console.error('[eBay Webhook] Failed to mark other marketplaces for delist:', updateOthersError)
+    }
+
+    // Dual-write: create delist jobs for other marketplaces
+    if (otherListings && otherListings.length > 0) {
+      for (const listing of otherListings) {
+        await createPublishJob(supabase, {
+          user_id: find.user_id,
+          find_id: findId,
+          platform: listing.marketplace,
+          action: 'delist',
+          payload: { platform_listing_id: listing.platform_listing_id },
+        })
+      }
     }
 
     // 4. Log to audit table

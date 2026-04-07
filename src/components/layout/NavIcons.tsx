@@ -100,6 +100,11 @@ export const NavIcons: Record<string, React.ReactNode> = {
       <path d="M3 9h3" stroke="currentColor" {...s} />
     </svg>
   ),
+  jobs: (
+    <svg viewBox="0 0 14 14" fill="none">
+      <path d="M2 3h3v8H2zM6 5h3v6H6zM10 1h3v11h-3z" stroke="currentColor" {...s} />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 14 14" fill="none">
       <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth={1.1} />

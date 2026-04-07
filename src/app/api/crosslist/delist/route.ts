@@ -4,6 +4,8 @@ import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { createPublishJob } from '@/lib/publish-jobs'
+import { createClient } from '@supabase/supabase-js'
 import type { Platform } from '@/types'
 
 const SUPPORTED_MARKETPLACES: Platform[] = [
@@ -140,6 +142,19 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     eventType: 'queued',
     source: 'api',
     details: { action: 'delist' },
+  })
+
+  // Dual-write: also create a delist job for the new job queue
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  await createPublishJob(supabaseAdmin, {
+    user_id: user.id,
+    find_id: findId,
+    platform: marketplace,
+    action: 'delist',
+    payload: { platform_listing_id: pmd.platform_listing_id },
   })
 
   return ApiResponseHelper.success({

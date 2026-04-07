@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
+import { createPublishJob } from '@/lib/publish-jobs'
 
 /**
  * GET /api/ebay/sync-orders
@@ -135,6 +136,14 @@ export async function POST(request: NextRequest) {
           .eq('find_id', findId)
           .eq('marketplace', 'ebay')
 
+        // Fetch other listed marketplaces (for delist job creation)
+        const { data: otherListings } = await supabase
+          .from('product_marketplace_data')
+          .select('marketplace, platform_listing_id')
+          .eq('find_id', findId)
+          .neq('marketplace', 'ebay')
+          .in('status', ['listed', 'needs_publish'])
+
         // Mark other marketplaces for delist
         await supabase
           .from('product_marketplace_data')
@@ -144,6 +153,19 @@ export async function POST(request: NextRequest) {
           })
           .eq('find_id', findId)
           .neq('marketplace', 'ebay')
+
+        // Dual-write: create delist jobs
+        if (otherListings && otherListings.length > 0) {
+          for (const listing of otherListings) {
+            await createPublishJob(supabase, {
+              user_id: user.id,
+              find_id: findId,
+              platform: listing.marketplace,
+              action: 'delist',
+              payload: { platform_listing_id: listing.platform_listing_id },
+            })
+          }
+        }
 
         // Log to sync audit
         await supabase

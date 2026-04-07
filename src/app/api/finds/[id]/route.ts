@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateFindSchema, validateBody } from '@/lib/validation'
+import { createPublishJob } from '@/lib/publish-jobs'
 import type { Find } from '@/types'
 
 /**
@@ -178,7 +180,7 @@ export async function PATCH(
     // Auto-delist: if status changed to 'sold', mark all active listings for delist
     if (isStatusChanging && newStatus === 'sold' && existing.status !== 'sold') {
       try {
-        await markMarketplacesForDelist(supabase, id)
+        await markMarketplacesForDelist(supabase, id, user.id)
       } catch (delistError) {
         // Log but don't fail the request - find was updated successfully
         console.error('Failed to auto-delist marketplaces:', delistError)
@@ -198,10 +200,10 @@ export async function PATCH(
  * Helper: Mark all active marketplace listings as 'needs_delist'
  * This triggers the extension to delist from each marketplace
  */
-async function markMarketplacesForDelist(supabase: any, findId: string) {
+async function markMarketplacesForDelist(supabase: any, findId: string, userId?: string) {
   const { data: marketplaceData, error: fetchError } = await supabase
     .from('product_marketplace_data')
-    .select('marketplace')
+    .select('marketplace, platform_listing_id')
     .eq('find_id', findId)
     .eq('status', 'listed')
 
@@ -228,6 +230,23 @@ async function markMarketplacesForDelist(supabase: any, findId: string) {
   if (updateError) {
     console.error('Failed to mark marketplaces for delist:', updateError)
     throw updateError
+  }
+
+  // Dual-write: create delist jobs for each marketplace
+  if (userId) {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    for (const item of marketplaceData) {
+      await createPublishJob(supabaseAdmin, {
+        user_id: userId,
+        find_id: findId,
+        platform: item.marketplace,
+        action: 'delist',
+        payload: { platform_listing_id: item.platform_listing_id },
+      })
+    }
   }
 
   console.log(`[Auto-Delist] Marked ${marketplaceData.length} marketplace(s) for delist for find ${findId}`)

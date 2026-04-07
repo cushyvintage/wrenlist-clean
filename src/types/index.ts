@@ -31,6 +31,35 @@ export type SupplierType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'fl
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify' | 'depop' | 'poshmark' | 'mercari' | 'facebook' | 'whatnot' | 'grailed'
 export type MarketplaceDataStatus = 'not_listed' | 'needs_publish' | 'listed' | 'sold' | 'error' | 'delisted' | 'needs_delist'
 
+// ============================================================================
+// JOB QUEUE
+// ============================================================================
+
+export type JobAction = 'publish' | 'delist' | 'update'
+export type JobStatus = 'pending' | 'claimed' | 'running' | 'completed' | 'failed' | 'cancelled'
+export type StalePolicy = 'run_if_late' | 'skip_if_late'
+
+export interface PublishJob {
+  id: string
+  user_id: string
+  find_id: string
+  platform: Platform
+  action: JobAction
+  scheduled_for: string | null
+  stale_policy: StalePolicy
+  status: JobStatus
+  claimed_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  error_message: string | null
+  attempts: number
+  max_attempts: number
+  payload: Record<string, unknown>
+  result: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
 export interface Profile {
   id: string
   full_name: string | null
@@ -181,12 +210,13 @@ export type Listing = ProductMarketplaceData
 // EXPENSES & MILEAGE (Phase 4 - Operations & Tax)
 // ============================================================================
 
-export type ExpenseCategory = 'packaging' | 'postage' | 'platform_fees' | 'supplies' | 'vehicle' | 'other'
+/** @deprecated Use useExpenseCategories() hook for DB-driven categories */
+export type ExpenseCategory = string
 
 export interface Expense {
   id: string
   user_id: string
-  category: ExpenseCategory
+  category: string
   amount_gbp: number
   vat_amount_gbp: number | null
   description: string | null
@@ -251,7 +281,8 @@ export const VEHICLE_TYPE_ICONS: Record<VehicleType, string> = {
   bicycle: '🚲',
 }
 
-export const EXPENSE_LABELS: Record<ExpenseCategory, string> = {
+/** @deprecated Use useExpenseCategories() hook for DB-driven labels */
+export const EXPENSE_LABELS: Record<string, string> = {
   packaging: 'Packaging',
   postage: 'Postage',
   platform_fees: 'Platform fees',
