@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { searchSoldItems, EbayListingStats } from '@/lib/ebay-finding'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 interface SampleListing {
   title: string
@@ -196,6 +197,26 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
     }
 
     const result: PriceResearchResponse = { vinted, ebay, recommendation }
+
+    // Fire-and-forget: save to history for QA/analytics
+    createSupabaseServerClient().then((supabase) => {
+      supabase
+        .from('price_research_history')
+        .insert([{
+          user_id: user.id,
+          query,
+          title: query,
+          suggested_price: recommendation.suggested_price,
+          best_platform: recommendation.best_platform,
+          ebay_avg: ebay.avg_price,
+          vinted_avg: vinted.avg_price,
+          source: 'text',
+          raw_response: result as unknown as Record<string, unknown>,
+        }])
+        .then(({ error }) => {
+          if (error) console.error('Failed to save price research history:', error)
+        })
+    })
 
     return NextResponse.json(result)
   } catch (error) {

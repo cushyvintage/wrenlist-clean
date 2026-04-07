@@ -91,7 +91,7 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 - Always run `npx tsc --noEmit` before committing
 - Use `src/types/index.ts` for shared types — do not define types inline in pages
 
-## Database Schema (source of truth — updated 2026-04-04)
+## Database Schema (source of truth — updated 2026-04-08)
 
 **NEVER create a new table without updating this list and DATABASE_SCHEMA_REFERENCE.md.**
 
@@ -112,6 +112,7 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `ebay_sync_log` | eBay sync audit trail | ON |
 | `ebay_webhooks_audit` | eBay webhook audit trail | ON |
 | `shopify_connections` | Shopify store connections | ON |
+| `price_research_history` | Price research lookups with results for QA | ON |
 | `daily_metrics` | Daily KPIs (not yet populated) | ON |
 | `monthly_metrics` | Monthly performance (not yet populated) | ON |
 

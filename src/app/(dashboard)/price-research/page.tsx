@@ -1,117 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
-import { Panel } from '@/components/wren/Panel'
-
-interface SampleListing {
-  title: string
-  condition: string
-  price: number
-  days_ago: number
-  url?: string
-}
-
-interface PlatformData {
-  avg_price: number
-  min_price: number
-  max_price: number
-  avg_days_to_sell: number
-  source: 'sold' | 'live' | 'ai_estimate'
-  sample_listings: SampleListing[]
-}
-
-interface PriceResearchData {
-  vinted: PlatformData
-  ebay: PlatformData
-  recommendation: {
-    suggested_price: number
-    best_platform: string
-    reasoning: string
-  }
-}
-
-function SourceBadge({ source }: { source: 'sold' | 'live' | 'ai_estimate' }) {
-  if (source === 'sold') {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">
-        sold prices
-      </span>
-    )
-  }
-  if (source === 'live') {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
-        asking prices
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">
-      AI estimate
-    </span>
-  )
-}
-
-function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
-  return (
-    <Panel>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-sm text-ink">{name}</h3>
-        <SourceBadge source={data.source} />
-      </div>
-      <div className="mb-4">
-        <div className="text-3xl font-mono font-semibold text-ink mb-1">
-          £{data.avg_price}
-        </div>
-        <div className="text-xs text-ink-lt mb-3">
-          £{data.min_price}–£{data.max_price}
-        </div>
-        <div className="text-sm text-ink">
-          <span className="font-medium">{data.avg_days_to_sell.toFixed(1)}</span>{' '}
-          <span className="text-ink-lt">
-            {data.source === 'sold' ? 'avg days to sell' : data.source === 'live' ? 'avg days listed' : 'avg days to sell'}
-          </span>
-        </div>
-      </div>
-      {data.sample_listings.length > 0 && (
-        <div className="border-t border-border pt-4">
-          <h4 className="text-xs font-medium text-ink-lt mb-3">
-            {data.source === 'sold' ? 'recent sales' : data.source === 'live' ? 'current listings' : 'estimated sales'}
-          </h4>
-          <div className="space-y-2">
-            {data.sample_listings.map((listing, idx) => (
-              <div key={idx} className="text-xs">
-                {listing.url ? (
-                  <a
-                    href={listing.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-ink font-medium truncate block hover:text-sage transition"
-                  >
-                    {listing.title}
-                  </a>
-                ) : (
-                  <div className="text-ink font-medium truncate">{listing.title}</div>
-                )}
-                <div className="flex justify-between text-ink-lt mt-1">
-                  <span>{listing.condition}</span>
-                  <span>
-                    £{listing.price}
-                    {listing.days_ago > 0 && (
-                      <> · {listing.days_ago}d {data.source === 'live' ? 'listed' : 'ago'}</>
-                    )}
-
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </Panel>
-  )
-}
+import { fetchApi } from '@/lib/api-utils'
+import type { PriceResearchRecord } from '@/types'
+import SearchForm from '@/components/price-research/SearchForm'
+import PlatformCard from '@/components/price-research/PlatformCard'
+import RecommendationCard from '@/components/price-research/RecommendationCard'
+import RecentSearches from '@/components/price-research/RecentSearches'
+import AICaveatBanner from '@/components/price-research/AICaveatBanner'
+import type { PriceResearchData, ImageIdentification } from '@/components/price-research/types'
 
 export default function PriceResearchPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -119,9 +17,32 @@ export default function PriceResearchPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchTerm.trim()) return
+  // Image identification
+  const [identification, setIdentification] = useState<ImageIdentification | null>(null)
+  const [isIdentifying, setIsIdentifying] = useState(false)
+  const [identifyImageUrl, setIdentifyImageUrl] = useState<string | null>(null)
+
+  // Recent searches
+  const [recentSearches, setRecentSearches] = useState<PriceResearchRecord[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const data = await fetchApi<PriceResearchRecord[]>('/api/price-research/history?limit=20')
+      setRecentSearches(data)
+    } catch {
+      // Silently fail — history is not critical
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) return
 
     setLoading(true)
     setError(null)
@@ -131,7 +52,7 @@ export default function PriceResearchPage() {
       const response = await fetch('/api/price-research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchTerm }),
+        body: JSON.stringify({ query }),
       })
 
       if (!response.ok) {
@@ -141,6 +62,29 @@ export default function PriceResearchPage() {
 
       const data = (await response.json()) as PriceResearchData
       setResults(data)
+
+      // If this was an image search, save with image context
+      if (identification && identifyImageUrl) {
+        fetch('/api/price-research/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            title: identification.title,
+            description: identification.description,
+            suggested_price: data.recommendation.suggested_price,
+            best_platform: data.recommendation.best_platform,
+            ebay_avg: data.ebay.avg_price,
+            vinted_avg: data.vinted.avg_price,
+            source: 'image',
+            image_url: identifyImageUrl,
+            raw_response: data,
+          }),
+        }).then(() => loadHistory())
+      } else {
+        // Text searches are auto-saved server-side, just refresh history
+        setTimeout(() => loadHistory(), 500)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to research prices')
     } finally {
@@ -148,56 +92,79 @@ export default function PriceResearchPage() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch(e as unknown as React.FormEvent)
+  const handleIdentify = async (images: string[]) => {
+    setIsIdentifying(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/ai/identify-from-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images }),
+      })
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string }
+        throw new Error(data.error || 'Failed to identify item')
+      }
+
+      const data = (await response.json()) as ImageIdentification
+      setIdentification(data)
+      setSearchTerm(data.suggestedQuery)
+
+      // Store a small thumbnail for the history entry
+      const canvas = document.createElement('canvas')
+      canvas.width = 80
+      canvas.height = 80
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        const img = new Image()
+        img.onload = () => {
+          const size = Math.min(img.width, img.height)
+          const sx = (img.width - size) / 2
+          const sy = (img.height - size) / 2
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 80, 80)
+          setIdentifyImageUrl(canvas.toDataURL('image/jpeg', 0.6))
+        }
+        img.src = images[0] ?? ''
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to identify item')
+    } finally {
+      setIsIdentifying(false)
     }
   }
 
-  const SearchForm = () => (
-    <form onSubmit={handleSearch} className="flex gap-3">
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="flex-1 px-4 py-2 bg-cream-md border border-border rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:ring-2 focus:ring-sage/30"
-        placeholder="Search for items..."
-      />
-      <button
-        type="submit"
-        disabled={!searchTerm.trim()}
-        className="px-6 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        research
-      </button>
-    </form>
-  )
+  const handleReplay = (query: string) => {
+    setSearchTerm(query)
+    setIdentification(null)
+    setIdentifyImageUrl(null)
+    handleSearch(query)
+  }
 
   return (
     <div className="space-y-6">
-      {/* Topbar */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <h1 className="text-lg font-serif text-ink">price research</h1>
       </div>
 
-      {/* Empty state */}
-      {!results && !loading && !error && (
-        <div className="flex items-center justify-center min-h-96">
-          <Panel className="w-full max-w-2xl">
-            <div className="space-y-4">
-              <SearchForm />
-              <p className="text-center text-sm text-ink-lt">
-                search for an item to see real eBay listing prices and Vinted estimates
-              </p>
-            </div>
-          </Panel>
-        </div>
-      )}
+      <SearchForm
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        onSearch={handleSearch}
+        isSearching={loading}
+        identification={identification}
+        onIdentify={handleIdentify}
+        isIdentifying={isIdentifying}
+        onClearIdentification={() => {
+          setIdentification(null)
+          setIdentifyImageUrl(null)
+        }}
+      />
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center min-h-96">
+        <div className="flex items-center justify-center py-16">
           <div className="text-center space-y-4">
             <Loader2 className="w-8 h-8 text-sage animate-spin mx-auto" />
             <p className="text-sm text-ink-lt">Searching eBay sold listings...</p>
@@ -206,55 +173,40 @@ export default function PriceResearchPage() {
       )}
 
       {/* Error */}
-      {error && (
-        <div className="space-y-4">
-          <Panel className="bg-red-50 border border-red-200">
-            <p className="text-sm text-red-700">{error}</p>
-          </Panel>
-          <Panel>
-            <SearchForm />
-          </Panel>
+      {error && !loading && (
+        <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
         </div>
       )}
 
       {/* Results */}
       {results && !loading && (
         <>
-          <Panel>
-            <SearchForm />
-          </Panel>
+          <AICaveatBanner />
 
           <div className="grid grid-cols-2 gap-6">
             <PlatformCard name="vinted" data={results.vinted} />
             <PlatformCard name="ebay uk" data={results.ebay} />
           </div>
 
-          {/* Recommendation */}
-          <Panel className="bg-sage/5 border border-sage/20">
-            <div className="flex gap-4">
-              <div className="text-2xl">💡</div>
-              <div>
-                <h3 className="font-medium text-ink mb-2">Recommendation</h3>
-                <p className="text-sm text-ink-lt">
-                  List at{' '}
-                  <span className="font-semibold text-ink">
-                    £{results.recommendation.suggested_price}
-                  </span>{' '}
-                  on{' '}
-                  <span className="font-semibold text-ink">
-                    {results.recommendation.best_platform}
-                  </span>{' '}
-                  — {results.recommendation.reasoning}
-                </p>
-              </div>
-            </div>
-          </Panel>
+          <RecommendationCard
+            suggestedPrice={results.recommendation.suggested_price}
+            bestPlatform={results.recommendation.best_platform}
+            reasoning={results.recommendation.reasoning}
+          />
 
           <button className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition">
             use this price in a new find →
           </button>
         </>
       )}
+
+      {/* Recent searches */}
+      <RecentSearches
+        searches={recentSearches}
+        onReplay={handleReplay}
+        isLoading={historyLoading}
+      />
     </div>
   )
 }
