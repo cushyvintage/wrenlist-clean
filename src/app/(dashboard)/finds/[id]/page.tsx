@@ -10,29 +10,16 @@ import MarkAsSoldModal from '@/components/inventory/MarkAsSoldModal'
 import InventoryItemHeader from '@/components/inventory/InventoryItemHeader'
 import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import VintedMetadataPanel from '@/components/inventory/VintedMetadataPanel'
-import { VINTED_COLORS } from '@/data/vinted-colors'
+import { UNIFIED_COLOURS, findColourByVintedId } from '@/data/unified-colours'
 import type { VintedStoredMetadata } from '@/types/vinted-metadata'
 import { CATEGORY_MAP, getCategoryNode } from '@/data/marketplace-category-map'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
-import type { ListingFormData } from '@/types/listing-form'
+import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
-
-interface PlatformFieldsData {
-  vinted?: {
-    primaryColor?: number
-    secondaryColor?: number
-    conditionDescription?: string
-    material?: number[]
-  }
-  ebay?: {
-    acceptOffers?: boolean
-    isAuction?: boolean
-  }
-}
 
 interface FormData {
   title: string
@@ -1752,9 +1739,9 @@ export default function InventoryDetailPage() {
                       onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(61,92,58,.22)')}
                     >
                       <option value="">Select colour</option>
-                      {VINTED_COLORS.map((color) => (
-                        <option key={color.id} value={color.id}>
-                          {color.title}
+                      {UNIFIED_COLOURS.filter(c => c.vintedId).map((color) => (
+                        <option key={color.vintedId} value={color.vintedId!}>
+                          {color.label}
                         </option>
                       ))}
                     </select>
@@ -1786,9 +1773,9 @@ export default function InventoryDetailPage() {
                       onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(61,92,58,.22)')}
                     >
                       <option value="">Select colour (optional)</option>
-                      {VINTED_COLORS.map((color) => (
-                        <option key={color.id} value={color.id}>
-                          {color.title}
+                      {UNIFIED_COLOURS.filter(c => c.vintedId).map((color) => (
+                        <option key={color.vintedId} value={color.vintedId!}>
+                          {color.label}
                         </option>
                       ))}
                     </select>

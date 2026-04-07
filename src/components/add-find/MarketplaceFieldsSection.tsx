@@ -2,28 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { Platform, FieldConfig } from '@/types'
+import type { PlatformFieldsData } from '@/types/listing-form'
 import { UNIFIED_COLOURS, findColourByLabel, ETSY_WHO_MADE, ETSY_WHEN_MADE, DEPOP_SOURCES, DEPOP_AGES, DEPOP_STYLE_TAGS } from '@/data/unified-colours'
 import DynamicFieldRenderer from './DynamicFieldRenderer'
-
-interface PlatformFieldsData {
-  shared?: Record<string, string | string[] | boolean | undefined>
-  vinted?: {
-    primaryColor?: number
-    secondaryColor?: number
-    conditionDescription?: string
-    material?: number[]
-    author?: string
-    isbn?: string
-    language?: string
-  }
-  ebay?: {
-    acceptOffers?: boolean
-    isAuction?: boolean
-    author?: string
-    isbn?: string
-    language?: string
-  }
-}
 
 interface MarketplaceFieldsSectionProps {
   selectedPlatforms: Platform[]

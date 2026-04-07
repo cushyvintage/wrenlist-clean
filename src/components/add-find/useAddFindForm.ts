@@ -4,27 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import { FindCondition, Platform, FieldConfig, ListingTemplate } from '@/types'
+import type { PlatformFieldsData } from '@/types/listing-form'
 import type { AIAutoFillData } from '@/components/add-find/AIAutoFillBanner'
 
-export interface PlatformFieldsData {
-  shared?: Record<string, string | string[] | boolean | undefined>
-  vinted?: {
-    primaryColor?: number
-    secondaryColor?: number
-    conditionDescription?: string
-    material?: number[]
-    author?: string
-    isbn?: string
-    language?: string
-  }
-  ebay?: {
-    acceptOffers?: boolean
-    isAuction?: boolean
-    author?: string
-    isbn?: string
-    language?: string
-  }
-}
+export type { PlatformFieldsData }
 
 export interface FormData {
   title: string

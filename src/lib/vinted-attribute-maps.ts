@@ -3,11 +3,11 @@
  * Built from Vinted mapper reference data
  */
 
-import { VINTED_COLORS } from '@/data/vinted-colors'
+import { UNIFIED_COLOURS } from '@/data/unified-colours'
 
-// Build color map from canonical source (avoids duplication)
+// Build color map from unified colours (Vinted ID → label)
 export const COLOR_MAP: Record<number, string> = Object.fromEntries(
-  VINTED_COLORS.map((c) => [c.id, c.title])
+  UNIFIED_COLOURS.filter(c => c.vintedId).map((c) => [c.vintedId!, c.label])
 )
 
 export const PACKAGE_SIZE_MAP: Record<number, string> = {
