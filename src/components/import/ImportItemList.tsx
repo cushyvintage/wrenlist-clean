@@ -1,7 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Panel } from '@/components/wren/Panel'
 import type { ImportableItem } from './types'
+
+const PAGE_SIZE = 50
 
 interface ImportItemListProps {
   items: ImportableItem[]
@@ -18,6 +21,15 @@ export function ImportItemList({
   allSelected,
   totalCount,
 }: ImportItemListProps) {
+  const [page, setPage] = useState(1)
+
+  // Reset to page 1 when filtered items change (search, status filter, etc.)
+  useEffect(() => { setPage(1) }, [items.length])
+
+  const totalPages = Math.ceil(items.length / PAGE_SIZE)
+  const safePage = Math.min(page, totalPages || 1)
+  const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
   if (items.length === 0) {
     return (
       <Panel>
@@ -47,7 +59,7 @@ export function ImportItemList({
 
       <Panel className="p-0">
         <div className="divide-y divide-sage/10">
-          {items.map((item) => (
+          {pagedItems.map((item) => (
             <div
               key={item.id}
               className={`flex items-center gap-4 px-4 py-3 transition ${
@@ -145,6 +157,45 @@ export function ImportItemList({
           ))}
         </div>
       </Panel>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-xs text-ink-lt">
+            Page {page} of {totalPages}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-2 py-1 text-xs rounded bg-cream-md text-ink-lt hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              ««
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-2 py-1 text-xs rounded bg-cream-md text-ink-lt hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              ‹ Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-2 py-1 text-xs rounded bg-cream-md text-ink-lt hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              Next ›
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="px-2 py-1 text-xs rounded bg-cream-md text-ink-lt hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              »»
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
