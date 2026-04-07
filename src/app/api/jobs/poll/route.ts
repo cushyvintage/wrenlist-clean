@@ -165,7 +165,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       const nextAttempts = job.attempts + 1
       const exhausted = nextAttempts >= job.max_attempts
 
-      await supabase
+      // Atomic: only fail an active job (prevents double-fail overwriting completed state)
+      const { data: failed } = await supabase
         .from('publish_jobs')
         .update({
           status: exhausted ? 'failed' : 'pending',
@@ -177,6 +178,13 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           ...(exhausted ? { completed_at: now } : {}),
         })
         .eq('id', job_id)
+        .eq('user_id', user.id)
+        .in('status', ['running', 'claimed'])
+        .select('id')
+
+      if (!failed || failed.length === 0) {
+        return ApiResponseHelper.error('Job is not in an active state', 409)
+      }
 
       // If exhausted, update PMD to error
       if (exhausted) {

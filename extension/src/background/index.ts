@@ -277,6 +277,12 @@ type ExternalMessage = Record<string, unknown>;
   const MAX_PUBLISH_RETRIES = 3;
   const USE_JOB_QUEUE_KEY = "useJobQueue";
 
+  // Cached flag — avoids async chrome.storage.sync.get during poll guard window
+  let cachedUseJobQueue = false;
+  chrome.storage.sync.get([USE_JOB_QUEUE_KEY]).then(({ [USE_JOB_QUEUE_KEY]: v }) => {
+    cachedUseJobQueue = !!v;
+  });
+
   chrome.alarms.create(QUEUE_POLL_ALARM, {
     delayInMinutes: 0.1, // first poll ~6s after startup
     periodInMinutes: QUEUE_POLL_INTERVAL_MINUTES,
@@ -970,9 +976,8 @@ type ExternalMessage = Record<string, unknown>;
     if (alarm.name === HEARTBEAT_ALARM) {
       await sendHeartbeat();
     } else if (alarm.name === QUEUE_POLL_ALARM) {
-      // Check feature flag: use new job queue or legacy PMD queue
-      const { [USE_JOB_QUEUE_KEY]: useJobQueue } = await chrome.storage.sync.get([USE_JOB_QUEUE_KEY]);
-      if (useJobQueue) {
+      // Use cached flag (synchronous) to avoid async race with isQueuePolling guard
+      if (cachedUseJobQueue) {
         await runJobQueuePoll();
       } else {
         await runQueuePoll();
@@ -989,19 +994,14 @@ type ExternalMessage = Record<string, unknown>;
     // Handle check_queue/poll_queue inside the IIFE so it can access runQueuePoll
     const cmd = normalizeCommand(message as ExternalMessage);
     if (cmd === "check_queue" || cmd === "poll_queue") {
-      void (async () => {
-        const { [USE_JOB_QUEUE_KEY]: useJobQueue } = await chrome.storage.sync.get([USE_JOB_QUEUE_KEY]);
-        if (useJobQueue) {
-          return runJobQueuePoll();
-        }
-        return runQueuePoll();
-      })()
+      void (cachedUseJobQueue ? runJobQueuePoll() : runQueuePoll())
         .then((result) => sendResponse(withExtensionVersion({ success: true, ...result })))
         .catch((error) => sendResponse(withError(error)));
       return true;
     }
     if (cmd === "set_job_queue") {
       const enabled = !!(message as any).enabled;
+      cachedUseJobQueue = enabled; // Update cached flag immediately
       void chrome.storage.sync.set({ [USE_JOB_QUEUE_KEY]: enabled })
         .then(() => sendResponse(withExtensionVersion({ success: true, useJobQueue: enabled })))
         .catch((error) => sendResponse(withError(error)));
