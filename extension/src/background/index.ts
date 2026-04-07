@@ -305,14 +305,35 @@ type ExternalMessage = Record<string, unknown>;
         return;
       }
 
-      console.log(`[VintedSalesSync] Found ${result.sales.length} sales to sync`);
+      console.log(`[VintedSalesSync] Found ${result.sales.length} sales, enriching with order details...`);
+
+      // Enrich each sale with full order details (buyer, fees, shipment)
+      // The list endpoint returns minimal data; per-order calls return everything
+      const enrichedSales = [];
+      for (const sale of result.sales) {
+        try {
+          const details = await client.getOrderDetails(sale.transactionId);
+          if (details) {
+            enrichedSales.push(details);
+          } else {
+            enrichedSales.push(sale); // Fallback to list data
+          }
+          // Small delay to avoid Vinted rate limiting (429)
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (err) {
+          console.warn(`[VintedSalesSync] Failed to get details for ${sale.transactionId}:`, err);
+          enrichedSales.push(sale); // Fallback to list data
+        }
+      }
+
+      console.log(`[VintedSalesSync] Enriched ${enrichedSales.length} sales, posting to API`);
 
       // POST to sync-sales API
       const baseUrl = await getWrenlistBaseUrl();
       const syncRes = await queueFetch(`${baseUrl}/api/vinted/sync-sales`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sales: result.sales }),
+        body: JSON.stringify({ sales: enrichedSales }),
       });
 
       if (syncRes.ok) {
@@ -1625,17 +1646,36 @@ async function handleGetVintedSales(message: ExternalMessage) {
     const page = (params.page as number | undefined) ?? (message.page as number | undefined) ?? 1;
     const perPage = (params.perPage as number | undefined) ?? (message.perPage as number | undefined) ?? 20;
     const tld = (params.tld as string | undefined) ?? (message.tld as string | undefined) ?? 'co.uk';
-    // stopAtId: For incremental sync - stop fetching when this order ID is encountered
     const stopAtId = (params.stopAtId as string | undefined) ?? (message.stopAtId as string | undefined);
+    // enrich: call getOrderDetails per sale for buyer/fees/shipment data
+    const enrich = (params.enrich as boolean | undefined) ?? (message.enrich as boolean | undefined) ?? false;
 
     const { client } = createVintedServices({ tld });
     await client.bootstrap();
 
     const result = await client.getSales(page, perPage, stopAtId);
 
+    let sales = result.sales;
+
+    // Enrich each sale with full order details if requested
+    if (enrich && sales.length > 0) {
+      const enriched = [];
+      for (const sale of sales) {
+        try {
+          const details = await client.getOrderDetails(sale.transactionId);
+          enriched.push(details || sale);
+          // Small delay to avoid Vinted rate limiting
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch {
+          enriched.push(sale);
+        }
+      }
+      sales = enriched;
+    }
+
     return {
       success: true,
-      sales: result.sales,
+      sales,
       pagination: result.pagination,
       stoppedEarly: result.stoppedEarly || false,
     };

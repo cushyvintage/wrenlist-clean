@@ -103,7 +103,7 @@ export default function SoldHistoryPage() {
         }
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { perPage: 100 } },
+          { action: 'get_vinted_sales', params: { perPage: 100, enrich: true } },
           (response: Record<string, unknown> | undefined) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
