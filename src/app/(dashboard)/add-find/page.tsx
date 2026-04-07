@@ -232,21 +232,36 @@ export default function AddFindPage() {
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto) return
 
-      // Convert blob URL to data URL for the API (http URLs pass through)
+      // Convert blob URL to a resized data URL for the API (keeps payload under 4MB)
       let imageUrl = firstPhoto
-      if (firstPhoto.startsWith('blob:')) {
+      if (firstPhoto.startsWith('blob:') || firstPhoto.startsWith('data:')) {
         try {
-          const resp = await fetch(firstPhoto)
-          const blob = await resp.blob()
-          imageUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve()
+            img.onerror = reject
+            img.src = firstPhoto
           })
+          // Resize to max 1024px on longest side (keeps data URL under ~500KB)
+          const MAX = 1024
+          let { width, height } = img
+          if (width > MAX || height > MAX) {
+            const scale = MAX / Math.max(width, height)
+            width = Math.round(width * scale)
+            height = Math.round(height * scale)
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          ctx.drawImage(img, 0, 0, width, height)
+          imageUrl = canvas.toDataURL('image/jpeg', 0.8)
         } catch {
-          return // Can't convert blob — skip
+          return // Can't process image — skip
         }
-      } else if (!firstPhoto.startsWith('http') && !firstPhoto.startsWith('data:')) {
+      } else if (!firstPhoto.startsWith('http')) {
         return // Not a usable URL
       }
 
@@ -717,6 +732,7 @@ export default function AddFindPage() {
                   if (fields.description) handleInputChange('description', fields.description)
                   if (fields.category) handleInputChange('category', fields.category)
                   setAiAutoFill(null)
+                  setDismissedAutoFill(true)
                   setAutoDetectedCategory(null)
                 }}
                 onDismiss={() => {

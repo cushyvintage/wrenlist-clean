@@ -39,10 +39,10 @@ export default function AIAutoFillBanner({
   onApply,
   onDismiss,
 }: AIAutoFillBannerProps) {
-  // Toggle state for each field — default ON if the form field is empty
-  const [applyTitle, setApplyTitle] = useState(true)
-  const [applyDescription, setApplyDescription] = useState(true)
-  const [applyCategory, setApplyCategory] = useState(true)
+  // Toggle state: default ON if form field is empty, OFF if it already has data
+  const [applyTitle, setApplyTitle] = useState(!hasTitle)
+  const [applyDescription, setApplyDescription] = useState(!hasDescription)
+  const [applyCategory, setApplyCategory] = useState(!hasCategory)
 
   if (!data) return null
 
