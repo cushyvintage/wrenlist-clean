@@ -16,11 +16,13 @@ const PLATFORM_LABELS: Record<string, string> = {
 interface PlatformSelectorProps {
   selectedPlatforms: Platform[]
   onPlatformToggle: (platform: Platform) => void
+  variant?: 'vertical' | 'chips'
 }
 
 export default function PlatformSelector({
   selectedPlatforms,
   onPlatformToggle,
+  variant = 'vertical',
 }: PlatformSelectorProps) {
   const [connectedPlatforms, setConnectedPlatforms] = useState<Platform[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,7 +51,13 @@ export default function PlatformSelector({
   }, [])
 
   if (loading) {
-    return (
+    return variant === 'chips' ? (
+      <div className="flex gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-7 w-20 bg-sage/10 rounded-full animate-pulse" />
+        ))}
+      </div>
+    ) : (
       <div>
         <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
         <div className="space-y-3">
@@ -64,13 +72,44 @@ export default function PlatformSelector({
   if (connectedPlatforms.length === 0) {
     return (
       <div>
-        <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
+        {variant === 'vertical' && <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>}
         <p className="text-sm text-ink/60 mb-2">No marketplaces connected yet.</p>
         <Link
           href="/platform-connect"
           className="text-sm text-sage hover:text-sage-dk underline"
         >
           Connect a marketplace →
+        </Link>
+      </div>
+    )
+  }
+
+  if (variant === 'chips') {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {connectedPlatforms.map((platform) => {
+          const selected = selectedPlatforms.includes(platform)
+          return (
+            <button
+              key={platform}
+              type="button"
+              onClick={() => onPlatformToggle(platform)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors ${
+                selected
+                  ? 'border-sage bg-sage/10 text-sage font-medium'
+                  : 'border-sage/20 text-sage-dim hover:border-sage/40'
+              }`}
+            >
+              <MarketplaceIcon platform={platform} size="sm" />
+              {PLATFORM_LABELS[platform] ?? platform}
+            </button>
+          )
+        })}
+        <Link
+          href="/platform-connect"
+          className="text-xs text-ink/30 hover:text-sage transition-colors"
+        >
+          +
         </Link>
       </div>
     )

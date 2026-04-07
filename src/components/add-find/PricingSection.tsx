@@ -10,9 +10,11 @@ interface PricingSectionProps {
   ebayAcceptOffers: boolean
   ebayIsAuction: boolean
   incompleteRequiredFields: Set<string>
+  costPrice: number | null
   onPriceChange: (value: number | null) => void
   onPlatformPriceChange: (platform: Platform, value: number | null) => void
   onEbayFieldChange: (field: string, value: boolean) => void
+  onCostPriceChange: (value: number | null) => void
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -30,11 +32,14 @@ export default function PricingSection({
   ebayAcceptOffers,
   ebayIsAuction,
   incompleteRequiredFields,
+  costPrice,
   onPriceChange,
   onPlatformPriceChange,
   onEbayFieldChange,
+  onCostPriceChange,
 }: PricingSectionProps) {
   const [showOverrides, setShowOverrides] = useState(false)
+  const [showCost, setShowCost] = useState(false)
 
   return (
     <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-4">
@@ -64,13 +69,23 @@ export default function PricingSection({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowOverrides(!showOverrides)}
-        className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
-      >
-        {showOverrides ? 'Hide' : 'Adjust prices per marketplace'} →
-      </button>
+      {/* Toggles row */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <button
+          type="button"
+          onClick={() => setShowOverrides(!showOverrides)}
+          className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+        >
+          {showOverrides ? 'Hide' : 'Adjust prices per marketplace'} →
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowCost(!showCost)}
+          className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
+        >
+          {showCost ? 'Hide' : 'Cost & margin'} →
+        </button>
+      </div>
 
       {showOverrides && (
         <div className="space-y-3 pt-3 border-t border-sage/14">
@@ -92,6 +107,30 @@ export default function PricingSection({
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {showCost && (
+        <div className="pt-3 border-t border-sage/14">
+          <label className="block text-sm font-semibold text-ink mb-2">Cost price</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-sage-dim">£</span>
+            <input
+              type="number"
+              value={costPrice ?? ''}
+              onChange={(e) =>
+                onCostPriceChange(e.target.value ? parseFloat(e.target.value) : null)
+              }
+              className="flex-1 px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+              placeholder="0.00"
+              step="0.01"
+            />
+          </div>
+          {price && costPrice ? (
+            <div className="text-xs text-sage-dim mt-1">
+              Margin: {Math.round(((price - costPrice) / price) * 100)}%
+            </div>
+          ) : null}
         </div>
       )}
 
