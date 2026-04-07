@@ -139,6 +139,7 @@ export default function AddFindPage() {
           description={form.formData.description}
           category={form.formData.category}
           titleCharLimit={handlers.titleCharLimit}
+          descriptionCharLimit={handlers.descriptionCharLimit}
           incompleteRequiredFields={form.incompleteRequiredFields}
           isGeneratingDescription={form.isGeneratingDescription}
           isbnLookupOpen={form.isbnLookupOpen}

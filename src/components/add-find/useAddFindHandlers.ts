@@ -5,6 +5,7 @@ import { usePhotoHandlers } from '@/components/add-find/usePhotoHandlers'
 import { generateSKU } from '@/lib/sku'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import { Platform, ListingTemplate } from '@/types'
+import { PLATFORM_TITLE_LIMITS, PLATFORM_DESCRIPTION_LIMITS } from '@/data/unified-colours'
 import type { FormData } from './useAddFindForm'
 
 interface HandlerDeps {
@@ -165,7 +166,13 @@ export function useAddFindHandlers(deps: HandlerDeps) {
   }, [formData.title, formData.category, formData.brand, formData.condition])
 
   const titleCharLimit = useMemo(() => {
-    return formData.selectedPlatforms.includes('ebay') ? 80 : 255
+    if (formData.selectedPlatforms.length === 0) return 255
+    return Math.min(...formData.selectedPlatforms.map(p => PLATFORM_TITLE_LIMITS[p] ?? 255))
+  }, [formData.selectedPlatforms])
+
+  const descriptionCharLimit = useMemo(() => {
+    if (formData.selectedPlatforms.length === 0) return 12000
+    return Math.min(...formData.selectedPlatforms.map(p => PLATFORM_DESCRIPTION_LIMITS[p] ?? 12000))
   }, [formData.selectedPlatforms])
 
   const handleDimensionChange = useCallback(
@@ -199,6 +206,7 @@ export function useAddFindHandlers(deps: HandlerDeps) {
     handleClassifyPhoto,
     handleGenerateDescription,
     titleCharLimit,
+    descriptionCharLimit,
     handleDimensionChange,
     handlePlatformPriceChange,
   }

@@ -8,6 +8,7 @@ interface TitleDescriptionSectionProps {
   description: string
   category: string
   titleCharLimit: number
+  descriptionCharLimit?: number
   incompleteRequiredFields: Set<string>
   isGeneratingDescription: boolean
   isbnLookupOpen: boolean
@@ -25,6 +26,7 @@ export default function TitleDescriptionSection({
   description,
   category,
   titleCharLimit,
+  descriptionCharLimit = 2000,
   incompleteRequiredFields,
   isGeneratingDescription,
   isbnLookupOpen,
@@ -95,7 +97,7 @@ export default function TitleDescriptionSection({
         </div>
         <textarea
           value={description}
-          onChange={(e) => onDescriptionChange(e.target.value.slice(0, 2000))}
+          onChange={(e) => onDescriptionChange(e.target.value.slice(0, descriptionCharLimit))}
           className={`w-full px-3 py-2 border rounded text-sm resize-none focus:outline-none focus:ring-2 ${
             incompleteRequiredFields.has('description')
               ? 'border-amber-400 focus:ring-amber-400'
@@ -106,7 +108,7 @@ export default function TitleDescriptionSection({
         />
         <div className="flex justify-between items-start mt-1">
           <div className="text-xs text-sage-dim">
-            {description.length}/2000
+            {description.length}/{descriptionCharLimit}
           </div>
           {incompleteRequiredFields.has('description') && (
             <span className="text-xs text-amber-600">Required — complete before publishing</span>
