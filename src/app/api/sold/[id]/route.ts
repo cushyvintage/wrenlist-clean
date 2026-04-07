@@ -3,11 +3,12 @@ import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
 export const GET = withAuth(async (req, user, params) => {
-  const id = params?.id as string | undefined
+  const id = (params?.id as string | undefined) || req.url.split('/api/sold/')[1]?.split('?')[0]
   if (!id) return ApiResponseHelper.badRequest('Missing id')
 
   const supabase = await createSupabaseServerClient()
 
+  // Fetch find separately from PMD to avoid .single() issues with 1:many join
   const { data: find, error } = await supabase
     .from('finds')
     .select(
@@ -16,11 +17,7 @@ export const GET = withAuth(async (req, user, params) => {
       description, cost_gbp, asking_price_gbp, sold_price_gbp,
       sourced_at, sold_at, photos, sku, source_type, source_name,
       shipping_weight_grams, shipping_length_cm, shipping_width_cm, shipping_height_cm,
-      status, created_at,
-      product_marketplace_data (
-        marketplace, status, platform_listing_id, platform_listing_url,
-        listing_price, fields, last_synced_at
-      )
+      status, created_at
       `
     )
     .eq('id', id)
@@ -32,19 +29,14 @@ export const GET = withAuth(async (req, user, params) => {
     return ApiResponseHelper.notFound('Sold item not found')
   }
 
-  // Extract sale metadata from the sold PMD record
-  const pmdRecords = (find as Record<string, unknown>).product_marketplace_data as Array<{
-    marketplace: string
-    status: string
-    platform_listing_id: string | null
-    platform_listing_url: string | null
-    listing_price: number | null
-    fields: Record<string, unknown> | null
-    last_synced_at: string | null
-  }> | null
+  // Fetch PMD records separately
+  const { data: pmdRecords } = await supabase
+    .from('product_marketplace_data')
+    .select('marketplace, status, platform_listing_id, platform_listing_url, listing_price, fields, last_synced_at')
+    .eq('find_id', id)
 
   const soldPmd = pmdRecords?.find((m) => m.status === 'sold')
-  const sale = soldPmd?.fields?.sale as Record<string, unknown> | undefined
+  const sale = (soldPmd?.fields as Record<string, unknown> | null)?.sale as Record<string, unknown> | undefined
 
   return ApiResponseHelper.success({
     ...find,
