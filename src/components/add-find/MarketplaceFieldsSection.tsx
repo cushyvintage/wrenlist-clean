@@ -5,9 +5,11 @@ import { Platform, FieldConfig } from '@/types'
 import type { PlatformFieldsData } from '@/types/listing-form'
 import { UNIFIED_COLOURS, findColourByLabel, ETSY_WHO_MADE, ETSY_WHEN_MADE, DEPOP_SOURCES, DEPOP_AGES, DEPOP_STYLE_TAGS, VINTED_MATERIALS } from '@/data/unified-colours'
 import DynamicFieldRenderer from './DynamicFieldRenderer'
+import SizePicker from './SizePicker'
 
 interface MarketplaceFieldsSectionProps {
   selectedPlatforms: Platform[]
+  category: string
   fieldConfig: Record<string, FieldConfig> | null
   platformFields: PlatformFieldsData
   onSharedFieldChange: (field: string, value: string | string[] | boolean | undefined) => void
@@ -27,6 +29,7 @@ const CUSTOM_HANDLED_KEYS = new Set([
 
 export default function MarketplaceFieldsSection({
   selectedPlatforms,
+  category,
   fieldConfig,
   platformFields,
   onSharedFieldChange,
@@ -159,12 +162,16 @@ export default function MarketplaceFieldsSection({
             <label className="block text-sm font-semibold text-ink mb-2">
               Size{fieldConfig.size.required && <span className="text-red-500"> *</span>}
             </label>
-            <input
-              type="text"
+            <SizePicker
               value={(platformFields.shared?.size as string) ?? ''}
-              onChange={(e) => onSharedFieldChange('size', e.target.value)}
-              className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-              placeholder="e.g. M, 12, EU 38..."
+              category={category}
+              required={fieldConfig.size.required}
+              onChange={(value, vintedSizeId) => {
+                onSharedFieldChange('size', value)
+                if (vintedSizeId && hasVinted) {
+                  onSharedFieldChange('vintedSizeId', String(vintedSizeId))
+                }
+              }}
             />
           </div>
         )}

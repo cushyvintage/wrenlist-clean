@@ -194,6 +194,7 @@ export default function AddFindPage() {
 
         <MarketplaceFieldsSection
           selectedPlatforms={form.formData.selectedPlatforms}
+          category={form.formData.category}
           fieldConfig={form.fieldConfig}
           platformFields={form.formData.platformFields}
           onSharedFieldChange={handlers.handleSharedFieldChange}
