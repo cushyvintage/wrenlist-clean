@@ -830,7 +830,22 @@ type ExternalMessage = Record<string, unknown>;
               acceptOffers: true,
               whenMade: typeof sharedFields.whenMade === "string" ? sharedFields.whenMade : undefined,
               shipping: {
-                weight: typeof vintedFields.shippingWeight === "number" ? vintedFields.shippingWeight : 1,
+                shippingType: mp === "facebook" ? "Pickup" : "OwnLabel",
+                shippingWeight: (() => {
+                  const w = typeof vintedFields.shippingWeight === "number"
+                    ? vintedFields.shippingWeight
+                    : (findData.shipping_weight_grams ?? 500);
+                  return {
+                    value: w,
+                    unit: "Grams",
+                    inGrams: w,
+                    inOunces: Math.round(w * 0.03527 * 100) / 100,
+                  };
+                })(),
+                shippingAddress: { city: "London", country: "UK", lat: 51.5074, lng: -0.1278 },
+                domesticShipping: mp === "facebook" ? 0 : 4,
+                sellerPays: false,
+                allowLocalPickup: true,
               },
               dynamicProperties: {},
             };
