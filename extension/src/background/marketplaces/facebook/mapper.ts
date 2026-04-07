@@ -140,21 +140,30 @@ export class FacebookMapper {
       case "Cream":
       case "Tan":
       case "Khaki":
+      case "Nude":
         return "Beige";
+      case "Grey": // UK spelling → Facebook US spelling
+      case "Charcoal":
+        return "Gray";
       case "Multi":
+      case "Multi-colour":
         return "Multi-Color";
       case "Turquoise":
+      case "Teal":
       case "LightBlue":
       case "Navy":
+      case "Indigo":
         return "Blue";
       case "Coral":
       case "Apricot":
+      case "Copper":
         return "Orange";
       case "Rose":
         return "Pink";
       case "Lilac":
         return "Purple";
       case "Mint":
+      case "Olive":
       case "DarkGreen":
         return "Green";
       case "Mustard":

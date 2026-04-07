@@ -431,10 +431,17 @@ type ExternalMessage = Record<string, unknown>;
 
           // Extract platform-specific fields (set in add-find form, stored in finds.platform_fields)
           const pf = (find.platform_fields ?? {}) as Record<string, unknown>;
+          const sharedFields = (pf.shared ?? {}) as Record<string, unknown>;
           const vintedFields = (pf.vinted ?? {}) as Record<string, unknown>;
           const vintedPrimaryColor = typeof vintedFields.primaryColor === "number" ? vintedFields.primaryColor : null;
           const vintedSecondaryColor = typeof vintedFields.secondaryColor === "number" ? vintedFields.secondaryColor : null;
           const vintedColorIds = [vintedPrimaryColor, vintedSecondaryColor].filter((id): id is number => id !== null && id > 0);
+
+          // Extract shared form fields for cross-platform use
+          const userTags = typeof sharedFields.tags === "string" && sharedFields.tags.trim() ? sharedFields.tags.trim() : null;
+          const userWhenMade = typeof sharedFields.whenMade === "string" ? sharedFields.whenMade : undefined;
+          const userWhoMade = typeof sharedFields.whoMade === "string" ? sharedFields.whoMade : undefined;
+          const secondaryColour = typeof sharedFields.secondaryColour === "string" ? sharedFields.secondaryColour : undefined;
 
           // Map category per marketplace
           const productCategory = mp === "shopify"
@@ -455,11 +462,13 @@ type ExternalMessage = Record<string, unknown>;
             brand: find.brand ?? undefined,
             condition: mapCondition(find.condition),
             category: productCategory,
-            tags: [find.brand, find.category, "vintage"].filter(Boolean).join(", "),
+            tags: userTags ?? [find.brand, find.category, "vintage"].filter(Boolean).join(", "),
             color: find.colour ?? undefined,
+            color2: secondaryColour ?? undefined,
             size: find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
             quantity: 1,
+            whenMade: userWhenMade,
             acceptOffers: true,
             shipping: {
               // Facebook UK only supports local pickup; others use OwnLabel shipping

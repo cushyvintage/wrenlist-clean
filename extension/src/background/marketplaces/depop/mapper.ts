@@ -193,32 +193,38 @@ export class DepopMapper {
     };
   }
 
+  /**
+   * Map colour label to Depop slug.
+   * Handles both old Crosslist Color enum values AND new unified colour labels.
+   * Depop accepts: black, grey, white, brown, tan, cream, yellow, red, burgundy,
+   * orange, pink, purple, blue, navy, green, khaki, multi, silver, gold
+   */
   private mapColor(color?: string | null): string | null {
     if (!color) return null;
+    const c = color.toLowerCase().replace("-colour", "");
 
-    switch (color) {
-      case Color.Beige:
-        return "cream";
-      case Color.Gray:
-        return "grey";
-      case Color.Turquoise:
-      case Color.LightBlue:
-        return "blue";
-      case Color.Coral:
-      case Color.Apricot:
-        return "orange";
-      case Color.Rose:
-        return "pink";
-      case Color.Lilac:
-        return "purple";
-      case Color.Mint:
-      case "DarkGreen":
-      case Color.DarkGreen:
-        return "green";
-      case Color.Mustard:
-        return "yellow";
-      case Color.Clear:
-        return "blue";
+    // Direct Depop slug matches (covers most unified labels)
+    const DEPOP_SLUGS = new Set([
+      "black", "grey", "white", "brown", "tan", "cream", "yellow", "red",
+      "burgundy", "orange", "pink", "purple", "blue", "navy", "green",
+      "khaki", "multi", "silver", "gold",
+    ]);
+    if (DEPOP_SLUGS.has(c)) return c;
+
+    // Map colours that don't have direct Depop equivalents
+    switch (c) {
+      case "beige": return "cream";
+      case "gray": return "grey"; // US→UK spelling
+      case "turquoise": case "teal": case "indigo": case "lightblue": return "blue";
+      case "coral": case "apricot": return "orange";
+      case "rose": return "pink";
+      case "lilac": return "purple";
+      case "mint": case "olive": case "darkgreen": return "green";
+      case "mustard": return "yellow";
+      case "copper": return "brown";
+      case "charcoal": return "grey";
+      case "nude": return "cream";
+      case "clear": return "blue";
       default:
         return isColor(color) ? color.toLowerCase() : null;
     }
