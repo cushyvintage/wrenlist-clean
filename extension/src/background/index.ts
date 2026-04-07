@@ -442,6 +442,7 @@ type ExternalMessage = Record<string, unknown>;
           const userWhenMade = typeof sharedFields.whenMade === "string" ? sharedFields.whenMade : undefined;
           const userWhoMade = typeof sharedFields.whoMade === "string" ? sharedFields.whoMade : undefined;
           const secondaryColour = typeof sharedFields.secondaryColour === "string" ? sharedFields.secondaryColour : undefined;
+          const vintedMaterialIds = Array.isArray(vintedFields.material) ? vintedFields.material.filter((id): id is number => typeof id === "number") : [];
 
           // Map category per marketplace
           const productCategory = mp === "shopify"
@@ -494,6 +495,7 @@ type ExternalMessage = Record<string, unknown>;
             dynamicProperties: {
               productType: mapProductType(find.category),
               ...(vintedColorIds.length > 0 ? { colorIds: vintedColorIds } : {}),
+              ...(vintedMaterialIds.length > 0 ? { MaterialVinted: vintedMaterialIds.join("|") } : {}),
               ...(userWhoMade ? { whoMade: userWhoMade } : {}),
             },
           };

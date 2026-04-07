@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Platform, FieldConfig } from '@/types'
 import type { PlatformFieldsData } from '@/types/listing-form'
-import { UNIFIED_COLOURS, findColourByLabel, ETSY_WHO_MADE, ETSY_WHEN_MADE, DEPOP_SOURCES, DEPOP_AGES, DEPOP_STYLE_TAGS } from '@/data/unified-colours'
+import { UNIFIED_COLOURS, findColourByLabel, ETSY_WHO_MADE, ETSY_WHEN_MADE, DEPOP_SOURCES, DEPOP_AGES, DEPOP_STYLE_TAGS, VINTED_MATERIALS } from '@/data/unified-colours'
 import DynamicFieldRenderer from './DynamicFieldRenderer'
 
 interface MarketplaceFieldsSectionProps {
@@ -168,20 +168,58 @@ export default function MarketplaceFieldsSection({
           </div>
         )}
 
-        {/* Material */}
+        {/* Material — multi-select chips for Vinted (numeric IDs), text for others */}
         {fieldConfig.material?.show && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
               Material
-              {fieldConfig.material.required ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional)</span>}
+              {fieldConfig.material.required ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional{hasVinted ? ', max 3' : ''})</span>}
             </label>
-            <input
-              type="text"
-              value={(platformFields.shared?.material as string) ?? ''}
-              onChange={(e) => onSharedFieldChange('material', e.target.value)}
-              className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-              placeholder="e.g. Ceramic, Glass, Cotton..."
-            />
+            {hasVinted ? (
+              <>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {VINTED_MATERIALS.map((m) => {
+                    const selectedIds = ((platformFields.shared?.vintedMaterialIds as string) ?? '').split(',').filter(Boolean)
+                    const isSelected = selectedIds.includes(String(m.id))
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          const current = selectedIds.map(Number).filter(n => !isNaN(n))
+                          const next = isSelected ? current.filter(id => id !== m.id) : [...current, m.id].slice(0, 3)
+                          onSharedFieldChange('vintedMaterialIds', next.join(','))
+                          // Also set text material for non-Vinted platforms
+                          const labels = next.map(id => VINTED_MATERIALS.find(v => v.id === id)?.label).filter(Boolean)
+                          onSharedFieldChange('material', labels.join(', '))
+                          // Set Vinted-specific material IDs
+                          onPlatformFieldChange('vinted', 'material', next)
+                        }}
+                        className={`px-2 py-1 rounded border text-xs transition-colors ${
+                          isSelected ? 'border-sage bg-sage/10 text-sage font-medium' : 'border-sage/14 text-sage-dim hover:border-sage/30'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {(() => {
+                  const selectedIds = ((platformFields.shared?.vintedMaterialIds as string) ?? '').split(',').filter(Boolean)
+                  return selectedIds.length > 0 && (
+                    <p className="text-xs text-sage-dim">{selectedIds.length}/3 selected</p>
+                  )
+                })()}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={(platformFields.shared?.material as string) ?? ''}
+                onChange={(e) => onSharedFieldChange('material', e.target.value)}
+                className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                placeholder="e.g. Ceramic, Glass, Cotton..."
+              />
+            )}
           </div>
         )}
 
