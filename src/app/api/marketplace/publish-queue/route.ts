@@ -175,7 +175,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   const { error } = await supabaseAdmin
     .from('product_marketplace_data')
     .upsert(
-      { find_id: findId, marketplace, user_id: user.id, ...updateData },
+      { find_id: findId, marketplace, ...updateData },
       { onConflict: 'find_id,marketplace' }
     )
 
