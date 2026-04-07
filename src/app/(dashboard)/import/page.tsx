@@ -395,7 +395,20 @@ export default function ImportPage() {
     if (selectedPlatform === 'ebay') {
       await handleEbayImport()
     } else if (selectedPlatform === 'vinted') {
-      await handleVintedImport()
+      // Check if any selected items are sold — use sales flow for those
+      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
+      const hasActiveItems = selectedItems.some((i) => i.listingStatus === 'active' || i.listingStatus === 'hidden')
+
+      if (hasActiveItems && hasSoldItems) {
+        // Mixed — import active first, then sold
+        await handleVintedImport()
+        await handleVintedSoldImport()
+      } else if (hasSoldItems) {
+        await handleVintedSoldImport()
+      } else {
+        await handleVintedImport()
+      }
     } else if (selectedPlatform === 'shopify') {
       await handleShopifyImport()
     }
@@ -512,6 +525,158 @@ export default function ImportPage() {
       vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleVintedSoldImport() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      vintedImport.setError('Extension not available')
+      return
+    }
+
+    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    if (soldItems.length === 0) return
+
+    const totalItems = soldItems.length
+    let totalSynced = 0, totalSkipped = 0, totalCreated = 0, totalErrors = 0
+
+    vintedImport.runImportProgress(0, 0, 0, totalItems)
+
+    try {
+      // Fetch sales from Vinted via extension (paginated)
+      let page = 1
+      let allSales: any[] = []
+      const soldItemIds = new Set(soldItems.map((i) => i.id))
+
+      while (true) {
+        const response = await new Promise<{
+          success: boolean
+          sales?: any[]
+          pagination?: { current_page: number; total_pages: number; total_entries: number }
+          message?: string
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: 'Timed out fetching sales' }),
+            60000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            { action: 'get_vinted_sales', page, perPage: 50 },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
+            }
+          )
+        })
+
+        if (!response.success || !response.sales?.length) break
+
+        // Filter to only sales containing items the user selected
+        const relevantSales = response.sales.filter((sale: any) =>
+          sale.items?.some((item: any) => soldItemIds.has(String(item.itemId)))
+        )
+        allSales.push(...relevantSales)
+
+        // Stop if we've got enough or reached the end
+        const pagination = response.pagination
+        if (!pagination || page >= pagination.total_pages) break
+        page++
+
+        // Polite delay between pages
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      // Send sales to API in chunks
+      const CHUNK_SIZE = 20
+      for (let i = 0; i < allSales.length; i += CHUNK_SIZE) {
+        const chunk = allSales.slice(i, i + CHUNK_SIZE)
+
+        try {
+          const res = await fetch('/api/vinted/sync-sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sales: chunk }),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+            const result = data.data || data
+            totalSynced += result.synced || 0
+            totalSkipped += result.skipped || 0
+            totalCreated += result.created || 0
+            totalErrors += result.errors || 0
+          } else {
+            totalErrors += chunk.length
+          }
+        } catch {
+          totalErrors += chunk.length
+        }
+
+        vintedImport.runImportProgress(totalSynced + totalCreated, totalSkipped, totalErrors, totalItems)
+
+        // Refresh imported status
+        try {
+          const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/vinted-imported')
+          const importedSet = new Set(importedData.importedIds)
+          setItems((prev) => prev.map((item) => ({
+            ...item,
+            alreadyImported: importedSet.has(item.id),
+            checked: importedSet.has(item.id) ? false : item.checked,
+          })))
+        } catch { /* non-fatal */ }
+      }
+
+      // For sold items not found in getSales (very old sales), create basic finds
+      const importedSoFar = totalSynced + totalCreated
+      const remaining = soldItems.filter((i) => {
+        // Check if this item was handled by the sales sync
+        return !allSales.some((sale: any) =>
+          sale.items?.some((si: any) => String(si.itemId) === i.id)
+        )
+      })
+
+      if (remaining.length > 0) {
+        // Fall back to basic import for unmatched sold items using wardrobe data we already have
+        const basicSales = remaining.map((item) => ({
+          transactionId: `unknown_${item.id}`,
+          grossAmount: item.price || 0,
+          serviceFee: 0,
+          netAmount: item.price || 0,
+          currency: 'GBP',
+          items: [{
+            itemId: item.id,
+            title: item.title,
+            price: item.price || 0,
+            thumbnailUrl: item.photo,
+          }],
+          isBundle: false,
+          itemCount: 1,
+          orderDate: null,
+        }))
+
+        try {
+          const res = await fetch('/api/vinted/sync-sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sales: basicSales }),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const result = data.data || data
+            totalSynced += result.synced || 0
+            totalCreated += result.created || 0
+            totalSkipped += result.skipped || 0
+          }
+        } catch { /* non-fatal */ }
+      }
+
+      vintedImport.setDone(totalSynced + totalCreated, totalSkipped, totalErrors, totalItems)
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Sold import failed')
     }
   }
 
