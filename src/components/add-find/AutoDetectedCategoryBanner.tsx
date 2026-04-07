@@ -1,11 +1,24 @@
 'use client'
 
+import { getCategoryNode, getTopLevelCategory } from '@/data/marketplace-category-map'
+
 interface AutoDetectedCategoryBannerProps {
   autoDetectedCategory: { category: string; confidence: 'high' | 'medium' | 'low' } | null
   hasCategory: boolean
   dismissedAutoDetection: boolean
   onApply: (category: string) => void
   onDismiss: () => void
+}
+
+/** Format a category value for display: use node label if available, else humanize the slug */
+function formatCategory(value: string): string {
+  const node = getCategoryNode(value)
+  if (node) {
+    const topLevel = getTopLevelCategory(value)
+    const topLabel = topLevel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    return node.label !== topLabel ? `${topLabel} > ${node.label}` : node.label
+  }
+  return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 export default function AutoDetectedCategoryBanner({
@@ -16,6 +29,8 @@ export default function AutoDetectedCategoryBanner({
   onDismiss,
 }: AutoDetectedCategoryBannerProps) {
   if (!autoDetectedCategory || hasCategory || dismissedAutoDetection) return null
+
+  const displayName = formatCategory(autoDetectedCategory.category)
 
   return (
     <div className={`rounded-lg border p-4 flex items-center justify-between ${
@@ -38,7 +53,7 @@ export default function AutoDetectedCategoryBanner({
             {autoDetectedCategory.confidence === 'high'
               ? 'Category detected: '
               : 'Looks like '}
-            <strong className="capitalize">{autoDetectedCategory.category}</strong>
+            <strong>{displayName}</strong>
             {autoDetectedCategory.confidence !== 'high' ? '?' : ''}
           </span>
         </span>

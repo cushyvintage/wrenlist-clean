@@ -700,13 +700,19 @@ export class EtsyClient {
   private buildFormData(product: Product): EtsyFormFillData {
     const rawCategory = product.category?.[0]?.toLowerCase() || "";
     // Try exact match first (handles subcategories like "ceramics_plates"),
-    // then try the prefix before "_" (handles "ceramics_plates" → "ceramics"),
-    // then fall back to the raw value as a search term
-    const categorySearch =
-      WRENLIST_TO_ETSY_CATEGORY[rawCategory] ||
-      WRENLIST_TO_ETSY_CATEGORY[rawCategory.split("_")[0]] ||
-      product.category?.[0] ||
-      "";
+    // Try exact match, then progressively shorter prefixes (home_garden_furniture → home_garden → matched)
+    let categorySearch = WRENLIST_TO_ETSY_CATEGORY[rawCategory] || "";
+    if (!categorySearch) {
+      const parts = rawCategory.split("_");
+      for (let i = parts.length - 1; i >= 1; i--) {
+        const prefix = parts.slice(0, i).join("_");
+        if (WRENLIST_TO_ETSY_CATEGORY[prefix]) {
+          categorySearch = WRENLIST_TO_ETSY_CATEGORY[prefix];
+          break;
+        }
+      }
+    }
+    if (!categorySearch) categorySearch = product.category?.[0] || "";
 
     // Determine when_made based on product metadata.
     // CushyVintage sells almost exclusively vintage items, so default to vintage
