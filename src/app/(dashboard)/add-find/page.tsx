@@ -230,14 +230,32 @@ export default function AddFindPage() {
       // Skip if user already has title + category (e.g. from URL params / scanner)
       if (formData.title && formData.category) return
       const firstPhoto = formData.photoPreviews[0]
-      if (!firstPhoto || !firstPhoto.startsWith('http')) return
+      if (!firstPhoto) return
+
+      // Convert blob URL to data URL for the API (http URLs pass through)
+      let imageUrl = firstPhoto
+      if (firstPhoto.startsWith('blob:')) {
+        try {
+          const resp = await fetch(firstPhoto)
+          const blob = await resp.blob()
+          imageUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        } catch {
+          return // Can't convert blob — skip
+        }
+      } else if (!firstPhoto.startsWith('http') && !firstPhoto.startsWith('data:')) {
+        return // Not a usable URL
+      }
 
       setIsIdentifying(true)
       try {
         const response = await fetch('/api/ai/identify-from-photo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: [firstPhoto] }),
+          body: JSON.stringify({ images: [imageUrl] }),
         })
         if (response.ok) {
           const data = await response.json()
