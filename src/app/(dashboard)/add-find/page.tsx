@@ -8,6 +8,7 @@ import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import PlatformSelector from '@/components/add-find/PlatformSelector'
 import AutoDetectedCategoryBanner from '@/components/add-find/AutoDetectedCategoryBanner'
+import AIAutoFillBanner, { type AIAutoFillData } from '@/components/add-find/AIAutoFillBanner'
 import TitleDescriptionSection from '@/components/add-find/TitleDescriptionSection'
 import PricingSection from '@/components/add-find/PricingSection'
 import ItemDetailsSection from '@/components/add-find/ItemDetailsSection'
@@ -99,6 +100,9 @@ export default function AddFindPage() {
     confidence: 'high' | 'medium' | 'low'
   } | null>(null)
   const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
+  const [aiAutoFill, setAiAutoFill] = useState<AIAutoFillData | null>(null)
+  const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
+  const [isIdentifying, setIsIdentifying] = useState(false)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -219,29 +223,44 @@ export default function AddFindPage() {
     return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
-  // ── Auto-classify first photo ──
+  // ── Auto-identify from first photo (title + description + category) ──
   useEffect(() => {
-    const classifyFirstPhoto = async () => {
-      if (!formData.photoPreviews.length || formData.category || dismissedAutoDetection) return
+    const identifyFromPhoto = async () => {
+      if (!formData.photoPreviews.length || dismissedAutoFill) return
+      // Skip if user already has title + category (e.g. from URL params / scanner)
+      if (formData.title && formData.category) return
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto || !firstPhoto.startsWith('http')) return
 
+      setIsIdentifying(true)
       try {
-        const response = await fetch('/api/ai/classify-photo', {
+        const response = await fetch('/api/ai/identify-from-photo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photoUrl: firstPhoto }),
+          body: JSON.stringify({ images: [firstPhoto] }),
         })
         if (response.ok) {
           const data = await response.json()
-          setAutoDetectedCategory(data)
+          setAiAutoFill({
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            suggestedQuery: data.suggestedQuery,
+            confidence: data.confidence,
+          })
+          // Also set the old category banner for backward compat
+          if (data.category && !formData.category) {
+            setAutoDetectedCategory({ category: data.category, confidence: data.confidence })
+          }
         }
       } catch (err) {
-        console.error('Failed to classify photo:', err)
+        console.error('Failed to identify from photo:', err)
+      } finally {
+        setIsIdentifying(false)
       }
     }
-    classifyFirstPhoto()
-  }, [formData.photoPreviews, formData.category, dismissedAutoDetection])
+    identifyFromPhoto()
+  }, [formData.photoPreviews, formData.title, formData.category, dismissedAutoFill])
 
   // ── Handlers ──
   const handleInputChange = useCallback(
@@ -668,16 +687,41 @@ export default function AddFindPage() {
 
           {/* CENTRE PANEL */}
           <div className="md:col-span-7 space-y-6">
-            <AutoDetectedCategoryBanner
-              autoDetectedCategory={autoDetectedCategory}
-              hasCategory={!!formData.category}
-              dismissedAutoDetection={dismissedAutoDetection}
-              onApply={(cat) => {
-                handleInputChange('category', cat)
-                setAutoDetectedCategory(null)
-              }}
-              onDismiss={() => setDismissedAutoDetection(true)}
-            />
+            {/* AI Auto-Fill banner (rich: title + description + category) */}
+            {aiAutoFill && !dismissedAutoFill ? (
+              <AIAutoFillBanner
+                data={aiAutoFill}
+                hasTitle={!!formData.title}
+                hasDescription={!!formData.description}
+                hasCategory={!!formData.category}
+                onApply={(fields) => {
+                  if (fields.title) handleInputChange('title', fields.title)
+                  if (fields.description) handleInputChange('description', fields.description)
+                  if (fields.category) handleInputChange('category', fields.category)
+                  setAiAutoFill(null)
+                  setAutoDetectedCategory(null)
+                }}
+                onDismiss={() => {
+                  setDismissedAutoFill(true)
+                  setAiAutoFill(null)
+                }}
+              />
+            ) : isIdentifying ? (
+              <div className="rounded-lg border border-sage/10 bg-sage/5 p-4 text-sm text-sage-dim flex items-center gap-2">
+                <span className="animate-pulse">⏳</span> AI is identifying your item...
+              </div>
+            ) : (
+              <AutoDetectedCategoryBanner
+                autoDetectedCategory={autoDetectedCategory}
+                hasCategory={!!formData.category}
+                dismissedAutoDetection={dismissedAutoDetection}
+                onApply={(cat) => {
+                  handleInputChange('category', cat)
+                  setAutoDetectedCategory(null)
+                }}
+                onDismiss={() => setDismissedAutoDetection(true)}
+              />
+            )}
 
             {/* Sourcing trip banner */}
             {sourcingTripName && (
