@@ -118,13 +118,9 @@ export default function ImportPage() {
       const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/vinted-imported')
       const importedSet = new Set(importedData.importedIds)
 
-      // Progressive page fetch
-      let page = 1
-      let totalPages = 1
-      const allItems: ImportableItem[] = []
-
-      while (page <= totalPages && allItems.length < IMPORT_LIMIT) {
-        const response = await new Promise<{
+      // Helper to fetch a single page from the extension
+      async function fetchVintedPage(pg: number) {
+        return new Promise<{
           success: boolean
           listings?: Array<{
             id: string
@@ -144,7 +140,7 @@ export default function ImportPage() {
           )
           chrome.runtime.sendMessage(
             EXTENSION_ID,
-            { action: 'get_vinted_listings', page, perPage: 96, status: 'all' },
+            { action: 'get_vinted_listings', page: pg, perPage: 96, status: 'all' },
             (resp) => {
               clearTimeout(timeout)
               if (chrome.runtime.lastError) {
@@ -155,6 +151,23 @@ export default function ImportPage() {
             }
           )
         })
+      }
+
+      // Progressive page fetch
+      let page = 1
+      let totalPages = 1
+      const allItems: ImportableItem[] = []
+
+      while (page <= totalPages && allItems.length < IMPORT_LIMIT) {
+        let response = await fetchVintedPage(page)
+
+        // First page failed — retry once after 3s (Vinted session may still be refreshing)
+        if (!response.success && page === 1) {
+          console.log('[Import] Vinted first page failed, retrying in 3s...')
+          setFetchError(null)
+          await new Promise(resolve => setTimeout(resolve, 3000))
+          response = await fetchVintedPage(page)
+        }
 
         if (!response.success) {
           if (page === 1) {
@@ -551,10 +564,19 @@ export default function ImportPage() {
 
   // --- Render ---
   if (platformsLoading) {
+    // Show platform-specific connecting state if user navigated directly with ?platform=
+    const connectingPlatform = selectedPlatform ? formatPlatformName(selectedPlatform) : null
     return (
       <div className="space-y-6">
         <h1 className="text-lg font-serif italic text-ink">import</h1>
-        <div className="text-sm text-ink-lt animate-pulse">Loading platforms...</div>
+        {connectingPlatform ? (
+          <div className="bg-white border border-sage/14 rounded-md p-6 flex items-center gap-3">
+            <div className="h-4 w-4 border-2 border-sage border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-ink-lt">Connecting to {connectingPlatform}...</span>
+          </div>
+        ) : (
+          <div className="text-sm text-ink-lt animate-pulse">Loading platforms...</div>
+        )}
       </div>
     )
   }

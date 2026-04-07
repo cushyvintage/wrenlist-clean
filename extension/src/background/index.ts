@@ -246,10 +246,36 @@ type ExternalMessage = Record<string, unknown>;
     }
   });
 
+  // --- Extension heartbeat: report alive status to Wrenlist API ---
+  const HEARTBEAT_ALARM = "heartbeat";
+  const HEARTBEAT_INTERVAL_MINUTES = 1;
+
+  chrome.alarms.create(HEARTBEAT_ALARM, {
+    delayInMinutes: 0.2, // first heartbeat ~12s after startup
+    periodInMinutes: HEARTBEAT_INTERVAL_MINUTES,
+  });
+
+  async function sendHeartbeat(): Promise<void> {
+    try {
+      const baseUrl = await getWrenlistBaseUrl();
+      await queueFetch(`${baseUrl}/api/extension/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          extension_version: EXTENSION_VERSION,
+          user_agent: navigator.userAgent,
+        }),
+      });
+    } catch (e) {
+      console.debug("[Heartbeat] Failed:", e);
+    }
+  }
+
   // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
   const QUEUE_POLL_ALARM = "queue_poll";
   const QUEUE_POLL_INTERVAL_MINUTES = 1;
   const MAX_PUBLISH_RETRIES = 3;
+  const USE_JOB_QUEUE_KEY = "useJobQueue";
 
   chrome.alarms.create(QUEUE_POLL_ALARM, {
     delayInMinutes: 0.1, // first poll ~6s after startup
@@ -710,9 +736,198 @@ type ExternalMessage = Record<string, unknown>;
     return { publish: publishCount, delist: delistCount };
   }
 
+  // --- Job queue polling (new system, feature-flagged) ---
+  async function runJobQueuePoll(): Promise<{ processed: number; error?: string }> {
+    if (isQueuePolling) {
+      return { processed: 0, error: "already_polling" };
+    }
+    isQueuePolling = true;
+    try {
+      return await _runJobQueuePollImpl();
+    } finally {
+      isQueuePolling = false;
+    }
+  }
+
+  async function _runJobQueuePollImpl(): Promise<{ processed: number; error?: string }> {
+    const baseUrl = await getWrenlistBaseUrl();
+    let processed = 0;
+
+    try {
+      const pollRes = await queueFetch(`${baseUrl}/api/jobs/poll`);
+      if (!pollRes.ok) {
+        console.warn(`[JobQueue] Poll returned ${pollRes.status}`);
+        return { processed: 0 };
+      }
+
+      const pollData = await pollRes.json();
+      const jobs = (pollData?.data ?? pollData) as Array<Record<string, any>>;
+      if (!Array.isArray(jobs) || jobs.length === 0) return { processed: 0 };
+
+      for (const job of jobs) {
+        try {
+          // 1. Claim
+          const claimRes = await queueFetch(`${baseUrl}/api/jobs/poll`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_id: job.id, action: "claim" }),
+          });
+          if (!claimRes.ok) {
+            console.warn(`[JobQueue] Failed to claim job ${job.id}: ${claimRes.status}`);
+            continue;
+          }
+
+          // 2. Start
+          await queueFetch(`${baseUrl}/api/jobs/poll`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_id: job.id, action: "start" }),
+          });
+
+          // 3. Execute
+          const mp = job.platform as SupportedMarketplace;
+          const payload = (job.payload || {}) as Record<string, any>;
+
+          if (job.action === "publish") {
+            const findData = payload.find || {};
+            const product: Product = {
+              name: findData.name || "",
+              description: findData.description || "",
+              category: findData.category || "",
+              price: payload.listing_price ?? findData.asking_price_gbp ?? 0,
+              photos: (findData.photos || []) as string[],
+              sku: findData.sku || "",
+              brand: findData.brand || "",
+              condition: findData.condition || "",
+              colour: findData.colour || "",
+              size: findData.size || "",
+            };
+
+            const publishOptions: Record<string, any> = {};
+            if (mp === "shopify" && payload.settings?.shopifyShopUrl) {
+              publishOptions.shopifyShopUrl = payload.settings.shopifyShopUrl;
+            }
+            if (mp === "etsy" && payload.fields?.publishMode) {
+              publishOptions.publishMode = payload.fields.publishMode;
+            }
+
+            const result = await publishToMarketplace(mp, product, publishOptions);
+
+            if (result.success) {
+              const reportStatus =
+                mp === "etsy" && (result as any).publishMode !== "publish"
+                  ? "draft"
+                  : "listed";
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  job_id: job.id,
+                  action: "complete",
+                  result: {
+                    status: reportStatus,
+                    platform_listing_id: result.product?.id
+                      ? String(result.product.id)
+                      : null,
+                    platform_listing_url: result.product?.url ?? null,
+                  },
+                }),
+              });
+              processed++;
+            } else if (result.needsLogin) {
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  job_id: job.id,
+                  action: "fail",
+                  error_message: `Not logged in to ${mp}`,
+                }),
+              });
+            } else {
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  job_id: job.id,
+                  action: "fail",
+                  error_message: result.message || `Publish to ${mp} failed`,
+                }),
+              });
+            }
+          } else if (job.action === "delist") {
+            const listingId = payload.platform_listing_id;
+            if (!listingId) {
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  job_id: job.id,
+                  action: "fail",
+                  error_message: "No platform_listing_id in payload",
+                }),
+              });
+              continue;
+            }
+
+            const delistOptions: Record<string, any> = {};
+            if (mp === "shopify" && payload.settings?.shopifyShopUrl) {
+              delistOptions.shopifyShopUrl = payload.settings.shopifyShopUrl;
+            }
+
+            const result = await delistFromMarketplace(mp, String(listingId), delistOptions);
+
+            if (result.success) {
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ job_id: job.id, action: "complete" }),
+              });
+              processed++;
+            } else {
+              await queueFetch(`${baseUrl}/api/jobs/poll`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  job_id: job.id,
+                  action: "fail",
+                  error_message: result.message || `Delist from ${mp} failed`,
+                }),
+              });
+            }
+          }
+        } catch (err) {
+          const errMsg = normalizeError(err);
+          console.error(`[JobQueue] Error processing job ${job.id}:`, errMsg);
+          await queueFetch(`${baseUrl}/api/jobs/poll`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              job_id: job.id,
+              action: "fail",
+              error_message: errMsg,
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.debug("[JobQueue] Poll failed:", e);
+    }
+
+    return { processed };
+  }
+
   chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === QUEUE_POLL_ALARM) {
-      await runQueuePoll();
+    if (alarm.name === HEARTBEAT_ALARM) {
+      await sendHeartbeat();
+    } else if (alarm.name === QUEUE_POLL_ALARM) {
+      // Check feature flag: use new job queue or legacy PMD queue
+      const { [USE_JOB_QUEUE_KEY]: useJobQueue } = await chrome.storage.sync.get([USE_JOB_QUEUE_KEY]);
+      if (useJobQueue) {
+        await runJobQueuePoll();
+      } else {
+        await runQueuePoll();
+      }
     }
   });
 
@@ -725,8 +940,21 @@ type ExternalMessage = Record<string, unknown>;
     // Handle check_queue/poll_queue inside the IIFE so it can access runQueuePoll
     const cmd = normalizeCommand(message as ExternalMessage);
     if (cmd === "check_queue" || cmd === "poll_queue") {
-      void runQueuePoll()
+      void (async () => {
+        const { [USE_JOB_QUEUE_KEY]: useJobQueue } = await chrome.storage.sync.get([USE_JOB_QUEUE_KEY]);
+        if (useJobQueue) {
+          return runJobQueuePoll();
+        }
+        return runQueuePoll();
+      })()
         .then((result) => sendResponse(withExtensionVersion({ success: true, ...result })))
+        .catch((error) => sendResponse(withError(error)));
+      return true;
+    }
+    if (cmd === "set_job_queue") {
+      const enabled = !!(message as any).enabled;
+      void chrome.storage.sync.set({ [USE_JOB_QUEUE_KEY]: enabled })
+        .then(() => sendResponse(withExtensionVersion({ success: true, useJobQueue: enabled })))
         .catch((error) => sendResponse(withError(error)));
       return true;
     }
@@ -1150,16 +1378,33 @@ async function handleGetVintedSession() {
         extensionVersion: EXTENSION_VERSION,
       };
     } catch (bootstrapError) {
-      // Bootstrap failed, but we still have the cookie
-      console.warn("[Vinted] Bootstrap failed during session check:", bootstrapError);
-      return {
-        success: true,
-        loggedIn: true, // Cookie exists, assume logged in
-        username,
-        tld,
-        error: "Could not verify session fully, but cookie exists",
-        extensionVersion: EXTENSION_VERSION,
-      };
+      // Bootstrap failed — cookies may still be refreshing. Wait and retry once with force.
+      console.warn("[Vinted] Bootstrap failed during session check, retrying in 3s:", bootstrapError);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const { client: retryClient } = createVintedServices({ tld });
+        await retryClient.bootstrap(true);
+        const isLoggedIn = await retryClient.checkLogin();
+        const actualUsername = retryClient.getUsername() || username;
+        console.log("[Vinted] Retry bootstrap succeeded, loggedIn:", isLoggedIn);
+        return {
+          success: true,
+          loggedIn: isLoggedIn,
+          username: isLoggedIn ? actualUsername : undefined,
+          tld,
+          extensionVersion: EXTENSION_VERSION,
+        };
+      } catch (retryError) {
+        console.warn("[Vinted] Retry bootstrap also failed:", retryError);
+        return {
+          success: true,
+          loggedIn: true, // Cookie exists, assume logged in
+          username,
+          tld,
+          error: "Could not verify session fully, but cookie exists",
+          extensionVersion: EXTENSION_VERSION,
+        };
+      }
     }
   } catch (error) {
     console.error("[Vinted] Session check error:", error);
