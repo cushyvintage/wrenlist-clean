@@ -219,6 +219,11 @@ export class EtsyClient {
     product: Product,
     options?: { publishMode?: "draft" | "publish" },
   ): Promise<ListingActionResult> {
+    // MV3 service worker keepalive: call a chrome API every 20s to prevent
+    // the 30-second inactivity timeout from killing the worker mid-publish.
+    const keepAlive = setInterval(() => {
+      void chrome.runtime.getPlatformInfo();
+    }, 20000);
     try {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
@@ -230,6 +235,7 @@ export class EtsyClient {
       }
 
       const mode = options?.publishMode ?? "draft";
+
       await remoteLog("info", "etsy.publish", `Starting Etsy ${mode} flow`, {
         productTitle: product.title?.substring(0, 60),
       });
@@ -448,6 +454,7 @@ export class EtsyClient {
         // Even without a listing ID, if we got past validation the save worked.
         // The redirect to /tools/listings confirms it.
         const modeLabel = mode === "publish" ? "published" : "saved as draft";
+        clearInterval(keepAlive);
         await remoteLog("info", "etsy.publish", `Completed: ${modeLabel}`, {
           listingId,
           listingUrl,
@@ -468,6 +475,8 @@ export class EtsyClient {
         throw error;
       }
     } catch (error) {
+      // keepAlive may not exist if error happened before setInterval
+      try { clearInterval(keepAlive); } catch { /* ignore */ }
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       console.error("[Etsy] Publish error:", error);
       await remoteLog("error", "etsy.publish", `Publish failed: ${errMsg}`, {
