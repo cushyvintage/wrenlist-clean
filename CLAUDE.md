@@ -2,11 +2,20 @@
 
 ## Supabase (wrenlist-clean)
 - **Project ID:** tewtfroudyicwfubgcqi
-- **URL:** https://tewtfroudyicwfubgcqi.supabase.co
+- **Custom domain:** https://api.wrenlist.com (production URL — use this)
+- **Direct URL:** https://tewtfroudyicwfubgcqi.supabase.co (still works, used for storage URLs)
+- **Custom domain add-on:** $10/month, DNS managed in Namecheap (CNAME `api` + TXT `_acme-challenge.api`)
 
 ## Vercel
 - **Project ID:** prj_npEAJ4fDntlbTtTmkCryTrcQkdmh
 - **Team ID:** team_5klHjx1qdqPBtT5i8oAdlA8U
+- **IMPORTANT:** There are two Vercel projects — `wrenlist` (visible in dashboard) and `wrenlist-clean` (what the CLI links to and what actually deploys). When using `vercel env` CLI commands, do NOT use `--scope` — it targets the wrong project.
+
+## Google OAuth
+- **Project:** `wrenlist` in Google Cloud Console
+- **Client:** `Wrenlist Web` (807112761697-32vb...)
+- **Redirect URIs:** Both `api.wrenlist.com/auth/v1/callback` AND `tewtfroudyicwfubgcqi.supabase.co/auth/v1/callback` are registered
+- **Branding:** App name "Wrenlist", logo uploaded, privacy/terms URLs set
 
 ### Missing Vercel Env Vars (TODO)
 - **`EBAY_WEBHOOK_VERIFICATION_TOKEN`** — Required for eBay webhook signature validation. Without it, incoming eBay events (ITEM_SOLD, account deletion) are rejected with 500. eBay publishing still works; only inbound webhooks are affected.
