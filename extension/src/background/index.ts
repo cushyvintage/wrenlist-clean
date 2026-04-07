@@ -803,20 +803,35 @@ type ExternalMessage = Record<string, unknown>;
 
           if (job.action === "publish") {
             const findData = payload.find || {};
+            const pf = (findData.platform_fields || {}) as Record<string, unknown>;
+            const sharedFields = (pf.shared ?? {}) as Record<string, unknown>;
+            const vintedFields = (pf.vinted ?? {}) as Record<string, unknown>;
+            const listingPrice = payload.listing_price ?? findData.asking_price_gbp ?? 0;
+
+            // Build product matching the old PMD publish path
             const product: Product = {
               id: findData.id || job.find_id || "",
+              marketPlaceId: findData.id || job.find_id || "",
               title: findData.name || findData.title || "",
               description: findData.description || "",
               category: findData.category ? [findData.category] : [],
-              price: payload.listing_price ?? findData.asking_price_gbp ?? 0,
+              price: listingPrice,
               images: (findData.photos || []) as string[],
               sku: findData.sku || "",
-              brand: findData.brand || "",
-              condition: findData.condition || "used",
-              color: findData.colour || findData.color || "",
+              brand: findData.brand || undefined,
+              condition: mapCondition(findData.condition),
+              color: findData.colour || findData.color || undefined,
               size: findData.size ? [findData.size] : undefined,
+              tags: typeof sharedFields.tags === "string" && sharedFields.tags.trim()
+                ? sharedFields.tags.trim()
+                : [findData.brand, findData.category, "vintage"].filter(Boolean).join(", "),
+              quantity: 1,
+              acceptOffers: true,
+              whenMade: typeof sharedFields.whenMade === "string" ? sharedFields.whenMade : undefined,
+              shipping: {
+                weight: typeof vintedFields.shippingWeight === "number" ? vintedFields.shippingWeight : 1,
+              },
               dynamicProperties: {},
-              shipping: {},
             };
 
             const publishOptions: Record<string, any> = {};
