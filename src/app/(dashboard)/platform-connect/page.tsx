@@ -523,7 +523,7 @@ export default function PlatformConnectPage() {
       )}
 
       {/* Extension banner */}
-      <div className="flex items-center gap-4 p-4 bg-sage-pale border border-sage rounded">
+      <div className={`flex items-center gap-4 p-4 rounded border ${extensionDetected ? 'bg-sage-pale border-sage' : extensionDetected === null ? 'bg-cream border-border' : 'bg-red-50 border-red/30'}`}>
         <div className="flex-shrink-0">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Wrenlist Extension">
             <rect width="24" height="24" rx="6" fill="#5E7D5E" />
@@ -533,10 +533,22 @@ export default function PlatformConnectPage() {
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm text-ink">Wrenlist Extension</span>
-            <div className="flex items-center gap-1 text-xs font-semibold text-sage uppercase tracking-wide">
-              <div className="w-1 h-1 rounded-full bg-sage"></div>
-              connected
-            </div>
+            {extensionDetected === null ? (
+              <div className="flex items-center gap-1 text-xs font-semibold text-ink-lt uppercase tracking-wide">
+                <div className="w-1 h-1 rounded-full bg-ink-lt animate-pulse"></div>
+                checking…
+              </div>
+            ) : extensionDetected ? (
+              <div className="flex items-center gap-1 text-xs font-semibold text-sage uppercase tracking-wide">
+                <div className="w-1 h-1 rounded-full bg-sage"></div>
+                connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs font-semibold text-red uppercase tracking-wide">
+                <div className="w-1 h-1 rounded-full bg-red"></div>
+                not detected
+              </div>
+            )}
           </div>
           <div className="text-xs text-ink-lt">Chrome{extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting</div>
         </div>
