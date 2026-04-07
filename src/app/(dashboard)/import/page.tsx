@@ -496,12 +496,20 @@ export default function ImportPage() {
         }
 
         vintedImport.runImportProgress(totalImported, totalSkipped, totalErrors, totalItems)
+
+        // Refresh imported status so list updates live
+        try {
+          const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/vinted-imported')
+          const importedSet = new Set(importedData.importedIds)
+          setItems((prev) => prev.map((item) => ({
+            ...item,
+            alreadyImported: importedSet.has(item.id),
+            checked: importedSet.has(item.id) ? false : item.checked,
+          })))
+        } catch { /* non-fatal */ }
       }
 
       vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
-
-      // Refresh list
-      await loadVintedListings()
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
