@@ -15,6 +15,7 @@ interface SearchFormProps {
   onIdentify: (images: string[]) => void
   isIdentifying: boolean
   onClearIdentification: () => void
+  onClearResults: () => void
 }
 
 export default function SearchForm({
@@ -26,6 +27,7 @@ export default function SearchForm({
   onIdentify,
   isIdentifying,
   onClearIdentification,
+  onClearResults,
 }: SearchFormProps) {
   const [mode, setMode] = useState<'text' | 'image'>('text')
 
@@ -43,7 +45,7 @@ export default function SearchForm({
         <div className="flex gap-1 bg-cream-md rounded p-0.5 w-fit">
           <button
             type="button"
-            onClick={() => { setMode('text'); onClearIdentification() }}
+            onClick={() => { setMode('text'); onClearIdentification(); onClearResults() }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
               mode === 'text' ? 'bg-white text-ink shadow-sm' : 'text-ink-lt hover:text-ink'
             }`}
@@ -53,7 +55,7 @@ export default function SearchForm({
           </button>
           <button
             type="button"
-            onClick={() => setMode('image')}
+            onClick={() => { setMode('image'); onClearResults() }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
               mode === 'image' ? 'bg-white text-ink shadow-sm' : 'text-ink-lt hover:text-ink'
             }`}

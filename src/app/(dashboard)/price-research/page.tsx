@@ -97,6 +97,7 @@ export default function PriceResearchPage() {
   const handleIdentify = async (images: string[]) => {
     setIsIdentifying(true)
     setError(null)
+    setResults(null)
 
     try {
       const response = await fetch('/api/ai/identify-from-photo', {
@@ -191,6 +192,7 @@ export default function PriceResearchPage() {
           setIdentification(null)
           setIdentifyImageUrl(null)
         }}
+        onClearResults={() => setResults(null)}
       />
 
       {/* Loading */}

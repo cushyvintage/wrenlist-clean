@@ -12,7 +12,7 @@ function SourceBadge({ source }: { source: 'sold' | 'live' | 'ai_estimate' }) {
   if (source === 'live') {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
-        asking prices
+        listed prices
       </span>
     )
   }
@@ -23,11 +23,19 @@ function SourceBadge({ source }: { source: 'sold' | 'live' | 'ai_estimate' }) {
   )
 }
 
-export default function PlatformCard({ name, data }: { name: string; data: PlatformData }) {
+interface PlatformCardProps {
+  name: string
+  data: PlatformData
+}
+
+export default function PlatformCard({ name, data }: PlatformCardProps) {
+  // If the data is AI-generated, show "AI research" instead of the platform name
+  const displayName = data.source === 'ai_estimate' ? 'AI research' : name
+
   return (
     <Panel>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-sm text-ink">{name}</h3>
+        <h3 className="font-medium text-sm text-ink">{displayName}</h3>
         <SourceBadge source={data.source} />
       </div>
       <div className="mb-4">
@@ -40,14 +48,14 @@ export default function PlatformCard({ name, data }: { name: string; data: Platf
         <div className="text-sm text-ink">
           <span className="font-medium">{data.avg_days_to_sell.toFixed(1)}</span>{' '}
           <span className="text-ink-lt">
-            {data.source === 'sold' ? 'avg days to sell' : data.source === 'live' ? 'avg days listed' : 'avg days to sell'}
+            {data.source === 'sold' ? 'avg days to sell' : data.source === 'live' ? 'avg days listed' : 'est. days to sell'}
           </span>
         </div>
       </div>
       {data.sample_listings.length > 0 && (
         <div className="border-t border-border pt-4">
           <h4 className="text-xs font-medium text-ink-lt mb-3">
-            {data.source === 'sold' ? 'recent sales' : data.source === 'live' ? 'current listings' : 'estimated sales'}
+            {data.source === 'sold' ? 'recent sales' : data.source === 'live' ? 'eBay listed items' : 'AI-estimated comparables'}
           </h4>
           <div className="space-y-2">
             {data.sample_listings.map((listing, idx) => (
