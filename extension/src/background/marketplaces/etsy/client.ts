@@ -115,7 +115,7 @@ export class EtsyClient {
     const offset = page ? parseInt(page, 10) * limit : 0;
 
     const url = new URL(
-      `${this.baseUrl}/api/v3/ajax/shop/${shopId}//listings/v3/search`,
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/v3/search`,
     );
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
@@ -160,7 +160,7 @@ export class EtsyClient {
     const shopId = await this.getShopId();
 
     const resp = await fetch(
-      `${this.baseUrl}/api/v3/ajax/shop/${shopId}//listings/${id}`,
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${id}`,
       {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -324,15 +324,19 @@ export class EtsyClient {
         const publishExec = publishResult?.[0]?.result as {
           success: boolean;
           message?: string;
+          actualMode?: "draft" | "publish";
         };
+        // Use the actual mode clicked (may differ from requested if button was unavailable)
+        const actualMode = publishExec?.actualMode ?? mode;
         await remoteLog("info", "etsy.publish", `Button click result`, {
           success: publishExec?.success,
           message: publishExec?.message,
+          requestedMode: mode,
+          actualMode,
         });
 
-        // If publishing directly, handle the $0.20 fee confirmation dialog.
-        // Poll for the dialog to appear (up to 8 seconds).
-        if (mode === "publish") {
+        // If actually publishing, handle the $0.20 fee confirmation dialog.
+        if (actualMode === "publish") {
           let confirmed = false;
           for (let attempt = 0; attempt < 4; attempt++) {
             await wait(2000);
@@ -404,7 +408,7 @@ export class EtsyClient {
                 // Etsy's default sort for update_date is descending (most recent first),
                 // so the first matching link in the DOM is the most recently created/updated listing.
                 // This handles multiple drafts with the same title correctly.
-                const scrapeState = mode === "publish" ? "active" : "draft";
+                const scrapeState = actualMode === "publish" ? "active" : "draft";
                 await chrome.tabs.update(tabId, {
                   url: `https://www.etsy.com/your/shops/me/tools/listings/state:${scrapeState},sort:update_date`,
                 });
@@ -476,14 +480,14 @@ export class EtsyClient {
         if (listingId) {
           // Drafts aren't viewable at /listing/{id} — use the edit URL instead.
           // Published listings use the public URL.
-          listingUrl = mode === "draft"
+          listingUrl = actualMode === "draft"
             ? `${ETSY_EDIT_LISTING_URL}/edit/${listingId}`
             : this.getProductUrl(listingId);
         }
 
         // Even without a listing ID, if we got past validation the save worked.
         // The redirect to /tools/listings confirms it.
-        const modeLabel = mode === "publish" ? "published" : "saved as draft";
+        const modeLabel = actualMode === "publish" ? "published" : "saved as draft";
         clearInterval(keepAlive);
         await remoteLog("info", "etsy.publish", `Completed: ${modeLabel}`, {
           listingId,
@@ -491,7 +495,7 @@ export class EtsyClient {
         });
         return {
           success: true,
-          publishMode: mode,
+          publishMode: actualMode,
           message: listingId
             ? `Listing ${modeLabel} on Etsy.`
             : `Listing ${modeLabel} on Etsy (ID not captured — check Etsy dashboard).`,
@@ -1326,19 +1330,18 @@ function fillEtsyListingForm(data: EtsyFormFillData): {
  */
 function clickPublishButton(
   mode: "draft" | "publish" = "draft",
-): { success: boolean; message?: string } {
+): { success: boolean; message?: string; actualMode?: "draft" | "publish" } {
   try {
     const buttons = Array.from(document.querySelectorAll("button"));
 
     if (mode === "publish") {
-      // Publish directly — user accepted the $0.20 listing fee
       const publishBtn = buttons.find(
         (b) => b.textContent?.trim() === "Publish",
       );
       if (publishBtn && !publishBtn.disabled) {
         publishBtn.scrollIntoView({ block: "center" });
         publishBtn.click();
-        return { success: true, message: "Clicked Publish" };
+        return { success: true, message: "Clicked Publish", actualMode: "publish" };
       }
       // Fallback to draft if Publish is disabled
       const draftBtn = buttons.find((b) =>
@@ -1347,17 +1350,16 @@ function clickPublishButton(
       if (draftBtn && !draftBtn.disabled) {
         draftBtn.scrollIntoView({ block: "center" });
         draftBtn.click();
-        return { success: true, message: "Publish disabled — saved as draft instead" };
+        return { success: true, message: "Publish disabled — saved as draft instead", actualMode: "draft" };
       }
     } else {
-      // Save as draft — avoids $0.20 fee
       const draftBtn = buttons.find((b) =>
         b.textContent?.trim()?.includes("Save as draft"),
       );
       if (draftBtn && !draftBtn.disabled) {
         draftBtn.scrollIntoView({ block: "center" });
         draftBtn.click();
-        return { success: true, message: "Saved as draft" };
+        return { success: true, message: "Saved as draft", actualMode: "draft" };
       }
       // Fallback to Publish if draft button not available
       const publishBtn = buttons.find(
@@ -1366,7 +1368,7 @@ function clickPublishButton(
       if (publishBtn && !publishBtn.disabled) {
         publishBtn.scrollIntoView({ block: "center" });
         publishBtn.click();
-        return { success: true, message: "Draft not available — clicked Publish" };
+        return { success: true, message: "Draft not available — clicked Publish", actualMode: "publish" };
       }
     }
 
@@ -1404,7 +1406,7 @@ function clickPublishConfirmation(): { success: boolean; message?: string } {
       const candidates = document.querySelectorAll(sel);
       for (const c of Array.from(candidates)) {
         if ((c as HTMLElement).offsetHeight > 0 &&
-            c.textContent?.includes("publish")) {
+            c.textContent?.toLowerCase().includes("publish")) {
           dialog = c;
           break;
         }
