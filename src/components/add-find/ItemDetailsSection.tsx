@@ -2,6 +2,7 @@
 
 import { FindCondition, Platform, FieldConfig } from '@/types'
 import { WRENLIST_CONDITIONS, getConditionPlatformLabels } from '@/data/marketplace-conditions'
+import BrandTypeahead from './BrandTypeahead'
 
 interface ItemDetailsSectionProps {
   brand: string
@@ -47,16 +48,10 @@ export default function ItemDetailsSection({
             )}
           </label>
           <div className="flex flex-col gap-2">
-            <input
-              type="text"
+            <BrandTypeahead
               value={brand}
-              onChange={(e) => onBrandChange(e.target.value)}
-              className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${
-                incompleteRequiredFields.has('brand')
-                  ? 'border-amber-400 focus:ring-amber-400'
-                  : 'border-sage/14 focus:ring-sage/30'
-              }`}
-              placeholder="Leave blank if unsure"
+              onChange={onBrandChange}
+              required={brandRequired}
             />
             {incompleteRequiredFields.has('brand') && (
               <span className="text-xs text-amber-600">Required — complete before publishing</span>
