@@ -55,23 +55,26 @@ export default function MarketplaceFieldsSection({
 
   const currentTab = activeTab && selectedPlatforms.includes(activeTab) ? activeTab : platformsWithTabs[0] || null
 
-  if (!fieldConfig || selectedPlatforms.length === 0) return null
+  if (selectedPlatforms.length === 0) return null
+  // If fieldConfig is null but we have Etsy or Depop, those still have hardcoded fields to show
+  if (!fieldConfig && !hasEtsy && !hasDepop) return null
 
-  const dynamicFields = Object.entries(fieldConfig).filter(
+  const dynamicFields = fieldConfig ? Object.entries(fieldConfig).filter(
     ([key, val]) => !CUSTOM_HANDLED_KEYS.has(key) && val.show
-  )
+  ) : []
 
   // Show colour if any platform needs it — Vinted always needs colour even if fieldConfig doesn't include 'colour'
-  const showColour = fieldConfig.colour?.show || hasVinted
+  const showColour = fieldConfig?.colour?.show || hasVinted
   const showSecondaryColour = hasVinted || hasEtsy || hasDepop
   const showTags = hasEtsy || hasFacebook || hasShopify
   const showEtsyFields = hasEtsy
   const showDepopFields = hasDepop
 
   // Determine if we have anything to render at all
-  const hasAnyContent = showColour || showSecondaryColour || showTags || showEtsyFields || showDepopFields ||
-    fieldConfig.condition_description?.show || fieldConfig.size?.show || (fieldConfig.material?.show || fieldConfig.materialvinted?.show) ||
-    fieldConfig.author?.show || fieldConfig.isbn?.show || fieldConfig.language?.show ||
+  const showSize = fieldConfig?.size?.show || (hasVinted && category.startsWith('clothing'))
+  const hasAnyContent = showColour || showSecondaryColour || showTags || showEtsyFields || showDepopFields || showSize ||
+    fieldConfig?.condition_description?.show || (fieldConfig?.material?.show || fieldConfig?.materialvinted?.show) ||
+    fieldConfig?.author?.show || fieldConfig?.isbn?.show || fieldConfig?.language?.show ||
     dynamicFields.length > 0 || platformsWithTabs.length > 0
 
   if (!hasAnyContent) return null
@@ -106,7 +109,7 @@ export default function MarketplaceFieldsSection({
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
               Primary colour
-              {fieldConfig.colour?.required && <span className="text-red-500"> *</span>}
+              {fieldConfig?.colour?.required && <span className="text-red-500"> *</span>}
             </label>
             <select
               value={(platformFields.shared?.colour as string) ?? ''}
@@ -141,7 +144,7 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* Condition Description */}
-        {fieldConfig.condition_description?.show && (
+        {fieldConfig?.condition_description?.show && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
               Condition description <span className="text-xs text-sage-dim font-normal">(optional)</span>
@@ -156,16 +159,16 @@ export default function MarketplaceFieldsSection({
           </div>
         )}
 
-        {/* Size */}
-        {fieldConfig.size?.show && (
+        {/* Size — show when fieldConfig says so, or always for Vinted clothing */}
+        {(fieldConfig?.size?.show || (hasVinted && category.startsWith('clothing'))) && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
-              Size{fieldConfig.size.required && <span className="text-red-500"> *</span>}
+              Size{fieldConfig?.size?.required && <span className="text-red-500"> *</span>}
             </label>
             <SizePicker
               value={(platformFields.shared?.size as string) ?? ''}
               category={category}
-              required={fieldConfig.size.required}
+              required={fieldConfig?.size?.required}
               onChange={(value, vintedSizeId) => {
                 onSharedFieldChange('size', value)
                 if (vintedSizeId && hasVinted) {
@@ -177,11 +180,11 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* Material — multi-select chips for Vinted (numeric IDs), text for others */}
-        {(fieldConfig.material?.show || fieldConfig.materialvinted?.show) && (
+        {(fieldConfig?.material?.show || fieldConfig?.materialvinted?.show) && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
               Material
-              {(fieldConfig.material?.required || fieldConfig.materialvinted?.required) ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional{hasVinted ? ', max 3' : ''})</span>}
+              {(fieldConfig?.material?.required || fieldConfig?.materialvinted?.required) ? <span className="text-red-500"> *</span> : <span className="text-xs text-sage-dim font-normal"> (optional{hasVinted ? ', max 3' : ''})</span>}
             </label>
             {hasVinted ? (
               <>
@@ -251,10 +254,10 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* Author (Books) */}
-        {fieldConfig.author?.show && (
+        {fieldConfig?.author?.show && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
-              Author{fieldConfig.author.required && <span className="text-red-500"> *</span>}
+              Author{fieldConfig?.author?.required && <span className="text-red-500"> *</span>}
             </label>
             <input
               type="text"
@@ -267,10 +270,10 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* ISBN */}
-        {fieldConfig.isbn?.show && (
+        {fieldConfig?.isbn?.show && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
-              ISBN{fieldConfig.isbn.required && <span className="text-red-500"> *</span>}
+              ISBN{fieldConfig?.isbn?.required && <span className="text-red-500"> *</span>}
             </label>
             <input
               type="text"
@@ -283,10 +286,10 @@ export default function MarketplaceFieldsSection({
         )}
 
         {/* Language */}
-        {fieldConfig.language?.show && (
+        {fieldConfig?.language?.show && (
           <div>
             <label className="block text-sm font-semibold text-ink mb-2">
-              Language{fieldConfig.language.required && <span className="text-red-500"> *</span>}
+              Language{fieldConfig?.language?.required && <span className="text-red-500"> *</span>}
             </label>
             <input
               type="text"

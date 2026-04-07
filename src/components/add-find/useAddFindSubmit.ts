@@ -55,26 +55,28 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     status,
   })
 
+  const checkPlanLimit = async () => {
+    const planCheck = await fetch('/api/finds?limit=1&offset=0&source_type=manual')
+    if (!planCheck.ok) return
+    const planData = await planCheck.json()
+    const total = planData?.data?.pagination?.total ?? 0
+    const planLimits: Record<string, number | null> = { free: 10, nester: 100, forager: 500, flock: null }
+    const profileRes = await fetch('/api/profile')
+    if (!profileRes.ok) return
+    const profile = await profileRes.json()
+    const plan = profile?.data?.data?.plan ?? 'free'
+    const limit = planLimits[plan] ?? null
+    if (limit !== null && total >= limit) {
+      throw new Error(`You've reached your ${limit}-find limit on the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan. Upgrade to add more finds.`)
+    }
+  }
+
   const handleSaveDraft = async () => {
     setIsLoading(true)
     setError(null)
     setUploadProgress(0)
     try {
-      const planCheck = await fetch('/api/finds?limit=1&offset=0&source_type=manual')
-      if (planCheck.ok) {
-        const planData = await planCheck.json()
-        const total = planData?.data?.pagination?.total ?? 0
-        const planLimits: Record<string, number | null> = { free: 5, nester: 10, picker: 50, trader: null }
-        const profileRes = await fetch('/api/profile')
-        if (profileRes.ok) {
-          const profile = await profileRes.json()
-          const plan = profile?.data?.plan ?? 'free'
-          const limit = planLimits[plan] ?? null
-          if (limit !== null && total >= limit) {
-            throw new Error(`You've reached your ${limit}-find limit on the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan. Upgrade to add more finds.`)
-          }
-        }
-      }
+      await checkPlanLimit()
       const response = await fetch('/api/finds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,6 +146,7 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     setError(null)
     setUploadProgress(0)
     try {
+      await checkPlanLimit()
       const response = await fetch('/api/finds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

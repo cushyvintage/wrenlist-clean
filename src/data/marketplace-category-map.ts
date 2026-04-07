@@ -467,9 +467,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Men's shoes",
       platforms: {
         ebay: { id: "93427", name: "Men's Shoes", path: "Root > Clothes, Shoes & Accessories > Men > Men's Shoes" },
-        vinted: { id: "4099", name: "Hoes", path: "Home > Outdoor & garden > Outdoor hand tools > Hoes" },
+        vinted: { id: "1231", name: "Men's Shoes", path: "Men > Shoes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-8", name: "Shoes", path: "Apparel & Accessories > Shoes" },
-        depop: { id: "menswear|footwear|boots", name: "Boots" },
+        depop: { id: "menswear|footwear|other-shoes", name: "Shoes" },
       },
     },
     menswear_mens_shorts: {
@@ -655,9 +655,9 @@ export const CATEGORY_TREE: CategoryTree = {
       label: "Women's shoes",
       platforms: {
         ebay: { id: "3034", name: "Women's Shoes", path: "Root > Clothes, Shoes & Accessories > Women > Women's Shoes" },
-        vinted: { id: "4099", name: "Hoes", path: "Home > Outdoor & garden > Outdoor hand tools > Hoes" },
+        vinted: { id: "16", name: "Women's Shoes", path: "Women > Shoes" },
         shopify: { id: "gid://shopify/TaxonomyCategory/aa-8", name: "Shoes", path: "Apparel & Accessories > Shoes" },
-        depop: { id: "menswear|footwear|boots", name: "Boots" },
+        depop: { id: "womenswear|footwear|other-shoes", name: "Shoes" },
       },
     },
     womenswear_womens_shorts: {
