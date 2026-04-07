@@ -28,7 +28,7 @@ interface ImportResult {
   error?: string
 }
 
-const VALID_CONDITIONS: FindCondition[] = ['excellent', 'good', 'fair']
+const VALID_CONDITIONS: FindCondition[] = ['new_with_tags', 'new_without_tags', 'very_good', 'good', 'fair', 'poor']
 const VALID_CATEGORIES = Object.keys(CATEGORY_MAP)
 
 function parseCSVLine(line: string): string[] {

@@ -25,7 +25,7 @@ export interface AuthState {
 
 export type PlanId = 'free' | 'nester' | 'forager' | 'flock'
 export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
-export type FindCondition = 'excellent' | 'good' | 'fair'
+export type FindCondition = 'new_with_tags' | 'new_without_tags' | 'very_good' | 'good' | 'fair' | 'poor'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'
 export type SupplierType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'flea_market' | 'online' | 'other'
 export type Platform = 'vinted' | 'ebay' | 'etsy' | 'shopify' | 'depop' | 'poshmark' | 'mercari' | 'facebook' | 'whatnot' | 'grailed'
@@ -457,6 +457,21 @@ export interface ScanHistoryRecord {
   details: string | null
   source: 'isbn' | 'ai' | 'manual' | null
   price_data: ScanPriceData | null
+  created_at: string
+}
+
+export interface PriceResearchRecord {
+  id: string
+  query: string
+  title: string | null
+  description: string | null
+  suggested_price: number | null
+  best_platform: string | null
+  ebay_avg: number | null
+  vinted_avg: number | null
+  source: 'text' | 'image' | null
+  image_url: string | null
+  raw_response: Record<string, unknown> | null
   created_at: string
 }
 

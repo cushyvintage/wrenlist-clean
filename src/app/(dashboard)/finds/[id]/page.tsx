@@ -58,9 +58,12 @@ interface FormData {
 }
 
 const CONDITIONS: { value: FindCondition; label: string }[] = [
-  { value: 'excellent', label: 'Excellent / Like new' },
+  { value: 'new_with_tags', label: 'New with tags' },
+  { value: 'new_without_tags', label: 'New without tags / Like new' },
+  { value: 'very_good', label: 'Very good' },
   { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair / Worn' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'poor', label: 'Poor' },
 ]
 
 const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP)
@@ -870,11 +873,14 @@ export default function InventoryDetailPage() {
               // Extension expects PascalCase condition enum
               condition: (() => {
                 const c = find.condition?.toLowerCase() || ''
-                if (c === 'excellent') return 'VeryGood'
+                if (c === 'new_with_tags') return 'NewWithTags'
+                if (c === 'new_without_tags') return 'NewWithoutTags'
+                if (c === 'very_good') return 'VeryGood'
                 if (c === 'good') return 'Good'
                 if (c === 'fair') return 'Fair'
                 if (c === 'poor') return 'Poor'
-                if (c === 'new') return 'NewWithoutTags'
+                // Legacy fallbacks
+                if (c === 'excellent') return 'NewWithoutTags'
                 return 'Good'
               })(),
               // Pass catalog_id as category[0] — mapper detects numeric IDs and skips resolution

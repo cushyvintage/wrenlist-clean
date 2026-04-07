@@ -22,7 +22,7 @@ const mockFind: Find = {
   brand: 'Carhartt',
   size: 'M',
   colour: 'brown',
-  condition: 'excellent',
+  condition: 'very_good',
   description: 'Nice vintage jacket',
   cost_gbp: 12,
   asking_price_gbp: 145,

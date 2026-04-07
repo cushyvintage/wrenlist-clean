@@ -120,15 +120,21 @@ function mapProductType(category?: string | null): string {
 
 function mapCondition(condition?: string | null): Condition {
   switch (condition?.toLowerCase()) {
-    case "excellent":
-    case "new":
+    case "new_with_tags":
+      return Condition.NewWithTags;
+    case "new_without_tags":
       return Condition.NewWithoutTags;
+    case "very_good":
+      return Condition.VeryGood;
     case "good":
       return Condition.Good;
     case "fair":
       return Condition.Fair;
     case "poor":
       return Condition.Poor;
+    // Legacy fallbacks
+    case "excellent":
+      return Condition.NewWithoutTags;
     default:
       return Condition.Good;
   }
@@ -2575,10 +2581,11 @@ async function handleFetchWrenlistApi(message: ExternalMessage) {
 function mapConditionToWrenlist(condition?: Condition): string {
   switch (condition) {
     case Condition.NewWithTags:
+      return "new_with_tags";
     case Condition.NewWithoutTags:
-      return "new";
+      return "new_without_tags";
     case Condition.VeryGood:
-      return "like_new";
+      return "very_good";
     case Condition.Good:
       return "good";
     case Condition.Fair:

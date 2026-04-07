@@ -6,8 +6,8 @@ import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 
 // Vinted condition map
 const CONDITION_MAP: Record<string, string> = {
-  'New with tags': 'excellent', 'New without tags': 'excellent',
-  'Very good': 'excellent', 'Good': 'good',
+  'New with tags': 'new_with_tags', 'New without tags': 'new_without_tags',
+  'Very good': 'very_good', 'Good': 'good',
   'Satisfactory': 'fair', 'Fair': 'fair', 'Poor': 'poor',
 }
 

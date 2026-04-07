@@ -5,7 +5,7 @@ import { z } from 'zod'
  */
 
 export const FindStatusEnum = z.enum(['draft', 'listed', 'on_hold', 'sold'])
-export const ConditionEnum = z.enum(['excellent', 'good', 'fair', 'poor'])
+export const ConditionEnum = z.enum(['new_with_tags', 'new_without_tags', 'very_good', 'good', 'fair', 'poor'])
 export const SourceTypeEnum = z.enum(['house_clearance', 'charity_shop', 'car_boot', 'online_haul', 'flea_market', 'other'])
 export const PlatformEnum = z.enum(['vinted', 'ebay', 'etsy', 'shopify', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed'])
 

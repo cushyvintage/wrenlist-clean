@@ -36,7 +36,7 @@ interface FindDetails {
   brand?: string
   size?: string
   colour?: string
-  condition: 'excellent' | 'good' | 'fair'
+  condition: 'new_with_tags' | 'new_without_tags' | 'very_good' | 'good' | 'fair' | 'poor'
   notes?: string
 }
 

@@ -31,12 +31,12 @@ const EBAY_TO_CATEGORY: Record<string, string> = {
 }
 
 const CONDITION_MAP: Record<string, string> = {
-  'NEW': 'excellent',
-  'NEW_WITH_TAGS': 'excellent',
-  'NEW_WITHOUT_TAGS': 'excellent',
-  'LIKE_NEW': 'excellent',
-  'USED_EXCELLENT': 'excellent',
-  'USED_VERY_GOOD': 'excellent',
+  'NEW': 'new_with_tags',
+  'NEW_WITH_TAGS': 'new_with_tags',
+  'NEW_WITHOUT_TAGS': 'new_without_tags',
+  'LIKE_NEW': 'new_without_tags',
+  'USED_EXCELLENT': 'very_good',
+  'USED_VERY_GOOD': 'very_good',
   'USED_GOOD': 'good',
   'USED_ACCEPTABLE': 'fair',
   'FOR_PARTS_OR_NOT_WORKING': 'poor',
