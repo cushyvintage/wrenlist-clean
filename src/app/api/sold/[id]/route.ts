@@ -26,7 +26,10 @@ export const GET = withAuth(async (req, user, params) => {
     .single()
 
   if (error || !find) {
-    return ApiResponseHelper.notFound('Sold item not found')
+    return ApiResponseHelper.error(
+      `Sold item not found (id=${id}, error=${error?.message || 'none'}, code=${error?.code || 'none'})`,
+      404
+    )
   }
 
   // Fetch PMD records separately
