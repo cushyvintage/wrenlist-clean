@@ -94,12 +94,22 @@ const FACEBOOK_CATEGORY_MAP: Record<string, string> = {
   music_media: "298538951209945",
 };
 
+/** Resolve a compound category value against a lookup map, trying progressively shorter prefixes */
+function resolveFromMap<T>(map: Record<string, T>, cat: string): T | undefined {
+  if (map[cat]) return map[cat];
+  const parts = cat.split("_");
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const prefix = parts.slice(0, i).join("_");
+    if (map[prefix]) return map[prefix];
+  }
+  return undefined;
+}
+
 function mapCategoryToFacebook(category?: string | null, platformCategoryId?: string | null): string[] {
   if (platformCategoryId) return [platformCategoryId];
   if (!category) return ["684964985564453"]; // Miscellaneous
   const cat = category.toLowerCase();
-  // Try exact match first, then top-level prefix (e.g. "ceramics_plates" → "ceramics")
-  const id = FACEBOOK_CATEGORY_MAP[cat] ?? FACEBOOK_CATEGORY_MAP[cat.split("_")[0]];
+  const id = resolveFromMap(FACEBOOK_CATEGORY_MAP, cat);
   return [id ?? "684964985564453"];
 }
 
@@ -138,14 +148,13 @@ const DEPOP_CATEGORY_MAP: Record<string, string[]> = {
 function mapCategoryToDepop(category?: string | null): string[] {
   if (!category) return ["everything-else", "home", "decor-home-accesories"];
   const cat = category.toLowerCase();
-  // Try exact match first, then top-level prefix (e.g. "ceramics_plates" → "ceramics")
-  return DEPOP_CATEGORY_MAP[cat] ?? DEPOP_CATEGORY_MAP[cat.split("_")[0]] ?? ["everything-else", "home", "decor-home-accesories"];
+  return resolveFromMap(DEPOP_CATEGORY_MAP, cat) ?? ["everything-else", "home", "decor-home-accesories"];
 }
 
 function mapProductType(category?: string | null): string {
   if (!category) return "";
   const cat = category.toLowerCase();
-  return PRODUCT_TYPE_MAP[cat] ?? PRODUCT_TYPE_MAP[cat.split("_")[0]] ?? "";
+  return resolveFromMap(PRODUCT_TYPE_MAP, cat) ?? "";
 }
 
 function mapCondition(condition?: string | null): Condition {

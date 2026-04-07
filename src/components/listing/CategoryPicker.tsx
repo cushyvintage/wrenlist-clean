@@ -139,6 +139,7 @@ export default function CategoryPicker({
     if (!catTree) return
     const subs = Object.values(catTree)
     if (subs.length === 1 && subs[0]) {
+      setBrowsing(null)
       onChange(subs[0].value, subs[0])
       return
     }
