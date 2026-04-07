@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { findColourByVintedId } from '@/data/unified-colours'
 
 // Vinted condition map
 const CONDITION_MAP: Record<string, string> = {
@@ -189,11 +190,21 @@ export async function POST(request: NextRequest) {
             photos,
             sku,
             status: findStatus,
+            colour: findColourByVintedId(item.colour_ids?.[0])?.label || null,
+            size: item.size_title || null,
             platform_fields: {
               selectedPlatforms: ['vinted'],
+              shared: {
+                colour: findColourByVintedId(item.colour_ids?.[0])?.label,
+                secondaryColour: findColourByVintedId(item.colour_ids?.[1])?.label,
+                size: item.size_title || undefined,
+                vintedSizeId: item.size_id ? String(item.size_id) : undefined,
+              },
               vinted: {
                 primaryColor: item.colour_ids?.[0] || null,
+                secondaryColor: item.colour_ids?.[1] || null,
                 catalogId: item.catalog_id || item.vintedMetadata?.catalog_id || null,
+                material: item.material_id ? [item.material_id] : undefined,
                 vintedMetadata: item.vintedMetadata || null,
                 originalListingId: String(item.id),
               },

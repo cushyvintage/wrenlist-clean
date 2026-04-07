@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
+import { findColourByVintedId } from '@/data/unified-colours'
 
 // Map Vinted status string → Wrenlist condition
 const CONDITION_MAP: Record<string, string> = {
@@ -76,12 +77,22 @@ export async function POST(request: NextRequest) {
             photos,
             sku,
             status: item.is_sold ? 'sold' : 'listed',
+            colour: findColourByVintedId(item.colour_ids?.[0])?.label || null,
+            size: item.size_title || null,
             platform_fields: {
               selectedPlatforms: ['vinted'],
+              shared: {
+                colour: findColourByVintedId(item.colour_ids?.[0])?.label,
+                secondaryColour: findColourByVintedId(item.colour_ids?.[1])?.label,
+                size: item.size_title || undefined,
+                vintedSizeId: item.size_id ? String(item.size_id) : undefined,
+              },
               vinted: {
                 primaryColor: item.colour_ids?.[0] || null,
+                secondaryColor: item.colour_ids?.[1] || null,
                 catalogId: item.catalog_id || null,
-              }
+                material: item.material_id ? [item.material_id] : undefined,
+              },
             },
             selected_marketplaces: ['vinted'],
           })
