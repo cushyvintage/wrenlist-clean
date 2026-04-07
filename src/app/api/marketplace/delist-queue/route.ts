@@ -51,10 +51,27 @@ export const GET = withAuth(async (_req, user) => {
     return ApiResponseHelper.internalError()
   }
 
-  // Filter out items without platform_listing_id (can't delist without an ID)
-  const validItems = (data || []).filter(
-    (item): item is DelistQueueItem => !!item.platform_listing_id
-  )
+  // Filter out items without platform_listing_id (can't delist without an ID).
+  // Mark invalid items as error so the user gets feedback instead of being stuck.
+  const allItems = data || []
+  const validItems: DelistQueueItem[] = []
+
+  for (const item of allItems) {
+    if (item.platform_listing_id) {
+      validItems.push(item as DelistQueueItem)
+    } else {
+      // Auto-fail: no listing ID means we can't navigate to the listing to delist it
+      await supabase
+        .from('product_marketplace_data')
+        .update({
+          status: 'error',
+          error_message: 'Cannot delist: no listing ID found. The listing ID was not captured during publish. Please delist manually from the marketplace.',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('find_id', item.find_id)
+        .eq('marketplace', item.marketplace)
+    }
+  }
 
   // If any Shopify items, fetch the user's Shopify store domain
   const hasShopify = validItems.some((item) => item.marketplace === 'shopify')

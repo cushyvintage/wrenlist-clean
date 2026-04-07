@@ -390,8 +390,11 @@ export class EtsyClient {
                 break;
               }
               try {
+                // For published listings, scrape the active listings page (sorted by most recent).
+                // For drafts, scrape the draft listings page.
+                const scrapeState = mode === "publish" ? "active" : "draft";
                 await chrome.tabs.update(tabId, {
-                  url: "https://www.etsy.com/your/shops/me/tools/listings/state:draft,sort:update_date",
+                  url: `https://www.etsy.com/your/shops/me/tools/listings/state:${scrapeState},sort:update_date`,
                 });
 
                 // Poll for listing-editor links to appear (up to 10s)
@@ -412,10 +415,24 @@ export class EtsyClient {
                             return idMatch[1];
                           }
                         }
-                        // Pass 2: first listing-editor/edit link (most recent draft)
+                        // Pass 2: match by listing/{id} link (active listings use public URLs)
                         for (const link of links) {
                           const href = link.getAttribute("href") || "";
-                          const idMatch = href.match(/listing-editor\/edit\/(\d+)/);
+                          const idMatch = href.match(/\/listing\/(\d+)/);
+                          if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
+                            return idMatch[1];
+                          }
+                        }
+                        // Pass 3: first listing-editor link (most recent by sort order)
+                        for (const link of links) {
+                          const href = link.getAttribute("href") || "";
+                          const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
+                          if (idMatch?.[1]) return idMatch[1];
+                        }
+                        // Pass 4: first /listing/{id} link (most recent active listing)
+                        for (const link of links) {
+                          const href = link.getAttribute("href") || "";
+                          const idMatch = href.match(/\/listing\/(\d+)/);
                           if (idMatch?.[1]) return idMatch[1];
                         }
                         return null;
@@ -675,13 +692,22 @@ export class EtsyClient {
       product.category?.[0] ||
       "";
 
-    // Determine when_made based on product metadata
+    // Determine when_made based on product metadata.
+    // CushyVintage sells almost exclusively vintage items, so default to vintage
+    // for categories that are typically pre-owned/antique. Only categories that
+    // might be new/handmade (craft_supplies, health_beauty) default to recent.
     const categoryRoot = rawCategory.split("_")[0];
+    const VINTAGE_CATEGORIES = new Set([
+      "ceramics", "glassware", "jewellery", "collectibles", "antiques",
+      "art", "furniture", "homeware", "toys", "clothing", "books",
+      "music_media", "electronics", "sports", "medals", "teapots", "jugs",
+    ]);
+    const isLikelyVintage =
+      product.dynamicProperties?.is_vintage === "true" ||
+      VINTAGE_CATEGORIES.has(categoryRoot);
     const whenMade =
       product.whenMade || product.dynamicProperties?.when_made ||
-      (categoryRoot === "collectibles" || product.dynamicProperties?.is_vintage === "true"
-        ? ETSY_WHEN_MADE_VINTAGE
-        : ETSY_WHEN_MADE_RECENT);
+      (isLikelyVintage ? ETSY_WHEN_MADE_VINTAGE : ETSY_WHEN_MADE_RECENT);
 
     // Combine all images into a single array
     // The cover image may be stored as a string on the product's index signature

@@ -113,6 +113,13 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     }
   }
 
+  // For extension-based marketplaces, we need a platform_listing_id to delist
+  if (!pmd.platform_listing_id) {
+    return ApiResponseHelper.badRequest(
+      `Cannot delist from ${marketplace}: no listing ID was captured during publish. Please delist this listing manually from ${marketplace}.`
+    )
+  }
+
   // All other marketplaces: queue for extension
   const { error: updateError } = await supabase
     .from('product_marketplace_data')

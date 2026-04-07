@@ -237,13 +237,39 @@ type ExternalMessage = Record<string, unknown>;
 
       // Supabase SSR stores the session as base64-encoded JSON in a cookie
       // named sb-{ref}-auth-token (possibly chunked with .0, .1 suffixes).
-      const authPrefix = "sb-";
-      const authSuffix = "-auth-token";
+      // Multiple Supabase connections (direct + custom domain) may have
+      // different cookie prefixes (e.g. sb-tewtfro...-auth-token vs sb-api-auth-token).
+      // Group by prefix and pick the first valid group.
+      const authCookies = allCookies.filter(
+        (c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"),
+      );
 
-      // Collect chunks: sb-xxx-auth-token.0, sb-xxx-auth-token.1, etc.
-      const chunks = allCookies
-        .filter((c) => c.name.startsWith(authPrefix) && c.name.includes(authSuffix))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      // Group by prefix: everything before "-auth-token"
+      const groups = new Map<string, typeof authCookies>();
+      for (const c of authCookies) {
+        const prefixEnd = c.name.indexOf("-auth-token");
+        const prefix = c.name.substring(0, prefixEnd);
+        if (!groups.has(prefix)) groups.set(prefix, []);
+        groups.get(prefix)!.push(c);
+      }
+
+      // Pick the first group that produces a valid token (try each prefix)
+      const chunks: typeof authCookies = [];
+      for (const [, group] of groups) {
+        const sorted = group.sort((a, b) => a.name.localeCompare(b.name));
+        const raw = sorted.map((c) => c.value).join("");
+        const b64 = raw.startsWith("base64-") ? raw.slice(7) : raw;
+        try {
+          const json = atob(b64);
+          const session = JSON.parse(json);
+          if (session.access_token || session[0]) {
+            chunks.push(...sorted);
+            break;
+          }
+        } catch {
+          // Try next group
+        }
+      }
 
       if (chunks.length > 0) {
         // Join chunk values (the cookie value is base64-encoded JSON)
@@ -269,8 +295,24 @@ type ExternalMessage = Record<string, unknown>;
     return fetch(url, { ...init, headers });
   }
 
+  /** Guard against concurrent queue polls (alarm + check_queue overlap). */
+  let isQueuePolling = false;
+
   /** Extracted so it can be invoked by both the alarm and check_queue message. */
   async function runQueuePoll(): Promise<{ publish: number; delist: number; error?: string }> {
+    if (isQueuePolling) {
+      console.log("[QueuePoll] Already polling — skipping this cycle");
+      return { publish: 0, delist: 0, error: "already_polling" };
+    }
+    isQueuePolling = true;
+    try {
+      return await _runQueuePollImpl();
+    } finally {
+      isQueuePolling = false;
+    }
+  }
+
+  async function _runQueuePollImpl(): Promise<{ publish: number; delist: number; error?: string }> {
     const baseUrl = await getWrenlistBaseUrl();
     let publishCount = 0;
     let delistCount = 0;
