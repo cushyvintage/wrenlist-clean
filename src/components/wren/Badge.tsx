@@ -10,7 +10,7 @@
  * <Badge status="sold" />
  */
 
-type BadgeStatus = 'listed' | 'draft' | 'on_hold' | 'sold'
+type BadgeStatus = 'listed' | 'draft' | 'on_hold' | 'hidden' | 'sold'
 
 interface BadgeProps {
   /** Status value to display */
@@ -37,6 +37,11 @@ const statusConfig: Record<
     bg: 'bg-amber-lt',
     text: 'text-amber',
     label: 'on hold',
+  },
+  hidden: {
+    bg: 'bg-stone-100',
+    text: 'text-stone-500',
+    label: 'hidden',
   },
   sold: {
     bg: '',

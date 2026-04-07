@@ -204,7 +204,7 @@ export default function ListingsPage() {
   const getStatusBadgeType = (status: string) => {
     if (status === 'listed') return 'listed'
     if (status === 'sold') return 'sold'
-    if (status === 'hidden') return 'on_hold'
+    if (status === 'hidden') return 'hidden'
     if (status === 'delisted') return 'draft'
     if (status === 'error') return 'on_hold'
     return 'on_hold'
