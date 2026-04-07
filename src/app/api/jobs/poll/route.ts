@@ -100,24 +100,34 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   switch (action) {
     case 'claim': {
-      if (job.status !== 'pending') {
-        return ApiResponseHelper.error('Job is not pending', 409)
-      }
-      await supabase
+      // Atomic: only claim if still pending (prevents TOCTOU race)
+      const { data: claimed } = await supabase
         .from('publish_jobs')
         .update({ status: 'claimed', claimed_at: now, updated_at: now })
         .eq('id', job_id)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .select('id')
+        .single()
+      if (!claimed) {
+        return ApiResponseHelper.error('Job already claimed or not pending', 409)
+      }
       return ApiResponseHelper.success({ status: 'claimed' })
     }
 
     case 'start': {
-      if (job.status !== 'claimed') {
-        return ApiResponseHelper.error('Job is not claimed', 409)
-      }
-      await supabase
+      // Atomic: only start if currently claimed
+      const { data: started } = await supabase
         .from('publish_jobs')
         .update({ status: 'running', started_at: now, updated_at: now })
         .eq('id', job_id)
+        .eq('user_id', user.id)
+        .eq('status', 'claimed')
+        .select('id')
+        .single()
+      if (!started) {
+        return ApiResponseHelper.error('Job is not claimed', 409)
+      }
       return ApiResponseHelper.success({ status: 'running' })
     }
 

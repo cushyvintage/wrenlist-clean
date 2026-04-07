@@ -279,13 +279,16 @@ async function handleItemSold(ebayListingId: string) {
     // Dual-write: create delist jobs for other marketplaces
     if (otherListings && otherListings.length > 0) {
       for (const listing of otherListings) {
-        await createPublishJob(supabase, {
+        const jobResult = await createPublishJob(supabase, {
           user_id: find.user_id,
           find_id: findId,
           platform: listing.marketplace,
           action: 'delist',
           payload: { platform_listing_id: listing.platform_listing_id },
         })
+        if (jobResult.error) {
+          console.error('[DualWrite] Failed to create delist job for', listing.marketplace, jobResult.error)
+        }
       }
     }
 

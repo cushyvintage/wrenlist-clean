@@ -32,6 +32,13 @@ export interface CrosslistOutcome {
   expired: Platform[]
 }
 
+export interface CrosslistOptions {
+  /** ISO timestamp — if set, job is scheduled for this time instead of immediate */
+  scheduled_for?: string
+  /** What to do if extension is offline at scheduled time */
+  stale_policy?: 'run_if_late' | 'skip_if_late'
+}
+
 /**
  * Publish a single find to multiple marketplaces via /api/crosslist/publish.
  * Handles session re-check, partial publish, and builds a human-readable result.
@@ -39,7 +46,8 @@ export interface CrosslistOutcome {
 export async function crosslistFind(
   findId: string,
   targets: Platform[],
-  recheckPlatforms: (platforms: Platform[]) => Promise<{ valid: Platform[]; expired: Platform[] }>
+  recheckPlatforms: (platforms: Platform[]) => Promise<{ valid: Platform[]; expired: Platform[] }>,
+  options?: CrosslistOptions
 ): Promise<CrosslistOutcome> {
   // Pre-publish session re-check
   const { valid, expired } = await recheckPlatforms(targets)
@@ -57,7 +65,12 @@ export async function crosslistFind(
   const res = await fetch('/api/crosslist/publish', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ findId, marketplaces: valid }),
+    body: JSON.stringify({
+      findId,
+      marketplaces: valid,
+      ...(options?.scheduled_for ? { scheduled_for: options.scheduled_for } : {}),
+      ...(options?.stale_policy ? { stale_policy: options.stale_policy } : {}),
+    }),
   })
   const data = await res.json()
   const results: Record<string, PublishResult> = data.data?.results || {}
@@ -65,12 +78,17 @@ export async function crosslistFind(
   const succeeded = Object.entries(results).filter(([, r]) => r.ok).map(([m]) => m)
   const failed = Object.entries(results).filter(([, r]) => !r.ok).map(([m, r]) => `${m}: ${r.error}`)
 
-  // Build message distinguishing direct-published vs queued
+  // Build message distinguishing direct-published vs queued vs scheduled
   const direct = succeeded.filter((m) => API_PLATFORMS.has(m as Platform))
   const queued = succeeded.filter((m) => !API_PLATFORMS.has(m as Platform))
   const parts: string[] = []
   if (direct.length > 0) parts.push(`Listed on ${direct.map(formatPlatformName).join(', ')}`)
-  if (queued.length > 0) parts.push(`Queued for ${queued.map(formatPlatformName).join(', ')} — publishing via extension`)
+  if (queued.length > 0 && options?.scheduled_for) {
+    const time = new Date(options.scheduled_for).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    parts.push(`Scheduled for ${queued.map(formatPlatformName).join(', ')} at ${time}`)
+  } else if (queued.length > 0) {
+    parts.push(`Queued for ${queued.map(formatPlatformName).join(', ')} — publishing via extension`)
+  }
   if (failed.length > 0) parts.push(`Failed: ${failed.join('; ')}`)
   if (expired.length > 0) parts.push(`${expired.map(formatPlatformName).join(', ')}: session expired`)
 

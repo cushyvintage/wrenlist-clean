@@ -149,13 +149,16 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-  await createPublishJob(supabaseAdmin, {
+  const jobResult = await createPublishJob(supabaseAdmin, {
     user_id: user.id,
     find_id: findId,
     platform: marketplace,
     action: 'delist',
     payload: { platform_listing_id: pmd.platform_listing_id },
   })
+  if (jobResult.error) {
+    console.error('[DualWrite] Failed to create delist job for', marketplace, jobResult.error)
+  }
 
   return ApiResponseHelper.success({
     message: `Delist queued for ${marketplace} — extension will handle removal.`,

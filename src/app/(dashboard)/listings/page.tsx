@@ -78,6 +78,9 @@ export default function ListingsPage() {
   const [failedTargets, setFailedTargets] = useState<Platform[]>([])
 
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
+  const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false)
+  const [bulkScheduleTime, setBulkScheduleTime] = useState('')
+  const [bulkStaggerMinutes, setBulkStaggerMinutes] = useState(0)
 
   // Set page title
   useEffect(() => {
@@ -296,10 +299,26 @@ export default function ListingsPage() {
       })
 
       try {
+        // Build scheduled_for if batch scheduling is enabled
+        let itemScheduledFor: string | undefined
+        if (bulkScheduleEnabled && bulkScheduleTime) {
+          const baseTime = new Date(bulkScheduleTime)
+          if (bulkStaggerMinutes > 0 && findIds.length > 1) {
+            const offsetMs = (i * bulkStaggerMinutes * 60_000) / (findIds.length - 1)
+            itemScheduledFor = new Date(baseTime.getTime() + offsetMs).toISOString()
+          } else {
+            itemScheduledFor = baseTime.toISOString()
+          }
+        }
+
         const res = await fetch('/api/crosslist/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ findId: findIds[i], marketplaces: valid }),
+          body: JSON.stringify({
+            findId: findIds[i],
+            marketplaces: valid,
+            ...(itemScheduledFor ? { scheduled_for: itemScheduledFor } : {}),
+          }),
         })
         const data = await res.json()
         const results: Record<string, { ok: boolean; error?: string; listingUrl?: string; alreadyListed?: boolean }> = data.data?.results || {}
@@ -719,6 +738,50 @@ export default function ListingsPage() {
                   </div>
                 </>
               )}
+              {/* Batch scheduling options (only show when not already publishing) */}
+              {Object.keys(platformStatuses).length === 0 && crosslistTargets.length > 0 && (
+                <div className="mb-3 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.1)' }}>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkScheduleEnabled}
+                      onChange={(e) => {
+                        setBulkScheduleEnabled(e.target.checked)
+                        if (!e.target.checked) { setBulkScheduleTime(''); setBulkStaggerMinutes(0) }
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-xs font-medium" style={{ color: '#1E2E1C' }}>Schedule for later</span>
+                  </label>
+                  {bulkScheduleEnabled && (
+                    <div className="mt-2 space-y-2 pl-6">
+                      <input
+                        type="datetime-local"
+                        value={bulkScheduleTime}
+                        onChange={(e) => setBulkScheduleTime(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="w-full px-2 py-1.5 text-sm border rounded bg-white"
+                        style={{ borderColor: 'rgba(61,92,58,.22)' }}
+                      />
+                      {selectedItems.size > 1 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px]" style={{ color: '#8A9E88' }}>Stagger over</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={120}
+                            value={bulkStaggerMinutes}
+                            onChange={(e) => setBulkStaggerMinutes(parseInt(e.target.value) || 0)}
+                            className="w-16 px-2 py-1 text-sm border rounded bg-white text-center"
+                            style={{ borderColor: 'rgba(61,92,58,.22)' }}
+                          />
+                          <span className="text-[11px]" style={{ color: '#8A9E88' }}>min</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               {crosslistProgress && (
                 <p className="text-xs mb-3" style={{ color: '#8A9E88' }}>{crosslistProgress}</p>
               )}
@@ -758,7 +821,14 @@ export default function ListingsPage() {
                   onMouseEnter={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#2C4428')}
                   onMouseLeave={(e) => !isCrosslisting && (e.currentTarget.style.backgroundColor = '#3D5C3A')}
                 >
-                  {isCrosslisting ? 'Publishing...' : crosslistTargets.length === 0 ? 'Publish' : `Publish to ${crosslistTargets.length} platform${crosslistTargets.length !== 1 ? 's' : ''}`}
+                  {isCrosslisting
+                    ? 'Publishing...'
+                    : crosslistTargets.length === 0
+                      ? 'Publish'
+                      : bulkScheduleEnabled && bulkScheduleTime
+                        ? `Schedule ${crosslistTargets.length} platform${crosslistTargets.length !== 1 ? 's' : ''}`
+                        : `Publish to ${crosslistTargets.length} platform${crosslistTargets.length !== 1 ? 's' : ''}`
+                  }
                 </button>
               </div>
             </div>

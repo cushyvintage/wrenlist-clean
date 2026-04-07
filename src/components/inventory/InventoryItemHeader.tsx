@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
@@ -25,6 +26,7 @@ interface InventoryItemHeaderProps {
   availableForCrosslist?: Platform[]
   platformUsernames?: Map<Platform, string | undefined>
   extensionDetected?: boolean | null
+  extensionOnline?: boolean | null
   marketplaceData?: MarketplaceDataItem[]
   onMarkAsSoldClick: () => void
   onEditClick: () => void
@@ -35,7 +37,7 @@ interface InventoryItemHeaderProps {
   onRelistVintedClick?: () => Promise<void>
   onCrosslistClick?: () => void
   onCrosslistTargetToggle?: (platform: Platform) => void
-  onCrosslistConfirm?: () => void
+  onCrosslistConfirm?: (scheduledFor?: string, stalePolicy?: 'run_if_late' | 'skip_if_late') => void
   onCrosslistCancel?: () => void
 }
 
@@ -49,6 +51,7 @@ export default function InventoryItemHeader({
   availableForCrosslist = [],
   platformUsernames,
   extensionDetected,
+  extensionOnline,
   marketplaceData = [],
   onMarkAsSoldClick,
   onEditClick,
@@ -63,6 +66,9 @@ export default function InventoryItemHeader({
   onCrosslistCancel,
 }: InventoryItemHeaderProps) {
   const router = useRouter()
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [scheduledFor, setScheduledFor] = useState('')
+  const [stalePolicy, setStalePolicy] = useState<'run_if_late' | 'skip_if_late'>('run_if_late')
 
   const vintedData = marketplaceData.find((m) => m.marketplace === 'vinted')
   const vintedIsListed = vintedData?.status === 'listed'
@@ -212,17 +218,76 @@ export default function InventoryItemHeader({
                 Install the extension to connect more platforms
               </p>
             )}
+            {extensionOnline === false && extensionDetected !== false && (
+              <p className="text-xs py-1 text-amber-600">
+                Extension offline — jobs will run when your desktop is back
+              </p>
+            )}
             <Link href="/platform-connect" className="block text-xs py-1" style={{ color: '#8A9E88' }} onClick={(e) => e.stopPropagation()}>
               Manage connections →
             </Link>
+
+            {/* Schedule toggle */}
+            <div className="mt-2 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showSchedule}
+                  onChange={(e) => {
+                    setShowSchedule(e.target.checked)
+                    if (!e.target.checked) setScheduledFor('')
+                  }}
+                  className="rounded"
+                />
+                <span className="text-xs font-medium" style={{ color: '#1E2E1C' }}>Schedule for later</span>
+              </label>
+              {showSchedule && (
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="datetime-local"
+                    value={scheduledFor}
+                    onChange={(e) => setScheduledFor(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-2 py-1.5 text-sm border rounded bg-white"
+                    style={{ borderColor: 'rgba(61,92,58,.22)' }}
+                  />
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="stalePolicy"
+                        checked={stalePolicy === 'run_if_late'}
+                        onChange={() => setStalePolicy('run_if_late')}
+                      />
+                      <span className="text-[11px]" style={{ color: '#8A9E88' }}>Run anyway if late</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="stalePolicy"
+                        checked={stalePolicy === 'skip_if_late'}
+                        onChange={() => setStalePolicy('skip_if_late')}
+                      />
+                      <span className="text-[11px]" style={{ color: '#8A9E88' }}>Skip if missed</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2 mt-3 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
               <button
-                onClick={onCrosslistConfirm}
-                disabled={crosslistTargets.length === 0}
+                onClick={() => {
+                  const isoSchedule = showSchedule && scheduledFor
+                    ? new Date(scheduledFor).toISOString()
+                    : undefined
+                  onCrosslistConfirm?.(isoSchedule, showSchedule ? stalePolicy : undefined)
+                }}
+                disabled={crosslistTargets.length === 0 || (showSchedule && !scheduledFor)}
                 className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
               >
-                Publish
+                {showSchedule && scheduledFor ? 'Schedule' : 'Publish now'}
               </button>
               <button
                 onClick={onCrosslistCancel}

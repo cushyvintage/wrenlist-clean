@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { createPublishJob } from '@/lib/publish-jobs'
@@ -154,16 +155,23 @@ export async function POST(request: NextRequest) {
           .eq('find_id', findId)
           .neq('marketplace', 'ebay')
 
-        // Dual-write: create delist jobs
+        // Dual-write: create delist jobs (use service-role client)
         if (otherListings && otherListings.length > 0) {
+          const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          )
           for (const listing of otherListings) {
-            await createPublishJob(supabase, {
+            const jobResult = await createPublishJob(supabaseAdmin, {
               user_id: user.id,
               find_id: findId,
               platform: listing.marketplace,
               action: 'delist',
               payload: { platform_listing_id: listing.platform_listing_id },
             })
+            if (jobResult.error) {
+              console.error('[DualWrite] Failed to create delist job for', listing.marketplace, jobResult.error)
+            }
           }
         }
 

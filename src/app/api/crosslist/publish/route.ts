@@ -149,7 +149,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
           )
-          await createPublishJob(supabaseAdmin, {
+          const jobResult = await createPublishJob(supabaseAdmin, {
             user_id: user.id,
             find_id: findId,
             platform: marketplace,
@@ -162,6 +162,9 @@ export const POST = withAuth(async (req: NextRequest, user) => {
               fields: queueFields,
             },
           })
+          if (jobResult.error) {
+            console.error('[DualWrite] Failed to create publish job for', marketplace, jobResult.error)
+          }
         }
       }
     } catch (err) {

@@ -56,15 +56,20 @@ export const DELETE = withAuth(async (_req: NextRequest, user, params) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('publish_jobs')
     .delete()
     .eq('id', jobId)
     .eq('user_id', user.id)
     .in('status', ['completed', 'failed', 'cancelled'])
+    .select('id')
 
   if (error) {
     return ApiResponseHelper.internalError()
+  }
+
+  if (!data || data.length === 0) {
+    return ApiResponseHelper.notFound('Job not found or not deletable (must be completed, failed, or cancelled)')
   }
 
   return ApiResponseHelper.success({ deleted: true })

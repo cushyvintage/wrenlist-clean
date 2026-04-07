@@ -17,6 +17,7 @@ import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
+import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 
@@ -121,6 +122,7 @@ export default function InventoryDetailPage() {
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
   const extensionInfo = useExtensionInfo()
+  const heartbeat = useExtensionHeartbeat()
   const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
 
   // Fetch find details
@@ -227,13 +229,14 @@ export default function InventoryDetailPage() {
     prevMarketplaceDataRef.current = marketplaceData
   }, [marketplaceData])
 
-  const handleCrosslist = async () => {
+  const handleCrosslist = async (scheduledFor?: string, stalePolicy?: 'run_if_late' | 'skip_if_late') => {
     if (!find || crosslistTargets.length === 0) return
     setIsCrosslisting(true)
     setCrosslistResult(null)
 
     try {
-      const outcome = await crosslistFind(find.id, crosslistTargets, recheckPlatforms)
+      const options = scheduledFor ? { scheduled_for: scheduledFor, stale_policy: stalePolicy } : undefined
+      const outcome = await crosslistFind(find.id, crosslistTargets, recheckPlatforms, options)
       setCrosslistResult({ ok: outcome.ok, message: outcome.message })
       setShowCrosslistPicker(false)
       setCrosslistTargets([])
@@ -1026,6 +1029,7 @@ export default function InventoryDetailPage() {
         availableForCrosslist={availableForCrosslist}
         platformUsernames={new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp.username]))}
         extensionDetected={extensionInfo.detected}
+        extensionOnline={heartbeat.online}
         marketplaceData={marketplaceData}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
