@@ -170,6 +170,8 @@ export function useAddFindHandlers(deps: HandlerDeps) {
     return Math.min(...formData.selectedPlatforms.map(p => PLATFORM_TITLE_LIMITS[p] ?? 255))
   }, [formData.selectedPlatforms])
 
+  // Description uses the *lowest* platform limit as a soft warning (shown in counter)
+  // but does NOT hard-truncate — the extension truncates per-platform at publish time
   const descriptionCharLimit = useMemo(() => {
     if (formData.selectedPlatforms.length === 0) return 12000
     return Math.min(...formData.selectedPlatforms.map(p => PLATFORM_DESCRIPTION_LIMITS[p] ?? 12000))

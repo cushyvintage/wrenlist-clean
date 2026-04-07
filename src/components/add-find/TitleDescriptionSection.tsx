@@ -97,7 +97,7 @@ export default function TitleDescriptionSection({
         </div>
         <textarea
           value={description}
-          onChange={(e) => onDescriptionChange(e.target.value.slice(0, descriptionCharLimit))}
+          onChange={(e) => onDescriptionChange(e.target.value)}
           className={`w-full px-3 py-2 border rounded text-sm resize-none focus:outline-none focus:ring-2 ${
             incompleteRequiredFields.has('description')
               ? 'border-amber-400 focus:ring-amber-400'
@@ -107,8 +107,9 @@ export default function TitleDescriptionSection({
           placeholder="Describe the item..."
         />
         <div className="flex justify-between items-start mt-1">
-          <div className="text-xs text-sage-dim">
+          <div className={`text-xs ${description.length > descriptionCharLimit ? 'text-amber-600 font-medium' : 'text-sage-dim'}`}>
             {description.length}/{descriptionCharLimit}
+            {description.length > descriptionCharLimit && ' — will be truncated on some platforms'}
           </div>
           {incompleteRequiredFields.has('description') && (
             <span className="text-xs text-amber-600">Required — complete before publishing</span>
