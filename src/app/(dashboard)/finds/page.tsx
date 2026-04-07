@@ -419,27 +419,8 @@ export default function InventoryPage() {
     router.push('/add-find')
   }
 
-  const handleUpgradeToNester = async () => {
-    try {
-      const response = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: 'nester', interval: 'monthly' }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.data?.url) {
-          window.location.href = data.data.url
-          return
-        }
-      }
-    } catch (err) {
-      // Fallback on error
-    }
-
-    // Fallback to pricing page
-    router.push('/pricing')
+  const handleUpgradeToNester = () => {
+    router.push('/billing')
   }
 
   const handleListOnEbay = async (findId: string, e: React.MouseEvent) => {
