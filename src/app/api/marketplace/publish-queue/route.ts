@@ -50,7 +50,7 @@ export const GET = withAuth(async (_req, user) => {
   const findIds = [...new Set(items.map((d) => d.find_id))]
   const { data: finds } = await supabaseAdmin
     .from('finds')
-    .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size')
+    .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, shipping_weight_grams, platform_fields')
     .eq('user_id', user.id)
     .in('id', findIds)
 

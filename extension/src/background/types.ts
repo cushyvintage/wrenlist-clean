@@ -140,7 +140,8 @@ export interface Product {
   acceptOffers?: boolean;
   smartPricing?: boolean;
   smartPricingPrice?: number;
-  dynamicProperties: Record<string, string>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dynamicProperties: Record<string, any>;
   shipping: ShippingInfo & Record<string, unknown>;
   isAuction?: boolean;
   auctionStartingPrice?: number;

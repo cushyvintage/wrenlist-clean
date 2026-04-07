@@ -6,7 +6,11 @@ import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Platform } from '@/types'
 
-// eBay publishes via API; Shopify and others queue for extension
+// eBay publishes via API; Shopify and others queue for extension.
+// Etsy: API key applied (Apr 2026, pending approval). Until approved,
+// Etsy crosslisting uses browser automation via the Chrome extension.
+// Once the key is active, add 'etsy' here and build the OAuth flow.
+// Credentials: .env.local (ETSY_API_KEY, ETSY_SHARED_SECRET).
 const API_MARKETPLACES = new Set(['ebay'])
 const SUPPORTED_MARKETPLACES: Platform[] = ['ebay', 'shopify', 'vinted', 'depop', 'poshmark', 'mercari', 'facebook', 'whatnot', 'grailed', 'etsy']
 
@@ -50,10 +54,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   const supabase = await createSupabaseServerClient()
 
-  // Verify ownership
+  // Verify ownership and read platform_fields for per-platform prices
   const { data: find, error: findError } = await supabase
     .from('finds')
-    .select('id, name, status')
+    .select('id, name, status, platform_fields')
     .eq('id', findId)
     .eq('user_id', user.id)
     .single()
@@ -63,6 +67,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const results: Record<string, MarketplaceResult> = {}
+
+  // Extract per-platform prices from platform_fields (set in add-find form)
+  const platformPrices = (find.platform_fields as Record<string, unknown>)?.platformPrices as
+    Record<string, number | null> | undefined
 
   // Build base URL for internal API calls — host header is always present in Next.js
   const host = req.headers.get('host') || 'localhost:3004'
@@ -103,6 +111,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         }
 
         // Queue for extension via publish-queue (only if not already listed)
+        const perPlatformPrice = platformPrices?.[marketplace] ?? null
         const { error: queueError } = await supabase
           .from('product_marketplace_data')
           .upsert(
@@ -110,6 +119,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
               find_id: findId,
               marketplace,
               status: 'needs_publish',
+              ...(perPlatformPrice != null ? { listing_price: perPlatformPrice } : {}),
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'find_id,marketplace' }

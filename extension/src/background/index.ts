@@ -311,7 +311,14 @@ type ExternalMessage = Record<string, unknown>;
           const shopifyCategory = item.platform_category_id
             ? [item.platform_category_id]
             : mapCategoryToShopify(find.category);
-          const weightGrams = find.shipping_weight_grams ?? find.weight_grams;
+          const weightGrams = find.shipping_weight_grams;
+
+          // Extract platform-specific fields (set in add-find form, stored in finds.platform_fields)
+          const pf = (find.platform_fields ?? {}) as Record<string, unknown>;
+          const vintedFields = (pf.vinted ?? {}) as Record<string, unknown>;
+          const vintedPrimaryColor = typeof vintedFields.primaryColor === "number" ? vintedFields.primaryColor : null;
+          const vintedSecondaryColor = typeof vintedFields.secondaryColor === "number" ? vintedFields.secondaryColor : null;
+          const vintedColorIds = [vintedPrimaryColor, vintedSecondaryColor].filter((id): id is number => id !== null && id > 0);
 
           // Map category per marketplace
           const productCategory = mp === "shopify"
@@ -361,6 +368,7 @@ type ExternalMessage = Record<string, unknown>;
             },
             dynamicProperties: {
               productType: mapProductType(find.category),
+              ...(vintedColorIds.length > 0 ? { colorIds: vintedColorIds } : {}),
             },
           };
 
