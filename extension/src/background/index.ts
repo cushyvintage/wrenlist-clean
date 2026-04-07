@@ -448,8 +448,12 @@ type ExternalMessage = Record<string, unknown>;
           const userWhenMade = typeof sharedFields.whenMade === "string" ? sharedFields.whenMade : undefined;
           const userWhoMade = typeof sharedFields.whoMade === "string" ? sharedFields.whoMade : undefined;
           const secondaryColour = typeof sharedFields.secondaryColour === "string" ? sharedFields.secondaryColour : undefined;
+          const depopStyleTags = typeof sharedFields.depopStyleTags === "string" ? (sharedFields.depopStyleTags as string).split(",").filter(Boolean) : [];
+          const depopSource = typeof sharedFields.depopSource === "string" ? (sharedFields.depopSource as string).split(",").filter(Boolean) : [];
+          const depopAge = typeof sharedFields.depopAge === "string" ? sharedFields.depopAge as string : undefined;
           const vintedMaterialIds = Array.isArray(vintedFields.material) ? vintedFields.material.filter((id): id is number => typeof id === "number") : [];
-          const vintedSizeId = typeof sharedFields.vintedSizeId === "string" ? parseInt(sharedFields.vintedSizeId as string, 10) : null;
+          const parsedSizeId = typeof sharedFields.vintedSizeId === "string" ? parseInt(sharedFields.vintedSizeId as string, 10) : null;
+          const vintedSizeId = (parsedSizeId !== null && !isNaN(parsedSizeId) && parsedSizeId > 0) ? parsedSizeId : null;
 
           // Map category per marketplace
           const productCategory = mp === "shopify"
@@ -473,6 +477,7 @@ type ExternalMessage = Record<string, unknown>;
             tags: userTags ?? [find.brand, find.category, "vintage"].filter(Boolean).join(", "),
             color: find.colour ?? undefined,
             color2: secondaryColour ?? undefined,
+            styleTags: depopStyleTags.length > 0 ? depopStyleTags : undefined,
             size: vintedSizeId ? [String(vintedSizeId)] : find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
             quantity: 1,
@@ -504,6 +509,8 @@ type ExternalMessage = Record<string, unknown>;
               ...(vintedColorIds.length > 0 ? { colorIds: vintedColorIds } : {}),
               ...(vintedMaterialIds.length > 0 ? { MaterialVinted: vintedMaterialIds.join("|") } : {}),
               ...(userWhoMade ? { whoMade: userWhoMade } : {}),
+              ...(depopSource.length > 0 ? { Source: depopSource[0] } : {}),
+              ...(depopAge ? { age: depopAge } : {}),
             },
           };
 

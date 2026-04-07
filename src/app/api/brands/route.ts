@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
 import brandsData from '@/data/brands.json'
 
 const brands = brandsData as string[]
@@ -8,7 +9,7 @@ const brands = brandsData as string[]
  * Searchable brand typeahead — returns matching brand names.
  * Uses substring match (case-insensitive), sorted by relevance (starts-with first).
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest) => {
   const q = req.nextUrl.searchParams.get('q')?.trim().toLowerCase() ?? ''
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') ?? '10'), 50)
 
@@ -32,4 +33,4 @@ export async function GET(req: NextRequest) {
 
   const results = [...startsWith, ...contains].slice(0, limit)
   return NextResponse.json({ brands: results })
-}
+})

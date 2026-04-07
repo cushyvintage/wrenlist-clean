@@ -135,9 +135,14 @@ export function useAddFindForm() {
           const response = await fetch(`/api/templates/${templateId}`)
           if (!response.ok) throw new Error('Failed to load template')
           const { data: template } = await response.json()
-          const result = applyTemplate(template, formData)
-          setFormData(prev => ({ ...result.merged, sourcingTripId: prev.sourcingTripId }))
-          setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
+          // Use functional updater to merge against current state (not stale closure)
+          let incompleteFields: string[] = []
+          setFormData(prev => {
+            const result = applyTemplate(template, prev)
+            incompleteFields = result.incompleteRequiredFields
+            return { ...result.merged, sourcingTripId: prev.sourcingTripId }
+          })
+          setIncompleteRequiredFields(new Set(incompleteFields))
           setTemplateAppliedBanner(template.name)
           setTimeout(() => setTemplateAppliedBanner(null), 3000)
           await fetch(`/api/templates/${templateId}`, { method: 'PATCH' })
