@@ -219,11 +219,12 @@ export class EtsyClient {
     product: Product,
     options?: { publishMode?: "draft" | "publish" },
   ): Promise<ListingActionResult> {
-    // MV3 service worker keepalive: call a chrome API every 20s to prevent
+    // MV3 service worker keepalive: call chrome APIs every 5s to prevent
     // the 30-second inactivity timeout from killing the worker mid-publish.
+    // Using multiple API calls and short interval for maximum reliability.
     const keepAlive = setInterval(() => {
-      void chrome.runtime.getPlatformInfo();
-    }, 20000);
+      void chrome.storage.local.set({ _keepAlive: Date.now() });
+    }, 5000);
     try {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
