@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
@@ -20,7 +20,12 @@ interface DelistQueueItem {
  * Response: Array of { find_id, marketplace, platform_listing_id, platform_listing_url, fields }
  */
 export const GET = withAuth(async (_req, user) => {
-  const supabase = await createSupabaseServerClient()
+  // Use service role client — extension authenticates via Bearer token so
+  // cookie-based client has no session and RLS blocks queries.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // Get all user's find IDs first
   const { data: userFinds, error: findsError } = await supabase
@@ -104,7 +109,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     )
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // Verify user owns this find
   const { data: find, error: findError } = await supabase
