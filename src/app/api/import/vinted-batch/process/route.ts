@@ -133,10 +133,16 @@ export async function POST(request: NextRequest) {
         // price: number, photos: string[], category: string (text), catalog_id: may be absent
         const condition = CONDITION_MAP[item.status as string] || 'good'
 
-        // Map Vinted status → Wrenlist find status
+        // Map Vinted status → Wrenlist find/PMD status
+        // Use vintedMetadata flags (from getListing detail) if available, fall back to status string
+        const isSold = item.vintedMetadata?.is_sold || item.vintedMetadata?.is_closed || false
+        const isHidden = item.vintedMetadata?.is_hidden || false
         const vintedStatus = (item.status as string || '').toLowerCase()
-        const findStatus = vintedStatus === 'sold' ? 'sold'
-          : vintedStatus === 'hidden' ? 'draft'
+        const findStatus = (isSold || vintedStatus === 'sold') ? 'sold'
+          : (isHidden || vintedStatus === 'hidden') ? 'listed' // find stays 'listed', PMD gets 'hidden'
+          : 'listed'
+        const pmdStatus = (isSold || vintedStatus === 'sold') ? 'sold'
+          : (isHidden || vintedStatus === 'hidden') ? 'hidden'
           : 'listed'
 
         // Category: prefer catalog_id mapping, fall back to text category
@@ -216,7 +222,7 @@ export async function POST(request: NextRequest) {
           platform_listing_url: `https://www.vinted.co.uk/items/${listingId}`,
           platform_category_id: String(item.catalog_id || item.vintedMetadata?.catalog_id || ''),
           listing_price: askingPrice,
-          status: findStatus,
+          status: pmdStatus,
         })
 
         imported++

@@ -795,16 +795,19 @@ type ExternalMessage = Record<string, unknown>;
           if (job.action === "publish") {
             const findData = payload.find || {};
             const product: Product = {
-              name: findData.name || "",
+              id: findData.id || job.find_id || "",
+              title: findData.name || findData.title || "",
               description: findData.description || "",
-              category: findData.category || "",
+              category: findData.category ? [findData.category] : [],
               price: payload.listing_price ?? findData.asking_price_gbp ?? 0,
-              photos: (findData.photos || []) as string[],
+              images: (findData.photos || []) as string[],
               sku: findData.sku || "",
               brand: findData.brand || "",
-              condition: findData.condition || "",
-              colour: findData.colour || "",
-              size: findData.size || "",
+              condition: findData.condition || "used",
+              color: findData.colour || findData.color || "",
+              size: findData.size ? [findData.size] : undefined,
+              dynamicProperties: {},
+              shipping: {},
             };
 
             const publishOptions: Record<string, any> = {};
@@ -2045,12 +2048,6 @@ async function handleBatchImportVinted(message: ExternalMessage) {
       200,
     );
     const status = (message.status as string | undefined)?.toLowerCase() ?? "active";
-    if (status !== "active") {
-      return withExtensionVersion({
-        success: false,
-        message: "Only active Vinted listings can be imported right now.",
-      });
-    }
 
     const baseUrl = await getWrenlistBaseUrl(
       (message as { wrenlistBaseUrl?: string }).wrenlistBaseUrl,
@@ -2834,7 +2831,10 @@ function mapProductToBatch(
     color: product.color ?? product.color2 ?? null,
     category: product.category?.[0] ?? null,
     url,
-    status,
+    // Derive status from item metadata flags if available, fall back to caller's status
+    status: product.vintedMetadata?.is_sold || product.vintedMetadata?.is_closed ? "sold"
+      : product.vintedMetadata?.is_hidden ? "hidden"
+      : status,
 
     // Cross-marketplace fields
     originalPrice: product.originalPrice,

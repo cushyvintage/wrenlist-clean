@@ -11,7 +11,7 @@ import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { formatPlatformName, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
-type FilterType = 'all' | 'listed' | 'sold' | 'delisted'
+type FilterType = 'all' | 'listed' | 'sold' | 'hidden' | 'delisted'
 type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low' | 'days_listed'
 
 /** Statuses that indicate an item is still pending extension action */
@@ -194,6 +194,7 @@ export default function ListingsPage() {
     all: grouped.length,
     listed: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'listed')).length,
     sold: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'sold')).length,
+    hidden: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'hidden')).length,
     delisted: grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'delisted')).length,
   }
 
@@ -203,6 +204,7 @@ export default function ListingsPage() {
   const getStatusBadgeType = (status: string) => {
     if (status === 'listed') return 'listed'
     if (status === 'sold') return 'sold'
+    if (status === 'hidden') return 'on_hold'
     if (status === 'delisted') return 'draft'
     if (status === 'error') return 'on_hold'
     return 'on_hold'
@@ -434,7 +436,7 @@ export default function ListingsPage() {
 
         {/* Filter Pills */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'listed', 'sold', 'delisted'] as const).map((f) => (
+          {(['all', 'listed', 'sold', 'hidden', 'delisted'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}

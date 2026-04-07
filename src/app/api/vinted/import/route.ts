@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
             asking_price_gbp: parseFloat(item.price?.amount || String(item.price_numeric || 0)),
             photos,
             sku,
-            status: 'listed',
+            status: item.is_sold ? 'sold' : 'listed',
             platform_fields: {
               selectedPlatforms: ['vinted'],
               vinted: {
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           platform_listing_url: `https://www.vinted.co.uk/items/${item.id}`,
           platform_category_id: String(item.catalog_id),
           listing_price: parseFloat(item.price?.amount || item.price_numeric || '0'),
-          status: 'listed',
+          status: item.is_sold ? 'sold' : item.is_hidden ? 'hidden' : 'listed',
         })
 
         logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api' })
