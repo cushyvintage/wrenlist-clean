@@ -7,13 +7,10 @@ interface PricingSectionProps {
   price: number | null
   platformPrices: Partial<Record<Platform, number | null>>
   selectedPlatforms: Platform[]
-  ebayAcceptOffers: boolean
-  ebayIsAuction: boolean
   incompleteRequiredFields: Set<string>
   costPrice: number | null
   onPriceChange: (value: number | null) => void
   onPlatformPriceChange: (platform: Platform, value: number | null) => void
-  onEbayFieldChange: (field: string, value: boolean) => void
   onCostPriceChange: (value: number | null) => void
 }
 
@@ -29,13 +26,10 @@ export default function PricingSection({
   price,
   platformPrices,
   selectedPlatforms,
-  ebayAcceptOffers,
-  ebayIsAuction,
   incompleteRequiredFields,
   costPrice,
   onPriceChange,
   onPlatformPriceChange,
-  onEbayFieldChange,
   onCostPriceChange,
 }: PricingSectionProps) {
   const [showOverrides, setShowOverrides] = useState(false)
@@ -134,29 +128,6 @@ export default function PricingSection({
         </div>
       )}
 
-      {/* eBay-only fields */}
-      {selectedPlatforms.includes('ebay') && (
-        <div className="pt-3 border-t border-sage/14 space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={ebayAcceptOffers}
-              onChange={(e) => onEbayFieldChange('acceptOffers', e.target.checked)}
-              className="w-4 h-4 border border-sage/30 rounded"
-            />
-            <span className="text-xs text-ink">Accept offers</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={ebayIsAuction}
-              onChange={(e) => onEbayFieldChange('isAuction', e.target.checked)}
-              className="w-4 h-4 border border-sage/30 rounded"
-            />
-            <span className="text-xs text-ink">Is auction</span>
-          </label>
-        </div>
-      )}
     </div>
   )
 }

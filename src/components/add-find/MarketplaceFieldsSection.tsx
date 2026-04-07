@@ -103,10 +103,13 @@ export default function MarketplaceFieldsSection({
         {/* Colour (text — for eBay/Depop/Shopify/Etsy) */}
         {fieldConfig.colour?.show && hasNonVinted && (
           <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
+            <label className="block text-sm font-semibold text-ink mb-1">
               Colour
               {fieldConfig.colour.required && <span className="text-red-500"> *</span>}
             </label>
+            {hasVinted && (
+              <p className="text-xs text-sage-dim mb-2">For eBay, Depop, Shopify, Etsy — Vinted uses its own colour picker below</p>
+            )}
             <input
               type="text"
               value={(platformFields.shared?.colour as string) ?? ''}
@@ -324,6 +327,18 @@ export default function MarketplaceFieldsSection({
                   <div>
                     <span className="text-sm font-medium text-ink">Accept offers</span>
                     <p className="text-xs text-sage-dim">Allow buyers to make best offers on this listing</p>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={platformFields.ebay?.isAuction ?? false}
+                    onChange={(e) => onPlatformFieldChange('ebay', 'isAuction', e.target.checked)}
+                    className="w-4 h-4 rounded border-sage/30 text-sage focus:ring-sage/30"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-ink">Auction listing</span>
+                    <p className="text-xs text-sage-dim">List as auction instead of fixed price</p>
                   </div>
                 </label>
               </div>

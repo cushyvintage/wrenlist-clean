@@ -172,13 +172,10 @@ export default function AddFindPage() {
           price={form.formData.price}
           platformPrices={form.formData.platformPrices}
           selectedPlatforms={form.formData.selectedPlatforms}
-          ebayAcceptOffers={form.formData.platformFields.ebay?.acceptOffers ?? false}
-          ebayIsAuction={form.formData.platformFields.ebay?.isAuction ?? false}
           incompleteRequiredFields={form.incompleteRequiredFields}
           costPrice={form.formData.costPrice}
           onPriceChange={(v) => handlers.handleInputChange('price', v)}
           onPlatformPriceChange={handlers.handlePlatformPriceChange}
-          onEbayFieldChange={(field, value) => handlers.handlePlatformFieldChange('ebay', field, value)}
           onCostPriceChange={(v) => handlers.handleInputChange('costPrice', v)}
         />
 
