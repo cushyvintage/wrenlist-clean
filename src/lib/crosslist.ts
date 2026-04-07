@@ -96,7 +96,7 @@ export async function crosslistFind(
   const anyFailed = failed.length > 0 || expired.length > 0
 
   return {
-    ok: anySucceeded || !anyFailed,
+    ok: anySucceeded && !anyFailed,
     message: parts.join('. ') || 'No results',
     succeeded,
     failed,

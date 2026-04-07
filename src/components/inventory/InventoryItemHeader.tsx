@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
@@ -69,6 +69,15 @@ export default function InventoryItemHeader({
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledFor, setScheduledFor] = useState('')
   const [stalePolicy, setStalePolicy] = useState<'run_if_late' | 'skip_if_late'>('run_if_late')
+
+  // Reset schedule state when picker closes
+  useEffect(() => {
+    if (!showCrosslistPicker) {
+      setShowSchedule(false)
+      setScheduledFor('')
+      setStalePolicy('run_if_late')
+    }
+  }, [showCrosslistPicker])
 
   const vintedData = marketplaceData.find((m) => m.marketplace === 'vinted')
   const vintedIsListed = vintedData?.status === 'listed'

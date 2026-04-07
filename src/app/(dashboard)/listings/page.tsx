@@ -317,7 +317,7 @@ export default function ListingsPage() {
           body: JSON.stringify({
             findId: findIds[i],
             marketplaces: valid,
-            ...(itemScheduledFor ? { scheduled_for: itemScheduledFor } : {}),
+            ...(itemScheduledFor ? { scheduled_for: itemScheduledFor, stale_policy: 'run_if_late' } : {}),
           }),
         })
         const data = await res.json()

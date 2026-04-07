@@ -26,6 +26,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     .lt('claimed_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
 
   // Auto-fail skip_if_late jobs that are > 30 min past schedule
+  // Explicit NOT NULL guard: unscheduled jobs should never be auto-failed
   await supabase
     .from('publish_jobs')
     .update({
@@ -37,6 +38,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     .eq('user_id', user.id)
     .eq('status', 'pending')
     .eq('stale_policy', 'skip_if_late')
+    .not('scheduled_for', 'is', null)
     .lt('scheduled_for', new Date(Date.now() - 30 * 60 * 1000).toISOString())
 
   // Fetch ready jobs
