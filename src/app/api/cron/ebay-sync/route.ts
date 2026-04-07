@@ -64,21 +64,21 @@ export async function GET(request: NextRequest) {
         let itemsSoldForUser = 0
         let enrichedForUser = 0
 
+        // Fetch user's find IDs once per user (not per line item)
+        const { data: userFinds } = await supabase
+          .from('finds')
+          .select('id')
+          .eq('user_id', userId)
+
+        const userFindIds = (userFinds || []).map(f => f.id)
+        if (userFindIds.length === 0) { results.usersProcessed++; continue }
+
         for (const order of orders) {
           if (!order.lineItems || order.lineItems.length === 0) continue
 
           for (const lineItem of order.lineItems) {
             const legacyItemId = lineItem.legacyItemId
             if (!legacyItemId) continue
-
-            // Scope PMD lookup to this user's finds
-            const { data: userFinds } = await supabase
-              .from('finds')
-              .select('id')
-              .eq('user_id', userId)
-
-            const userFindIds = (userFinds || []).map(f => f.id)
-            if (userFindIds.length === 0) continue
 
             const { data: marketplaceData } = await supabase
               .from('product_marketplace_data')

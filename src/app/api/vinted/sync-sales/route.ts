@@ -97,6 +97,7 @@ export const POST = withAuth(async (req, user) => {
             .maybeSingle()
 
           let findId: string
+          let isNewSale = true
 
           if (existingPmd) {
             // Verify this find belongs to the user
@@ -117,6 +118,7 @@ export const POST = withAuth(async (req, user) => {
             }
 
             findId = find.id
+            isNewSale = find.status !== 'sold'
 
             // Mark find as sold (or update sold data if re-enriching)
             await supabase.from('finds').update({
@@ -126,10 +128,10 @@ export const POST = withAuth(async (req, user) => {
               updated_at: new Date().toISOString(),
             }).eq('id', findId).eq('user_id', user.id)
 
-            // Update PMD status + store sale metadata
+            // Update PMD status + store sale metadata (preserve existing fields)
             await supabase.from('product_marketplace_data').update({
               status: 'sold',
-              fields: { sale: saleData },
+              fields: { ...(existingFields || {}), sale: saleData },
               updated_at: new Date().toISOString(),
             }).eq('find_id', findId).eq('marketplace', 'vinted')
 
@@ -195,28 +197,30 @@ export const POST = withAuth(async (req, user) => {
             }
           }
 
-          // Auto-delist other marketplaces
-          const { data: otherListings } = await supabase
-            .from('product_marketplace_data')
-            .select('marketplace, platform_listing_id')
-            .eq('find_id', findId)
-            .neq('marketplace', 'vinted')
-            .in('status', ['listed', 'needs_publish'])
+          // Auto-delist other marketplaces (only for new sales, not re-enrichment)
+          if (isNewSale) {
+            const { data: otherListings } = await supabase
+              .from('product_marketplace_data')
+              .select('marketplace, platform_listing_id')
+              .eq('find_id', findId)
+              .neq('marketplace', 'vinted')
+              .in('status', ['listed', 'needs_publish'])
 
-          if (otherListings && otherListings.length > 0) {
-            await supabase.from('product_marketplace_data').update({
-              status: 'needs_delist',
-              updated_at: new Date().toISOString(),
-            }).eq('find_id', findId).neq('marketplace', 'vinted')
+            if (otherListings && otherListings.length > 0) {
+              await supabase.from('product_marketplace_data').update({
+                status: 'needs_delist',
+                updated_at: new Date().toISOString(),
+              }).eq('find_id', findId).neq('marketplace', 'vinted')
 
-            for (const listing of otherListings) {
-              await createPublishJob(supabaseAdmin, {
-                user_id: user.id,
-                find_id: findId,
-                platform: listing.marketplace,
-                action: 'delist',
-                payload: { platform_listing_id: listing.platform_listing_id },
-              })
+              for (const listing of otherListings) {
+                await createPublishJob(supabaseAdmin, {
+                  user_id: user.id,
+                  find_id: findId,
+                  platform: listing.marketplace,
+                  action: 'delist',
+                  payload: { platform_listing_id: listing.platform_listing_id },
+                })
+              }
             }
           }
 
