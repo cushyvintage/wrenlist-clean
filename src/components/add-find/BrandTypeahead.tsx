@@ -16,21 +16,29 @@ export default function BrandTypeahead({ value, onChange, required }: BrandTypea
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const abortRef = useRef<AbortController>()
 
   // Sync external value changes
   useEffect(() => { setQuery(value) }, [value])
 
+  // Cancel in-flight request on unmount
+  useEffect(() => () => abortRef.current?.abort(), [])
+
   const fetchBrands = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return }
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
     try {
-      const res = await fetch(`/api/brands?q=${encodeURIComponent(q)}&limit=8`)
+      const res = await fetch(`/api/brands?q=${encodeURIComponent(q)}&limit=8`, {
+        signal: abortRef.current.signal,
+      })
       if (!res.ok) return
       const data = await res.json()
       setSuggestions(data.brands || [])
       setIsOpen(data.brands?.length > 0)
       setActiveIndex(-1)
-    } catch {
-      setSuggestions([])
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setSuggestions([])
     }
   }, [])
 

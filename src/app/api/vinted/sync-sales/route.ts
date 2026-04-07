@@ -1,10 +1,36 @@
-import { NextRequest } from 'next/server'
-import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
+import { withAuth } from '@/lib/with-auth'
+
+interface VintedSaleItem {
+  itemId?: string
+  title?: string
+  price?: number
+  thumbnailUrl?: string
+  itemUrl?: string
+}
+
+interface VintedSalePayload {
+  transactionId?: string
+  items?: VintedSaleItem[]
+  buyer?: { id?: string; username?: string; profileUrl?: string; location?: string }
+  grossAmount?: number
+  serviceFee?: number
+  netAmount?: number
+  currency?: string
+  shippingAddress?: Record<string, unknown>
+  trackingNumber?: string
+  carrier?: string
+  shipmentStatusTitle?: string
+  orderDate?: string
+  completedDate?: string
+  isBundle?: boolean
+  itemCount?: number
+}
 
 /**
  * POST /api/vinted/sync-sales
@@ -16,19 +42,23 @@ import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
  *   - Auto-delists other marketplaces
  * Works for both import page (batch) and future real-time cron sync.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   try {
-    const user = await getServerUser()
-    if (!user) return ApiResponseHelper.unauthorized()
-
     const supabase = await createSupabaseServerClient()
-    const body = await request.json()
-    const sales: any[] = body.sales || []
+    const body = await req.json()
+    const sales: VintedSalePayload[] = body.sales || []
 
     if (!sales.length) return ApiResponseHelper.badRequest('No sales provided')
 
+    // Create admin client once for delist jobs (needs service role for RLS bypass)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const startTime = Date.now()
     let synced = 0, skipped = 0, created = 0, errors = 0
+    const needsPhotoBackfill: Array<{ findId: string; photos: string[] }> = []
 
     for (const sale of sales) {
       try {
@@ -143,6 +173,22 @@ export async function POST(request: NextRequest) {
             created++
           }
 
+          // Check if photos need mirroring to Supabase Storage
+          const { data: findPhotos } = await supabase
+            .from('finds')
+            .select('photos')
+            .eq('id', findId)
+            .single()
+
+          if (findPhotos?.photos?.length) {
+            const hasExternalUrl = findPhotos.photos.some(
+              (url: string) => !url.includes('supabase') && (url.includes('vinted.net') || url.includes('vinted.com'))
+            )
+            if (hasExternalUrl) {
+              needsPhotoBackfill.push({ findId, photos: findPhotos.photos })
+            }
+          }
+
           // Auto-delist other marketplaces
           const { data: otherListings } = await supabase
             .from('product_marketplace_data')
@@ -157,10 +203,6 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString(),
             }).eq('find_id', findId).neq('marketplace', 'vinted')
 
-            const supabaseAdmin = createClient(
-              process.env.NEXT_PUBLIC_SUPABASE_URL!,
-              process.env.SUPABASE_SERVICE_ROLE_KEY!
-            )
             for (const listing of otherListings) {
               await createPublishJob(supabaseAdmin, {
                 user_id: user.id,
@@ -192,10 +234,11 @@ export async function POST(request: NextRequest) {
       synced, skipped, created, errors,
       total: sales.length,
       durationMs,
+      needsPhotoBackfill,
       message: `Synced ${synced} sold items, created ${created} new finds in ${(durationMs / 1000).toFixed(1)}s`,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Sync failed'
     return ApiResponseHelper.internalError(message)
   }
-}
+})

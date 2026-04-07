@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
             brand: brand !== 'no brand' ? brand : null,
             condition,
             asking_price_gbp: parseFloat(item.price?.amount || String(item.price_numeric || 0)),
+            sold_price_gbp: item.is_sold ? parseFloat(item.price?.amount || String(item.price_numeric || 0)) : null,
+            sold_at: item.is_sold ? (item.updated_at_ts ? new Date(item.updated_at_ts * 1000).toISOString() : new Date().toISOString()) : null,
             photos,
             sku,
             status: item.is_sold ? 'sold' : 'listed',

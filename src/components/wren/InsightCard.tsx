@@ -56,7 +56,7 @@ export function InsightCard({ text, type = 'info', link }: InsightCardProps) {
     <div className={`${style.bg} rounded-md p-5 border ${style.border}`}>
       {/* Eyebrow label */}
       <div className={`text-xs uppercase tracking-widest ${style.eyebrow} font-medium mb-2`}>
-        wren insight
+        wren insight · beta
       </div>
 
       {/* Italic insight text using Cormorant Garamond */}

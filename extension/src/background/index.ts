@@ -271,6 +271,85 @@ type ExternalMessage = Record<string, unknown>;
     }
   }
 
+  // --- Vinted sales sync: periodic enrichment of sold items ---
+  const VINTED_SALES_SYNC_ALARM = "vinted_sales_sync";
+  const VINTED_SALES_SYNC_INTERVAL_MINUTES = 15;
+  const LAST_VINTED_SALE_TX_KEY = "lastVintedSaleTxId";
+
+  chrome.alarms.create(VINTED_SALES_SYNC_ALARM, {
+    delayInMinutes: 2, // first sync ~2 min after startup
+    periodInMinutes: VINTED_SALES_SYNC_INTERVAL_MINUTES,
+  });
+
+  async function runVintedSalesSync(): Promise<void> {
+    try {
+      // Check if user is logged into Vinted
+      const isLoggedIn = await checkMarketplaceLogin("vinted");
+      if (!isLoggedIn) {
+        console.debug("[VintedSalesSync] Not logged into Vinted, skipping");
+        return;
+      }
+
+      // Read last synced transaction ID
+      const stored = await chrome.storage.local.get([LAST_VINTED_SALE_TX_KEY]);
+      const stopAtId = (stored[LAST_VINTED_SALE_TX_KEY] as string) || undefined;
+
+      console.log("[VintedSalesSync] Fetching sales, stopAtId:", stopAtId || "(none)");
+
+      const { client } = createVintedServices({ tld: "co.uk" });
+      await client.bootstrap();
+      const result = await client.getSales(1, 50, stopAtId);
+
+      if (!result.sales || result.sales.length === 0) {
+        console.debug("[VintedSalesSync] No new sales found");
+        return;
+      }
+
+      console.log(`[VintedSalesSync] Found ${result.sales.length} sales to sync`);
+
+      // POST to sync-sales API
+      const baseUrl = await getWrenlistBaseUrl();
+      const syncRes = await queueFetch(`${baseUrl}/api/vinted/sync-sales`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sales: result.sales }),
+      });
+
+      if (syncRes.ok) {
+        const syncData = await syncRes.json();
+        const data = syncData.data || syncData;
+        console.log("[VintedSalesSync] Synced:", data.message || data);
+
+        // Only advance checkpoint if all items synced without errors
+        if ((data.errors || 0) === 0) {
+          const newestTxId = result.sales[0]?.transactionId;
+          if (newestTxId) {
+            await chrome.storage.local.set({ [LAST_VINTED_SALE_TX_KEY]: String(newestTxId) });
+          }
+        } else {
+          console.warn(`[VintedSalesSync] ${data.errors} errors — not advancing checkpoint`);
+        }
+
+        // Photo backfill for finds with external URLs
+        if (data.needsPhotoBackfill?.length > 0) {
+          const backfillRes = await queueFetch(`${baseUrl}/api/finds/photo-backfill`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ finds: data.needsPhotoBackfill }),
+          });
+          if (backfillRes.ok) {
+            const bf = await backfillRes.json();
+            console.log("[VintedSalesSync] Photo backfill:", bf.data || bf);
+          }
+        }
+      } else {
+        console.error("[VintedSalesSync] API error:", syncRes.status, await syncRes.text());
+      }
+    } catch (e) {
+      console.error("[VintedSalesSync] Failed:", e);
+    }
+  }
+
   // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
   const QUEUE_POLL_ALARM = "queue_poll";
   const QUEUE_POLL_INTERVAL_MINUTES = 1;
@@ -990,6 +1069,8 @@ type ExternalMessage = Record<string, unknown>;
       } else {
         await runQueuePoll();
       }
+    } else if (alarm.name === VINTED_SALES_SYNC_ALARM) {
+      await runVintedSalesSync();
     }
   });
 
