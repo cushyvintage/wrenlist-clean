@@ -143,6 +143,34 @@ export async function chunkConcurrentRequestsWithRetry<T>(
   return chunkConcurrentRequests(wrappedTasks, concurrency);
 }
 
+/**
+ * Send log entries to the Wrenlist remote logging API.
+ * Fire-and-forget — never throws, never blocks publish flow.
+ */
+export async function remoteLog(
+  level: "info" | "warn" | "error",
+  source: string,
+  message: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const baseUrl = await getWrenlistBaseUrl();
+    await fetch(`${baseUrl}/api/extension/logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level,
+        source,
+        message,
+        data,
+      }),
+    });
+  } catch {
+    // Never fail the caller
+  }
+}
+
 export async function log(
   type: string,
   body: string,

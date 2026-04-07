@@ -10,7 +10,7 @@ import {
   ETSY_WHEN_MADE_RECENT,
   WRENLIST_TO_ETSY_CATEGORY,
 } from "./constants.js";
-import { log, wait } from "../../shared/api.js";
+import { log, wait, remoteLog } from "../../shared/api.js";
 
 interface EtsyListingSummary {
   listing_id: number;
@@ -229,6 +229,11 @@ export class EtsyClient {
         };
       }
 
+      const mode = options?.publishMode ?? "draft";
+      await remoteLog("info", "etsy.publish", `Starting Etsy ${mode} flow`, {
+        productTitle: product.title?.substring(0, 60),
+      });
+
       // Open tab active — Etsy's React form needs a visible tab to render properly.
       // Background tabs are throttled by Chrome and React components may not mount.
       // Tab is auto-closed after save completes.
@@ -245,7 +250,9 @@ export class EtsyClient {
 
       try {
         // Wait for the React app to fully render
+        await remoteLog("info", "etsy.publish", "Waiting for page ready");
         await this.waitForPageReady(tabId, "#listing-title-input", 15000);
+        await remoteLog("info", "etsy.publish", "Page ready, building form data");
 
         const formData = this.buildFormData(product);
 
@@ -267,6 +274,9 @@ export class EtsyClient {
         };
 
         if (!execResult?.success) {
+          await remoteLog("error", "etsy.publish", "Form fill failed", {
+            error: execResult?.message,
+          });
           // Close tab on failure
           await chrome.tabs.remove(tabId).catch(() => {});
           return {
@@ -274,6 +284,7 @@ export class EtsyClient {
             message: execResult?.message || "Failed to fill Etsy listing form",
           };
         }
+        await remoteLog("info", "etsy.publish", "Form filled successfully");
 
         // Step 3: Select category via search typeahead
         if (formData.categorySearch) {
@@ -287,20 +298,36 @@ export class EtsyClient {
         await this.selectProcessingProfile(tabId);
 
         // Step 5: Click Save as draft or Publish depending on mode
-        const mode = options?.publishMode ?? "draft";
+        await remoteLog("info", "etsy.publish", `Clicking ${mode} button`);
         await wait(1000);
-        await chrome.scripting.executeScript({
+        const publishResult = await chrome.scripting.executeScript({
           target: { tabId },
           func: clickPublishButton,
           args: [mode],
+        });
+        const publishExec = publishResult?.[0]?.result as {
+          success: boolean;
+          message?: string;
+        };
+        await remoteLog("info", "etsy.publish", `Button click result`, {
+          success: publishExec?.success,
+          message: publishExec?.message,
         });
 
         // If publishing directly, handle the $0.20 fee confirmation dialog
         if (mode === "publish") {
           await wait(2000);
-          await chrome.scripting.executeScript({
+          const confirmResult = await chrome.scripting.executeScript({
             target: { tabId },
             func: clickPublishConfirmation,
+          });
+          const confirmExec = confirmResult?.[0]?.result as {
+            success: boolean;
+            message?: string;
+          };
+          await remoteLog("info", "etsy.publish", `Confirmation result`, {
+            success: confirmExec?.success,
+            message: confirmExec?.message,
           });
         }
 
@@ -313,12 +340,14 @@ export class EtsyClient {
         let listingUrl: string | undefined;
 
         // Poll for redirect (up to 15s)
+        await remoteLog("info", "etsy.publish", "Waiting for redirect after save");
         const redirectStart = Date.now();
         while (Date.now() - redirectStart < 15000) {
           await wait(1000);
           try {
             const updatedTab = await chrome.tabs.get(tabId);
             const tabUrl = updatedTab?.url || "";
+            await remoteLog("info", "etsy.publish", `Poll URL: ${tabUrl.substring(0, 100)}`);
 
             // Check for listing-editor/{id} or listing-editor/edit/{id} redirect
             const editorMatch = tabUrl.match(/listing-editor\/(?:edit\/)?(\d+)/);
@@ -403,6 +432,10 @@ export class EtsyClient {
         // Even without a listing ID, if we got past validation the save worked.
         // The redirect to /tools/listings confirms it.
         const modeLabel = mode === "publish" ? "published" : "saved as draft";
+        await remoteLog("info", "etsy.publish", `Completed: ${modeLabel}`, {
+          listingId,
+          listingUrl,
+        });
         return {
           success: true,
           publishMode: mode,
@@ -419,10 +452,14 @@ export class EtsyClient {
         throw error;
       }
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
       console.error("[Etsy] Publish error:", error);
+      await remoteLog("error", "etsy.publish", `Publish failed: ${errMsg}`, {
+        stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+      });
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: errMsg,
       };
     }
   }
@@ -701,6 +738,7 @@ export class EtsyClient {
     console.warn(
       `[Etsy] Selector "${selector}" not found after ${timeoutMs}ms, continuing anyway`,
     );
+    await remoteLog("warn", "etsy.publish", `Page selector "${selector}" not found after ${timeoutMs}ms`);
   }
 
   /**
