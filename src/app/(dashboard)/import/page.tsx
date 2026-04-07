@@ -543,63 +543,35 @@ export default function ImportPage() {
     vintedImport.runImportProgress(0, 0, 0, totalItems)
 
     try {
-      // Fetch sales from Vinted via extension (paginated)
-      let page = 1
-      let allSales: any[] = []
-      const soldItemIds = new Set(soldItems.map((i) => i.id))
+      // Import sold items using wardrobe data we already have (title, price, photo)
+      // Rich sale data (buyer, fees, tracking) can be enriched later via getSales cron sync
+      const CHUNK_SIZE = 50
+      for (let i = 0; i < soldItems.length; i += CHUNK_SIZE) {
+        const chunk = soldItems.slice(i, i + CHUNK_SIZE)
 
-      while (true) {
-        const response = await new Promise<{
-          success: boolean
-          sales?: any[]
-          pagination?: { current_page: number; total_pages: number; total_entries: number }
-          message?: string
-        }>((resolve) => {
-          const timeout = setTimeout(
-            () => resolve({ success: false, message: 'Timed out fetching sales' }),
-            60000
-          )
-          chrome.runtime.sendMessage(
-            EXTENSION_ID,
-            { action: 'get_vinted_sales', page, perPage: 50 },
-            (resp) => {
-              clearTimeout(timeout)
-              if (chrome.runtime.lastError) {
-                resolve({ success: false, message: chrome.runtime.lastError.message })
-              } else {
-                resolve(resp || { success: false, message: 'No response' })
-              }
-            }
-          )
-        })
-
-        if (!response.success || !response.sales?.length) break
-
-        // Filter to only sales containing items the user selected
-        const relevantSales = response.sales.filter((sale: any) =>
-          sale.items?.some((item: any) => soldItemIds.has(String(item.itemId)))
-        )
-        allSales.push(...relevantSales)
-
-        // Stop if we've got enough or reached the end
-        const pagination = response.pagination
-        if (!pagination || page >= pagination.total_pages) break
-        page++
-
-        // Polite delay between pages
-        await new Promise(r => setTimeout(r, 500))
-      }
-
-      // Send sales to API in chunks
-      const CHUNK_SIZE = 20
-      for (let i = 0; i < allSales.length; i += CHUNK_SIZE) {
-        const chunk = allSales.slice(i, i + CHUNK_SIZE)
+        const basicSales = chunk.map((item) => ({
+          transactionId: `wardrobe_${item.id}`,
+          grossAmount: item.price || 0,
+          serviceFee: 0,
+          netAmount: item.price || 0,
+          currency: 'GBP',
+          items: [{
+            itemId: item.id,
+            title: item.title,
+            price: item.price || 0,
+            thumbnailUrl: item.photo,
+            itemUrl: item.listingUrl,
+          }],
+          isBundle: false,
+          itemCount: 1,
+          orderDate: null,
+        }))
 
         try {
           const res = await fetch('/api/vinted/sync-sales', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sales: chunk }),
+            body: JSON.stringify({ sales: basicSales }),
           })
 
           if (res.ok) {
@@ -618,7 +590,7 @@ export default function ImportPage() {
 
         vintedImport.runImportProgress(totalSynced + totalCreated, totalSkipped, totalErrors, totalItems)
 
-        // Refresh imported status
+        // Refresh imported status so list updates live
         try {
           const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/vinted-imported')
           const importedSet = new Set(importedData.importedIds)
@@ -627,50 +599,6 @@ export default function ImportPage() {
             alreadyImported: importedSet.has(item.id),
             checked: importedSet.has(item.id) ? false : item.checked,
           })))
-        } catch { /* non-fatal */ }
-      }
-
-      // For sold items not found in getSales (very old sales), create basic finds
-      const importedSoFar = totalSynced + totalCreated
-      const remaining = soldItems.filter((i) => {
-        // Check if this item was handled by the sales sync
-        return !allSales.some((sale: any) =>
-          sale.items?.some((si: any) => String(si.itemId) === i.id)
-        )
-      })
-
-      if (remaining.length > 0) {
-        // Fall back to basic import for unmatched sold items using wardrobe data we already have
-        const basicSales = remaining.map((item) => ({
-          transactionId: `unknown_${item.id}`,
-          grossAmount: item.price || 0,
-          serviceFee: 0,
-          netAmount: item.price || 0,
-          currency: 'GBP',
-          items: [{
-            itemId: item.id,
-            title: item.title,
-            price: item.price || 0,
-            thumbnailUrl: item.photo,
-          }],
-          isBundle: false,
-          itemCount: 1,
-          orderDate: null,
-        }))
-
-        try {
-          const res = await fetch('/api/vinted/sync-sales', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sales: basicSales }),
-          })
-          if (res.ok) {
-            const data = await res.json()
-            const result = data.data || data
-            totalSynced += result.synced || 0
-            totalCreated += result.created || 0
-            totalSkipped += result.skipped || 0
-          }
         } catch { /* non-fatal */ }
       }
 
