@@ -24,22 +24,22 @@ interface BatchImportResult {
  * Best-effort category mapping from Vinted catalog_id to canonical category
  */
 function mapVintedCategoryToCanonical(catalogId?: number, categoryTitle?: string): string {
-  // Vinted category IDs - basic mapping
+  // Vinted category IDs → Phase 3 top-level keys
   const categoryMap: Record<number, string> = {
-    1: 'homeware',
-    2: 'jewellery',
-    3: 'homeware',
-    4: 'jewellery',
+    1: 'home_garden',
+    2: 'clothing',     // jewellery → clothing
+    3: 'home_garden',
+    4: 'clothing',     // jewellery → clothing
     5: 'clothing',
     6: 'clothing',
     7: 'clothing',
     8: 'clothing',
-    10: 'homeware',
-    11: 'homeware',
-    12: 'toys',
-    13: 'books',
-    14: 'ceramics',
-    15: 'homeware',
+    10: 'home_garden',
+    11: 'home_garden',
+    12: 'toys_games',
+    13: 'books_media',
+    14: 'home_garden',  // ceramics → home_garden
+    15: 'home_garden',
     16: 'clothing',
   }
 
@@ -50,14 +50,12 @@ function mapVintedCategoryToCanonical(catalogId?: number, categoryTitle?: string
   // Fallback: simple text matching
   if (categoryTitle) {
     const title = categoryTitle.toLowerCase()
-    if (title.includes('book')) return 'books'
-    if (title.includes('ceramic') || title.includes('pottery')) return 'ceramics'
-    if (title.includes('glass') || title.includes('glassware')) return 'glassware'
-    if (title.includes('jewel') || title.includes('ring') || title.includes('necklace')) return 'jewellery'
+    if (title.includes('book')) return 'books_media'
+    if (title.includes('ceramic') || title.includes('pottery') || title.includes('glass')) return 'home_garden'
+    if (title.includes('jewel') || title.includes('ring') || title.includes('necklace')) return 'clothing'
     if (title.includes('cloth') || title.includes('dress') || title.includes('shirt')) return 'clothing'
-    if (title.includes('furniture')) return 'furniture'
-    if (title.includes('toy')) return 'toys'
-    if (title.includes('home') || title.includes('decor')) return 'homeware'
+    if (title.includes('furniture') || title.includes('home') || title.includes('decor')) return 'home_garden'
+    if (title.includes('toy')) return 'toys_games'
   }
 
   return 'other'

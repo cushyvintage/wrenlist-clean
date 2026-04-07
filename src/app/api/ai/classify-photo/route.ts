@@ -3,8 +3,10 @@ import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const VALID_CATEGORIES = [
-  'ceramics', 'glassware', 'books', 'jewellery', 'clothing',
-  'homeware', 'collectibles', 'toys', 'furniture', 'other',
+  'antiques', 'art', 'baby_toddler', 'books_media', 'clothing',
+  'craft_supplies', 'collectibles', 'electronics', 'health_beauty',
+  'home_garden', 'musical_instruments', 'pet_supplies',
+  'sports_outdoors', 'toys_games', 'vehicles_parts', 'other',
 ]
 
 export const POST = withAuth(async (request, user) => {
@@ -41,7 +43,7 @@ export const POST = withAuth(async (request, user) => {
             },
             {
               type: 'text',
-              text: 'Which single category best fits this item: ceramics, glassware, books, jewellery, clothing, homeware, collectibles, toys, furniture, or other? Reply with ONLY the category name (lowercase), nothing else.',
+              text: 'Which single category best fits this item: antiques, art, baby_toddler, books_media, clothing, craft_supplies, collectibles, electronics, health_beauty, home_garden, musical_instruments, pet_supplies, sports_outdoors, toys_games, vehicles_parts, or other? Reply with ONLY the category name (lowercase with underscores), nothing else.',
             },
           ],
         }],
@@ -55,12 +57,12 @@ export const POST = withAuth(async (request, user) => {
 
     // Strip any extra text
     if (category.includes(':')) category = category.split(':')[1]?.trim() ?? 'other'
-    category = category.replace(/[^a-z]/g, '')
+    category = category.replace(/[^a-z_]/g, '')
 
     if (!VALID_CATEGORIES.includes(category)) category = 'other'
 
     const confidence: 'high' | 'medium' | 'low' =
-      ['ceramics', 'glassware', 'books', 'jewellery', 'clothing', 'homeware', 'toys', 'furniture'].includes(category)
+      ['clothing', 'books_media', 'home_garden', 'electronics', 'toys_games', 'art', 'antiques'].includes(category)
         ? 'high'
         : category === 'collectibles' ? 'medium' : 'low'
 

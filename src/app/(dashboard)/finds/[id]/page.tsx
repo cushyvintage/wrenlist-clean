@@ -12,7 +12,7 @@ import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import VintedMetadataPanel from '@/components/inventory/VintedMetadataPanel'
 import { VINTED_COLORS } from '@/data/vinted-colors'
 import type { VintedStoredMetadata } from '@/types/vinted-metadata'
-import { CATEGORY_MAP } from '@/data/marketplace-category-map'
+import { CATEGORY_MAP, getCategoryNode } from '@/data/marketplace-category-map'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData } from '@/types/listing-form'
@@ -407,11 +407,11 @@ export default function InventoryDetailPage() {
 
   const categoryInfo = useMemo(() => {
     if (!formData.category) return null
-    const categoryData = CATEGORY_MAP[formData.category as keyof typeof CATEGORY_MAP]
-    if (!categoryData) return null
+    const node = getCategoryNode(formData.category)
+    if (!node) return null
     const platforms = []
-    if (categoryData.vintedId) platforms.push('Vinted')
-    if (categoryData.ebayId) platforms.push('eBay')
+    if (node.platforms.vinted) platforms.push('Vinted')
+    if (node.platforms.ebay) platforms.push('eBay')
     return platforms
   }, [formData.category])
 

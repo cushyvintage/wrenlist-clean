@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { FieldConfig, Platform } from '@/types'
-import { getRequiredFields } from '@/data/marketplace-required-fields'
+import { getCategoryFields } from '@/data/marketplace/category-field-requirements'
+import { LEGACY_CATEGORY_MAP } from '@/data/marketplace-category-map'
+import type { PlatformFieldMap } from '@/types/categories'
 
 const CACHE_HEADERS = {
   'Cache-Control': 'private, max-age=3600, stale-while-revalidate=86400',
@@ -20,15 +22,27 @@ export const GET = async (req: NextRequest) => {
       )
     }
 
-    // Static required fields as base (covers all 130 categories × 5 platforms)
-    const staticFields = getRequiredFields(category.toLowerCase(), marketplace)
+    // Resolve legacy category names, then look up field requirements
+    const resolvedCategory = LEGACY_CATEGORY_MAP[category.toLowerCase()] ?? category.toLowerCase()
+    const mp = marketplace === 'ebay' || marketplace === 'vinted' ? marketplace : null
+    const fieldDefs = mp ? getCategoryFields(resolvedCategory, mp) : []
+
+    // Convert CategoryFieldDef[] → PlatformFieldMap for backward compat with consumers
+    const staticFields: PlatformFieldMap = {}
+    for (const f of fieldDefs) {
+      staticFields[f.name.toLowerCase().replace(/\s+/g, '_')] = {
+        show: true,
+        required: f.required,
+        type: f.type === 'select' ? 'select' : 'text',
+      }
+    }
 
     // Check DB for overrides (extension PATCH writes here)
     const supabase = await createSupabaseServerClient()
     const { data } = await supabase
       .from('marketplace_category_config')
       .select('*')
-      .eq('category', category.toLowerCase())
+      .eq('category', resolvedCategory)
       .eq('marketplace', marketplace)
       .single()
 
@@ -49,7 +63,7 @@ export const GET = async (req: NextRequest) => {
     // No DB override — return static fields directly
     return NextResponse.json(
       {
-        category: category.toLowerCase(),
+        category: resolvedCategory,
         marketplace,
         fields: staticFields,
       },

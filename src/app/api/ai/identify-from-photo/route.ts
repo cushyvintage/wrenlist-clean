@@ -47,7 +47,7 @@ Return ONLY valid JSON:
   "title": "concise item title suitable for a marketplace listing (e.g. 'Hornsea Saffron Coffee Mug 1970s')",
   "description": "brief description noting maker, era, style, condition observations, and any notable features (2-3 sentences max)",
   "suggestedQuery": "the best search query to find comparable sold items on eBay UK (e.g. 'Hornsea Saffron mug vintage')",
-  "category": "one of: ceramics, glassware, books, jewellery, clothing, homeware, collectibles, toys, furniture, art, antiques, electronics, sports, music_media, craft_supplies, health_beauty, other",
+  "category": "one of: antiques, art, baby_toddler, books_media, clothing, craft_supplies, collectibles, electronics, health_beauty, home_garden, musical_instruments, pet_supplies, sports_outdoors, toys_games, vehicles_parts, other",
   "confidence": "high if you can identify maker/brand, medium if you can identify the type but not maker, low if unsure"
 }`,
             },

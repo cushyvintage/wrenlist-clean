@@ -6,33 +6,62 @@ import type { Find } from '@/types'
  * Use the most general/default catalog ID per category for publishing
  */
 const CATEGORY_TO_VINTED_CATALOG_ID: Record<string, number> = {
-  ceramics: 1960,     // Home > Tableware & Crockery > General
-  teapots: 3856,      // Home > Tableware > Teapots
-  jugs: 3857,         // Home > Tableware > Jugs & Pitchers
-  glassware: 2005,    // Home > Glassware > General
-  books: 2997,        // Books > General
-  jewellery: 21,      // Accessories > Jewellery > General
-  clothing: 4,        // Women > Clothing (generic fallback)
-  homeware: 1934,     // Home > Home Decor
-  collectibles: 3823, // Antiques > Collectibles
-  medals: 167,        // Antiques > Medals
-  toys: 1499,         // Toys & Games > General
-  furniture: 3154,    // Home > Furniture
-  other: 1934,        // fallback → Home & Decor
+  // Phase 3 top-level categories
+  antiques: 3823,
+  art: 1934,
+  baby_toddler: 1499,
+  books_media: 2997,
+  clothing: 4,
+  craft_supplies: 1934,
+  collectibles: 3823,
+  electronics: 1934,
+  health_beauty: 956,
+  home_garden: 1934,
+  musical_instruments: 1934,
+  pet_supplies: 1934,
+  sports_outdoors: 1934,
+  toys_games: 1499,
+  vehicles_parts: 1934,
+  other: 1934,
+  // Legacy (backward compat)
+  ceramics: 1960,
+  teapots: 3856,
+  jugs: 3857,
+  glassware: 2005,
+  books: 2997,
+  jewellery: 21,
+  homeware: 1934,
+  medals: 167,
+  toys: 1499,
+  furniture: 3154,
 }
 
 const CATEGORY_TO_EBAY_CATEGORY_ID: Record<string, number> = {
+  // Phase 3 top-level categories
+  antiques: 20081,
+  art: 550,
+  baby_toddler: 2984,
+  books_media: 267,
+  clothing: 15724,
+  craft_supplies: 14339,
+  collectibles: 1,
+  electronics: 293,
+  health_beauty: 26395,
+  home_garden: 11700,
+  musical_instruments: 619,
+  pet_supplies: 1281,
+  sports_outdoors: 888,
+  toys_games: 220,
+  vehicles_parts: 6000,
+  other: 99,
+  // Legacy (backward compat)
   ceramics: 163531,
   glassware: 870,
   books: 267,
   jewellery: 281,
-  clothing: 15724,
   homeware: 20444,
-  collectibles: 1,
   medals: 4702,
-  toys: 19016,
   furniture: 20091,
-  other: 99,
 }
 
 // For now, we'll define Condition mapping locally since the extension has its own Condition enum

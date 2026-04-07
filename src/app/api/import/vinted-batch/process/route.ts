@@ -145,16 +145,11 @@ export async function POST(request: NextRequest) {
         // If still "other", try text-based fallback from item.category
         if (category === 'other' && item.category) {
           const cat = String(item.category).toLowerCase()
-          if (cat.includes('ceram') || cat.includes('potter') || cat.includes('china') || cat.includes('porcelain') || cat.includes('vase') || cat.includes('plate') || cat.includes('bowl')) category = 'ceramics'
-          else if (cat.includes('glass')) category = 'glassware'
-          else if (cat.includes('book') || cat.includes('fiction') || cat.includes('novel') || cat.includes('magazine') || cat.includes('literature')) category = 'books'
-          else if (cat.includes('jewel') || cat.includes('ring') || cat.includes('necklace') || cat.includes('bracelet') || cat.includes('earring')) category = 'jewellery'
-          else if (cat.includes('cloth') || cat.includes('dress') || cat.includes('shirt') || cat.includes('trouser') || cat.includes('jean') || cat.includes('coat') || cat.includes('jacket') || cat.includes('top') || cat.includes('skirt')) category = 'clothing'
-          else if (cat.includes('furniture') || cat.includes('chair') || cat.includes('table') || cat.includes('shelf') || cat.includes('cabinet') || cat.includes('sofa')) category = 'furniture'
-          else if (cat.includes('toy') || cat.includes('game') || cat.includes('puzzle') || cat.includes('children')) category = 'toys'
-          else if (cat.includes('medal') || cat.includes('militaria') || cat.includes('badge') || cat.includes('military')) category = 'medals'
-          else if (cat.includes('collect') || cat.includes('antique') || cat.includes('vintage') || cat.includes('curio')) category = 'collectibles'
-          else if (cat.includes('home') || cat.includes('decor') || cat.includes('kitchen') || cat.includes('linen') || cat.includes('textile') || cat.includes('garden') || cat.includes('cushion') || cat.includes('lamp')) category = 'homeware'
+          if (cat.includes('ceram') || cat.includes('potter') || cat.includes('china') || cat.includes('porcelain') || cat.includes('vase') || cat.includes('plate') || cat.includes('bowl') || cat.includes('glass') || cat.includes('furniture') || cat.includes('chair') || cat.includes('table') || cat.includes('shelf') || cat.includes('cabinet') || cat.includes('sofa') || cat.includes('home') || cat.includes('decor') || cat.includes('kitchen') || cat.includes('linen') || cat.includes('textile') || cat.includes('garden') || cat.includes('cushion') || cat.includes('lamp')) category = 'home_garden'
+          else if (cat.includes('book') || cat.includes('fiction') || cat.includes('novel') || cat.includes('magazine') || cat.includes('literature')) category = 'books_media'
+          else if (cat.includes('jewel') || cat.includes('ring') || cat.includes('necklace') || cat.includes('bracelet') || cat.includes('earring') || cat.includes('cloth') || cat.includes('dress') || cat.includes('shirt') || cat.includes('trouser') || cat.includes('jean') || cat.includes('coat') || cat.includes('jacket') || cat.includes('top') || cat.includes('skirt')) category = 'clothing'
+          else if (cat.includes('toy') || cat.includes('game') || cat.includes('puzzle') || cat.includes('children')) category = 'toys_games'
+          else if (cat.includes('medal') || cat.includes('militaria') || cat.includes('badge') || cat.includes('military') || cat.includes('collect') || cat.includes('antique') || cat.includes('vintage') || cat.includes('curio')) category = 'collectibles'
         }
 
         const brand = (item.brand_title || item.brand || null) as string | null

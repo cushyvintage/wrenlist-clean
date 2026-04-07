@@ -48,7 +48,7 @@ export const GET = withAuth(async (request, user) => {
         if (book) {
           const result: BarcodeLookupResult = {
             title: book.title ?? 'Unknown book',
-            category: 'books',
+            category: 'books_media',
             brand: book.publishers?.[0]?.name ?? '',
             details: (book.authors ?? []).map((a) => a.name).join(', '),
             ean: cleaned,
@@ -66,7 +66,7 @@ Given this barcode/EAN: ${cleaned}
 Identify the product if you can. Return ONLY valid JSON (no markdown):
 {
   "title": "product name",
-  "category": "one of: ceramics, glassware, books, jewellery, clothing, homeware, furniture, toys, other",
+  "category": "one of: antiques, art, baby_toddler, books_media, clothing, craft_supplies, collectibles, electronics, health_beauty, home_garden, musical_instruments, pet_supplies, sports_outdoors, toys_games, vehicles_parts, other",
   "brand": "brand name or empty string",
   "details": "brief details like colour, size, material — keep under 50 chars"
 }

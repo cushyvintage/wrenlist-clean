@@ -44,3 +44,12 @@ export interface PlatformFieldRequirement {
 
 /** Map of field name → requirement for one platform */
 export type PlatformFieldMap = Record<string, PlatformFieldRequirement>
+
+/** A single field definition for a category×marketplace combination */
+export interface CategoryFieldDef {
+  name: string
+  label: string
+  type: 'text' | 'select' | 'multiselect' | 'checkbox'
+  required: boolean
+  highlighted?: boolean
+}

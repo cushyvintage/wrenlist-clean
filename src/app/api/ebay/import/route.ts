@@ -4,30 +4,30 @@ import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 
-// Reverse map: eBay category ID → Wrenlist category
+// Reverse map: eBay category ID → Wrenlist category (Phase 3 top-level keys)
 const EBAY_TO_CATEGORY: Record<string, string> = {
   '1': 'collectibles',
   '18': 'clothing',
-  '63': 'homeware',
+  '63': 'home_garden',
   '260': 'collectibles',
-  '261': 'medals',
-  '267': 'books',
-  '281': 'jewellery',
-  '809': 'ceramics',
-  '870': 'ceramics',
-  '1059': 'homeware',
-  '3197': 'furniture',
-  '10033': 'homeware',
-  '11232': 'homeware',
+  '261': 'collectibles',
+  '267': 'books_media',
+  '281': 'clothing',  // jewellery → clothing
+  '809': 'home_garden',  // ceramics → home_garden
+  '870': 'home_garden',  // ceramics → home_garden
+  '1059': 'home_garden',
+  '3197': 'home_garden',  // furniture → home_garden
+  '10033': 'home_garden',
+  '11232': 'home_garden',
   '11450': 'clothing',
-  '11700': 'glassware',
+  '11700': 'home_garden',  // glassware → home_garden
   '11116': 'collectibles',
   '13956': 'collectibles',
-  '15273': 'medals',
+  '15273': 'collectibles',  // medals → collectibles
   '15709': 'clothing',
-  '19068': 'toys',
-  '57902': 'ceramics',
-  '69400': 'books',
+  '19068': 'toys_games',
+  '57902': 'home_garden',  // ceramics → home_garden
+  '69400': 'books_media',
 }
 
 const CONDITION_MAP: Record<string, string> = {

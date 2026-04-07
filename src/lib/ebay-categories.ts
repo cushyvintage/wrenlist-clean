@@ -7,7 +7,7 @@
  * - Leaf values (e.g. "ceramics_plates") → specific eBay leaf ID
  */
 
-import { CATEGORY_TREE, getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { CATEGORY_TREE, LEGACY_CATEGORY_MAP, getPlatformCategoryId } from '@/data/marketplace-category-map'
 
 export const EBAY_CATEGORY_MAP: Record<string, string> = (() => {
   const map: Record<string, string> = {}
@@ -24,12 +24,14 @@ export const EBAY_CATEGORY_MAP: Record<string, string> = (() => {
     }
   }
 
-  // Legacy aliases
-  map['teapots'] = map['ceramics_teapots'] ?? '262381'
-  map['jugs'] = map['ceramics_jugs'] ?? '262376'
-  map['medals'] = map['collectibles_militaria'] ?? '13956'
-  map['home'] = map['homeware_other'] ?? '10034'
-  map['jewelry'] = map['jewellery_other'] ?? '262023'
+  // Legacy aliases — resolve old values through LEGACY_CATEGORY_MAP
+  for (const [oldVal, newVal] of Object.entries(LEGACY_CATEGORY_MAP)) {
+    if (!map[oldVal]) {
+      map[oldVal] = map[newVal] ?? '99'
+    }
+  }
+
+  // Short aliases
   map['default'] = '99'
 
   return map
@@ -37,5 +39,7 @@ export const EBAY_CATEGORY_MAP: Record<string, string> = (() => {
 
 /** Look up eBay leaf category ID for a find.category value */
 export function getEbayCategoryId(category: string): string {
-  return EBAY_CATEGORY_MAP[category] ?? getPlatformCategoryId(category, 'ebay') ?? '99'
+  // Try direct lookup, then legacy resolution, then platform ID from tree
+  const resolved = LEGACY_CATEGORY_MAP[category] ?? category
+  return EBAY_CATEGORY_MAP[resolved] ?? EBAY_CATEGORY_MAP[category] ?? getPlatformCategoryId(resolved, 'ebay') ?? '99'
 }

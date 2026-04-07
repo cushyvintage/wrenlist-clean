@@ -5,19 +5,31 @@
  */
 
 const CATEGORY_PREFIXES: Record<string, string> = {
+  // Phase 3 top-level categories
+  antiques: 'ANT',
+  art: 'ART',
+  baby_toddler: 'BAB',
+  books_media: 'BKS',
+  clothing: 'CLT',
+  craft_supplies: 'CRF',
+  collectibles: 'COL',
+  electronics: 'ELC',
+  health_beauty: 'HBE',
+  home_garden: 'HMG',
+  musical_instruments: 'MUS',
+  pet_supplies: 'PET',
+  sports_outdoors: 'SPO',
+  toys_games: 'TOY',
+  vehicles_parts: 'VEH',
+  other: 'OTH',
+  // Legacy prefixes (backward compat for existing SKUs in DB)
   ceramics: 'CER',
   glassware: 'GLS',
   books: 'BKS',
   jewellery: 'JWL',
-  clothing: 'CLT',
   homeware: 'HMW',
-  collectibles: 'COL',
-  medals: 'MDL',
-  toys: 'TOY',
   furniture: 'FRN',
-  teapots: 'TPT',
-  jugs: 'JUG',
-  other: 'OTH',
+  medals: 'MDL',
 }
 
 /**
@@ -26,7 +38,11 @@ const CATEGORY_PREFIXES: Record<string, string> = {
  * @returns SKU string in format WL-{PREFIX}-{TIMESTAMP}, e.g., WL-CER-X2KP91
  */
 export function generateSKU(category: string): string {
-  const prefix = CATEGORY_PREFIXES[category.toLowerCase()] || CATEGORY_PREFIXES.other
+  const cat = category.toLowerCase()
+  // Try exact match first, then extract top-level from compound value (e.g. "clothing_womenswear_dresses" → "clothing")
+  const prefix = CATEGORY_PREFIXES[cat]
+    ?? CATEGORY_PREFIXES[cat.split('_')[0] ?? '']
+    ?? CATEGORY_PREFIXES.other
   const timestamp = Date.now().toString(36).toUpperCase().slice(-6)
   return `WL-${prefix}-${timestamp}`
 }
