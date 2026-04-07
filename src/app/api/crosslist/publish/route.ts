@@ -61,10 +61,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   const supabase = await createSupabaseServerClient()
 
-  // Verify ownership and read platform_fields for per-platform prices
+  // Verify ownership and fetch full find data (needed for job payload snapshot)
   const { data: find, error: findError } = await supabase
     .from('finds')
-    .select('id, name, status, platform_fields')
+    .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, status, platform_fields')
     .eq('id', findId)
     .eq('user_id', user.id)
     .single()
