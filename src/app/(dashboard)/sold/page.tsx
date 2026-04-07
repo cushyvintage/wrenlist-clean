@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -67,6 +68,7 @@ function ShipmentBadge({ status }: { status: string | null | undefined }) {
 }
 
 export default function SoldHistoryPage() {
+  const router = useRouter()
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'all'>('month')
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -285,7 +287,7 @@ export default function SoldHistoryPage() {
                   <tr
                     key={item.id}
                     className="border-b border-border hover:bg-cream-md transition cursor-pointer"
-                    onClick={() => window.location.href = `/sold/${item.id}`}
+                    onClick={() => router.push(`/sold/${item.id}`)}
                   >
                     {/* Photo */}
                     <td className="px-3 py-2">
@@ -306,12 +308,9 @@ export default function SoldHistoryPage() {
 
                     {/* Name */}
                     <td className="px-3 py-2 max-w-[200px]">
-                      <Link
-                        href={`/sold/${item.id}`}
-                        className="font-medium text-sm text-sage hover:underline truncate block"
-                      >
+                      <span className="font-medium text-sm text-sage truncate block">
                         {item.name}
-                      </Link>
+                      </span>
                     </td>
 
                     {/* Platform */}

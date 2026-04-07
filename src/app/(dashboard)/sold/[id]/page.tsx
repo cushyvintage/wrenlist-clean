@@ -145,7 +145,7 @@ export default function SoldDetailPage() {
   const daysListed = data.sourced_at && data.sold_at
     ? Math.round((new Date(data.sold_at).getTime() - new Date(data.sourced_at).getTime()) / (1000 * 60 * 60 * 24))
     : null
-  const photos = data.photos || []
+  const photos = (data.photos || []).filter((p): p is string => !!p)
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -160,7 +160,7 @@ export default function SoldDetailPage() {
         {photos.length > 0 ? (
           <div className="flex gap-2 flex-shrink-0">
             <Image
-              src={photos[0]}
+              src={photos[0]!}
               alt={data.name}
               width={120}
               height={120}
@@ -170,7 +170,7 @@ export default function SoldDetailPage() {
             />
             {photos.length > 1 && (
               <div className="flex flex-col gap-2">
-                {photos.slice(1, 4).map((url, i) => (
+                {photos.slice(1, 4).map((url, i) => url ? (
                   <Image
                     key={i}
                     src={url}
@@ -181,7 +181,7 @@ export default function SoldDetailPage() {
                     style={{ width: 36, height: 36 }}
                     unoptimized
                   />
-                ))}
+                ) : null)}
                 {photos.length > 4 && (
                   <span className="text-[10px] text-ink-lt text-center">+{photos.length - 4}</span>
                 )}

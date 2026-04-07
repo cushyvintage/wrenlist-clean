@@ -2,8 +2,8 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
-export const GET = withAuth(async (req, user) => {
-  const id = req.url.split('/api/sold/')[1]?.split('?')[0]
+export const GET = withAuth(async (req, user, params) => {
+  const id = params?.id as string | undefined
   if (!id) return ApiResponseHelper.badRequest('Missing id')
 
   const supabase = await createSupabaseServerClient()
@@ -51,15 +51,15 @@ export const GET = withAuth(async (req, user) => {
     // Flatten sale metadata for easy consumption
     sale: {
       marketplace: soldPmd?.marketplace || 'unknown',
-      platformListingId: soldPmd?.platform_listing_id || null,
-      platformListingUrl: soldPmd?.platform_listing_url || null,
-      listingPrice: soldPmd?.listing_price || null,
-      buyer: (sale?.buyer as Record<string, unknown>)?.username as string || null,
-      shipmentStatus: (sale?.shipmentStatus as string) || null,
-      grossAmount: (sale?.grossAmount as number) || null,
-      serviceFee: (sale?.serviceFee as number) || null,
-      netAmount: (sale?.netAmount as number) || null,
-      trackingNumber: (sale?.trackingNumber as string) || null,
+      platformListingId: soldPmd?.platform_listing_id ?? null,
+      platformListingUrl: soldPmd?.platform_listing_url ?? null,
+      listingPrice: soldPmd?.listing_price ?? null,
+      buyer: ((sale?.buyer as Record<string, unknown>)?.username as string) ?? null,
+      shipmentStatus: (sale?.shipmentStatus as string) ?? null,
+      grossAmount: (sale?.grossAmount as number) ?? null,
+      serviceFee: (sale?.serviceFee as number) ?? null,
+      netAmount: (sale?.netAmount as number) ?? null,
+      trackingNumber: (sale?.trackingNumber as string) ?? null,
     },
   })
 })
