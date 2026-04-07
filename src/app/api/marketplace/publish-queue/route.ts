@@ -174,9 +174,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   const { error } = await supabaseAdmin
     .from('product_marketplace_data')
-    .update(updateData)
-    .eq('find_id', findId)
-    .eq('marketplace', marketplace)
+    .upsert(
+      { find_id: findId, marketplace, user_id: user.id, ...updateData },
+      { onConflict: 'find_id,marketplace' }
+    )
 
   if (error) {
     return ApiResponseHelper.internalError()
