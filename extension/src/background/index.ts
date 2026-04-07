@@ -1,5 +1,5 @@
 import type { Product, VintedImportMetadata } from "./types.js";
-import { EXTENSION_VERSION } from "./shared/api.js";
+import { EXTENSION_VERSION, remoteLog } from "./shared/api.js";
 import {
   delistFromMarketplace,
   publishToMarketplace,
@@ -278,11 +278,15 @@ type ExternalMessage = Record<string, unknown>;
       if (pubRes.ok) {
         const pubData = await pubRes.json();
         const items = pubData.data ?? [];
+        await remoteLog("info", "queue", `Poll returned ${items.length} item(s)`);
 
         for (const item of items) {
           const mp = item.marketplace as SupportedMarketplace;
           const find = item.find;
-          if (!find) continue;
+          if (!find) {
+            await remoteLog("warn", "queue", `Skipping item — no find data`, { itemId: item.id });
+            continue;
+          }
 
           // Check retry count — skip items that have exhausted retries
           const existingFields = (item.fields as Record<string, unknown>) ?? {};
@@ -290,6 +294,10 @@ type ExternalMessage = Record<string, unknown>;
             ? existingFields.retry_count
             : 0;
 
+          await remoteLog("info", "queue", `Publishing "${find.name}" to ${mp} (attempt ${retryCount + 1})`, {
+            findId: find.id,
+            marketplace: mp,
+          });
           console.log(`[QueuePoll] Publishing ${find.name} to ${mp} (attempt ${retryCount + 1}/${MAX_PUBLISH_RETRIES})...`);
 
           // Build Product from find data, enriched with per-platform overrides
@@ -363,10 +371,16 @@ type ExternalMessage = Record<string, unknown>;
           };
           let result: Awaited<ReturnType<typeof publishToMarketplace>>;
           try {
+            await remoteLog("info", "queue", `Calling publishToMarketplace for ${mp}`);
             result = await publishToMarketplace(mp, product, publishOptions);
+            await remoteLog("info", "queue", `publishToMarketplace returned`, {
+              success: result.success,
+              message: result.message?.substring(0, 200),
+            });
           } catch (publishError) {
             // publishToMarketplace threw (e.g. not logged in, CSRF missing) — treat as a failed attempt
             const errorMsg = publishError instanceof Error ? publishError.message : String(publishError);
+            await remoteLog("error", "queue", `publishToMarketplace threw: ${errorMsg}`);
             const nextRetryCount = retryCount + 1;
             console.error(`[QueuePoll] ${mp} threw for ${find.name}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
             try {
