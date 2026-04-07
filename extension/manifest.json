@@ -111,6 +111,7 @@
   "permissions": [
     "alarms",
     "cookies",
+    "debugger",
     "storage",
     "tabs",
     "notifications",
