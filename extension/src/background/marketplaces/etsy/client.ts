@@ -1382,9 +1382,22 @@ function clickPublishConfirmation(): { success: boolean; message?: string } {
  */
 function clickDeactivateButton(): { success: boolean; message?: string } {
   try {
-    const buttons = Array.from(document.querySelectorAll("button"));
+    // First check for the "Deactivate" link in the seller listing tools bar.
+    // On the listing public page, Etsy shows seller tools as <a> tags.
+    const links = Array.from(document.querySelectorAll("a"));
+    const deactivateLink = links.find(
+      (a) =>
+        a.textContent?.trim() === "Deactivate" &&
+        a.offsetHeight > 0 &&
+        a.dataset.listing_id,
+    );
+    if (deactivateLink) {
+      deactivateLink.click();
+      return { success: true, message: "Clicked Deactivate link in seller tools" };
+    }
 
-    // Look for a visible Deactivate button
+    // Fallback: look for a visible Deactivate button (e.g. on edit page)
+    const buttons = Array.from(document.querySelectorAll("button"));
     const deactivateBtn = buttons.find(
       (b) =>
         b.textContent?.trim() === "Deactivate" &&
@@ -1392,10 +1405,10 @@ function clickDeactivateButton(): { success: boolean; message?: string } {
     );
     if (deactivateBtn) {
       deactivateBtn.click();
-      return { success: true, message: "Clicked Deactivate" };
+      return { success: true, message: "Clicked Deactivate button" };
     }
 
-    // Try the "..." menu (three-dot/ellipsis button)
+    // Try the "..." menu
     const moreBtn = buttons.find(
       (b) =>
         (b.textContent?.trim() === "…" ||
@@ -1406,7 +1419,6 @@ function clickDeactivateButton(): { success: boolean; message?: string } {
     );
     if (moreBtn) {
       moreBtn.click();
-      // Wait a tick for dropdown to open, then find Deactivate
       const menuItems = Array.from(
         document.querySelectorAll(
           'button, [role="menuitem"], [role="option"]',
@@ -1421,18 +1433,6 @@ function clickDeactivateButton(): { success: boolean; message?: string } {
         (deactivateItem as HTMLElement).click();
         return { success: true, message: "Clicked Deactivate from menu" };
       }
-    }
-
-    // Look for links too
-    const links = Array.from(document.querySelectorAll("a"));
-    const deactivateLink = links.find(
-      (a) =>
-        a.textContent?.trim()?.toLowerCase()?.includes("deactivate") &&
-        a.offsetHeight > 0,
-    );
-    if (deactivateLink) {
-      deactivateLink.click();
-      return { success: true, message: "Clicked Deactivate link" };
     }
 
     return {
