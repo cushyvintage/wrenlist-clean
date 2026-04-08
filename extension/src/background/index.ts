@@ -710,7 +710,11 @@ type ExternalMessage = Record<string, unknown>;
             } else {
               // Publish failed — check if we should retry or mark as error
               const nextRetryCount = retryCount + 1;
-              const errorMsg = result.message ?? "Unknown publish error";
+              // Include full error details (e.g. Vinted validation errors) in the message
+              const errorDetail = (result as any).errors ? JSON.stringify((result as any).errors) : '';
+              const errorMsg = errorDetail
+                ? `${result.message ?? "Unknown publish error"} | ${errorDetail.substring(0, 500)}`
+                : (result.message ?? "Unknown publish error");
 
               if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
                 // Exhausted retries — report error to API
