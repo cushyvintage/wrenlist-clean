@@ -735,13 +735,31 @@ export class VintedMapper {
       console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
     }
 
-    console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'type:', typeof catalogId);
-    
+    // Validate package_size_id against known valid Vinted UK IDs
+    // Valid: 1(S), 2(M), 3(L), 5(XL custom), 8(5kg), 9(10kg), 10(20kg), 11(30kg)
+    const VALID_PACKAGE_SIZES = new Set([1, 2, 3, 5, 8, 9, 10, 11]);
+    if (!VALID_PACKAGE_SIZES.has(packageSizeId)) {
+      // Map invalid IDs to nearest valid one
+      if (packageSizeId <= 1) packageSizeId = 1;
+      else if (packageSizeId <= 2) packageSizeId = 2;
+      else if (packageSizeId <= 4) packageSizeId = 3; // 4 is invalid, use 3 (Large)
+      else if (packageSizeId <= 7) packageSizeId = 5;
+      else if (packageSizeId <= 8) packageSizeId = 8;
+      else packageSizeId = 9;
+      console.warn('[Vinted Mapper] Adjusted packageSizeId to valid value:', packageSizeId);
+    }
+
+    // Resolve currency — TLD detection may not have completed yet, force GBP for UK
+    const currency = this.tld === 'co.uk' ? 'GBP'
+      : this.currencyMap[this.tld] ?? 'GBP'; // Default to GBP for Wrenlist (UK-based)
+
+    console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'currency:', currency, 'packageSizeId:', packageSizeId);
+
     // Build payload matching Vinted's expected structure (aligned with Vinted's expected format)
     const payload: Record<string, any> = {
       item: {
         id: null,
-        currency: this.currencyMap[this.tld] ?? "USD",
+        currency,
         temp_uuid: tempUuid,
         title: this.isTitleValid(product.title)
           ? product.title
@@ -761,7 +779,7 @@ export class VintedMapper {
           domestic:
             product.shipping.shippingType === "ShipYourOwn"
               ? String(product.shipping.domesticShipping)
-              : null,
+              : "0",
           international: null,
         },
         color_ids: colorIds,
