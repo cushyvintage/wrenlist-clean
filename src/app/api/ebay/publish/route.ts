@@ -190,6 +190,27 @@ export async function POST(request: NextRequest) {
       aspects['Model'] = find.name.substring(0, 65)
     }
 
+    // Style — required for clothing on eBay
+    if (!aspects['Style'] && category.startsWith('clothing')) {
+      aspects['Style'] = 'Vintage'
+    }
+
+    // Brand — required for most categories, default to 'Unbranded' if not set
+    if (!aspects['Brand']) {
+      aspects['Brand'] = 'Unbranded'
+    }
+
+    // Material — commonly required
+    if (!aspects['Material'] && (category.includes('kitchen') || category.includes('home') || category.includes('ceramic') || category.includes('pottery'))) {
+      aspects['Material'] = 'Ceramic'
+    }
+
+    // Type — commonly required
+    if (!aspects['Type']) {
+      const lastSegment = category.split('_').pop() || ''
+      aspects['Type'] = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/_/g, ' ')
+    }
+
     // MPN — commonly required, safe default
     if (!aspects['MPN']) {
       aspects['MPN'] = 'Does not apply'
@@ -198,6 +219,11 @@ export async function POST(request: NextRequest) {
     // EAN — commonly required, safe default
     if (!aspects['EAN']) {
       aspects['EAN'] = 'Does not apply'
+    }
+
+    // Colour — default if not set
+    if (!aspects['Colour']) {
+      aspects['Colour'] = 'Multicoloured'
     }
 
     // Also try category-specific field requirements if they exist
