@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Panel } from '@/components/wren/Panel'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import { getCategoryNode } from '@/data/marketplace-category-map'
@@ -124,7 +125,10 @@ export default function SoldDetailPage() {
       setIsDeleting(true)
       setDeleteError(null)
       const res = await fetch(`/api/sold/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string }).error || 'Failed to delete')
+      }
       router.push('/sold')
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete')
@@ -160,49 +164,15 @@ export default function SoldDetailPage() {
 
   if (deleteConfirm) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div
-          className="p-8 rounded text-center"
-          style={{
-            backgroundColor: '#FFF9F3',
-            borderWidth: '1px',
-            borderColor: 'rgba(196,138,58,.2)',
-          }}
-        >
-          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
-            Delete &ldquo;{data.name}&rdquo;?
-          </h2>
-          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
-            This will permanently delete this sold record. This action cannot be undone.
-          </p>
-          {deleteError && (
-            <p className="text-sm text-red-600 mb-4">{deleteError}</p>
-          )}
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => setDeleteConfirm(false)}
-              disabled={isDeleting}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors"
-              style={{
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.22)',
-                backgroundColor: 'transparent',
-                color: '#3D5C3A',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
-              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <DeleteConfirmModal
+        itemName={data.name}
+        message="This will permanently delete this sold record. This action cannot be undone."
+        isOpen={deleteConfirm}
+        isLoading={isDeleting}
+        error={deleteError}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(false)}
+      />
     )
   }
 

@@ -1,19 +1,21 @@
 'use client'
 
-import type { Find } from '@/types'
-
 interface DeleteConfirmModalProps {
-  find: Find
+  itemName: string
+  message?: string
   isOpen: boolean
   isLoading: boolean
-  onConfirm: () => Promise<void>
+  error?: string | null
+  onConfirm: () => void
   onCancel: () => void
 }
 
 export default function DeleteConfirmModal({
-  find,
+  itemName,
+  message = 'This action cannot be undone.',
   isOpen,
   isLoading,
+  error,
   onConfirm,
   onCancel,
 }: DeleteConfirmModalProps) {
@@ -29,25 +31,16 @@ export default function DeleteConfirmModal({
           borderColor: 'rgba(196,138,58,.2)',
         }}
       >
-        <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
-          Delete "{find.name}"?
+        <h2 className="text-lg font-medium mb-2 text-ink">
+          Delete &ldquo;{itemName}&rdquo;?
         </h2>
-        <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
-          This action cannot be undone.
-        </p>
+        <p className="text-sm mb-6 text-ink-lt">{message}</p>
+        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
         <div className="flex gap-3 justify-center">
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded transition-colors"
-            style={{
-              borderWidth: '1px',
-              borderColor: 'rgba(61,92,58,.22)',
-              backgroundColor: 'transparent',
-              color: '#3D5C3A',
-            }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            className="px-4 py-2 text-sm font-medium rounded transition-colors border border-sage/20 bg-transparent text-sage hover:bg-sage/5 disabled:opacity-50"
           >
             Cancel
           </button>

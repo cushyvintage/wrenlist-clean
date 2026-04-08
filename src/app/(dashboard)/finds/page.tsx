@@ -348,9 +348,8 @@ export default function InventoryPage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
-        // Fall back to mock data
-        setFinds(mockFinds)
-        setTotalCount(mockFinds.length)
+        setFinds([])
+        setTotalCount(0)
       } finally {
         setIsLoading(false)
       }
@@ -871,8 +870,8 @@ export default function InventoryPage() {
       {isLoading && (
         <Panel className="overflow-x-auto">
           <table className="w-full text-sm min-w-max">
-            <thead style={{ color: '#8A9E88' }}>
-              <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+            <thead className="text-sage-dim">
+              <tr className="border-b border-sage/14">
                 <th className="text-left py-[10px] px-[18px] w-8"><div className="w-4 h-4 rounded bg-sage/10 animate-pulse" /></th>
                 <th className="text-left py-[10px] px-[18px] min-w-[180px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
                 <th className="text-left py-[10px] px-[18px] min-w-[90px] text-[10px] uppercase tracking-[.08em] font-medium hidden md:table-cell">source</th>
@@ -884,7 +883,7 @@ export default function InventoryPage() {
             </thead>
             <tbody>
               {Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i} style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                <tr key={i} className="border-b border-sage/14">
                   <td className="py-[12px] px-[18px]"><div className="w-4 h-4 rounded bg-sage/10 animate-pulse" /></td>
                   <td className="py-[12px] px-[18px]">
                     <div className="flex items-center gap-3">

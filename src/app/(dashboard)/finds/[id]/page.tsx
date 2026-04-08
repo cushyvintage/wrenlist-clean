@@ -1005,7 +1005,7 @@ export default function InventoryDetailPage() {
   if (deleteConfirm) {
     return (
       <DeleteConfirmModal
-        find={find}
+        itemName={find.name}
         isOpen={deleteConfirm}
         isLoading={isSaving}
         onConfirm={handleDelete}
