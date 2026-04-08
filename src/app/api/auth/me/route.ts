@@ -79,16 +79,12 @@ export async function GET(req: NextRequest) {
       null
 
     // Fetch inventory + listing stats in parallel
-    const [findsResult, listingsResult, platformsResult] = await Promise.all([
+    const [findsResult, pmdResult] = await Promise.all([
       supabase
         .from('finds')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id),
-      supabase
-        .from('product_marketplace_data')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'listed'),
+      // Single query: get marketplace for listed items (need marketplace for unique count)
       supabase
         .from('product_marketplace_data')
         .select('marketplace')
@@ -96,10 +92,9 @@ export async function GET(req: NextRequest) {
         .eq('status', 'listed'),
     ])
 
-    // Count unique connected platforms from active listings
-    const connectedPlatforms = platformsResult.data
-      ? [...new Set(platformsResult.data.map(r => r.marketplace))].length
-      : 0
+    const listedRows = pmdResult.data ?? []
+    const activeListings = listedRows.length
+    const connectedPlatforms = [...new Set(listedRows.map(r => r.marketplace))].length
 
     return NextResponse.json({
       user: {
@@ -115,7 +110,7 @@ export async function GET(req: NextRequest) {
       },
       stats: {
         total_finds: findsResult.count ?? 0,
-        active_listings: listingsResult.count ?? 0,
+        active_listings: activeListings,
         connected_platforms: connectedPlatforms,
       },
     })

@@ -26,23 +26,12 @@ document.addEventListener('DOMContentLoaded', function () {
   async function checkAuth() {
     return new Promise(resolve => {
       chrome.runtime.sendMessage({ action: 'get_auth_info' }, response => {
-        // Debug: log to console (visible in popup DevTools)
-        console.log('[Popup] get_auth_info response:', JSON.stringify(response))
-        console.log('[Popup] lastError:', chrome.runtime.lastError?.message)
-
-        if (chrome.runtime.lastError) {
-          console.warn('[Popup] Runtime error:', chrome.runtime.lastError.message)
-          resolve(null)
-          return
-        }
-        if (!response || !response.success) {
-          console.warn('[Popup] Auth failed:', response)
+        if (chrome.runtime.lastError || !response || !response.success) {
           resolve(null)
           return
         }
         const data = response.data
         if (!data || !data.user) {
-          console.warn('[Popup] No user in response:', data)
           resolve(null)
           return
         }
