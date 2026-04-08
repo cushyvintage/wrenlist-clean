@@ -252,6 +252,7 @@ export default function SoldHistoryPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [showAllAction, setShowAllAction] = useState(false)
 
   const loadSoldItems = useCallback(() => {
     call(() => fetchApi<SoldResponse>(`/api/sold?timeframe=${timeframe}`))
@@ -456,28 +457,41 @@ export default function SoldHistoryPage() {
       )}
 
       {/* ── Needs Action section ─────────────────────────────── */}
-      {!isLoading && actionItems.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
-              Needs action
-            </h2>
-            <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
-              {actionItems.length}
-            </span>
+      {!isLoading && actionItems.length > 0 && (() => {
+        const PREVIEW_COUNT = 6
+        const visibleActions = showAllAction ? actionItems : actionItems.slice(0, PREVIEW_COUNT)
+        const hasMore = actionItems.length > PREVIEW_COUNT
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
+                Needs action
+              </h2>
+              <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
+                {actionItems.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {visibleActions.map((item) => (
+                <OrderCard
+                  key={item.id}
+                  item={item}
+                  onUpdateStatus={handleUpdateShipment}
+                  formatDate={formatDate}
+                />
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                onClick={() => setShowAllAction(!showAllAction)}
+                className="text-xs text-sage hover:text-sage-lt transition font-medium"
+              >
+                {showAllAction ? 'Show less' : `Show all ${actionItems.length} orders`}
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {actionItems.map((item) => (
-              <OrderCard
-                key={item.id}
-                item={item}
-                onUpdateStatus={handleUpdateShipment}
-                formatDate={formatDate}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Stats grid (metrics for all items) ───────────────── */}
       {!isLoading && metrics && (
@@ -547,7 +561,7 @@ export default function SoldHistoryPage() {
       )}
 
       {/* ── Sold History table ────────────────────────────────── */}
-      {!isLoading && completedItems.length > 0 && (
+      {!isLoading && allItems.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
             Sold history
@@ -570,7 +584,7 @@ export default function SoldHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {completedItems.map((item) => (
+                  {allItems.map((item) => (
                     <tr
                       key={item.id}
                       className="border-b border-border hover:bg-cream-md transition cursor-pointer"
