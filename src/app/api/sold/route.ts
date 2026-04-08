@@ -50,23 +50,42 @@ export const GET = withAuth(async (req, user) => {
     const timeframe = searchParams.get('timeframe') || 'month'
 
     // Calculate date range
+    // UK tax year runs 6 April – 5 April
     const now = new Date()
     let startDate = new Date()
+
+    function ukTaxYearStart(year: number): Date {
+      return new Date(`${year}-04-06T00:00:00`)
+    }
+
+    // Current tax year start: if before 6 Apr, it started last calendar year
+    const currentTaxYearStart = now.getMonth() > 3 || (now.getMonth() === 3 && now.getDate() >= 6)
+      ? ukTaxYearStart(now.getFullYear())
+      : ukTaxYearStart(now.getFullYear() - 1)
 
     switch (timeframe) {
       case 'quarter':
         startDate.setDate(now.getDate() - 90)
         break
+      case 'tax_year':
+        startDate = currentTaxYearStart
+        break
+      case 'last_tax_year':
+        startDate = ukTaxYearStart(currentTaxYearStart.getFullYear() - 1)
+        break
       case 'all':
-        startDate = new Date('2000-01-01') // Far past
+        startDate = new Date('2000-01-01')
         break
       case 'month':
       default:
         startDate.setDate(now.getDate() - 30)
     }
 
+    // For last_tax_year, also set an end date
+    const endDate = timeframe === 'last_tax_year' ? currentTaxYearStart : null
+
     // Fetch sold finds with marketplace data including sale metadata
-    const { data: finds, error: findsError } = await supabase
+    let query = supabase
       .from('finds')
       .select(
         `
@@ -90,6 +109,13 @@ export const GET = withAuth(async (req, user) => {
       .gte('sold_at', startDate.toISOString())
       .order('sold_at', { ascending: false })
       .limit(10000)
+
+    // Apply end date for last_tax_year filter
+    if (endDate) {
+      query = query.lt('sold_at', endDate.toISOString())
+    }
+
+    const { data: finds, error: findsError } = await query
 
     if (findsError) {
       if (process.env.NODE_ENV !== 'production') {

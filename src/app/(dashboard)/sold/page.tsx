@@ -247,7 +247,7 @@ function OrderCard({
 
 export default function SoldHistoryPage() {
   const router = useRouter()
-  const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'all'>('month')
+  const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'tax_year' | 'last_tax_year' | 'all'>('month')
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
@@ -500,18 +500,24 @@ export default function SoldHistoryPage() {
             <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
               Performance
             </h2>
-            <div className="flex gap-2 bg-cream rounded p-1">
-              {(['month', 'quarter', 'all'] as const).map((tf) => (
+            <div className="flex gap-1 bg-cream rounded p-1 flex-wrap">
+              {([
+                ['month', 'this month'],
+                ['quarter', '3 months'],
+                ['tax_year', 'tax year'],
+                ['last_tax_year', 'last tax year'],
+                ['all', 'all time'],
+              ] as const).map(([tf, label]) => (
                 <button
                   key={tf}
                   onClick={() => setTimeframe(tf)}
-                  className={`px-3 py-1 text-xs font-medium rounded transition ${
+                  className={`px-2.5 py-1 text-xs font-medium rounded transition whitespace-nowrap ${
                     timeframe === tf
                       ? 'bg-sage text-white'
                       : 'text-ink hover:bg-cream-dk'
                   }`}
                 >
-                  {tf === 'month' ? 'this month' : tf === 'quarter' ? '3 months' : 'all time'}
+                  {label}
                 </button>
               ))}
             </div>
