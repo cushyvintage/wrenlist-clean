@@ -5,8 +5,17 @@ import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { getCategoryFields } from '@/data/marketplace/category-field-requirements'
 
-// eBay category mapping (simple hardcoded map for now)
+/** Infer eBay Department from Wrenlist category slug */
+function inferDepartment(category: string): string {
+  if (category.includes('menswear') || category.includes('mens_')) return 'Men'
+  if (category.includes('womenswear') || category.includes('womens_')) return 'Women'
+  if (category.includes('boyswear') || category.includes('boys_')) return 'Boys'
+  if (category.includes('girlswear') || category.includes('girls_')) return 'Girls'
+  if (category.includes('baby') || category.includes('toddler')) return 'Baby'
+  return 'Unisex'
+}
 
 /**
  * POST /api/ebay/publish
@@ -133,15 +142,67 @@ export async function POST(request: NextRequest) {
       // Fall back to USED_EXCELLENT
     }
 
+    // eBay title max 80 chars
+    const ebayTitle = find.name.length > 80 ? find.name.substring(0, 80) : find.name
+
+    // eBay min price £0.99
+    if (ebayPrice < 0.99) {
+      return ApiResponseHelper.badRequest('eBay minimum listing price is £0.99. Please increase the price.')
+    }
+
+    // Build eBay item specifics (aspects) from find data + category requirements
+    const aspects: Record<string, string> = {}
+    if (find.brand) aspects['Brand'] = find.brand
+    if (find.colour) aspects['Colour'] = find.colour
+    if (find.size) aspects['Size'] = find.size
+
+    // Read any user-provided eBay-specific aspect values from platform_fields
+    if (ebayFields) {
+      for (const [key, val] of Object.entries(ebayFields)) {
+        if (val && typeof val === 'string' && !['acceptOffers', 'listingId', 'offerId', 'status', 'url', 'publishedAt'].includes(key)) {
+          aspects[key] = val
+        }
+      }
+    }
+
+    // Auto-fill required aspects that aren't set yet based on category
+    const category = find.category || ''
+    const categoryFields = getCategoryFields(category, 'ebay')
+    const requiredFields = categoryFields.filter(f => f.required)
+
+    for (const field of requiredFields) {
+      if (aspects[field.name]) continue // already set
+
+      // Smart defaults for common required fields
+      if (field.name === 'Department') {
+        aspects['Department'] = inferDepartment(category)
+      } else if (field.name === 'Language') {
+        aspects['Language'] = 'English'
+      } else if (field.name === 'Type' && !aspects['Type']) {
+        aspects['Type'] = 'Not Specified'
+      } else if (field.name === 'Material' && !aspects['Material']) {
+        aspects['Material'] = 'Not Specified'
+      } else if (field.name === 'Style' && !aspects['Style']) {
+        aspects['Style'] = 'Not Specified'
+      } else if (field.name === 'EAN' && !aspects['EAN']) {
+        aspects['EAN'] = 'Does not apply'
+      } else if (field.name === 'Outer Shell Material' && !aspects['Outer Shell Material']) {
+        aspects['Outer Shell Material'] = aspects['Material'] || 'Not Specified'
+      } else if (field.name === 'Upper Material' && !aspects['Upper Material']) {
+        aspects['Upper Material'] = aspects['Material'] || 'Not Specified'
+      }
+    }
+
     const inventoryItem = {
       sku,
-      title: find.name,
+      title: ebayTitle,
       description: find.description || find.name,
       price: ebayPrice,
       quantity: 1,
       condition: ebayCondition,
       brand: find.brand || undefined,
       images: find.photos,
+      aspectAttributes: aspects,
       merchantLocation: { locationKey: sellerConfig.merchant_location_key },
     }
 
