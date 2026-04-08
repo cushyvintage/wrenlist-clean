@@ -27,24 +27,14 @@ export const GET = withAuth(async (_req, user) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Get all user's find IDs first
-  const { data: userFinds, error: findsError } = await supabase
-    .from('finds')
-    .select('id')
-    .eq('user_id', user.id)
-
-  if (findsError || !userFinds) {
-    return ApiResponseHelper.internalError()
-  }
-
-  const findIds = userFinds.map((f: { id: string }) => f.id)
-
-  // Find all marketplace data with needs_delist status for this user's finds
+  // Use a JOIN instead of two-step (fetch all find IDs → .in()) to avoid
+  // URL length limits when a user has many finds (1000+ UUIDs in the query
+  // string exceeds PostgREST's URL limit and causes intermittent 500s).
   const { data, error } = await supabase
     .from('product_marketplace_data')
-    .select('find_id, marketplace, platform_listing_id, platform_listing_url, fields')
+    .select('find_id, marketplace, platform_listing_id, platform_listing_url, fields, finds!inner(user_id)')
     .eq('status', 'needs_delist')
-    .in('find_id', findIds)
+    .eq('finds.user_id', user.id)
 
   if (error) {
     console.error('[Delist Queue] Failed to fetch queue:', error)

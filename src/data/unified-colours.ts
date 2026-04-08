@@ -125,7 +125,7 @@ export const PLATFORM_TITLE_LIMITS: Record<string, number> = {
 
 /** Description char limits per platform (use min of selected) */
 export const PLATFORM_DESCRIPTION_LIMITS: Record<string, number> = {
-  depop: 1000,
+  depop: 500,
   vinted: 2000,
   shopify: 5000,
   facebook: 9999,
