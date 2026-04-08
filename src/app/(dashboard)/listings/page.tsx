@@ -429,6 +429,48 @@ export default function ListingsPage() {
           </Link>
         </div>
 
+        {/* Summary stats */}
+        {!isLoading && grouped.length > 0 && (() => {
+          const listedItems = grouped.filter((g) => g.marketplaces.some((mp) => mp.status === 'listed'))
+          const totalListedValue = listedItems.reduce((sum, g) => {
+            const price = g.marketplaces.find((mp) => mp.status === 'listed')?.listing_price ?? g.find?.asking_price_gbp ?? 0
+            return sum + price
+          }, 0)
+          const avgDaysListed = listedItems.length > 0
+            ? Math.round(listedItems.reduce((sum, g) => sum + daysAgo(g.created_at), 0) / listedItems.length)
+            : 0
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {[
+                { label: 'Active listings', value: String(counts.listed) },
+                { label: 'Listed value', value: `£${totalListedValue.toLocaleString()}` },
+                { label: 'Platforms', value: String(activeMarketplaces.length) },
+                { label: 'Avg days listed', value: String(avgDaysListed), highlight: avgDaysListed > 30 },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="px-4 py-3 rounded"
+                  style={{
+                    backgroundColor: stat.highlight ? 'rgba(181,129,58,.08)' : 'rgba(61,92,58,.05)',
+                    borderWidth: '1px',
+                    borderColor: stat.highlight ? 'rgba(181,129,58,.2)' : 'rgba(61,92,58,.1)',
+                  }}
+                >
+                  <div className="text-[10px] uppercase tracking-[.08em] font-medium" style={{ color: '#8A9E88' }}>
+                    {stat.label}
+                  </div>
+                  <div
+                    className="text-lg font-semibold mt-0.5"
+                    style={{ color: stat.highlight ? '#B5813A' : '#1E2E1C' }}
+                  >
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Filter Pills */}
         <div className="flex gap-2 flex-wrap">
           {(['all', 'listed', 'sold', 'hidden', 'delisted'] as const).map((f) => (
@@ -445,6 +487,37 @@ export default function ListingsPage() {
             </button>
           ))}
         </div>
+
+        {/* Platform breakdown */}
+        {activeMarketplaces.length > 0 && (
+          <div className="flex gap-3 flex-wrap mt-3">
+            {activeMarketplaces.map((mp) => {
+              const mpCount = grouped.filter((g) => g.marketplaces.some((m) => m.marketplace === mp)).length
+              return (
+                <button
+                  key={mp}
+                  onClick={() => setMarketplaceFilter(marketplaceFilter === mp ? 'all' : mp)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    marketplaceFilter === mp
+                      ? 'bg-sage-pale border border-sage text-sage'
+                      : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+                  }`}
+                >
+                  <MarketplaceIcon platform={mp} size="sm" />
+                  {formatPlatformName(mp)} ({mpCount})
+                </button>
+              )
+            })}
+            {marketplaceFilter !== 'all' && (
+              <button
+                onClick={() => setMarketplaceFilter('all')}
+                className="text-xs text-ink-lt hover:text-ink transition-colors underline"
+              >
+                clear
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Pending items banner */}
@@ -455,7 +528,7 @@ export default function ListingsPage() {
         </div>
       )}
 
-      {/* Search + Marketplace Filter + Sort */}
+      {/* Search + Sort */}
       <div className="flex gap-3 flex-wrap items-center">
         <input
           type="text"
@@ -464,21 +537,6 @@ export default function ListingsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm w-full max-w-xs"
         />
-
-        {activeMarketplaces.length > 1 && (
-          <select
-            value={marketplaceFilter}
-            onChange={(e) => setMarketplaceFilter(e.target.value as Platform | 'all')}
-            className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm"
-          >
-            <option value="all">all platforms</option>
-            {activeMarketplaces.map((mp) => (
-              <option key={mp} value={mp}>
-                {formatPlatformName(mp)}
-              </option>
-            ))}
-          </select>
-        )}
 
         <select
           value={sortBy}
@@ -850,19 +908,21 @@ export default function ListingsPage() {
         ) : filtered.length === 0 ? (
           <div className="bg-white border border-sage/14 rounded-lg">
             {listings.length === 0 ? (
-              <div className="text-center py-12 px-6">
-                <p className="text-2xl mb-2">📋</p>
-                <p className="text-sage-dim text-sm mb-4">No listings yet</p>
-                <p className="text-xs text-ink-lt mb-6">Items you publish to Vinted and eBay appear here</p>
+              <div className="text-center py-16 px-6">
+                <div className="text-4xl mb-3">📋</div>
+                <p className="text-ink font-medium mb-1">No listings yet</p>
+                <p className="text-ink-lt text-sm mb-6 max-w-sm mx-auto">
+                  Go to Finds, select items, and crosslist them to Vinted, eBay, Etsy, or Shopify. They&apos;ll appear here once published.
+                </p>
                 <Link
                   href="/finds"
-                  className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+                  className="inline-block px-6 py-2.5 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-dk transition-colors"
                 >
-                  Create your first listing
+                  Go to Finds →
                 </Link>
               </div>
             ) : (
-              <div className="text-center py-12 text-sage-dim">
+              <div className="text-center py-12 text-ink-lt text-sm">
                 No listings match your filters
               </div>
             )}

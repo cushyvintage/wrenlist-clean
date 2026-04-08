@@ -55,6 +55,7 @@ export default function InventoryPage() {
   const [markSoldPrice, setMarkSoldPrice] = useState('')
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0 })
 
   /**
    * Debounce search input (300ms)
@@ -109,9 +110,19 @@ export default function InventoryPage() {
           throw new Error('Failed to fetch finds')
         }
         const result = await findsRes.json()
-        const response = unwrapApiResponse<{ items: Find[]; pagination: { total: number } }>(result)
+        const response = unwrapApiResponse<{ items: Find[]; pagination: { total: number }; counts?: Record<string, number> }>(result)
         setFinds(response?.items || [])
         setTotalCount(response?.pagination?.total || 0)
+        if (response?.counts) {
+          const c = response.counts
+          setStatusCounts({
+            all: c.all ?? 0,
+            draft: c.draft ?? 0,
+            listed: c.listed ?? 0,
+            on_hold: c.on_hold ?? 0,
+            sold: c.sold ?? 0,
+          })
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
@@ -356,16 +367,121 @@ export default function InventoryPage() {
   const totalPages = Math.ceil(totalCount / LIMIT)
   const currentPage = Math.floor(currentOffset / LIMIT) + 1
 
+  // Computed stats
+  const totalStockValue = finds.reduce((sum, f) => sum + (f.asking_price_gbp || 0), 0)
+  const totalCostBasis = finds.reduce((sum, f) => sum + (f.cost_gbp || 0), 0)
+  const avgMargin = totalCostBasis > 0 && totalStockValue > 0
+    ? Math.round(((totalStockValue - totalCostBasis) / totalStockValue) * 100)
+    : null
+  const needsActionCount = finds.filter((f) =>
+    f.status === 'draft' && (!f.asking_price_gbp || !f.photos || f.photos.length === 0 || !f.description)
+  ).length
+
   return (
-    <div className="space-y-6">
-      {/* ELI5 */}
-      <p className="text-[13px]" style={{ color: '#8A9E88' }}>
-        Your items — everything you&apos;ve sourced, whether it&apos;s listed somewhere or still sitting in a box.
-      </p>
+    <div className="flex flex-col gap-6">
+      {/* Page header */}
+      <div className="border-b border-sage/14 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h1 className="font-serif text-2xl italic text-ink">finds</h1>
+            <p className="text-[13px] mt-1 hidden sm:block" style={{ color: '#8A9E88' }}>
+              Your items — everything you&apos;ve sourced, whether it&apos;s listed somewhere or still sitting in a box.
+            </p>
+          </div>
+          <div className="flex gap-2 items-center self-start">
+            {/* Usage indicator */}
+            {profile && planLimit !== null && (
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] rounded-full"
+                style={{
+                  backgroundColor: 'rgba(61,92,58,.08)',
+                  borderWidth: '1px',
+                  borderColor: 'rgba(61,92,58,.14)',
+                  color: '#6B7D6A',
+                }}
+              >
+                <span>
+                  {Math.min(findsUsed, planLimit)}/{planLimit}
+                </span>
+                {findsUsed >= planLimit && (
+                  <>
+                    <span className="text-amber-500">●</span>
+                    <button
+                      onClick={handleUpgradeToNester}
+                      className="text-amber-600 underline hover:text-amber-900 transition-colors"
+                    >
+                      upgrade
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <button
+              onClick={handleAddFind}
+              className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition whitespace-nowrap"
+            >
+              + add find
+            </button>
+          </div>
+        </div>
+
+        {/* Summary stats */}
+        {!isLoading && statusCounts.all > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {[
+              { label: 'Total items', value: String(statusCounts.all) },
+              { label: 'Stock value', value: `£${totalStockValue.toLocaleString()}` },
+              { label: 'Avg margin', value: avgMargin !== null ? `${avgMargin}%` : '—' },
+              { label: 'Needs action', value: String(needsActionCount), highlight: needsActionCount > 0 },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="px-4 py-3 rounded"
+                style={{
+                  backgroundColor: stat.highlight ? 'rgba(181,129,58,.08)' : 'rgba(61,92,58,.05)',
+                  borderWidth: '1px',
+                  borderColor: stat.highlight ? 'rgba(181,129,58,.2)' : 'rgba(61,92,58,.1)',
+                }}
+              >
+                <div className="text-[10px] uppercase tracking-[.08em] font-medium" style={{ color: '#8A9E88' }}>
+                  {stat.label}
+                </div>
+                <div
+                  className="text-lg font-semibold mt-0.5"
+                  style={{ color: stat.highlight ? '#B5813A' : '#1E2E1C' }}
+                >
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Filter pills with counts */}
+        <div className="flex gap-2 flex-wrap">
+          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging'] as StatusFilter[]).map((s) => {
+            const pillLabel = s === 'on_hold' ? 'on hold' : s
+            const pillCount = s === 'aging' ? agingCount : (statusCounts[s as keyof typeof statusCounts] ?? 0)
+            return (
+              <button
+                key={s}
+                onClick={() => setSelectedStatus(s)}
+                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors capitalize whitespace-nowrap ${
+                  selectedStatus === s
+                    ? 'bg-sage-pale border border-sage text-sage'
+                    : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+                }`}
+              >
+                {pillLabel} ({pillCount})
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Plan limit error state */}
       {planLimitError && (
-        <div className="bg-amber/10 border border-amber/30 rounded p-4 text-sm text-amber space-y-2">
+        <div className="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-700 space-y-2">
           <p className="font-medium">{planLimitError}</p>
           <button
             onClick={handleUpgradeToNester}
@@ -378,134 +494,37 @@ export default function InventoryPage() {
 
       {/* Error state */}
       {error && (
-        <div
-          className="rounded p-3 text-sm flex items-center justify-between"
-          style={{
-            backgroundColor: 'rgba(220,38,38,.1)',
-            borderWidth: '1px',
-            borderColor: 'rgba(220,38,38,.3)',
-            color: '#DC2626',
-          }}
-        >
+        <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700 flex items-center justify-between">
           <span>{error}</span>
           <button
-            onClick={() => {
-              setError(null)
-              setCurrentOffset(0)
-            }}
-            className="ml-4 px-3 py-1 text-xs font-medium rounded"
-            style={{
-              backgroundColor: 'rgba(220,38,38,.15)',
-              color: '#DC2626',
-            }}
+            onClick={() => { setError(null); setCurrentOffset(0) }}
+            className="ml-4 px-3 py-1 text-xs font-medium rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Controls row */}
-      <div
-        className="flex flex-wrap items-center gap-3 pb-4"
-        style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
-      >
-        {/* Status filter pills */}
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging'] as StatusFilter[]).map((status) => {
-            const label =
-              status === 'on_hold' ? 'on hold' : status === 'aging' ? `aging (${agingCount})` : status
-            return (
-              <button
-                key={status}
-                onClick={() => setSelectedStatus(status)}
-                className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
-                style={
-                  selectedStatus === status
-                    ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
-                    : {
-                        backgroundColor: 'transparent',
-                        borderColor: 'rgba(61,92,58,.22)',
-                        borderWidth: '1px',
-                        color: '#6B7D6A',
-                      }
-                }
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Needs action banner */}
+      {!isLoading && needsActionCount > 0 && selectedStatus !== 'draft' && (
+        <button
+          onClick={() => setSelectedStatus('draft')}
+          className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs w-full text-left hover:bg-amber-100 transition-colors"
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />
+          {needsActionCount} draft{needsActionCount !== 1 ? 's' : ''} missing price, photos, or description — click to review
+        </button>
+      )}
 
-        {/* Search input */}
+      {/* Search + Sort */}
+      <div className="flex gap-3 flex-wrap items-center">
         <input
           type="text"
-          placeholder="search finds..."
+          placeholder="Search finds..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-[200px] px-[14px] py-[7px] text-[13px] rounded bg-[#EDE8DE] text-[#1E2E1C]"
-          style={{
-            borderWidth: '1px',
-            borderColor: 'rgba(61,92,58,.22)',
-            outline: 'none',
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = '#3D5C3A')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(61,92,58,.22)')}
+          className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt outline-none focus:border-sage text-sm w-full max-w-xs"
         />
-
-        {/* Action buttons */}
-        <div className="flex gap-2 whitespace-nowrap items-center">
-          <button
-            className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
-            style={{
-              borderWidth: '1px',
-              borderColor: 'rgba(61,92,58,.22)',
-              backgroundColor: 'transparent',
-              color: '#6B7D6A',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          >
-            select
-          </button>
-
-          {/* Usage indicator */}
-          {profile && planLimit !== null && (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 text-[11px] rounded"
-              style={{
-                backgroundColor: 'rgba(61,92,58,.08)',
-                borderWidth: '1px',
-                borderColor: 'rgba(61,92,58,.14)',
-                color: '#6B7D6A',
-              }}
-            >
-              <span>
-                {Math.min(findsUsed, planLimit)} of {planLimit} manual finds
-              </span>
-              {findsUsed >= planLimit && (
-                <>
-                  <span className="text-amber">●</span>
-                  <button
-                    onClick={handleUpgradeToNester}
-                    className="text-amber underline hover:text-amber-900 transition-colors"
-                  >
-                    upgrade →
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={handleAddFind}
-            className="px-[18px] py-[7px] text-[13px] font-medium rounded transition-colors"
-            style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2C4428')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
-          >
-            + add find
-          </button>
-        </div>
       </div>
 
       {/* Bulk action error */}
@@ -931,25 +950,30 @@ export default function InventoryPage() {
       )}
 
       {/* Empty state */}
-      {!isLoading && filteredFinds.length === 0 && finds.length === 0 && (
+      {!isLoading && filteredFinds.length === 0 && finds.length === 0 && !debouncedSearch && (
         <Panel>
-          <div className="text-center py-12 px-6">
-            <p className="text-2xl mb-2">📦</p>
-            <p className="text-sage-dim text-sm mb-4">No finds yet</p>
+          <div className="text-center py-16 px-6">
+            <div className="text-4xl mb-3">📦</div>
+            <p className="text-ink font-medium mb-1">No finds yet</p>
+            <p className="text-ink-lt text-sm mb-6 max-w-sm mx-auto">
+              Add your first sourced item to start tracking inventory, costs, and margins.
+            </p>
             <button
               onClick={() => router.push('/add-find')}
-              className="px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors"
+              className="px-6 py-2.5 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-dk transition-colors"
             >
-              Add your first find
+              + Add your first find
             </button>
           </div>
         </Panel>
       )}
 
-      {/* No search results state */}
-      {!isLoading && filteredFinds.length === 0 && finds.length > 0 && (
+      {/* No search/filter results */}
+      {!isLoading && filteredFinds.length === 0 && (finds.length > 0 || debouncedSearch) && (
         <div className="py-12 text-center">
-          <p className="text-sm text-ink-lt">No items found matching your search</p>
+          <p className="text-ink-lt text-sm">
+            {debouncedSearch ? `No items matching "${debouncedSearch}"` : 'No items in this status'}
+          </p>
         </div>
       )}
     </div>

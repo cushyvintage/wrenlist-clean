@@ -41,18 +41,33 @@ export const GET = withAuth(async (req, user) => {
       query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%,source_name.ilike.%${search}%`)
     }
 
-    const { data, error, count } = await query.range(offset, offset + limit - 1)
+    // Run main query and status counts in parallel
+    const [mainResult, countsResult] = await Promise.all([
+      query.range(offset, offset + limit - 1),
+      supabase.rpc('get_find_status_counts', { p_user_id: user.id }).single(),
+    ])
 
-    if (error) {
+    if (mainResult.error) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', error)
+        console.error('Supabase error:', mainResult.error)
       }
       return ApiResponseHelper.internalError()
     }
 
+    // Build counts object — fallback to empty if RPC not yet deployed
+    const rawCounts = (countsResult.data as Record<string, number> | null) || {}
+    const statusCounts = {
+      all: (rawCounts.draft || 0) + (rawCounts.listed || 0) + (rawCounts.on_hold || 0) + (rawCounts.sold || 0),
+      draft: rawCounts.draft || 0,
+      listed: rawCounts.listed || 0,
+      on_hold: rawCounts.on_hold || 0,
+      sold: rawCounts.sold || 0,
+    }
+
     return ApiResponseHelper.success({
-      items: data as Find[],
-      pagination: { limit, offset, total: count || 0 },
+      items: mainResult.data as Find[],
+      pagination: { limit, offset, total: mainResult.count || 0 },
+      counts: statusCounts,
     })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
