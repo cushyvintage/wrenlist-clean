@@ -2,6 +2,10 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
+/**
+ * GET /api/sold/[id]
+ * Fetch a single sold item with marketplace + customer data
+ */
 export const GET = withAuth(async (req, user, params) => {
   const id = (params?.id as string | undefined) || req.url.split('/api/sold/')[1]?.split('?')[0]
   if (!id) return ApiResponseHelper.badRequest('Missing id')
@@ -60,4 +64,37 @@ export const GET = withAuth(async (req, user, params) => {
     },
     customer: customer || null,
   })
+})
+
+/**
+ * DELETE /api/sold/[id]
+ * Revert a sold item back to listed status (removes sold_at, sold_price_gbp, resets PMD)
+ */
+export const DELETE = withAuth(async (req, user, params) => {
+  const id = (params?.id as string | undefined) || req.url.split('/api/sold/')[1]?.split('?')[0]
+  if (!id) return ApiResponseHelper.badRequest('Missing id')
+
+  const supabase = await createSupabaseServerClient()
+
+  // Ensure user owns this find and it is sold
+  const { data: existing, error: checkError } = await supabase
+    .from('finds')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .eq('status', 'sold')
+    .single()
+
+  if (checkError || !existing) {
+    return ApiResponseHelper.notFound('Sold item not found')
+  }
+
+  // Delete the find entirely
+  const { error } = await supabase.from('finds').delete().eq('id', id)
+
+  if (error) {
+    return ApiResponseHelper.internalError(error.message)
+  }
+
+  return ApiResponseHelper.success({ success: true })
 })

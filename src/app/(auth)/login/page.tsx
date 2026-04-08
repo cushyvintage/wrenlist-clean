@@ -22,6 +22,8 @@ function LoginInner() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Clear error only on submit, not on input change
     setError(null)
 
     // Basic validation

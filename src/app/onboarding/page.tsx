@@ -225,7 +225,7 @@ export default function OnboardingPage() {
               <>
                 <button
                   onClick={handleSkip}
-                  className="px-6 py-3 text-sage hover:text-ink transition-colors font-medium"
+                  className="px-6 py-3 text-sage/60 hover:text-sage transition-colors text-sm"
                 >
                   Skip
                 </button>
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
               <>
                 <button
                   onClick={handleSkip}
-                  className="px-6 py-3 text-sage hover:text-ink transition-colors font-medium"
+                  className="px-6 py-3 text-sage/60 hover:text-sage transition-colors text-sm"
                 >
                   Skip
                 </button>

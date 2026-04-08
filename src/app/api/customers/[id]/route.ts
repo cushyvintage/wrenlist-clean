@@ -89,3 +89,41 @@ export const PATCH = withAuth(async (req, user, params) => {
 
   return ApiResponseHelper.success({ updated: true })
 })
+
+/**
+ * DELETE /api/customers/[id]
+ * Delete a customer record
+ */
+export const DELETE = withAuth(async (req, user, params) => {
+  const id = (params?.id as string | undefined) || req.url.split('/api/customers/')[1]?.split('?')[0]
+  if (!id) return ApiResponseHelper.badRequest('Missing id')
+
+  const supabase = await createSupabaseServerClient()
+
+  // Ensure user owns this customer
+  const { data: existing, error: checkError } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (checkError || !existing) {
+    return ApiResponseHelper.notFound('Customer not found')
+  }
+
+  // Unlink any PMD records that reference this customer
+  await supabase
+    .from('product_marketplace_data')
+    .update({ customer_id: null })
+    .eq('customer_id', id)
+
+  // Delete customer
+  const { error } = await supabase.from('customers').delete().eq('id', id)
+
+  if (error) {
+    return ApiResponseHelper.internalError(error.message)
+  }
+
+  return ApiResponseHelper.success({ success: true })
+})

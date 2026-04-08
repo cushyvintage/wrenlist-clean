@@ -616,8 +616,29 @@ export default function InventoryPage() {
 
       {/* Error state */}
       {error && (
-        <div className="bg-amber/10 border border-amber/30 rounded p-3 text-sm text-amber">
-          {error}
+        <div
+          className="rounded p-3 text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: 'rgba(220,38,38,.1)',
+            borderWidth: '1px',
+            borderColor: 'rgba(220,38,38,.3)',
+            color: '#DC2626',
+          }}
+        >
+          <span>{error}</span>
+          <button
+            onClick={() => {
+              setError(null)
+              setCurrentOffset(0)
+            }}
+            className="ml-4 px-3 py-1 text-xs font-medium rounded"
+            style={{
+              backgroundColor: 'rgba(220,38,38,.15)',
+              color: '#DC2626',
+            }}
+          >
+            Retry
+          </button>
         </div>
       )}
 

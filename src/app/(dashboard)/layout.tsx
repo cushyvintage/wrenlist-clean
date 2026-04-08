@@ -28,12 +28,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { id: 'scanner', label: 'Scanner', icon: NavIcons.scanner, path: '/scanner', section: 'WORKSPACE', pageTitle: 'Barcode & ISBN Scanner' },
     { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
     { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
+    { id: 'templates', label: 'Templates', icon: NavIcons.templates, path: '/templates', section: 'WORKSPACE', pageTitle: 'Templates' },
     // INSIGHTS
     { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
     { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
     { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
     { id: 'customers', label: 'Customers', icon: NavIcons.customers, path: '/customers', section: 'INSIGHTS', pageTitle: 'Customers' },
     // OPERATIONS
+    { id: 'orders', label: 'Orders', icon: NavIcons.orders, path: '/orders', section: 'OPERATIONS', pageTitle: 'Orders' },
     { id: 'sourcing', label: 'Sourcing', icon: NavIcons.sourcing, path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
     { id: 'suppliers', label: 'Suppliers', icon: NavIcons.suppliers, path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
     { id: 'expenses', label: 'Expenses', icon: NavIcons.expenses, path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },

@@ -51,8 +51,8 @@ export default function SettingsPage() {
   }, [])
 
   const [accountData, setAccountData] = useState<AccountData>({
-    email: 'cushyvintage@example.com',
-    fullName: 'Dominic Cushnan',
+    email: '',
+    fullName: '',
     avatar: null,
   })
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
@@ -71,8 +71,8 @@ export default function SettingsPage() {
         ])
 
         setAccountData({
-          email: auth.user?.email || 'cushyvintage@example.com',
-          fullName: profile.full_name || 'Dominic Cushnan',
+          email: auth.user?.email || '',
+          fullName: profile.full_name || '',
           avatar: null,
         })
       } catch (error) {
@@ -327,7 +327,11 @@ export default function SettingsPage() {
                 <div className="w-16 h-16 bg-sage-pale rounded-md flex items-center justify-center text-2xl border border-sage/22">
                   👤
                 </div>
-                <button className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-sm font-medium text-ink-lt hover:bg-cream transition-colors">
+                <button
+                  disabled
+                  title="Coming soon"
+                  className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-sm font-medium text-ink-lt cursor-not-allowed opacity-50"
+                >
                   Upload photo
                 </button>
               </div>
@@ -346,9 +350,15 @@ export default function SettingsPage() {
 
             {/* Change Password */}
             <div className="border-t border-sage/14 pt-6">
-              <button className="px-4 py-2 bg-cream-md border border-sage/22 text-ink-lt rounded-sm font-medium text-sm hover:bg-cream transition-colors">
+              <a
+                href="/forgot-password"
+                className="inline-block px-4 py-2 bg-cream-md border border-sage/22 text-ink-lt rounded-sm font-medium text-sm hover:bg-cream transition-colors"
+              >
                 Change password
-              </button>
+              </a>
+              <p className="text-xs text-sage-dim mt-2">
+                You&apos;ll receive a password reset link via email
+              </p>
             </div>
           </div>
         )}
@@ -551,12 +561,22 @@ export default function SettingsPage() {
 
             {/* Legal Links */}
             <div className="space-y-3">
-              <button className="w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors">
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors"
+              >
                 Privacy Policy
-              </button>
-              <button className="w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors">
+              </a>
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors"
+              >
                 Terms of Service
-              </button>
+              </a>
               <button className="w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors">
                 Data Export (GDPR)
               </button>

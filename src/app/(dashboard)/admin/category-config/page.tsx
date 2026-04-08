@@ -2,16 +2,30 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { isAdmin } from '@/lib/admin'
 import { CategoryFieldConfig } from '@/types'
 
 export default function CategoryConfigAdminPage() {
   const router = useRouter()
+  const { user } = useAuthContext()
   const [configs, setConfigs] = useState<CategoryFieldConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingFields, setEditingFields] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+
+  // Admin gate
+  useEffect(() => {
+    if (user && !isAdmin(user.email)) {
+      router.replace('/dashboard')
+    }
+  }, [user, router])
+
+  if (!user || !isAdmin(user.email)) {
+    return null
+  }
 
   // Fetch all configs
   useEffect(() => {

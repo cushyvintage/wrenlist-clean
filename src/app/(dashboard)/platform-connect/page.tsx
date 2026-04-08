@@ -552,9 +552,9 @@ export default function PlatformConnectPage() {
           </div>
           <div className="text-xs text-ink-lt">Chrome{extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting</div>
         </div>
-        <button className="px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition flex-shrink-0">
-          Extension settings →
-        </button>
+        <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0">
+          Open extension from your browser toolbar
+        </span>
       </div>
 
       {/* eBay */}

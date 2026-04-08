@@ -24,8 +24,13 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   // Password strength
-  const passwordStrength = password.length >= 8 ? 'good' : 'weak'
-  const isPasswordStrong = password.length >= 8
+  const hasMinLength = password.length >= 8
+  const hasUppercase = /[A-Z]/.test(password)
+  const hasNumber = /\d/.test(password)
+  const strengthChecks = [hasMinLength, hasUppercase, hasNumber].filter(Boolean).length
+  const strengthLabel = strengthChecks === 3 ? 'Strong' : strengthChecks === 2 ? 'Fair' : 'Weak'
+  const strengthColor = strengthChecks === 3 ? 'bg-green-400' : strengthChecks === 2 ? 'bg-yellow-400' : 'bg-red-300'
+  const strengthTextColor = strengthChecks === 3 ? 'text-green-600' : strengthChecks === 2 ? 'text-yellow-600' : 'text-red-600'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,15 +216,27 @@ export default function RegisterPage() {
                 className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
               />
               {password && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className={`h-1.5 flex-1 rounded-full transition-colors ${
-                    isPasswordStrong ? 'bg-green-400' : 'bg-red-300'
-                  }`} />
-                  <span className={`text-xs font-medium transition-colors ${
-                    isPasswordStrong ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {isPasswordStrong ? '✓ Strong' : '✗ Weak'}
-                  </span>
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                          i < strengthChecks ? strengthColor : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium ${strengthTextColor}`}>
+                      {strengthLabel}
+                    </span>
+                    <div className="text-xs text-ink-lt space-x-2">
+                      <span className={hasMinLength ? 'text-green-600' : ''}>8+ chars</span>
+                      <span className={hasUppercase ? 'text-green-600' : ''}>uppercase</span>
+                      <span className={hasNumber ? 'text-green-600' : ''}>number</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

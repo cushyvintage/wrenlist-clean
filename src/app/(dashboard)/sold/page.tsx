@@ -22,7 +22,7 @@ interface SoldItem {
   sold_at: string | null
   photo: string | null
   marketplace?: string
-  margin_percent?: number
+  margin_percent?: number | null
   days_listed?: number
   shipmentStatus?: string | null
   buyer?: string | null
@@ -275,7 +275,7 @@ export default function SoldHistoryPage() {
 
       {/* Stats grid */}
       {!isLoading && metrics && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="items sold"
             value={metrics.itemsSold.toString()}

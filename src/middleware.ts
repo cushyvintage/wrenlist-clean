@@ -32,9 +32,14 @@ export async function middleware(req: NextRequest) {
   )
 
   // Refresh session if expired
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null
+  try {
+    const { data } = await supabase.auth.getSession()
+    session = data.session
+  } catch {
+    // If session fetch fails, allow request through (fail open)
+    return res
+  }
 
   // Define public routes that don't require authentication
   const publicRoutes = [

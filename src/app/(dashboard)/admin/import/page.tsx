@@ -1,18 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { isAdmin } from '@/lib/admin'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
-
-const ADMIN_EMAIL = 'dom@wrenlist.com'
 
 export default function ImportPage() {
   const router = useRouter()
+  const { user } = useAuthContext()
   const [ebayResult, setEbayResult] = useState<any>(null)
   const [vintedResult, setVintedResult] = useState<any>(null)
   const [ebayLoading, setEbayLoading] = useState(false)
   const [vintedLoading, setVintedLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Admin gate
+  useEffect(() => {
+    if (user && !isAdmin(user.email)) {
+      router.replace('/dashboard')
+    }
+  }, [user, router])
+
+  if (!user || !isAdmin(user.email)) {
+    return null
+  }
 
   const handleEbayImport = async () => {
     setEbayLoading(true)

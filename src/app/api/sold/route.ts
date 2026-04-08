@@ -28,7 +28,7 @@ interface SoldItem {
   sold_at: string | null
   photo: string | null
   marketplace?: string
-  margin_percent?: number
+  margin_percent?: number | null
   days_listed?: number
   shipmentStatus?: string | null
   buyer?: string | null
@@ -101,9 +101,9 @@ export const GET = withAuth(async (req, user) => {
     // Transform data with calculated fields
     const items: SoldItem[] = ((finds || []) as FindWithMarketplaceJoin[]).map((find) => {
       const marginPercent =
-        find.cost_gbp && find.sold_price_gbp
+        find.cost_gbp != null && find.sold_price_gbp
           ? Math.round(((find.sold_price_gbp - find.cost_gbp) / find.sold_price_gbp) * 100)
-          : 0
+          : null
 
       const daysListed =
         find.sourced_at && find.sold_at
@@ -143,9 +143,10 @@ export const GET = withAuth(async (req, user) => {
     const totalRevenue = items.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
     const totalCost = items.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
     const totalProfit = totalRevenue - totalCost
+    const itemsWithMargin = items.filter((item) => item.margin_percent != null)
     const avgMargin =
-      items.length > 0
-        ? Math.round(items.reduce((sum, item) => sum + (item.margin_percent || 0), 0) / items.length)
+      itemsWithMargin.length > 0
+        ? Math.round(itemsWithMargin.reduce((sum, item) => sum + (item.margin_percent as number), 0) / itemsWithMargin.length)
         : 0
 
     return ApiResponseHelper.success({

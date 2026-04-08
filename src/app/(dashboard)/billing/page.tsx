@@ -16,6 +16,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
     document.title = 'Billing | Wrenlist'
@@ -73,6 +74,7 @@ export default function BillingPage() {
   }
 
   async function handlePortal() {
+    setPortalLoading(true)
     try {
       const response = await fetch('/api/billing/portal', {
         method: 'POST',
@@ -96,6 +98,8 @@ export default function BillingPage() {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(msg)
       console.error('[Portal Error]', msg)
+    } finally {
+      setPortalLoading(false)
     }
   }
 
@@ -171,13 +175,21 @@ export default function BillingPage() {
                   : 'Free plan (no active subscription)'}
               </p>
             </div>
-            {profile.stripe_customer_id && (
+            {profile.stripe_customer_id ? (
               <button
                 onClick={handlePortal}
-                className="px-3 py-1.5 text-xs bg-white border border-sage rounded-sm text-sage font-medium hover:bg-sage-pale transition-colors"
+                disabled={portalLoading}
+                className="px-3 py-1.5 text-xs bg-white border border-sage rounded-sm text-sage font-medium hover:bg-sage-pale transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Manage Billing
+                {portalLoading ? 'Loading...' : 'Manage Billing'}
               </button>
+            ) : (
+              <a
+                href="#plans"
+                className="px-3 py-1.5 text-xs bg-sage text-cream rounded-sm font-medium hover:bg-sage-dk transition-colors"
+              >
+                Upgrade Plan
+              </a>
             )}
           </div>
 
@@ -228,7 +240,7 @@ export default function BillingPage() {
       )}
 
       {/* Plans Grid */}
-      <div>
+      <div id="plans">
         <h3 className="font-serif text-lg italic text-ink mb-4">Available Plans</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map(plan => {
@@ -322,9 +334,12 @@ export default function BillingPage() {
         <p className="text-xs text-ink-lt mb-3">
           Check our FAQ or contact support for help with subscriptions, billing cycles, and plan changes.
         </p>
-        <button className="text-xs font-medium text-sage hover:text-sage-dk transition-colors underline">
+        <a
+          href="mailto:hello@wrenlist.com"
+          className="text-xs font-medium text-sage hover:text-sage-dk transition-colors underline"
+        >
           Contact Support
-        </button>
+        </a>
       </div>
     </div>
   )

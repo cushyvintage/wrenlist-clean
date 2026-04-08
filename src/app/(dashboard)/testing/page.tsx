@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { isAdmin } from '@/lib/admin'
 import { fetchApi } from '@/lib/api-utils'
 import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
@@ -180,11 +183,24 @@ const TEST_MATRIX: Array<{ test_name: string; phase: TestPhase; expected: string
 // ============================================================================
 
 export default function TestingPage() {
+  const router = useRouter()
+  const { user } = useAuthContext()
   const [runs, setRuns] = useState<TestRun[]>([])
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [selectedRun, setSelectedRun] = useState<TestRunWithResults | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+
+  // Admin gate
+  useEffect(() => {
+    if (user && !isAdmin(user.email)) {
+      router.replace('/dashboard')
+    }
+  }, [user, router])
+
+  if (!user || !isAdmin(user.email)) {
+    return null
+  }
 
   // Load all runs
   const loadRuns = useCallback(async () => {

@@ -82,6 +82,7 @@ export default function AnalyticsPage() {
   const [aging, setAging] = useState<AgingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     document.title = 'Analytics | Wrenlist'
@@ -120,7 +121,7 @@ export default function AnalyticsPage() {
     }
 
     fetchData()
-  }, [timePeriod])
+  }, [timePeriod, retryCount])
 
   // Chart helpers
   const maxSales = Math.max(...monthly.map((m) => m.sales), 1)
@@ -130,7 +131,13 @@ export default function AnalyticsPage() {
       <div className="space-y-6">
         <h1 className="font-serif text-2xl italic text-ink">analytics</h1>
         <div className="text-center py-12">
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="px-4 py-2 bg-sage text-white rounded font-medium text-sm hover:bg-sage-dk transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )

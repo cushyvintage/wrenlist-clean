@@ -107,12 +107,12 @@ export default function VerifyEmailPage() {
           )}
 
           {/* Main CTA */}
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-full px-6 py-3 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition mb-4"
+          <a
+            href="/login"
+            className="block w-full px-6 py-3 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition mb-4 text-center"
           >
-            I've verified — continue →
-          </button>
+            Go to Login →
+          </a>
 
           {/* Secondary actions */}
           <div className="space-y-2 text-center text-xs text-ink-lt">

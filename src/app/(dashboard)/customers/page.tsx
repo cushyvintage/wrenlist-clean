@@ -76,7 +76,7 @@ export default function CustomersPage() {
       {isLoading && <div className="text-center py-8 text-ink-lt">Loading customers...</div>}
 
       {!isLoading && stats && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard label="total customers" value={stats.total.toString()} />
           <StatCard label="repeat customers" value={stats.repeatCustomers.toString()} delta={stats.total > 0 ? `${Math.round((stats.repeatCustomers / stats.total) * 100)}% of total` : ''} />
           <StatCard label="avg orders" value={stats.avgOrders.toString()} delta="per customer" />

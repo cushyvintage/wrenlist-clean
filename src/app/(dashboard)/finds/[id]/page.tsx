@@ -95,6 +95,8 @@ export default function InventoryDetailPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
   const [templateAppliedBanner, setTemplateAppliedBanner] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [incompleteFields, setIncompleteFields] = useState<string[]>([])
   const [isListingOnVinted, setIsListingOnVinted] = useState(false)
   const [vintedListResult, setVintedListResult] = useState<{ ok: boolean; message: string; url?: string } | null>(null)
@@ -351,7 +353,10 @@ export default function InventoryDetailPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ photos: newPreviews }),
-        }).catch(() => {})
+        }).catch(() => {
+          setPhotoError('Failed to save photo order. Please try again.')
+          setTimeout(() => setPhotoError(null), 4000)
+        })
       }
       return {
         ...prev,
@@ -372,7 +377,10 @@ export default function InventoryDetailPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ photos: newPreviews }),
-        }).catch(() => {})
+        }).catch(() => {
+          setPhotoError('Failed to save photo changes. Please try again.')
+          setTimeout(() => setPhotoError(null), 4000)
+        })
       }
       return { ...prev, photos: newPhotos, photoPreviews: newPreviews }
     })
@@ -440,6 +448,8 @@ export default function InventoryDetailPage() {
       const result = await res.json()
       setFind(result.data as Find)
       setIsEditing(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2500)
 
       // If Vinted listing exists, update it via extension (non-blocking)
       const vintedData = find.platform_fields?.vinted as any
@@ -1119,6 +1129,37 @@ export default function InventoryDetailPage() {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {/* Save success banner */}
+      {saveSuccess && (
+        <div
+          className="p-3 rounded text-sm font-medium"
+          style={{
+            backgroundColor: 'rgba(61,92,58,.1)',
+            borderWidth: '1px',
+            borderColor: 'rgba(61,92,58,.3)',
+            color: '#3D5C3A',
+          }}
+        >
+          Changes saved
+        </div>
+      )}
+
+      {/* Photo operation error banner */}
+      {photoError && (
+        <div
+          className="p-3 rounded text-sm flex items-center justify-between"
+          style={{
+            backgroundColor: 'rgba(220,38,38,.1)',
+            borderWidth: '1px',
+            borderColor: 'rgba(220,38,38,.3)',
+            color: '#DC2626',
+          }}
+        >
+          <span>{photoError}</span>
+          <button onClick={() => setPhotoError(null)} className="ml-4 opacity-60 hover:opacity-100">&#x2715;</button>
         </div>
       )}
 
