@@ -173,7 +173,9 @@ export async function POST(request: NextRequest) {
     for (const field of requiredFields) {
       if (aspects[field.name]) continue // already set
 
-      // Smart defaults for common required fields
+      // Smart defaults for common required fields we can confidently fill.
+      // For fields we can't fill, we skip them — eBay will accept the listing
+      // with reduced search visibility rather than rejecting bad generic values.
       if (field.name === 'Department') {
         aspects['Department'] = inferDepartment(category)
       } else if (field.name === 'Language') {
@@ -182,26 +184,22 @@ export async function POST(request: NextRequest) {
         aspects['Book Title'] = find.name
       } else if (field.name === 'Author' && !aspects['Author']) {
         aspects['Author'] = 'Various'
+      } else if (field.name === 'Model') {
+        // Use find name as model hint (eBay accepts free text)
+        aspects['Model'] = find.name.substring(0, 65)
       } else if (field.name === 'Type') {
-        // Infer type from category slug (last segment often matches)
         const lastSegment = category.split('_').pop() || ''
         aspects['Type'] = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/_/g, ' ')
-      } else if (field.name === 'Material' && !aspects['Material']) {
-        aspects['Material'] = 'Mixed'
-      } else if (field.name === 'Style' && !aspects['Style']) {
-        aspects['Style'] = 'Vintage'
       } else if (field.name === 'EAN' && !aspects['EAN']) {
         aspects['EAN'] = 'Does not apply'
-      } else if (field.name === 'Outer Shell Material' && !aspects['Outer Shell Material']) {
-        aspects['Outer Shell Material'] = aspects['Material'] || 'Mixed'
-      } else if (field.name === 'Upper Material' && !aspects['Upper Material']) {
-        aspects['Upper Material'] = aspects['Material'] || 'Mixed'
+      } else if (field.name === 'MPN' && !aspects['MPN']) {
+        aspects['MPN'] = 'Does not apply'
       } else if (field.name === 'Colour' && !aspects['Colour']) {
         aspects['Colour'] = 'Multicoloured'
-      } else if (!aspects[field.name]) {
-        // Catch-all: set 'Does not apply' for any remaining required field
-        aspects[field.name] = 'Does not apply'
       }
+      // Intentionally skip other unknown required fields rather than setting
+      // bad defaults that eBay rejects. Missing aspects reduce visibility
+      // but don't block the listing.
     }
 
     const inventoryItem = {
