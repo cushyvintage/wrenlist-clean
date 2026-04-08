@@ -623,8 +623,9 @@ type ExternalMessage = Record<string, unknown>;
               ...(mp === "vinted" && vintedMeta?.package_size_id
                 ? { packageSizeId: Number(vintedMeta.package_size_id) }
                 : {}),
-              // ISBN for book categories — triggers Vinted language_book attribute
+              // ISBN + Language for book categories — triggers Vinted language_book attribute
               ...(sharedFields.isbn ? { ISBN: String(sharedFields.isbn) } : {}),
+              ...(sharedFields.language ? { Language: String(sharedFields.language) } : { Language: 'English' }),
             },
           };
 
