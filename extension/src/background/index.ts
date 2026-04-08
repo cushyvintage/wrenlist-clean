@@ -643,7 +643,12 @@ type ExternalMessage = Record<string, unknown>;
             });
           } catch (publishError) {
             // publishToMarketplace threw (e.g. not logged in, CSRF missing) — treat as a failed attempt
-            const errorMsg = publishError instanceof Error ? publishError.message : String(publishError);
+            // Mapper throws {success, message, errors} objects — extract message properly
+            const errorMsg = publishError instanceof Error
+              ? publishError.message
+              : typeof publishError === 'object' && publishError !== null && 'message' in publishError
+                ? String((publishError as { message: string }).message)
+                : JSON.stringify(publishError).substring(0, 500);
             await remoteLog("error", "queue", `publishToMarketplace threw: ${errorMsg}`);
             const nextRetryCount = retryCount + 1;
             console.error(`[QueuePoll] ${mp} threw for ${find.name}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
