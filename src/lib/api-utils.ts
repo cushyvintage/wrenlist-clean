@@ -39,3 +39,12 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
   const json = await res.json()
   return unwrapApiResponse<T>(json)
 }
+
+/**
+ * Parse an error response body and throw with the API's error message.
+ * Falls back to `fallback` if the body isn't JSON or doesn't contain `error`.
+ */
+export async function parseApiError(res: Response, fallback: string): Promise<never> {
+  const body = await res.json().catch(() => ({}))
+  throw new Error((body as { error?: string }).error || fallback)
+}

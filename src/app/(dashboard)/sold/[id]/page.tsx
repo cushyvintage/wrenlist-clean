@@ -8,7 +8,7 @@ import { Panel } from '@/components/wren/Panel'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import { useApiCall } from '@/hooks/useApiCall'
-import { fetchApi } from '@/lib/api-utils'
+import { fetchApi, parseApiError } from '@/lib/api-utils'
 import { getCategoryNode } from '@/data/marketplace-category-map'
 import type { Platform, FindCondition, Customer } from '@/types'
 
@@ -125,10 +125,7 @@ export default function SoldDetailPage() {
       setIsDeleting(true)
       setDeleteError(null)
       const res = await fetch(`/api/sold/${id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error((body as { error?: string }).error || 'Failed to delete')
-      }
+      if (!res.ok) await parseApiError(res, 'Failed to delete')
       router.push('/sold')
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete')

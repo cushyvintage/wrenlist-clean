@@ -18,6 +18,7 @@ import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
+import { parseApiError } from '@/lib/api-utils'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
@@ -441,10 +442,7 @@ export default function InventoryDetailPage() {
         }),
       })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.message || 'Failed to save')
-      }
+      if (!res.ok) await parseApiError(res, 'Failed to save')
 
       const result = await res.json()
       setFind(result.data as Find)
@@ -491,10 +489,7 @@ export default function InventoryDetailPage() {
         method: 'DELETE',
       })
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error((body as { error?: string }).error || 'Failed to delete')
-      }
+      if (!res.ok) await parseApiError(res, 'Failed to delete')
 
       router.push('/finds')
     } catch (err) {
@@ -624,10 +619,7 @@ export default function InventoryDetailPage() {
         headers: { 'Content-Type': 'application/json' },
       })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.message || 'Failed to sync orders')
-      }
+      if (!res.ok) await parseApiError(res, 'Failed to sync orders')
 
       const result = await res.json()
 
@@ -668,10 +660,7 @@ export default function InventoryDetailPage() {
 
     try {
       const payloadRes = await fetch(`/api/chrome-extension/vinted/product-payload/${id}`)
-      if (!payloadRes.ok) {
-        const data = await payloadRes.json()
-        throw new Error(data.message || 'Failed to build Vinted payload')
-      }
+      if (!payloadRes.ok) await parseApiError(payloadRes, 'Failed to build Vinted payload')
       const payloadData = await payloadRes.json()
       const product = payloadData?.data?.product ?? payloadData?.product
       if (!product) throw new Error('No product payload returned')
@@ -717,10 +706,7 @@ export default function InventoryDetailPage() {
 
     try {
       const payloadRes = await fetch(`/api/chrome-extension/ebay/product-payload/${id}`)
-      if (!payloadRes.ok) {
-        const data = await payloadRes.json()
-        throw new Error(data.message || 'Failed to build eBay payload')
-      }
+      if (!payloadRes.ok) await parseApiError(payloadRes, 'Failed to build eBay payload')
       const payloadData = await payloadRes.json()
       const product = payloadData?.data?.product ?? payloadData?.product
       if (!product) throw new Error('No product payload returned')

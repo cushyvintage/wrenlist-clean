@@ -17,7 +17,6 @@ export default function DeleteConfirmModal({
   onConfirm,
   onCancel,
 }: DeleteConfirmModalProps) {
-
   return (
     <div className="max-w-2xl mx-auto">
       <div
