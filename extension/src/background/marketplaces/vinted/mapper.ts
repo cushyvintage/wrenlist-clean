@@ -587,10 +587,22 @@ export class VintedMapper {
       errors.push("Category is required");
     }
 
+    // DEBUG: Log what the mapper receives so we can trace data flow issues
+    console.log('[Vinted Mapper] validateProduct input:', JSON.stringify({
+      vintedCatalogId: (product as any).vintedCatalogId,
+      dynCatalogId: product.dynamicProperties?.vintedCatalogId,
+      category: product.category,
+      color: product.color,
+      colorIds: product.dynamicProperties?.colorIds,
+      size: product.size,
+      weight: product.shipping?.shippingWeight,
+      imageCount: product.images?.length,
+    }));
+
     // Check if product has catalog ID directly (from vinted_category_id or vinted_catalog_id)
     // Also check marketplace_data.vinted.catalog_id (from imported products)
     // Parse to number if it's a string
-    const rawDirectCatalogId = (product as any).vintedCatalogId || 
+    const rawDirectCatalogId = (product as any).vintedCatalogId ||
                                product.dynamicProperties?.vintedCatalogId ||
                                (product as any).marketplace_data?.vinted?.catalog_id;
     const directCatalogId: number | null = typeof rawDirectCatalogId === 'number' 
@@ -735,8 +747,13 @@ export class VintedMapper {
       console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
     }
 
-    console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'type:', typeof catalogId);
-    
+    console.log('[Vinted Mapper] Final payload:', JSON.stringify({
+      catalogId, colorIds, packageSizeId,
+      sizeRaw: product.size,
+      sizeId: product.size?.[0] ? parseInt(String(product.size[0]), 10) : null,
+      price: product.price,
+    }));
+
     // Build payload matching Vinted's expected structure (aligned with Vinted's expected format)
     const payload: Record<string, any> = {
       item: {
