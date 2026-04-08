@@ -55,12 +55,23 @@ export function useAddFindHandlers(deps: HandlerDeps) {
   }, [formData])
 
   const handlePlatformToggle = useCallback((platform: Platform) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedPlatforms: prev.selectedPlatforms.includes(platform)
+    setFormData((prev) => {
+      const isRemoving = prev.selectedPlatforms.includes(platform)
+      const selectedPlatforms = isRemoving
         ? prev.selectedPlatforms.filter((p) => p !== platform)
-        : [...prev.selectedPlatforms, platform],
-    }))
+        : [...prev.selectedPlatforms, platform]
+
+      // When adding eBay, initialise platform fields with defaults so they persist on save
+      let platformFields = prev.platformFields
+      if (!isRemoving && platform === 'ebay' && !prev.platformFields.ebay) {
+        platformFields = {
+          ...platformFields,
+          ebay: { acceptOffers: false, isAuction: false },
+        }
+      }
+
+      return { ...prev, selectedPlatforms, platformFields }
+    })
   }, [])
 
   const photoHandlers = usePhotoHandlers(setFormData)

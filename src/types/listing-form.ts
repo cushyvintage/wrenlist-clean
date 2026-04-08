@@ -72,7 +72,7 @@ export const DEFAULT_FORM_DATA: ListingFormData = {
   quantity: 1,
   photos: [],
   photoPreviews: [],
-  selectedPlatforms: ['vinted'],
+  selectedPlatforms: [],
   platformFields: {},
   shippingWeight: null,
   shippingDimensions: { length: null, width: null, height: null },

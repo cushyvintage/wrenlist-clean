@@ -454,7 +454,7 @@ export default function MarketplaceFieldsSection({
             {currentTab === 'ebay' && (
               <>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={platformFields.ebay?.acceptOffers ?? true}
+                  <input type="checkbox" checked={platformFields.ebay?.acceptOffers ?? false}
                     onChange={(e) => onPlatformFieldChange('ebay', 'acceptOffers', e.target.checked)}
                     className="w-4 h-4 rounded border-sage/30 text-sage focus:ring-sage/30" />
                   <div>

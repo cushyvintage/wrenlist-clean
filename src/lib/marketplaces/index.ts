@@ -81,7 +81,7 @@ export function getMarketplaceServiceConstructor(
  * Platform fee mapping for profit calculations
  */
 export const MARKETPLACE_FEES: Record<string, number> = {
-  vinted: 5,
+  vinted: 0,    // Vinted charges buyers ("buyer protection"), not sellers
   ebay: 12.8,
   etsy: 6.5,
   shopify: 2.9,

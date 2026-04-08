@@ -53,7 +53,7 @@ export function useAddFindForm() {
     quantity: 1,
     photos: [],
     photoPreviews: [],
-    selectedPlatforms: ['vinted'],
+    selectedPlatforms: [],
     platformFields: {},
     shippingWeight: null,
     shippingDimensions: { length: null, width: null, height: null },

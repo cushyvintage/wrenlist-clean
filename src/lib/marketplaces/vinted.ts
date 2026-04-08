@@ -5,7 +5,7 @@
  * API Docs: https://www.vinted.com/api-docs
  * Base URL: https://api.vinted.com/api/v2
  *
- * Fee Structure: 5% commission on successful sales
+ * Fee Structure: No seller fees — Vinted charges buyers via "buyer protection"
  */
 
 import { ApiResponse } from '@/lib/api-response'
