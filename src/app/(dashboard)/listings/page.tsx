@@ -82,11 +82,6 @@ export default function ListingsPage() {
   const [bulkScheduleTime, setBulkScheduleTime] = useState('')
   const [bulkStaggerMinutes, setBulkStaggerMinutes] = useState(0)
 
-  // Set page title
-  useEffect(() => {
-    document.title = 'Listings | Wrenlist'
-  }, [])
-
   // Load listings from API
   const loadListings = useCallback(async (silent = false) => {
     try {

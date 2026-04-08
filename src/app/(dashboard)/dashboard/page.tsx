@@ -38,10 +38,6 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    document.title = 'Dashboard | Wrenlist'
-  }, [])
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch summary, finds, and insight

@@ -56,13 +56,6 @@ export default function InventoryPage() {
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
 
   /**
-   * Set page title on mount
-   */
-  useEffect(() => {
-    document.title = 'Finds | Wrenlist'
-  }, [])
-
-  /**
    * Debounce search input (300ms)
    */
   useEffect(() => {

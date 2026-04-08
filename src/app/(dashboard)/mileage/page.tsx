@@ -33,10 +33,6 @@ export default function MileagePage() {
   const [vehicles, setVehicles] = useState<string[]>([])
   const [filterVehicle, setFilterVehicle] = useState<string | null>(null)
 
-  useEffect(() => {
-    document.title = 'Mileage | Wrenlist'
-  }, [])
-
   const fetchMileage = async () => {
     try {
       setIsLoading(true)

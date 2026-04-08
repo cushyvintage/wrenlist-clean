@@ -19,7 +19,6 @@ export default function BillingPage() {
   const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
-    document.title = 'Billing | Wrenlist'
     fetchProfile()
   }, [])
 

@@ -45,7 +45,6 @@ export default function TemplatesPage() {
   }
 
   useEffect(() => {
-    document.title = 'Templates | Wrenlist'
     fetchTemplates()
   }, [])
 

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { MarketingNav } from '@/components/layout/MarketingNav'
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -139,24 +140,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f0e8]">
-      {/* NAV */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] px-4 sm:px-10 py-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/wrenlist-logo.png" alt="Wrenlist" width={36} height={36} className="rounded-sm flex-shrink-0" style={{ mixBlendMode: 'multiply' }} />
-          <div className="font-serif text-xl font-medium tracking-wider text-[#1e2e1c]">
-            WREN<em className="font-light italic text-[#5a7a57]">list</em>
-          </div>
-        </Link>
-        <div className="hidden sm:flex items-center gap-6">
-          <div className="text-xs font-medium text-[#1e2e1c]">home</div>
-          <Link href="/pricing" className="text-xs font-normal text-[#6b7d6a] hover:text-[#1e2e1c]">pricing</Link>
-          <Link href="/about" className="text-xs font-normal text-[#6b7d6a] hover:text-[#1e2e1c]">why wrenlist</Link>
-        </div>
-        <div className="flex gap-2 items-center">
-          <a href="/login" className="hidden sm:inline-block border border-[rgba(61,92,58,0.2)] rounded text-xs font-normal text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]">log in</a>
-          <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-5 py-2 hover:bg-[#2c4428] uppercase tracking-wider">start free</a>
-        </div>
-      </nav>
+      <MarketingNav />
 
       {/* HERO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">

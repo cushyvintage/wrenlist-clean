@@ -75,10 +75,6 @@ export default function SoldHistoryPage() {
   const [isBackfilling, setIsBackfilling] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
-  useEffect(() => {
-    document.title = 'Sold Items | Wrenlist'
-  }, [])
-
   const loadSoldItems = useCallback(() => {
     call(() => fetchApi<SoldResponse>(`/api/sold?timeframe=${timeframe}`))
   }, [call, timeframe])

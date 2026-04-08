@@ -85,10 +85,6 @@ export default function AnalyticsPage() {
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
-    document.title = 'Analytics | Wrenlist'
-  }, [])
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true)

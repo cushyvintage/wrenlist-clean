@@ -46,10 +46,6 @@ interface AuthResponse {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
 
-  useEffect(() => {
-    document.title = 'Settings | Wrenlist'
-  }, [])
-
   const [accountData, setAccountData] = useState<AccountData>({
     email: '',
     fullName: '',

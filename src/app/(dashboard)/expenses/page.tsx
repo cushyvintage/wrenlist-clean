@@ -27,10 +27,6 @@ export default function ExpensesPage() {
   const [showForm, setShowForm] = useState(false)
   const { categories: dbCategories, labelsMap } = useExpenseCategories()
 
-  useEffect(() => {
-    document.title = 'Expenses | Wrenlist'
-  }, [])
-
   // Fetch expenses
   useEffect(() => {
     const fetchExpenses = async () => {

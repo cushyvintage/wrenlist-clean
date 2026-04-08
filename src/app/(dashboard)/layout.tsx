@@ -50,6 +50,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const currentPage = navItems.find((item) => activeNav === item.id)
   const pageTitle = currentPage?.pageTitle
 
+  // Sync document.title from nav config
+  useEffect(() => {
+    if (pageTitle) document.title = `${pageTitle} | Wrenlist`
+  }, [pageTitle])
+
   // Set active nav based on current pathname
   useEffect(() => {
     const currentItem = navItems.find((item) => {

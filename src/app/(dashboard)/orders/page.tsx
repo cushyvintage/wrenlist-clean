@@ -22,10 +22,6 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Orders | Wrenlist'
-  }, [])
-
-  useEffect(() => {
     const fetchOrders = async () => {
       try {
         setIsLoading(true)

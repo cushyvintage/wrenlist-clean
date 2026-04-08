@@ -1,28 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { MarketingNav } from '@/components/layout/MarketingNav'
 
 export default function StoryPage() {
   return (
     <div className="min-h-screen bg-cream">
-      {/* NAV */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream pl-6 sm:pl-10 pr-6 sm:pr-12 py-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/wrenlist-logo.png" alt="Wrenlist" width={36} height={36} className="rounded-sm flex-shrink-0" style={{ mixBlendMode: 'multiply' }} />
-          <div className="font-serif text-xl font-medium tracking-wider text-ink">
-            WREN<em className="font-light italic text-sage-lt">list</em>
-          </div>
-        </Link>
-        <div className="flex items-center gap-6">
-          <Link href="/landing" className="text-xs font-light text-ink-lt hover:text-ink">home</Link>
-          <Link href="/pricing" className="text-xs font-light text-ink-lt hover:text-ink">pricing</Link>
-          <Link href="/about" className="text-xs font-light text-ink-lt hover:text-ink">why wrenlist</Link>
-        </div>
-        <div className="flex gap-2 items-center flex-shrink-0">
-          <a href="/login" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-ink-lt px-4 py-2 hover:bg-cream-md hover:text-ink">log in</a>
-          <a href="/register" className="bg-sage text-cream rounded text-xs font-medium px-4 py-2 hover:bg-sage-dk whitespace-nowrap">start free</a>
-        </div>
-      </nav>
+      <MarketingNav />
 
       {/* HERO */}
       <div className="bg-ink px-10 py-20 relative overflow-hidden">
