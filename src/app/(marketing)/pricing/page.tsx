@@ -77,7 +77,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-cream">
       {/* NAV */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream px-6 sm:px-10 py-4 overflow-hidden">
+      <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream px-6 sm:px-10 py-4">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="h-9 w-9 flex-shrink-0 bg-sage"></div>
           <div className="font-serif text-xl font-medium tracking-wider text-ink">
