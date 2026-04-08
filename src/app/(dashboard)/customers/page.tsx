@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { StatCard } from '@/components/wren/StatCard'
@@ -19,16 +19,25 @@ export default function CustomersPage() {
   const router = useRouter()
   const { data, isLoading, error, call } = useApiCall<CustomersResponse>(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     document.title = 'Customers | Wrenlist'
   }, [])
 
+  // Debounce search input
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [search])
+
   useEffect(() => {
     const params = new URLSearchParams()
-    if (search) params.set('search', search)
+    if (debouncedSearch) params.set('search', debouncedSearch)
     call(() => fetchApi<CustomersResponse>(`/api/customers?${params}`))
-  }, [call, search])
+  }, [call, debouncedSearch])
 
   const customers = data?.customers ?? []
   const stats = data?.stats

@@ -72,19 +72,20 @@ async function upsertVintedCustomer(
   }
 
   // Extract address from shippingAddress
+  // Vinted getOrderDetails returns: { name, line1, line2, city, postalCode, country, email }
   const addr = sale.shippingAddress || {}
   const addressFields = {
-    address_line1: (addr.line1 as string) || (addr.address1 as string) || (addr.street as string) || null,
-    address_line2: (addr.line2 as string) || (addr.address2 as string) || null,
-    city: (addr.city as string) || null,
-    postcode: (addr.postalCode as string) || (addr.postal_code as string) || (addr.zip as string) || null,
-    country: (addr.country as string) || (addr.country_title as string) || null,
+    address_line1: (addr.line1 as string) || (addr.line_1 as string) || (addr.street as string) || null,
+    address_line2: (addr.line2 as string) || (addr.line_2 as string) || null,
+    city: (addr.city as string) || (addr.town as string) || null,
+    postcode: (addr.postalCode as string) || (addr.postal_code as string) || (addr.postcode as string) || null,
+    country: (addr.country as string) || (addr.country_name as string) || null,
   }
 
-  // Extract name from shippingAddress or buyer
-  const fullName = (addr.full_name as string) || (addr.name as string) || null
+  // Extract name/email/phone from shippingAddress
+  const fullName = (addr.name as string) || (addr.full_name as string) || null
   const email = (addr.email as string) || null
-  const phone = (addr.phone_number as string) || (addr.phone as string) || null
+  const phone = (addr.phone as string) || (addr.phone_number as string) || null
 
   const customerData = {
     user_id: userId,
@@ -251,14 +252,8 @@ export const POST = withAuth(async (req, user) => {
             const existingFields = existingPmd.fields as Record<string, unknown> | null
             const existingSale = existingFields?.sale as Record<string, unknown> | undefined
             if (find.status === 'sold' && existingSale?.transactionId === transactionId) {
-              // Link customer to PMD if not yet linked
-              if (customerId && !existingPmd.fields) {
-                await supabase.from('product_marketplace_data').update({
-                  customer_id: customerId,
-                }).eq('find_id', find.id).eq('marketplace', 'vinted')
-              }
+              // Still link customer to PMD if not yet linked
               if (customerId) {
-                // Always ensure customer_id is set
                 await supabase.from('product_marketplace_data').update({
                   customer_id: customerId,
                 }).eq('find_id', find.id).eq('marketplace', 'vinted')

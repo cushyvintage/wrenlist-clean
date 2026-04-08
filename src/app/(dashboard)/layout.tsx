@@ -55,8 +55,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (pathname === item.path) return true
       // Check if pathname starts with the item's path (for nested routes)
       if (pathname.startsWith(item.path + '/')) {
-        // Special case: /finds/[id] should highlight finds
-        return item.id === 'finds'
+        // Nested routes should highlight parent nav item
+        return ['finds', 'sold', 'customers', 'sourcing'].includes(item.id)
       }
       return false
     })
