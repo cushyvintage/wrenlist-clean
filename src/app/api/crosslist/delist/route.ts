@@ -94,26 +94,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     }
   }
 
-  if (marketplace === 'shopify') {
-    try {
-      const res = await fetch(`${baseUrl}/api/shopify/delist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          cookie: req.headers.get('cookie') || '',
-        },
-        body: JSON.stringify({ findId }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        return ApiResponseHelper.badRequest(data.error || 'Shopify delist failed')
-      }
-      return ApiResponseHelper.success({ message: 'Delisted from Shopify' })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      return ApiResponseHelper.badRequest(`Shopify delist failed: ${msg}`)
-    }
-  }
+  // Shopify uses extension-based delist (same as Vinted/Depop/Etsy)
+  // Falls through to the extension queue handler below
 
   // For extension-based marketplaces, we need a platform_listing_id to delist
   if (!pmd.platform_listing_id) {
