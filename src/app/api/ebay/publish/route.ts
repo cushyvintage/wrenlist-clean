@@ -215,9 +215,20 @@ export async function POST(request: NextRequest) {
       aspects['Brand'] = 'Unbranded'
     }
 
-    // Material — commonly required
-    if (!aspects['Material'] && (category.includes('kitchen') || category.includes('home') || category.includes('ceramic') || category.includes('pottery'))) {
-      aspects['Material'] = 'Ceramic'
+    // Material — required for most non-clothing categories
+    if (!aspects['Material'] && !category.startsWith('clothing')) {
+      // Try to infer from description
+      const desc = (find.description || '').toLowerCase()
+      if (desc.includes('glass')) aspects['Material'] = 'Glass'
+      else if (desc.includes('ceramic') || desc.includes('porcelain')) aspects['Material'] = 'Porcelain'
+      else if (desc.includes('wood') || desc.includes('wooden')) aspects['Material'] = 'Wood'
+      else if (desc.includes('metal') || desc.includes('brass') || desc.includes('copper')) aspects['Material'] = 'Metal'
+      else if (desc.includes('silver')) aspects['Material'] = 'Silver'
+      else if (desc.includes('leather')) aspects['Material'] = 'Leather'
+      else if (desc.includes('cotton') || desc.includes('fabric') || desc.includes('textile')) aspects['Material'] = 'Cotton'
+      else if (desc.includes('plastic') || desc.includes('resin')) aspects['Material'] = 'Plastic'
+      else if (desc.includes('paper') || desc.includes('cardboard')) aspects['Material'] = 'Paper'
+      else aspects['Material'] = 'Mixed'
     }
 
     // Type — commonly required
