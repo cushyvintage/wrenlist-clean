@@ -741,10 +741,20 @@ export class VintedMapper {
         console.warn('[Vinted Mapper] No catalogId, using fallback package size:', packageSizeId);
       }
     } catch (pkgError) {
-      // Fallback to provided packageSizeId or default Medium (2)
+      // Fallback: weight-based package size lookup (Vinted UK standard sizes)
       const fallback = product.dynamicProperties?.packageSizeId;
-      packageSizeId = typeof fallback === 'number' ? fallback : 2;
-      console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
+      if (typeof fallback === 'number') {
+        packageSizeId = fallback;
+      } else {
+        const grams = (product.shipping.shippingWeight as { inGrams?: number } | undefined)?.inGrams || 0;
+        if (grams <= 500) packageSizeId = 1;       // Small
+        else if (grams <= 1000) packageSizeId = 2;  // Medium
+        else if (grams <= 2000) packageSizeId = 3;  // Large
+        else if (grams <= 5000) packageSizeId = 5;  // Extra Large
+        else packageSizeId = 3;                      // Default Large for heavy items
+      }
+      console.warn('[Vinted Mapper] Package size fetch failed, using weight-based fallback:', packageSizeId, 'for',
+        (product.shipping.shippingWeight as { inGrams?: number } | undefined)?.inGrams, 'g');
     }
 
     console.log('[Vinted Mapper] Final payload:', JSON.stringify({
@@ -778,7 +788,7 @@ export class VintedMapper {
           domestic:
             product.shipping.shippingType === "ShipYourOwn"
               ? String(product.shipping.domesticShipping)
-              : null,
+              : "0",
           international: null,
         },
         color_ids: colorIds,
