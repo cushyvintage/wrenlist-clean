@@ -6,6 +6,41 @@ import { FieldConfig } from '@/types'
 import type { FormData } from './useAddFindForm'
 import { getPlatformCategoryId } from '@/data/marketplace-category-map'
 
+/** Resolve Vinted catalog ID — prefer category map, fall back to known working leaf IDs */
+function getVintedCatalogId(category: string): number | null {
+  // Try category map first
+  const mapped = getPlatformCategoryId(category, 'vinted')
+  if (mapped) return Number(mapped)
+
+  // Fallback: known working Vinted leaf IDs for common stock categories
+  // (from dom_stock_mapping in vinted-categories-summary.json)
+  const VINTED_LEAF_FALLBACKS: Record<string, number> = {
+    // Books
+    books_media: 2997,
+    books_media_books: 2997,
+    // Home & Garden
+    home_garden: 1934,
+    home_garden_home_decor: 3822, // Sculptures & figurines
+    home_garden_kitchen_dining: 1920, // Dinnerware
+    // Collectibles
+    collectibles: 3823, // Decorative accessories
+    collectibles_general: 3823,
+    collectibles_general_collectibles: 3823,
+    // Toys
+    toys_games: 1499,
+    // Antiques
+    antiques: 1934, // Home accessories
+  }
+  // Try exact match, then try parent segments
+  if (VINTED_LEAF_FALLBACKS[category]) return VINTED_LEAF_FALLBACKS[category]
+  const parent = category.split('_').slice(0, 2).join('_')
+  if (VINTED_LEAF_FALLBACKS[parent]) return VINTED_LEAF_FALLBACKS[parent]
+  const topLevel = category.split('_')[0] ?? ''
+  if (topLevel && VINTED_LEAF_FALLBACKS[topLevel]) return VINTED_LEAF_FALLBACKS[topLevel]
+
+  return null
+}
+
 interface SubmitDeps {
   formData: FormData
   fieldConfig: Record<string, FieldConfig> | null
@@ -56,13 +91,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       ...(formData.selectedPlatforms.includes('vinted') ? {
         vinted: {
           ...formData.platformFields.vinted,
-          catalogId: formData.category
-            ? Number(getPlatformCategoryId(formData.category, 'vinted')) || null
-            : null,
+          catalogId: formData.category ? getVintedCatalogId(formData.category) : null,
           vintedMetadata: {
-            catalog_id: formData.category
-              ? Number(getPlatformCategoryId(formData.category, 'vinted')) || null
-              : null,
+            catalog_id: formData.category ? getVintedCatalogId(formData.category) : null,
             package_size_id: formData.shippingWeight
               ? formData.shippingWeight <= 500 ? 1
                 : formData.shippingWeight <= 1000 ? 2
