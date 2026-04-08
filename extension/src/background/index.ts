@@ -626,6 +626,13 @@ type ExternalMessage = Record<string, unknown>;
               // ISBN + Language for book categories — triggers Vinted language_book attribute
               ...(sharedFields.isbn ? { ISBN: String(sharedFields.isbn) } : {}),
               ...(sharedFields.language ? { Language: String(sharedFields.language) } : { Language: 'English' }),
+              // Video games: content rating + platform
+              ...(sharedFields.contentRating ? { "Content rating": String(sharedFields.contentRating) } : {}),
+              ...(sharedFields.gamePlatform ? { Platform: String(sharedFields.gamePlatform) } : {}),
+              // Single material fallback (when MaterialVinted array isn't set)
+              ...(vintedMaterialIds.length === 0 && sharedFields.material
+                ? { materialId: String(sharedFields.material) }
+                : {}),
             },
           };
 
