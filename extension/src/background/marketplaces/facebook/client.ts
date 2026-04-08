@@ -114,7 +114,16 @@ export class FacebookClient {
     }
     await this.storeCategories();
 
-    const payload = await this.mapper.map(product);
+    let payload;
+    try {
+      payload = await this.mapper.map(product);
+    } catch (mapError) {
+      const msg = mapError instanceof Error ? mapError.message : String(mapError);
+      return {
+        success: false,
+        message: msg || "Failed to prepare listing for Facebook.",
+      };
+    }
     try {
       return await this.postOrUpdate(payload);
     } catch (error) {
