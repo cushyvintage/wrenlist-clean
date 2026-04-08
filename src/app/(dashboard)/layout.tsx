@@ -9,6 +9,37 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { NavIcons } from '@/components/layout/NavIcons'
 
+// IDs that support nested routes (e.g. /finds/123 highlights Finds)
+const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect']
+
+const NAV_ITEMS = [
+  // WORKSPACE
+  { id: 'dashboard', label: 'Dashboard', icon: NavIcons.dashboard, path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
+  { id: 'finds', label: 'Finds', icon: NavIcons.finds, path: '/finds', section: 'WORKSPACE', pageTitle: 'Finds' },
+  { id: 'add-find', label: 'Add find', icon: NavIcons['add-find'], path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
+  { id: 'import', label: 'Import', icon: NavIcons.import, path: '/import', section: 'WORKSPACE', pageTitle: 'Import' },
+  { id: 'scanner', label: 'Scanner', icon: NavIcons.scanner, path: '/scanner', section: 'WORKSPACE', pageTitle: 'Barcode & ISBN Scanner' },
+  { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+  { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
+  { id: 'templates', label: 'Templates', icon: NavIcons.templates, path: '/templates', section: 'WORKSPACE', pageTitle: 'Templates' },
+  // INSIGHTS
+  { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
+  { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
+  { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
+  { id: 'customers', label: 'Customers', icon: NavIcons.customers, path: '/customers', section: 'INSIGHTS', pageTitle: 'Customers' },
+  // OPERATIONS
+  { id: 'orders', label: 'Orders', icon: NavIcons.orders, path: '/orders', section: 'OPERATIONS', pageTitle: 'Orders' },
+  { id: 'sourcing', label: 'Sourcing', icon: NavIcons.sourcing, path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
+  { id: 'suppliers', label: 'Suppliers', icon: NavIcons.suppliers, path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
+  { id: 'expenses', label: 'Expenses', icon: NavIcons.expenses, path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
+  { id: 'mileage', label: 'Mileage', icon: NavIcons.mileage, path: '/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
+  { id: 'tax', label: 'Tax', icon: NavIcons.tax, path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
+  // SETTINGS
+  { id: 'platform-connect', label: 'Platform Connect', icon: NavIcons['platform-connect'], path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
+  { id: 'billing', label: 'Billing', icon: NavIcons.billing, path: '/billing', section: 'SETTINGS', pageTitle: 'Billing' },
+  { id: 'settings', label: 'Settings', icon: NavIcons.settings, path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
+]
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -19,33 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
 
-  const navItems = [
-    // WORKSPACE
-    { id: 'dashboard', label: 'Dashboard', icon: NavIcons.dashboard, path: '/dashboard', section: 'WORKSPACE', pageTitle: 'Dashboard' },
-    { id: 'finds', label: 'Finds', icon: NavIcons.finds, path: '/finds', section: 'WORKSPACE', pageTitle: 'Finds' },
-    { id: 'add-find', label: 'Add find', icon: NavIcons['add-find'], path: '/add-find', section: 'WORKSPACE', pageTitle: '' },
-    { id: 'import', label: 'Import', icon: NavIcons.import, path: '/import', section: 'WORKSPACE', pageTitle: 'Import' },
-    { id: 'scanner', label: 'Scanner', icon: NavIcons.scanner, path: '/scanner', section: 'WORKSPACE', pageTitle: 'Barcode & ISBN Scanner' },
-    { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
-    { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
-    { id: 'templates', label: 'Templates', icon: NavIcons.templates, path: '/templates', section: 'WORKSPACE', pageTitle: 'Templates' },
-    // INSIGHTS
-    { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
-    { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
-    { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
-    { id: 'customers', label: 'Customers', icon: NavIcons.customers, path: '/customers', section: 'INSIGHTS', pageTitle: 'Customers' },
-    // OPERATIONS
-    { id: 'orders', label: 'Orders', icon: NavIcons.orders, path: '/orders', section: 'OPERATIONS', pageTitle: 'Orders' },
-    { id: 'sourcing', label: 'Sourcing', icon: NavIcons.sourcing, path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
-    { id: 'suppliers', label: 'Suppliers', icon: NavIcons.suppliers, path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },
-    { id: 'expenses', label: 'Expenses', icon: NavIcons.expenses, path: '/expenses', section: 'OPERATIONS', pageTitle: 'Expenses' },
-    { id: 'mileage', label: 'Mileage', icon: NavIcons.mileage, path: '/mileage', section: 'OPERATIONS', pageTitle: 'Mileage' },
-    { id: 'tax', label: 'Tax', icon: NavIcons.tax, path: '/tax', section: 'OPERATIONS', pageTitle: 'Tax' },
-    // SETTINGS
-    { id: 'platform-connect', label: 'Platform Connect', icon: NavIcons['platform-connect'], path: '/platform-connect', section: 'SETTINGS', pageTitle: 'Platform Connect' },
-    { id: 'billing', label: 'Billing', icon: NavIcons.billing, path: '/billing', section: 'SETTINGS', pageTitle: 'Billing' },
-    { id: 'settings', label: 'Settings', icon: NavIcons.settings, path: '/settings', section: 'SETTINGS', pageTitle: 'Settings' },
-  ]
+  const navItems = NAV_ITEMS
 
   const currentPage = navItems.find((item) => activeNav === item.id)
   const pageTitle = currentPage?.pageTitle
@@ -57,14 +62,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Set active nav based on current pathname
   useEffect(() => {
-    const currentItem = navItems.find((item) => {
-      // Exact match first
+    const currentItem = NAV_ITEMS.find((item) => {
+      // Exact match
       if (pathname === item.path) return true
-      // Check if pathname starts with the item's path (for nested routes)
-      if (pathname.startsWith(item.path + '/')) {
-        // Nested routes should highlight parent nav item
-        return ['finds', 'sold', 'customers', 'sourcing'].includes(item.id)
-      }
+      // Nested routes: highlight parent nav item for sub-paths
+      if (pathname.startsWith(item.path + '/') && NESTED_NAV_IDS.includes(item.id)) return true
       return false
     })
 

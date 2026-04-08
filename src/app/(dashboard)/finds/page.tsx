@@ -54,6 +54,7 @@ export default function InventoryPage() {
   const [showMarkSoldForm, setShowMarkSoldForm] = useState(false)
   const [markSoldPrice, setMarkSoldPrice] = useState('')
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   /**
    * Debounce search input (300ms)
@@ -108,9 +109,9 @@ export default function InventoryPage() {
           throw new Error('Failed to fetch finds')
         }
         const result = await findsRes.json()
-        const response = result.data as { data: Find[]; pagination: { total: number } }
-        setFinds(response.data || [])
-        setTotalCount(response.pagination?.total || 0)
+        const response = unwrapApiResponse<{ data: Find[]; pagination: { total: number } }>(result)
+        setFinds(response?.data || [])
+        setTotalCount(response?.pagination?.total || 0)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'
         setError(message)
@@ -122,7 +123,7 @@ export default function InventoryPage() {
     }
 
     fetchData()
-  }, [selectedStatus, debouncedSearch, currentOffset])
+  }, [selectedStatus, debouncedSearch, currentOffset, refreshTrigger])
 
   // Filter finds by aging status (client-side for aging filter since it needs calculation)
   const filteredFinds = selectedStatus === 'aging'
@@ -335,12 +336,8 @@ export default function InventoryPage() {
         return
       }
 
-      // Refresh finds
-      const findsRes = await fetch('/api/finds')
-      if (findsRes.ok) {
-        const result = await findsRes.json()
-        setFinds(unwrapApiResponse<Find[]>(result))
-      }
+      // Refresh finds (re-runs fetchData with current pagination/filter state)
+      setRefreshTrigger((n) => n + 1)
 
       // Clear selection and close form
       setSelectedItems(new Set())

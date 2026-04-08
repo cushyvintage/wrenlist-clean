@@ -167,14 +167,15 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead style={{ color: '#8A9E88' }}>
                   <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
-                    <th className="text-left py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Item</th>
-                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Cost</th>
-                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Price</th>
-                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Margin</th>
-                    <th className="text-right py-3 px-0 text-[10px] uppercase tracking-[.08em] font-medium">Status</th>
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[.08em] font-medium">Item</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[.08em] font-medium">Cost</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[.08em] font-medium">Price</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[.08em] font-medium">Margin</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[.08em] font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,6 +188,7 @@ export default function DashboardPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </Panel>
         </div>

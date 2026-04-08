@@ -83,7 +83,7 @@ export default function ExpensesPage() {
   const thisMonthTotal = thisMonth.reduce((sum, exp) => sum + exp.amount_gbp, 0)
 
   // Tax year: 6 Apr to 5 Apr
-  const taxYearStart = now.getFullYear() - (now.getMonth() < 3 ? 1 : 0)
+  const taxYearStart = now.getFullYear() - (now.getMonth() < 3 || (now.getMonth() === 3 && now.getDate() < 6) ? 1 : 0)
   const taxYearBegin = new Date(taxYearStart, 3, 6) // 6 Apr
   const ytdExpenses = expenses.filter((exp) => new Date(exp.date) >= taxYearBegin)
   const ytdTotal = ytdExpenses.reduce((sum, exp) => sum + exp.amount_gbp, 0)
@@ -102,6 +102,11 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Page header */}
+      <div className="border-b border-border pb-4">
+        <h1 className="font-serif text-2xl italic text-ink">expenses</h1>
+      </div>
+
       {/* Disclaimer */}
       <div className="bg-[rgba(61,92,58,0.08)] border border-[rgba(61,92,58,0.2)] rounded-lg p-4 text-sm text-[#3D5C3A]">
         <strong>Disclaimer:</strong> Wrenlist helps you track your business expenses — you are responsible for your own tax filings. Always consult an accountant for advice.

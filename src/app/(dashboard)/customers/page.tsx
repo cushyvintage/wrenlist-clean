@@ -53,7 +53,7 @@ export default function CustomersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
-          <h1 className="text-lg font-serif text-ink">customers</h1>
+          <h1 className="font-serif text-2xl italic text-ink">customers</h1>
           <p className="text-xs text-ink-lt mt-1">Track buyers across your marketplaces</p>
         </div>
         <input
@@ -97,12 +97,12 @@ export default function CustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">platform</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">name</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">username</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">orders</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">total spent</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">last order</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Platform</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Name</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Username</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Orders</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Total Spent</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Last Order</th>
                 </tr>
               </thead>
               <tbody>

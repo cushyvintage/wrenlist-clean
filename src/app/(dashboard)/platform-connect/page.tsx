@@ -9,6 +9,7 @@ import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionInfo, EXTENSION_ID } from '@/hooks/useExtensionInfo'
+import { CheckCircle2 } from 'lucide-react'
 
 interface EbayPolicy {
   id: string
@@ -509,7 +510,7 @@ export default function PlatformConnectPage() {
     <div className="space-y-6">
       {/* Topbar */}
       <div className="flex items-center justify-between border-b border-border pb-4">
-        <h1 className="text-lg font-serif text-ink">platform connections</h1>
+        <h1 className="font-serif text-2xl italic text-ink">platform connections</h1>
         <a href="/settings" className="text-sm text-sage hover:text-sage-dk transition">
           ← back to settings
         </a>
@@ -609,7 +610,7 @@ export default function PlatformConnectPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="font-medium text-sm text-ink">eBay UK — Connected ✅</div>
+                  <div className="font-medium text-sm text-ink flex items-center gap-1.5">eBay UK — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
                 </div>
                 <div className="text-xs text-ink-lt">Account: {ebay.username}</div>
               </div>
@@ -860,7 +861,7 @@ export default function PlatformConnectPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="font-medium text-sm text-ink">Vinted — Connected ✅</div>
+                  <div className="font-medium text-sm text-ink flex items-center gap-1.5">Vinted — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
                 </div>
                 <div className="text-xs text-ink-lt">Account: {vintedUsername}</div>
               </div>
@@ -968,7 +969,7 @@ export default function PlatformConnectPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <div className="font-medium text-sm text-ink">
-                {etsyConnected ? 'Etsy — Connected ✅' : 'Etsy'}
+                {etsyConnected ? <span className="flex items-center gap-1.5">Etsy — Connected <CheckCircle2 size={15} className="text-green-600" /></span> : 'Etsy'}
               </div>
             </div>
             <div className="text-xs text-ink-lt">

@@ -96,7 +96,7 @@ export function InventoryRow({ find, onClick }: InventoryRowProps) {
       {/* Margin % (DM Mono) */}
       <td className="py-3 px-4 text-right">
         <span className="font-mono text-sm font-medium text-sage">
-          {margin}%
+          {margin != null ? `${margin}%` : '—'}
         </span>
       </td>
 

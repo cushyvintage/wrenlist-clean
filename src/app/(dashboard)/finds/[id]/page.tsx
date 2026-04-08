@@ -18,7 +18,7 @@ import { applyTemplate } from '@/lib/templates/apply-template'
 import type { Find, FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
-import { parseApiError } from '@/lib/api-utils'
+import { parseApiError, unwrapApiResponse } from '@/lib/api-utils'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { useConnectedPlatforms, type ConnectedPlatform } from '@/hooks/useConnectedPlatforms'
 import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
@@ -125,7 +125,7 @@ export default function InventoryDetailPage() {
         const res = await fetch(`/api/finds/${id}`)
         if (!res.ok) throw new Error('Failed to load find')
         const result = await res.json()
-        const data = result.data as Find
+        const data = unwrapApiResponse<Find>(result)
 
         setFind(data)
 
@@ -145,7 +145,7 @@ export default function InventoryDetailPage() {
           photos: [],
           photoPreviews: data.photos || [],
           selectedPlatforms: platforms.length > 0 ? platforms : [],
-          platformFields: (data.platform_fields as any) || {},
+          platformFields: (data.platform_fields as PlatformFieldsData) || {},
           shippingWeight: data.shipping_weight_grams ?? null,
           shippingDimensions: {
             length: data.shipping_length_cm ?? null,
@@ -445,7 +445,7 @@ export default function InventoryDetailPage() {
       if (!res.ok) await parseApiError(res, 'Failed to save')
 
       const result = await res.json()
-      setFind(result.data as Find)
+      setFind(unwrapApiResponse<Find>(result))
       setIsEditing(false)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 2500)

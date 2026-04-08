@@ -216,12 +216,12 @@ export default function SoldHistoryPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h1 className="text-lg font-serif text-ink">sold history</h1>
+          <h1 className="font-serif text-2xl italic text-ink">sold history</h1>
           <p className="text-xs text-ink-lt mt-1">Track all sold items and profits</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSyncSales}
             disabled={isSyncing}
@@ -321,16 +321,16 @@ export default function SoldHistoryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs w-10"></th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">item</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">platform</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">status</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">buyer</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">sold</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">fees</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">net</th>
-                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-xs">margin</th>
-                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-xs">date</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em] w-10"></th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Item</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Platform</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Status</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Buyer</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Sold</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Fees</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Net</th>
+                  <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Margin</th>
+                  <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Date</th>
                 </tr>
               </thead>
               <tbody>
