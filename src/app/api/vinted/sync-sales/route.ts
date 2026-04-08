@@ -135,11 +135,20 @@ async function recomputeCustomerAggregates(
 ): Promise<void> {
   const { data: pmds } = await supabase
     .from('product_marketplace_data')
-    .select('fields')
+    .select('find_id, fields')
     .eq('customer_id', customerId)
     .eq('status', 'sold')
 
   if (!pmds || pmds.length === 0) return
+
+  // Fetch sold_at from finds as fallback for missing orderDate
+  const findIds = pmds.map(p => p.find_id)
+  const { data: finds } = await supabase
+    .from('finds')
+    .select('id, sold_at')
+    .in('id', findIds)
+
+  const findDates = new Map((finds || []).map(f => [f.id, f.sold_at]))
 
   let totalSpent = 0
   let firstOrder: string | null = null
@@ -147,10 +156,9 @@ async function recomputeCustomerAggregates(
 
   for (const pmd of pmds) {
     const sale = (pmd.fields as Record<string, unknown>)?.sale as Record<string, unknown> | undefined
-    if (!sale) continue
-    const amount = (sale.grossAmount as number) || 0
+    const amount = (sale?.grossAmount as number) || 0
     totalSpent += amount
-    const orderDate = (sale.orderDate as string) || null
+    const orderDate = (sale?.orderDate as string) || findDates.get(pmd.find_id) || null
     if (orderDate) {
       if (!firstOrder || orderDate < firstOrder) firstOrder = orderDate
       if (!lastOrder || orderDate > lastOrder) lastOrder = orderDate

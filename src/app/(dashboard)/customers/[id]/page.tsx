@@ -83,7 +83,7 @@ export default function CustomerDetailPage() {
     : null
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl pb-16">
       <Link href="/customers" className="inline-flex items-center gap-1 text-xs text-sage hover:underline">
         &larr; back to customers
       </Link>
