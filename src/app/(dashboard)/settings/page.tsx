@@ -247,7 +247,7 @@ export default function SettingsPage() {
                     : 'text-ink-lt hover:bg-cream-md'
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'ai' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             )
           )}
@@ -289,7 +289,8 @@ export default function SettingsPage() {
               </label>
               <input
                 type="email"
-                value={isLoadingProfile ? 'Loading...' : accountData.email}
+                value={accountData.email}
+                placeholder={isLoadingProfile ? 'Loading...' : ''}
                 disabled
                 className="w-full px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-ink-lt text-sm outline-none"
               />
