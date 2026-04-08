@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, user) => {
     }
 
     return ApiResponseHelper.success({
-      data: data as Find[],
+      items: data as Find[],
       pagination: { limit, offset, total: count || 0 },
     })
   } catch (error) {

@@ -52,7 +52,8 @@ export default function TaxPage() {
         const sellsRes = await fetch('/api/finds?status=sold')
         if (sellsRes.ok) {
           const sellsData = await sellsRes.json()
-          setSells(unwrapApiResponse<Find[]>(sellsData))
+          const sellsResponse = unwrapApiResponse<{ items: Find[] }>(sellsData)
+          setSells(sellsResponse?.items || [])
         }
 
         // Fetch expenses

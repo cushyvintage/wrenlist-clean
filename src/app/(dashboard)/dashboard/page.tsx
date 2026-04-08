@@ -54,7 +54,8 @@ export default function DashboardPage() {
 
         if (findsRes.ok) {
           const json = await findsRes.json()
-          setFinds(unwrapApiResponse<Find[]>(json))
+          const response = unwrapApiResponse<{ items: Find[] }>(json)
+          setFinds(response?.items || [])
         }
 
         if (insightRes.ok) {

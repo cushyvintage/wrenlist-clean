@@ -10,6 +10,8 @@ import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionInfo, EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { CheckCircle2 } from 'lucide-react'
+import { unwrapApiResponse } from '@/lib/api-utils'
+import type { Find } from '@/types'
 
 interface EbayPolicy {
   id: string
@@ -457,7 +459,8 @@ export default function PlatformConnectPage() {
       }
 
       const findsData = await findsResponse.json()
-      const finds = findsData.data || []
+      const findsPayload = unwrapApiResponse<{ items: Find[] }>(findsData)
+      const finds = findsPayload?.items || []
 
       if (finds.length === 0) {
         setVintedSyncResult({ updated: 0, failed: 0 })

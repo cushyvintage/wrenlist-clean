@@ -109,8 +109,8 @@ export default function InventoryPage() {
           throw new Error('Failed to fetch finds')
         }
         const result = await findsRes.json()
-        const response = unwrapApiResponse<{ data: Find[]; pagination: { total: number } }>(result)
-        setFinds(response?.data || [])
+        const response = unwrapApiResponse<{ items: Find[]; pagination: { total: number } }>(result)
+        setFinds(response?.items || [])
         setTotalCount(response?.pagination?.total || 0)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred'

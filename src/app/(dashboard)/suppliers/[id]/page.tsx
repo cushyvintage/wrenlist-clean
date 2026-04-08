@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Edit2, Trash2 } from 'lucide-react'
 import type { Supplier, SupplierType, Find } from '@/types'
+import { unwrapApiResponse } from '@/lib/api-utils'
 
 const typeLabel: Record<SupplierType, string> = {
   house_clearance: 'House Clearance',
@@ -71,8 +72,9 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
       const res = await fetch('/api/finds')
       if (!res.ok) throw new Error('Failed to load finds')
       const data = await res.json()
+      const response = unwrapApiResponse<{ items: Find[] }>(data)
       // Filter finds that match this supplier by source_name
-      const supplierFinds = (data.data || data).filter((find: Find) => {
+      const supplierFinds = (response?.items || []).filter((find: Find) => {
         return find.source_name === supplier?.name || find.source_name?.includes(supplier?.name || '')
       })
       setFinds(supplierFinds)
