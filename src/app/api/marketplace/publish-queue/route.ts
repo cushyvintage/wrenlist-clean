@@ -19,22 +19,14 @@ export const GET = withAuth(async (_req, user) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // First get this user's find IDs, then get their marketplace data
-  const { data: userFinds } = await supabaseAdmin
-    .from('finds')
-    .select('id')
-    .eq('user_id', user.id)
-
-  const userFindIds = (userFinds || []).map((f) => f.id)
-  if (userFindIds.length === 0) {
-    return ApiResponseHelper.success([])
-  }
-
+  // Use a JOIN instead of two-step (fetch all find IDs → .in()) to avoid
+  // URL length limits when a user has many finds (1000+ UUIDs in the query
+  // string exceeds PostgREST's URL limit and causes intermittent 500s).
   const { data, error } = await supabaseAdmin
     .from('product_marketplace_data')
-    .select('find_id, marketplace, fields, listing_price, platform_category_id')
+    .select('find_id, marketplace, fields, listing_price, platform_category_id, finds!inner(user_id)')
     .eq('status', 'needs_publish')
-    .in('find_id', userFindIds)
+    .eq('finds.user_id', user.id)
 
   if (error) {
     console.error('[PublishQueue] Marketplace data query failed:', error)
