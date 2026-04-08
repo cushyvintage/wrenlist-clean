@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import AIAutoFillSettings from '@/components/settings/AIAutoFillSettings'
 
@@ -44,6 +45,7 @@ interface AuthResponse {
 }
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
 
   const [accountData, setAccountData] = useState<AccountData>({
@@ -240,7 +242,13 @@ export default function SettingsPage() {
             (tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  if (tab === 'billing') {
+                    router.push('/billing')
+                    return
+                  }
+                  setActiveTab(tab)
+                }}
                 className={`w-full text-left px-4 py-2.5 rounded-sm text-sm font-medium transition-colors ${
                   activeTab === tab
                     ? 'bg-sage text-cream'
@@ -521,29 +529,7 @@ export default function SettingsPage() {
           <AIAutoFillSettings />
         )}
 
-        {/* Billing Section */}
-        {activeTab === 'billing' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="font-serif text-xl italic text-ink mb-1">Billing</h2>
-              <p className="text-sm text-ink-lt">
-                Manage your subscription and payment methods
-              </p>
-            </div>
-
-            <div className="bg-cream-md rounded-md p-6 border border-sage/14">
-              <p className="text-ink-lt text-sm mb-4">
-                Your billing dashboard has moved to a dedicated page with more detailed information.
-              </p>
-              <button
-                onClick={() => window.location.href = '/billing'}
-                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors"
-              >
-                Go to Billing Dashboard
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Billing — navigates directly to /billing via sidebar click */}
 
 
                 {/* Legal Section */}

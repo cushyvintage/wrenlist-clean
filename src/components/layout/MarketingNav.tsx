@@ -8,6 +8,7 @@ const navItems = [
   { href: '/landing', label: 'home' },
   { href: '/pricing', label: 'pricing' },
   { href: '/about', label: 'why wrenlist' },
+  { href: '/extension', label: 'extension' },
   { href: '/calculator', label: 'fee calculator' },
   { href: '/roadmap', label: 'roadmap' },
 ]

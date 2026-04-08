@@ -1,20 +1,76 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import type { PlanId } from '@/types'
+import type { User, SupabaseClient } from '@supabase/supabase-js'
 
-export async function GET() {
+const PLAN_LIMITS: Record<PlanId, number> = {
+  free: 5,
+  nester: 50,
+  forager: 500,
+  flock: 999999,
+}
+
+/**
+ * Try Bearer token auth (used by Chrome extension service worker
+ * which cannot send cookies).
+ */
+async function getUserFromBearerToken(req: NextRequest): Promise<User | null> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const token = authHeader.slice(7)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+  const { data: { user } } = await supabase.auth.getUser(token)
+  return user
+}
+
+/**
+ * Create a service-role client for DB queries.
+ * Needed when auth came from Bearer token (cookie-based client has no session).
+ */
+function createServiceClient(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const user = await getServerUser()
+    // Try cookies first, then Bearer token (extension)
+    let user = await getServerUser()
+    let fromBearer = false
+
+    if (!user) {
+      user = await getUserFromBearerToken(req)
+      fromBearer = true
+    }
+
     if (!user) {
       return NextResponse.json({ user: null }, { status: 401 })
     }
 
-    // Fetch display name from profile (set during onboarding), fall back to Google metadata
-    const supabase = await createSupabaseServerClient()
+    // Use service-role client when auth came from Bearer token
+    // (the cookie-based SSR client won't have a session for RLS queries)
+    const supabase: SupabaseClient = fromBearer
+      ? createServiceClient()
+      : await createSupabaseServerClient()
+
+    // Fetch profile (plan, finds count, name)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, plan, finds_this_month')
       .eq('user_id', user.id)
       .single()
+
+    const plan = (profile?.plan || 'free') as PlanId
+    const findsThisMonth = profile?.finds_this_month ?? 0
+    const findsLimit = PLAN_LIMITS[plan]
 
     const full_name =
       profile?.full_name ||
@@ -22,12 +78,45 @@ export async function GET() {
       user.user_metadata?.name ||
       null
 
+    // Fetch inventory + listing stats in parallel
+    const [findsResult, listingsResult, platformsResult] = await Promise.all([
+      supabase
+        .from('finds')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+      supabase
+        .from('product_marketplace_data')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'listed'),
+      supabase
+        .from('product_marketplace_data')
+        .select('marketplace')
+        .eq('user_id', user.id)
+        .eq('status', 'listed'),
+    ])
+
+    // Count unique connected platforms from active listings
+    const connectedPlatforms = platformsResult.data
+      ? [...new Set(platformsResult.data.map(r => r.marketplace))].length
+      : 0
+
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
         created_at: user.created_at,
         full_name,
+      },
+      plan: {
+        id: plan,
+        finds_this_month: findsThisMonth,
+        finds_limit: findsLimit,
+      },
+      stats: {
+        total_finds: findsResult.count ?? 0,
+        active_listings: listingsResult.count ?? 0,
+        connected_platforms: connectedPlatforms,
       },
     })
   } catch (error) {

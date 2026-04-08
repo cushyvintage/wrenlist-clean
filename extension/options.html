@@ -3,55 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wrenlist Skylark - Settings</title>
+  <title>Wrenlist — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #f5f3f0;
-      color: #2d3025;
+      font-family: 'Jost', system-ui, sans-serif;
+      background: #F5F0E8;
+      color: #1E2E1C;
       padding: 20px;
       max-width: 800px;
       margin: 0 auto;
     }
-    
+
     .header {
-      background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
-      color: #f5f3f0;
+      background: #1E2E1C;
+      color: #F5F0E8;
       padding: 24px;
-      border-radius: 12px;
+      border-radius: 6px;
       margin-bottom: 24px;
     }
-    
+
     .header h1 {
+      font-family: 'Cormorant Garamond', serif;
       font-size: 24px;
-      font-weight: 600;
+      font-weight: 400;
       margin-bottom: 4px;
+      letter-spacing: 0.04em;
     }
-    
+
     .header p {
-      font-size: 14px;
-      opacity: 0.9;
+      font-size: 13px;
+      font-weight: 300;
+      color: #8A9E88;
     }
     
     .section {
       background: white;
-      border-radius: 12px;
+      border-radius: 6px;
       padding: 20px;
       margin-bottom: 20px;
-      border: 1px solid #ede9e4;
+      border: 1px solid rgba(61,92,58,0.14);
     }
-    
+
     .section-title {
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
       margin-bottom: 16px;
-      color: #2d3025;
+      color: #8A9E88;
     }
     
     .setting-item {
@@ -65,16 +73,18 @@
       margin-bottom: 0;
       padding-bottom: 0;
     }
-    
+
     .setting-label {
       font-weight: 500;
+      font-size: 14px;
       margin-bottom: 8px;
-      color: #2d3025;
+      color: #1E2E1C;
     }
-    
+
     .setting-description {
-      font-size: 13px;
-      color: #6a6b6a;
+      font-size: 12px;
+      font-weight: 300;
+      color: #6B7D6A;
       margin-bottom: 10px;
     }
     
@@ -116,7 +126,7 @@
     }
     
     input:checked + .slider {
-      background-color: #7a8471;
+      background-color: #3D5C3A;
     }
     
     input:checked + .slider:before {
@@ -126,38 +136,46 @@
     select, input[type="text"], input[type="number"] {
       width: 100%;
       padding: 10px;
-      border: 1px solid #9ba088;
-      border-radius: 6px;
-      font-size: 14px;
-      font-family: inherit;
+      border: 1px solid rgba(61,92,58,0.22);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Jost', sans-serif;
+      background: white;
+      color: #1E2E1C;
     }
-    
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #3D5C3A;
+    }
+
     .button {
       padding: 10px 20px;
-      background: linear-gradient(135deg, #7a8471 0%, #6b7562 100%);
-      color: white;
+      background: #3D5C3A;
+      color: #F5F0E8;
       border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Jost', sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.15s;
     }
-    
+
     .button:hover {
-      background: #5d6355;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(122, 132, 113, 0.3);
+      background: #2C4428;
     }
-    
+
     .button.secondary {
       background: white;
-      color: #7a8471;
-      border: 1px solid #9ba088;
+      color: #3D5C3A;
+      border: 1px solid rgba(61,92,58,0.22);
     }
-    
+
     .button.secondary:hover {
-      background: #f5f3f0;
+      background: #F5F0E8;
     }
     
     .button-group {
@@ -196,12 +214,13 @@
     
     .marketplace-item {
       padding: 12px;
-      background: #f9f9f8;
-      border: 1px solid #ede9e4;
-      border-radius: 6px;
+      background: #F5F0E8;
+      border: 1px solid rgba(61,92,58,0.14);
+      border-radius: 4px;
       display: flex;
       align-items: center;
       gap: 8px;
+      font-size: 13px;
     }
     
     .marketplace-item input[type="checkbox"] {
@@ -211,7 +230,7 @@
 </head>
 <body>
   <div class="header">
-    <h1>Wrenlist Skylark Settings</h1>
+    <h1>WREN<em style="font-weight:300;font-style:italic;opacity:0.6">list</em> Settings</h1>
     <p>Configure your extension preferences</p>
   </div>
   
@@ -275,7 +294,7 @@
     <div class="setting-item">
       <div class="setting-label">Support</div>
       <div class="setting-description">
-        Wrenlist Skylark Version 1.1.0 | <a href="https://wrenlist.com/support" target="_blank">Support</a>
+        <a href="https://wrenlist.com" target="_blank" style="color:#3D5C3A">wrenlist.com</a> | <a href="mailto:admin@wrenlist.com" style="color:#3D5C3A">Support</a>
       </div>
     </div>
   </div>

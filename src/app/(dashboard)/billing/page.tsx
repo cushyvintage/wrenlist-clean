@@ -123,14 +123,6 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-8 max-w-4xl">
-      {/* Header */}
-      <div>
-        <h1 className="font-serif text-2xl italic text-ink mb-1">Billing</h1>
-        <p className="text-sm text-ink-lt">
-          Manage your subscription and find limits
-        </p>
-      </div>
-
       {/* Success/Cancelled Messages */}
       {typeof window !== 'undefined' && (
         <>
@@ -171,7 +163,9 @@ export default function BillingPage() {
               <p className="text-xs text-sage-dim">
                 {profile.stripe_customer_id
                   ? 'Active subscription'
-                  : 'Free plan (no active subscription)'}
+                  : profile.plan === 'free'
+                    ? 'Free plan'
+                    : `${currentPlan.name} plan — no active billing`}
               </p>
             </div>
             {profile.stripe_customer_id ? (

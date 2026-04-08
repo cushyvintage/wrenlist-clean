@@ -1204,6 +1204,47 @@ type ExternalMessage = Record<string, unknown>;
         // Extension detection ping from platform
         sendResponse({ success: true, version: EXTENSION_VERSION });
         return true;
+      case "get_auth_info":
+        // Popup requests auth + plan info via background (which can read cookies)
+        void (async () => {
+          try {
+            const res = await queueFetch(`${DEFAULT_WRENLIST_BASE_URL}/api/auth/me`, {
+              headers: { Accept: "application/json" },
+            });
+            if (!res.ok) {
+              sendResponse({ success: false, status: res.status });
+              return;
+            }
+            const data = await res.json();
+            sendResponse({ success: true, data });
+          } catch (error) {
+            sendResponse({ success: false, error: String(error) });
+          }
+        })();
+        return true;
+      case "bg_fetch":
+        // Generic authenticated fetch for popup (uses queueFetch with cookie auth)
+        void (async () => {
+          try {
+            const fetchUrl = message.url;
+            if (!fetchUrl || (!fetchUrl.startsWith("https://wrenlist.com/") && !fetchUrl.startsWith("https://app.wrenlist.com/"))) {
+              sendResponse({ success: false, error: "Invalid URL" });
+              return;
+            }
+            const res = await queueFetch(fetchUrl, {
+              headers: { Accept: "application/json" },
+            });
+            if (!res.ok) {
+              sendResponse({ success: false, status: res.status });
+              return;
+            }
+            const data = await res.json();
+            sendResponse({ success: true, data });
+          } catch (error) {
+            sendResponse({ success: false, error: String(error) });
+          }
+        })();
+        return true;
       case "vinted_debug_info":
         // Vinted diagnostics
         void (async () => {
