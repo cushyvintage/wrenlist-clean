@@ -72,16 +72,18 @@ export default function PlatformConnectPage() {
   const [showDebug, setShowDebug] = useState(false)
 
 
-  // Sync extension info: browser ping on desktop, heartbeat fallback on mobile
+  // Sync extension info: heartbeat on mobile, browser ping on desktop
   useEffect(() => {
-    if (extensionInfo.detected !== null) {
-      // Desktop Chrome: direct ping succeeded or failed
+    if (isMobileOrNonChrome) {
+      // Mobile/non-Chrome: always use server-side heartbeat
+      if (heartbeat.online !== null) {
+        setExtensionDetected(heartbeat.online)
+        setExtensionVersion(heartbeat.version)
+      }
+    } else if (extensionInfo.detected !== null) {
+      // Desktop Chrome: direct ping
       setExtensionDetected(extensionInfo.detected)
       setExtensionVersion(extensionInfo.version)
-    } else if (isMobileOrNonChrome && heartbeat.online !== null) {
-      // Mobile/non-Chrome: fall back to server-side heartbeat
-      setExtensionDetected(heartbeat.online)
-      setExtensionVersion(heartbeat.version)
     }
   }, [extensionInfo.detected, extensionInfo.version, heartbeat.online, heartbeat.version, isMobileOrNonChrome])
 
