@@ -587,22 +587,10 @@ export class VintedMapper {
       errors.push("Category is required");
     }
 
-    // DEBUG: Log what the mapper receives so we can trace data flow issues
-    console.log('[Vinted Mapper] validateProduct input:', JSON.stringify({
-      vintedCatalogId: (product as any).vintedCatalogId,
-      dynCatalogId: product.dynamicProperties?.vintedCatalogId,
-      category: product.category,
-      color: product.color,
-      colorIds: product.dynamicProperties?.colorIds,
-      size: product.size,
-      weight: product.shipping?.shippingWeight,
-      imageCount: product.images?.length,
-    }));
-
     // Check if product has catalog ID directly (from vinted_category_id or vinted_catalog_id)
     // Also check marketplace_data.vinted.catalog_id (from imported products)
     // Parse to number if it's a string
-    const rawDirectCatalogId = (product as any).vintedCatalogId ||
+    const rawDirectCatalogId = (product as any).vintedCatalogId || 
                                product.dynamicProperties?.vintedCatalogId ||
                                (product as any).marketplace_data?.vinted?.catalog_id;
     const directCatalogId: number | null = typeof rawDirectCatalogId === 'number' 
@@ -741,29 +729,14 @@ export class VintedMapper {
         console.warn('[Vinted Mapper] No catalogId, using fallback package size:', packageSizeId);
       }
     } catch (pkgError) {
-      // Fallback: weight-based package size lookup (Vinted UK standard sizes)
+      // Fallback to provided packageSizeId or default Medium (2)
       const fallback = product.dynamicProperties?.packageSizeId;
-      if (typeof fallback === 'number') {
-        packageSizeId = fallback;
-      } else {
-        const grams = (product.shipping.shippingWeight as { inGrams?: number } | undefined)?.inGrams || 0;
-        if (grams <= 500) packageSizeId = 1;       // Small
-        else if (grams <= 1000) packageSizeId = 2;  // Medium
-        else if (grams <= 2000) packageSizeId = 3;  // Large
-        else if (grams <= 5000) packageSizeId = 5;  // Extra Large
-        else packageSizeId = 3;                      // Default Large for heavy items
-      }
-      console.warn('[Vinted Mapper] Package size fetch failed, using weight-based fallback:', packageSizeId, 'for',
-        (product.shipping.shippingWeight as { inGrams?: number } | undefined)?.inGrams, 'g');
+      packageSizeId = typeof fallback === 'number' ? fallback : 2;
+      console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
     }
 
-    console.log('[Vinted Mapper] Final payload:', JSON.stringify({
-      catalogId, colorIds, packageSizeId,
-      sizeRaw: product.size,
-      sizeId: product.size?.[0] ? parseInt(String(product.size[0]), 10) : null,
-      price: product.price,
-    }));
-
+    console.log('[Vinted Mapper] Final payload catalogId:', catalogId, 'type:', typeof catalogId);
+    
     // Build payload matching Vinted's expected structure (aligned with Vinted's expected format)
     const payload: Record<string, any> = {
       item: {
@@ -788,7 +761,7 @@ export class VintedMapper {
           domestic:
             product.shipping.shippingType === "ShipYourOwn"
               ? String(product.shipping.domesticShipping)
-              : "0",
+              : null,
           international: null,
         },
         color_ids: colorIds,
@@ -803,18 +776,7 @@ export class VintedMapper {
       },
       feedback_id: null,
       push_up: false,
-      parcel: product.shipping.shippingWeight ? {
-        dimensions: {
-          height: product.shipping.shippingHeight ? product.shipping.shippingHeight * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
-          length: product.shipping.shippingLength ? product.shipping.shippingLength * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
-          width: product.shipping.shippingWidth ? product.shipping.shippingWidth * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
-        },
-        weight: this.tld === 'co.uk'
-          ? Math.floor(((product.shipping.shippingWeight as { inGrams?: number }).inGrams || 0) / 1000) || 1
-          : Math.floor(((product.shipping.shippingWeight as { inOunces?: number }).inOunces || 0) / 16) || 1,
-        migrate_uk_metric_units: false,
-      } : null,
-      package_size_id: packageSizeId,
+      parcel: null,
       upload_session_id: uploadSessionId,
       // shippingAddress is stripped by client.ts before posting, used for address fallback
       shippingAddress: product.shipping.shippingAddress,
