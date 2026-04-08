@@ -173,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </MobileSidebar>
 
       {/* Main content area */}
-      <div className="md:ml-[210px] flex flex-col min-h-screen">
+      <div className="md:ml-[210px] flex flex-col">
         {/* Top bar with user menu */}
         <AppTopbar
           title={pageTitle}
