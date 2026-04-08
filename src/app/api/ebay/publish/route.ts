@@ -165,41 +165,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-fill required aspects that aren't set yet based on category
+    // Always-on category-based aspect inference.
+    // getCategoryFields only covers ~60% of categories, so we also infer
+    // common eBay-required aspects directly from the category slug.
     const category = find.category || ''
+
+    // Department — required for all clothing/fashion categories
+    if (!aspects['Department'] && category.startsWith('clothing')) {
+      aspects['Department'] = inferDepartment(category)
+    }
+
+    // Language — required for books
+    if (!aspects['Language'] && (category.startsWith('books') || category.includes('book'))) {
+      aspects['Language'] = 'English'
+    }
+
+    // Book Title — required for books on eBay
+    if (!aspects['Book Title'] && category.startsWith('books')) {
+      aspects['Book Title'] = find.name
+    }
+
+    // Model — required for electronics, musical instruments
+    if (!aspects['Model'] && (category.startsWith('electronics') || category.startsWith('musical'))) {
+      aspects['Model'] = find.name.substring(0, 65)
+    }
+
+    // MPN — commonly required, safe default
+    if (!aspects['MPN']) {
+      aspects['MPN'] = 'Does not apply'
+    }
+
+    // EAN — commonly required, safe default
+    if (!aspects['EAN']) {
+      aspects['EAN'] = 'Does not apply'
+    }
+
+    // Also try category-specific field requirements if they exist
     const categoryFields = getCategoryFields(category, 'ebay')
-    const requiredFields = categoryFields.filter(f => f.required)
-
-    for (const field of requiredFields) {
-      if (aspects[field.name]) continue // already set
-
-      // Smart defaults for common required fields we can confidently fill.
-      // For fields we can't fill, we skip them — eBay will accept the listing
-      // with reduced search visibility rather than rejecting bad generic values.
+    for (const field of categoryFields.filter(f => f.required)) {
+      if (aspects[field.name]) continue
+      // Only fill fields we can confidently set
       if (field.name === 'Department') {
         aspects['Department'] = inferDepartment(category)
       } else if (field.name === 'Language') {
         aspects['Language'] = 'English'
       } else if (field.name === 'Book Title') {
         aspects['Book Title'] = find.name
-      } else if (field.name === 'Author' && !aspects['Author']) {
-        aspects['Author'] = 'Various'
       } else if (field.name === 'Model') {
-        // Use find name as model hint (eBay accepts free text)
         aspects['Model'] = find.name.substring(0, 65)
       } else if (field.name === 'Type') {
         const lastSegment = category.split('_').pop() || ''
         aspects['Type'] = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/_/g, ' ')
-      } else if (field.name === 'EAN' && !aspects['EAN']) {
-        aspects['EAN'] = 'Does not apply'
-      } else if (field.name === 'MPN' && !aspects['MPN']) {
-        aspects['MPN'] = 'Does not apply'
-      } else if (field.name === 'Colour' && !aspects['Colour']) {
-        aspects['Colour'] = 'Multicoloured'
       }
-      // Intentionally skip other unknown required fields rather than setting
-      // bad defaults that eBay rejects. Missing aspects reduce visibility
-      // but don't block the listing.
+      // Skip everything else — eBay accepts listings with missing optional aspects
     }
 
     const inventoryItem = {
