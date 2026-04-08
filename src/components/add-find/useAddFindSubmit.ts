@@ -4,6 +4,7 @@ import { Dispatch, SetStateAction } from 'react'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { FieldConfig } from '@/types'
 import type { FormData } from './useAddFindForm'
+import { getPlatformCategoryId } from '@/data/marketplace-category-map'
 
 interface SubmitDeps {
   formData: FormData
@@ -50,6 +51,53 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     selected_marketplaces: formData.selectedPlatforms,
     platform_fields: {
       ...formData.platformFields,
+      // Build vintedMetadata when Vinted is selected — mirrors import structure
+      // so the extension mapper uses the same working code path
+      ...(formData.selectedPlatforms.includes('vinted') ? {
+        vinted: {
+          ...formData.platformFields.vinted,
+          catalogId: formData.category
+            ? Number(getPlatformCategoryId(formData.category, 'vinted')) || null
+            : null,
+          vintedMetadata: {
+            catalog_id: formData.category
+              ? Number(getPlatformCategoryId(formData.category, 'vinted')) || null
+              : null,
+            package_size_id: formData.shippingWeight
+              ? formData.shippingWeight <= 500 ? 1
+                : formData.shippingWeight <= 1000 ? 2
+                : formData.shippingWeight <= 2000 ? 3
+                : formData.shippingWeight <= 5000 ? 5
+                : formData.shippingWeight <= 10000 ? 9
+                : 10
+              : 2,
+            shipping: {
+              weight_grams: formData.shippingWeight || 500,
+              package_size_id: formData.shippingWeight
+                ? formData.shippingWeight <= 500 ? 1
+                  : formData.shippingWeight <= 1000 ? 2
+                  : formData.shippingWeight <= 2000 ? 3
+                  : formData.shippingWeight <= 5000 ? 5
+                  : formData.shippingWeight <= 10000 ? 9
+                  : 10
+                : 2,
+            },
+            color_ids: [formData.platformFields.vinted?.primaryColor, formData.platformFields.vinted?.secondaryColor]
+              .filter((id): id is number => typeof id === 'number' && id > 0),
+            brand_id: 1, // "No brand" default — overridden by mapper if brand is set
+            brand_title: formData.brand || '',
+            size_id: null, // Non-clothing default — overridden by size picker's vintedSizeId
+            status_id: formData.condition === 'new_with_tags' ? 6
+              : formData.condition === 'new_without_tags' ? 1
+              : formData.condition === 'very_good' ? 2
+              : formData.condition === 'good' ? 3
+              : formData.condition === 'fair' ? 4
+              : 5, // poor
+            currency: 'GBP',
+            is_draft: false,
+          },
+        },
+      } : {}),
       platformPrices: formData.platformPrices,
     },
     status,
