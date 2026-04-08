@@ -604,6 +604,10 @@ type ExternalMessage = Record<string, unknown>;
               sellerPays: false,
               allowLocalPickup: true,
             },
+            // Pass platform_category_id as vintedCatalogId for Vinted mapper
+            ...(mp === "vinted" && item.platform_category_id
+              ? { vintedCatalogId: Number(item.platform_category_id) }
+              : {}),
             dynamicProperties: {
               productType: mapProductType(find.category),
               ...(vintedColorIds.length > 0 ? { colorIds: vintedColorIds } : {}),
@@ -611,6 +615,10 @@ type ExternalMessage = Record<string, unknown>;
               ...(userWhoMade ? { whoMade: userWhoMade } : {}),
               ...(depopSource.length > 0 ? { Source: depopSource[0] } : {}),
               ...(depopAge ? { age: depopAge } : {}),
+              // Also pass as dynamic property for fallback
+              ...(mp === "vinted" && item.platform_category_id
+                ? { vintedCatalogId: Number(item.platform_category_id) }
+                : {}),
             },
           };
 
