@@ -541,7 +541,13 @@ export default function SoldHistoryPage() {
             <StatCard
               label="avg margin"
               value={`${metrics.avgMargin}%`}
-              delta={`on ${timeframe}`}
+              delta={
+                timeframe === 'tax_year' ? 'this tax year'
+                : timeframe === 'last_tax_year' ? 'last tax year'
+                : timeframe === 'quarter' ? 'last 3 months'
+                : timeframe === 'all' ? 'all time'
+                : 'this month'
+              }
             />
           </div>
         </div>
