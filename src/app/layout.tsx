@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/wrenlist-logo.png',
+        url: 'https://wrenlist.com/wrenlist-logo.png',
         width: 600,
         height: 600,
         alt: 'Wrenlist — The Thrifter\'s Operating System',

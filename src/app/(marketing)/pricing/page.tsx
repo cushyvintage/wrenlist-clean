@@ -3,7 +3,16 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-const PricingCard = ({ tier, price, description, limit, features, featured = false }: any) => (
+interface PricingCardProps {
+  tier: string
+  price: string
+  description: string
+  limit: string
+  features: string[]
+  featured?: boolean
+}
+
+const PricingCard = ({ tier, price, description, limit, features, featured = false }: PricingCardProps) => (
   <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-sage bg-opacity-5 bg-sage relative' : 'border-[rgba(61,92,58,0.14)] bg-cream'}`}>
     {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-sage-pale text-sage px-2 py-1 rounded">most popular</div>}
     <div className={`text-sm font-medium text-ink mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
@@ -117,7 +126,7 @@ export default function PricingPage() {
         </div>
 
         {/* PRICING CARDS */}
-        <div className="grid grid-cols-4 gap-6 mb-12 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pt-4">
           {plans.map((plan, i) => (
             <PricingCard key={i} {...plan} />
           ))}
@@ -164,7 +173,7 @@ export default function PricingPage() {
 
       {/* FOOTER */}
       <footer className="bg-ink text-cream px-12 py-16 mt-16">
-        <div className="grid grid-cols-4 gap-12 max-w-5xl mx-auto mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-12 max-w-5xl mx-auto mb-12">
           <div>
             <div className="font-serif text-xl font-medium mb-3">
               WREN<em className="italic font-light text-sage-lt">list</em>

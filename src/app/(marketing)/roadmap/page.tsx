@@ -3,7 +3,16 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-const RoadmapCard = ({ title, desc, votes, tag, featured = false }: any) => (
+interface RoadmapCardProps {
+  title: string
+  desc: string
+  votes: number
+  tag: string
+  featured?: boolean
+  inProgress?: boolean
+}
+
+const RoadmapCard = ({ title, desc, votes, tag, featured = false }: RoadmapCardProps) => (
   <div className={`rounded-md p-4 mb-2.5 cursor-pointer border transition-all ${
     featured
       ? 'border-sage bg-opacity-5 bg-sage'
