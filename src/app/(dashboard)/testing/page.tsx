@@ -191,19 +191,11 @@ export default function TestingPage() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
 
-  // Admin gate
-  useEffect(() => {
-    if (user && !isAdmin(user.email)) {
-      router.replace('/dashboard')
-    }
-  }, [user, router])
-
-  if (!user || !isAdmin(user.email)) {
-    return null
-  }
+  const allowed = !!user && isAdmin(user.email)
 
   // Load all runs
   const loadRuns = useCallback(async () => {
+    if (!allowed) return
     try {
       const data = await fetchApi<TestRun[]>('/api/testing')
       setRuns(data)
@@ -212,7 +204,7 @@ export default function TestingPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [allowed])
 
   // Load a specific run with results
   const loadRun = useCallback(async (id: string) => {
@@ -224,6 +216,13 @@ export default function TestingPage() {
     }
   }, [])
 
+  // Admin gate — redirect non-admins
+  useEffect(() => {
+    if (user && !isAdmin(user.email)) {
+      router.replace('/dashboard')
+    }
+  }, [user, router])
+
   useEffect(() => {
     loadRuns()
   }, [loadRuns])
@@ -231,6 +230,11 @@ export default function TestingPage() {
   useEffect(() => {
     if (selectedRunId) loadRun(selectedRunId)
   }, [selectedRunId, loadRun])
+
+  // Don't render until we confirm admin
+  if (!allowed) {
+    return null
+  }
 
   // Create new run with pre-populated test matrix
   const createRun = async () => {
