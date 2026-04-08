@@ -101,7 +101,19 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results.ebay = { ok: true, listingUrl: data.data.listingUrl }
           logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingUrl: data.data.listingUrl } })
         } else {
-          results.ebay = { ok: false, error: data.error || data.data?.message || 'eBay publish failed' }
+          const ebayError = data.error || data.data?.message || 'eBay publish failed'
+          results.ebay = { ok: false, error: ebayError }
+          // Persist the error in PMD so user can see it on the find detail page
+          await supabase.from('product_marketplace_data').upsert(
+            {
+              find_id: findId,
+              marketplace: 'ebay',
+              status: 'error',
+              error_message: ebayError,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'find_id,marketplace' }
+          )
         }
       } else {
         // Check if already listed — don't re-queue to avoid duplicates
