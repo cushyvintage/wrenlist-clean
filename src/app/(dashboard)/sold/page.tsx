@@ -267,6 +267,35 @@ function OrderCard({
   )
 }
 
+/* ── Chunked sync helper (avoids Vercel 413 on large payloads) ── */
+
+const SYNC_CHUNK_SIZE = 50
+
+async function syncSalesInChunks(sales: unknown[]): Promise<{ synced: number; created: number; errors: number; needsPhotoBackfill: Array<{ findId: string; photos: string[] }> }> {
+  let totalSynced = 0, totalCreated = 0, totalErrors = 0
+  const allPhotoBackfill: Array<{ findId: string; photos: string[] }> = []
+
+  for (let i = 0; i < sales.length; i += SYNC_CHUNK_SIZE) {
+    const chunk = sales.slice(i, i + SYNC_CHUNK_SIZE)
+    const result = await fetchApi<{
+      synced: number
+      created: number
+      errors: number
+      needsPhotoBackfill?: Array<{ findId: string; photos: string[] }>
+    }>('/api/vinted/sync-sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sales: chunk }),
+    })
+    totalSynced += result.synced
+    totalCreated += result.created
+    totalErrors += result.errors
+    if (result.needsPhotoBackfill) allPhotoBackfill.push(...result.needsPhotoBackfill)
+  }
+
+  return { synced: totalSynced, created: totalCreated, errors: totalErrors, needsPhotoBackfill: allPhotoBackfill }
+}
+
 /* ── Main Page ────────────────────────────────────────────────── */
 
 export default function SoldHistoryPage() {
@@ -392,18 +421,9 @@ export default function SoldHistoryPage() {
         return
       }
 
-      const syncData = await fetchApi<{
-        synced: number
-        created: number
-        errors: number
-        needsPhotoBackfill?: Array<{ findId: string; photos: string[] }>
-      }>('/api/vinted/sync-sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sales }),
-      })
+      const syncData = await syncSalesInChunks(sales)
 
-      if (syncData.needsPhotoBackfill && syncData.needsPhotoBackfill.length > 0) {
+      if (syncData.needsPhotoBackfill.length > 0) {
         await fetchApi('/api/finds/photo-backfill', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -454,10 +474,7 @@ export default function SoldHistoryPage() {
         return
       }
 
-      const syncData = await fetchApi<{ synced: number; created: number; errors: number }>(
-        '/api/vinted/sync-sales',
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sales }) }
-      )
+      const syncData = await syncSalesInChunks(sales)
 
       setSyncMessage(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
       loadSoldItems()
