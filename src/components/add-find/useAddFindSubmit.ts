@@ -5,6 +5,7 @@ import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.share
 import { FieldConfig } from '@/types'
 import type { FormData } from './useAddFindForm'
 import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import type { PublishProgress, MarketplaceStatus } from '@/components/publish/PublishProgressPanel'
 
 /** Resolve Vinted catalog ID — prefer category map, fall back to known working leaf IDs */
 function getVintedCatalogId(category: string): number | null {
@@ -48,10 +49,11 @@ interface SubmitDeps {
   setIsLoading: Dispatch<SetStateAction<boolean>>
   setError: Dispatch<SetStateAction<string | null>>
   setUploadProgress: Dispatch<SetStateAction<number>>
+  setPublishProgress: Dispatch<SetStateAction<PublishProgress | null>>
 }
 
 export function useAddFindSubmit(deps: SubmitDeps) {
-  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress } = deps
+  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress } = deps
 
   const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
     if (!formData.photos.length) return []
@@ -224,6 +226,19 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     setIsLoading(true)
     setError(null)
     setUploadProgress(0)
+
+    // Initialize publish progress
+    const initialMarketplaces: MarketplaceStatus[] = formData.selectedPlatforms.map(mp => ({
+      marketplace: mp,
+      status: 'waiting' as const,
+    }))
+    setPublishProgress({
+      step: 'saving',
+      photoCount: formData.photos.length,
+      photosUploaded: 0,
+      marketplaces: initialMarketplaces,
+    })
+
     try {
       await checkPlanLimit()
       const response = await fetch('/api/finds', {
@@ -238,9 +253,11 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       const data = await response.json()
       const findId = data?.data?.id || data?.id
 
+      // Step 2: Upload photos
       if (findId && formData.photos.length > 0) {
-        setError('Uploading photos...')
+        setPublishProgress(prev => prev ? { ...prev, step: 'uploading', findId } : prev)
         const uploadedPhotoUrls = await uploadPhotosToStorage(findId)
+        setPublishProgress(prev => prev ? { ...prev, photosUploaded: formData.photos.length } : prev)
         setUploadProgress(50)
         const patchResponse = await fetch(`/api/finds/${findId}`, {
           method: 'PATCH',
@@ -255,8 +272,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
 
       setUploadProgress(75)
 
+      // Step 3: Publish to marketplaces
       if (formData.selectedPlatforms.length > 0) {
-        setError('Publishing to marketplaces...')
+        setPublishProgress(prev => prev ? { ...prev, step: 'publishing', findId } : prev)
         try {
           const crosslistRes = await fetch('/api/crosslist/publish', {
             method: 'POST',
@@ -265,25 +283,42 @@ export function useAddFindSubmit(deps: SubmitDeps) {
           })
           const crosslistData = await crosslistRes.json()
           const results = crosslistData.data?.results || {}
+
+          // Update marketplace statuses from publish response
+          const updatedMarketplaces: MarketplaceStatus[] = formData.selectedPlatforms.map(mp => {
+            const r = results[mp] as { ok: boolean; listingUrl?: string; error?: string } | undefined
+            if (!r) return { marketplace: mp, status: 'queued' as const }
+            if (r.ok) return {
+              marketplace: mp,
+              status: r.listingUrl ? 'listed' as const : 'queued' as const,
+              listingUrl: r.listingUrl,
+            }
+            return { marketplace: mp, status: 'error' as const, error: r.error }
+          })
+          setPublishProgress(prev => prev ? {
+            ...prev,
+            step: 'polling',
+            findId,
+            marketplaces: updatedMarketplaces,
+          } : prev)
+
           const failures = Object.entries(results)
             .filter(([, r]: [string, unknown]) => !(r as { ok: boolean }).ok)
             .map(([p, r]: [string, unknown]) => `${p}: ${(r as { error?: string }).error}`)
-          if (failures.length > 0) {
-            setError(`Saved but publish failed — ${failures.join(', ')}. Check Platform Connect.`)
-            setIsLoading(false)
-            return
+          if (failures.length > 0 && failures.length === formData.selectedPlatforms.length) {
+            // All platforms failed
+            setError(`Saved but all publishes failed. Check Platform Connect.`)
           }
+          // Don't redirect — progress panel will handle navigation
         } catch {
           setError('Saved but crosslist request failed. You can retry from the inventory page.')
-          setIsLoading(false)
-          return
         }
       }
 
       setUploadProgress(100)
-      setError(null)
-      router.push(`/finds`)
+      // Don't redirect — progress panel polls and user clicks "View in Finds"
     } catch (err) {
+      setPublishProgress(null) // Close progress panel on fatal error
       setError((err as Error).message || 'An error occurred')
     } finally {
       setIsLoading(false)

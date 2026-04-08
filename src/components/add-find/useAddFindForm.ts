@@ -67,6 +67,7 @@ export function useAddFindForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [publishProgress, setPublishProgress] = useState<import('@/components/publish/PublishProgressPanel').PublishProgress | null>(null)
   const [fieldConfig, setFieldConfig] = useState<Record<string, FieldConfig> | null>(null)
   const [incompleteRequiredFields, setIncompleteRequiredFields] = useState<Set<string>>(new Set())
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
@@ -333,6 +334,8 @@ export function useAddFindForm() {
     setError,
     uploadProgress,
     setUploadProgress,
+    publishProgress,
+    setPublishProgress,
     fieldConfig,
     incompleteRequiredFields,
     setIncompleteRequiredFields,

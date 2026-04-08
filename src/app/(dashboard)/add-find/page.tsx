@@ -15,6 +15,7 @@ import InternalDetailsSection from '@/components/add-find/InternalDetailsSection
 import { useAddFindForm } from '@/components/add-find/useAddFindForm'
 import { useAddFindHandlers } from '@/components/add-find/useAddFindHandlers'
 import { useAddFindSubmit } from '@/components/add-find/useAddFindSubmit'
+import PublishProgressPanel from '@/components/publish/PublishProgressPanel'
 
 declare const chrome: any
 
@@ -37,12 +38,24 @@ export default function AddFindPage() {
     setIsLoading: form.setIsLoading,
     setError: form.setError,
     setUploadProgress: form.setUploadProgress,
+    setPublishProgress: form.setPublishProgress,
   })
 
   return (
     <>
+      {/* Publish progress panel */}
+      {form.publishProgress && (
+        <PublishProgressPanel
+          progress={form.publishProgress}
+          onClose={() => {
+            form.setPublishProgress(null)
+            form.router.push('/finds')
+          }}
+        />
+      )}
+
       {/* Error message */}
-      {form.error && (
+      {form.error && !form.publishProgress && (
         <div className="max-w-2xl mx-auto mb-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 px-4 py-3">
           {form.error}
         </div>
