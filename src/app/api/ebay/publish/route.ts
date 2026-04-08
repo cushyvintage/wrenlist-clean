@@ -178,18 +178,29 @@ export async function POST(request: NextRequest) {
         aspects['Department'] = inferDepartment(category)
       } else if (field.name === 'Language') {
         aspects['Language'] = 'English'
-      } else if (field.name === 'Type' && !aspects['Type']) {
-        aspects['Type'] = 'Not Specified'
+      } else if (field.name === 'Book Title') {
+        aspects['Book Title'] = find.name
+      } else if (field.name === 'Author' && !aspects['Author']) {
+        aspects['Author'] = 'Various'
+      } else if (field.name === 'Type') {
+        // Infer type from category slug (last segment often matches)
+        const lastSegment = category.split('_').pop() || ''
+        aspects['Type'] = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/_/g, ' ')
       } else if (field.name === 'Material' && !aspects['Material']) {
-        aspects['Material'] = 'Not Specified'
+        aspects['Material'] = 'Mixed'
       } else if (field.name === 'Style' && !aspects['Style']) {
-        aspects['Style'] = 'Not Specified'
+        aspects['Style'] = 'Vintage'
       } else if (field.name === 'EAN' && !aspects['EAN']) {
         aspects['EAN'] = 'Does not apply'
       } else if (field.name === 'Outer Shell Material' && !aspects['Outer Shell Material']) {
-        aspects['Outer Shell Material'] = aspects['Material'] || 'Not Specified'
+        aspects['Outer Shell Material'] = aspects['Material'] || 'Mixed'
       } else if (field.name === 'Upper Material' && !aspects['Upper Material']) {
-        aspects['Upper Material'] = aspects['Material'] || 'Not Specified'
+        aspects['Upper Material'] = aspects['Material'] || 'Mixed'
+      } else if (field.name === 'Colour' && !aspects['Colour']) {
+        aspects['Colour'] = 'Multicoloured'
+      } else if (!aspects[field.name]) {
+        // Catch-all: set 'Does not apply' for any remaining required field
+        aspects[field.name] = 'Does not apply'
       }
     }
 
