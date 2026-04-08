@@ -21,6 +21,7 @@
  */
 
 import { Badge } from './Badge'
+import { formatCategory } from '@/lib/format-category'
 import type { Find } from '@/types'
 
 interface InventoryRowProps {
@@ -71,7 +72,7 @@ export function InventoryRow({ find, onClick }: InventoryRowProps) {
           <div>
             <div className="font-medium text-ink text-sm">{find.name}</div>
             <div className="text-xs text-ink-lt">
-              {find.category}
+              {formatCategory(find.category)}
               {find.source_name && ` · ${find.source_name}`}
             </div>
           </div>

@@ -5,8 +5,8 @@ import { useState } from 'react'
 
 const PricingCard = ({ tier, price, description, limit, features, featured = false }: any) => (
   <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-sage bg-opacity-5 bg-sage relative' : 'border-[rgba(61,92,58,0.14)] bg-cream'}`}>
-    {featured && <div className="absolute top-3 right-3 text-10px font-semibold uppercase bg-sage-pale text-sage px-2 py-1 rounded">most popular</div>}
-    <div className="text-sm font-medium text-ink mb-4">{tier}</div>
+    {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-sage-pale text-sage px-2 py-1 rounded">most popular</div>}
+    <div className={`text-sm font-medium text-ink mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
     <div className="flex items-baseline gap-1 mb-2">
       <span className="text-sm font-light text-ink-lt">£</span>
       <span className="font-serif text-3xl font-medium text-ink">{price}</span>
@@ -77,7 +77,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-cream">
       {/* NAV */}
-      <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream px-10 py-4">
+      <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream px-6 sm:px-10 py-4 overflow-hidden">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="h-9 w-9 flex-shrink-0 bg-sage"></div>
           <div className="font-serif text-xl font-medium tracking-wider text-ink">
@@ -117,7 +117,7 @@ export default function PricingPage() {
         </div>
 
         {/* PRICING CARDS */}
-        <div className="grid grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-4 gap-6 mb-12 pt-4">
           {plans.map((plan, i) => (
             <PricingCard key={i} {...plan} />
           ))}

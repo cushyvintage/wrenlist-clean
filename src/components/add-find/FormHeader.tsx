@@ -27,7 +27,7 @@ export default function FormHeader({
     <div className="space-y-4">
       {/* Title row with template button */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg sm:text-xl font-semibold text-ink">Add a find</h1>
+        <h1 className="text-lg sm:text-xl font-serif italic text-ink">Add a find</h1>
         <TemplatePickerPopover onSelectTemplate={onSelectTemplate} />
       </div>
 

@@ -107,7 +107,7 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       {/* Disclaimer */}
-      <div className="bg-blue-lt border border-blue-dk/20 rounded-md p-4 text-sm text-blue-dk">
+      <div className="bg-[rgba(61,92,58,0.08)] border border-[rgba(61,92,58,0.2)] rounded-lg p-4 text-sm text-[#3D5C3A]">
         <strong>Disclaimer:</strong> Wrenlist helps you track your business expenses — you are responsible for your own tax filings. Always consult an accountant for advice.
       </div>
 
@@ -153,9 +153,12 @@ export default function ExpensesPage() {
         <button
           key="all"
           onClick={() => setActiveCategory(null)}
-          className={`px-4 py-2 rounded text-sm font-medium transition ${
-            activeCategory === null ? 'bg-sage text-cream' : 'bg-cream-md text-ink-lt hover:bg-cream-dk'
-          }`}
+          className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
+          style={
+            activeCategory === null
+              ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
+              : { backgroundColor: 'transparent', borderColor: 'rgba(61,92,58,.22)', borderWidth: '1px', color: '#6B7D6A' }
+          }
         >
           all
         </button>
@@ -163,11 +166,12 @@ export default function ExpensesPage() {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-4 py-2 rounded text-sm font-medium transition ${
+            className="px-[10px] py-[3px] text-[11px] font-medium transition-colors capitalize whitespace-nowrap rounded-[20px]"
+            style={
               activeCategory === cat.id
-                ? 'bg-sage text-cream'
-                : 'bg-cream-md text-ink-lt hover:bg-cream-dk'
-            }`}
+                ? { backgroundColor: '#D4E2D2', borderColor: '#3D5C3A', borderWidth: '1px', color: '#3D5C3A' }
+                : { backgroundColor: 'transparent', borderColor: 'rgba(61,92,58,.22)', borderWidth: '1px', color: '#6B7D6A' }
+            }
           >
             {cat.label}
           </button>

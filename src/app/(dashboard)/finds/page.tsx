@@ -7,6 +7,7 @@ import { Badge } from '@/components/wren/Badge'
 import { PLAN_LIMITS } from '@/config/plans'
 import type { Find, Profile, PlanId } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { formatCategory } from '@/lib/format-category'
 
 // Emoji mapping for categories
 const categoryEmojis: Record<string, string> = {
@@ -746,8 +747,8 @@ export default function InventoryPage() {
                           <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
                             {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
                           </div>
-                          <div className="text-[11px] capitalize" style={{ color: '#6B7D6A' }}>
-                            {find.category}
+                          <div className="text-[11px]" style={{ color: '#6B7D6A' }}>
+                            {formatCategory(find.category)}
                           </div>
                         </div>
                       </div>
