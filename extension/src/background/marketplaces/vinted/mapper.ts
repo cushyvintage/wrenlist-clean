@@ -804,6 +804,7 @@ export class VintedMapper {
       feedback_id: null,
       push_up: false,
       parcel: null,
+      package_size_id: packageSizeId,
       upload_session_id: uploadSessionId,
       // shippingAddress is stripped by client.ts before posting, used for address fallback
       shippingAddress: product.shipping.shippingAddress,
