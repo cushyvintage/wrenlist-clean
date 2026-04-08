@@ -195,6 +195,21 @@ export async function POST(request: NextRequest) {
       aspects['Style'] = 'Vintage'
     }
 
+    // Dress Length — required for dresses
+    if (!aspects['Dress Length'] && category.includes('dresses')) {
+      aspects['Dress Length'] = 'Midi'
+    }
+
+    // Neckline — commonly required for tops/dresses
+    if (!aspects['Neckline'] && (category.includes('dresses') || category.includes('tops'))) {
+      aspects['Neckline'] = 'Round Neck'
+    }
+
+    // Sleeve Length — commonly required for clothing
+    if (!aspects['Sleeve Length'] && category.startsWith('clothing')) {
+      aspects['Sleeve Length'] = 'Short Sleeve'
+    }
+
     // Brand — required for most categories, default to 'Unbranded' if not set
     if (!aspects['Brand']) {
       aspects['Brand'] = 'Unbranded'
