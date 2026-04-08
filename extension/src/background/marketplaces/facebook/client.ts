@@ -260,7 +260,16 @@ export class FacebookClient {
 
     const text = await response.text();
     const trimmed = text.replace("for (;;);", "");
-    return JSON.parse(trimmed);
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!parsed?.payload?.photoID) {
+        console.error('[Facebook] Photo upload returned no photoID:', JSON.stringify(parsed).substring(0, 300));
+      }
+      return parsed;
+    } catch {
+      console.error('[Facebook] Photo upload response not JSON:', text.substring(0, 200));
+      return {};
+    }
   }
 
   private async fetchCarriers(

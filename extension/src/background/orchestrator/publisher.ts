@@ -133,9 +133,19 @@ async function publishViaMercari(product: Product) {
 }
 
 async function publishViaVinted(product: Product, tld: string) {
+  console.log('[DEBUG publishViaVinted] product:', JSON.stringify({
+    vintedCatalogId: (product as any).vintedCatalogId,
+    category: product.category,
+    color: product.color,
+    dynColorIds: product.dynamicProperties?.colorIds,
+    dynCatalogId: product.dynamicProperties?.vintedCatalogId,
+    size: product.size,
+    title: product.title?.substring(0, 40),
+  }));
   const services = createVintedServices({ tld });
   await services.client.bootstrap();
   let payload = await services.mapProduct(product);
+  console.log('[DEBUG publishViaVinted] payload keys:', Object.keys(payload), 'item keys:', payload.item ? Object.keys(payload.item) : 'NO ITEM');
   let result = await services.client.postListing(payload);
 
   if (!result.success && needsVintedTokenRefresh(result)) {
@@ -151,8 +161,9 @@ async function publishViaFacebook(product: Product, tld: string) {
   const services = createFacebookServices(tld);
   await services.client.bootstrap();
   let result = await services.client.postListing(product);
-  if (!result.success && !result.needsLogin && includesCsrfError(result)) {
-    // Only retry on CSRF/session errors — not on content or auth failures
+  if (!result.success && !result.needsLogin &&
+      (includesCsrfError(result) || result.message?.includes('Unable to upload photos'))) {
+    // Retry with fresh session — stale fb_dtsg causes photo upload failures
     await services.client.bootstrap(true);
     result = await services.client.postListing(product);
   }
