@@ -1,11 +1,7 @@
-'use client'
-
 import Link from 'next/link'
-import { useState } from 'react'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 
 export default function BlogPage() {
-  const [activeTag, setActiveTag] = useState('all')
 
   const posts = [
     {
@@ -80,17 +76,17 @@ export default function BlogPage() {
           <div className="text-10px font-semibold uppercase tracking-wider text-sage-dim mb-2.5">the wrenlist blog</div>
           <div className="flex gap-2 flex-wrap">
             {['all', 'sourcing', 'pricing', 'platforms', 'tax & finance', 'wrenlist updates'].map((tag) => (
-              <button
+              <a
                 key={tag}
-                onClick={() => setActiveTag(tag)}
+                href={`?tag=${tag}`}
                 className={`text-xs font-medium rounded px-3 py-1.5 transition-colors ${
-                  activeTag === tag
+                  tag === 'all'
                     ? 'bg-sage text-cream'
                     : 'bg-cream-md text-ink-lt border border-[rgba(61,92,58,0.14)] hover:text-ink'
                 }`}
               >
                 {tag}
-              </button>
+              </a>
             ))}
           </div>
         </div>

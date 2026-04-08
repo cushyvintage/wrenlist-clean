@@ -1,7 +1,4 @@
-'use client'
-
 import Link from 'next/link'
-import { useState } from 'react'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 
 interface RoadmapCardProps {
@@ -36,8 +33,6 @@ const RoadmapCard = ({ title, desc, votes, tag, featured = false }: RoadmapCardP
 )
 
 export default function RoadmapPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-
   const consideration = [
     { title: 'Depop integration', desc: 'List and sync inventory to Depop — popular with Gen Z vintage buyers.', votes: 84, tag: 'marketplace' },
     { title: 'Facebook Marketplace integration', desc: 'Crosslist finds to local Facebook Marketplace listings.', votes: 61, tag: 'marketplace' },
@@ -93,8 +88,6 @@ export default function RoadmapPage() {
                 <input
                   type="text"
                   placeholder="Search features…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="text-xs bg-transparent border-none outline-none flex-1 text-ink placeholder-ink-lt"
                 />
               </div>
