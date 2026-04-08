@@ -9,6 +9,7 @@ import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { useEbayConnection } from '@/hooks/useEbayConnection'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionInfo, EXTENSION_ID } from '@/hooks/useExtensionInfo'
+import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { CheckCircle2 } from 'lucide-react'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import type { Find } from '@/types'
@@ -58,19 +59,31 @@ export default function PlatformConnectPage() {
   const [extensionDetected, setExtensionDetected] = useState<boolean | null>(null)
   const [extensionVersion, setExtensionVersion] = useState<string | null>(null)
   const extensionInfo = useExtensionInfo()
+  const heartbeat = useExtensionHeartbeat()
+  // True when chrome.runtime.sendMessage is unavailable (mobile, Safari, non-Chrome).
+  // Computed once after mount to avoid SSR hydration mismatch.
+  const [isMobileOrNonChrome, setIsMobileOrNonChrome] = useState(false)
+  useEffect(() => {
+    setIsMobileOrNonChrome(typeof chrome === 'undefined' || !chrome.runtime?.sendMessage)
+  }, [])
   const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
   const [vintedActionError, setVintedActionError] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
 
 
-  // Sync extension info from hook into local state
+  // Sync extension info: browser ping on desktop, heartbeat fallback on mobile
   useEffect(() => {
     if (extensionInfo.detected !== null) {
+      // Desktop Chrome: direct ping succeeded or failed
       setExtensionDetected(extensionInfo.detected)
       setExtensionVersion(extensionInfo.version)
+    } else if (isMobileOrNonChrome && heartbeat.online !== null) {
+      // Mobile/non-Chrome: fall back to server-side heartbeat
+      setExtensionDetected(heartbeat.online)
+      setExtensionVersion(heartbeat.version)
     }
-  }, [extensionInfo.detected, extensionInfo.version])
+  }, [extensionInfo.detected, extensionInfo.version, heartbeat.online, heartbeat.version, isMobileOrNonChrome])
 
   // Check if debug panel should show (development or ?debug=1 param)
   useEffect(() => {
@@ -527,7 +540,7 @@ export default function PlatformConnectPage() {
       )}
 
       {/* Extension banner */}
-      <div className={`flex items-center gap-4 p-4 rounded border ${extensionDetected ? 'bg-sage-pale border-sage' : extensionDetected === null ? 'bg-cream border-border' : 'bg-red-50 border-red/30'}`}>
+      <div className={`flex items-center gap-4 p-4 rounded border ${extensionDetected ? 'bg-sage-pale border-sage' : extensionDetected === null ? 'bg-cream border-border' : 'bg-amber-50 border-amber/30'}`}>
         <div className="flex-shrink-0">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Wrenlist Extension">
             <rect width="24" height="24" rx="6" fill="#5E7D5E" />
@@ -545,19 +558,29 @@ export default function PlatformConnectPage() {
             ) : extensionDetected ? (
               <div className="flex items-center gap-1 text-xs font-semibold text-sage uppercase tracking-wide">
                 <div className="w-1 h-1 rounded-full bg-sage"></div>
-                connected
+                {isMobileOrNonChrome ? 'running on desktop' : 'connected'}
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-xs font-semibold text-red uppercase tracking-wide">
-                <div className="w-1 h-1 rounded-full bg-red"></div>
-                not detected
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                <div className="w-1 h-1 rounded-full bg-amber-700"></div>
+                {isMobileOrNonChrome ? 'offline' : 'not detected'}
               </div>
             )}
           </div>
-          <div className="text-xs text-ink-lt">Chrome{extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting</div>
+          <div className="text-xs text-ink-lt">
+            {extensionDetected && isMobileOrNonChrome && heartbeat.lastSeenAt
+              ? `Last seen ${new Date(heartbeat.lastSeenAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
+              : `Chrome desktop${extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting`
+            }
+          </div>
         </div>
-        <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0">
-          Open extension from your browser toolbar
+        <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0 hidden sm:block">
+          {isMobileOrNonChrome
+            ? extensionDetected
+              ? 'Manage from Chrome on your desktop'
+              : 'Install in Chrome on your desktop'
+            : 'Open extension from your browser toolbar'
+          }
         </span>
       </div>
 
@@ -852,7 +875,13 @@ export default function PlatformConnectPage() {
             </div>
 
             <p className="text-xs text-ink-lt text-center">
-              {vintedLoading || extensionDetected === null ? 'Checking status...' : extensionDetected ? 'Extension detected ✓' : 'Extension not detected. Install it to continue.'}
+              {vintedLoading || extensionDetected === null
+                ? 'Checking status...'
+                : extensionDetected
+                  ? 'Extension detected ✓'
+                  : isMobileOrNonChrome
+                    ? 'Extension offline — open Chrome on your desktop to connect'
+                    : 'Extension not detected. Install it to continue.'}
             </p>
           </div>
         ) : (
