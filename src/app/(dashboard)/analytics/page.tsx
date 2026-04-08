@@ -11,12 +11,21 @@ interface AnalyticsSummary {
   total_finds: number
   listed_finds: number
   sold_finds: number
-  total_revenue_gbp: number
-  total_cost_gbp: number
-  gross_margin_pct: number
+  draft_finds: number
+  total_sales: number
+  cogs: number
+  gross_profit: number
+  profit_margin_pct: number
+  avg_profit_per_item: number
+  stock_cost: number
+  stock_listed_value: number
+  stock_count: number
   avg_days_to_sell: number
-  this_month_finds: number
-  this_month_revenue: number
+  sell_through_pct: number
+  this_month_sales: number
+  this_month_profit: number
+  this_month_items_sold: number
+  this_month_items_sourced: number
   this_month_expenses: number
   this_month_mileage_gbp: number
 }
@@ -31,31 +40,45 @@ interface CategoryAnalytics {
 
 interface MonthlyData {
   month: string
-  revenue: number
-  percentage: number
-  highlight?: boolean
+  label: string
+  sales: number
+  profit: number
+  items_sold: number
+  items_sourced: number
 }
 
-interface PlatformData {
-  platform: string
-  revenue: number
-  percentage: number
+interface MarketplaceData {
+  marketplace: string
+  listed_count: number
+  sold_count: number
+  total_revenue: number
 }
 
 interface AgingData {
   aged_30: number
   aged_60: number
+  aged_90: number
+  aged_stock_value: number
   oldest_item: {
     name: string
     days_listed: number
     category: string | null
+    cost_gbp: number | null
+    asking_price_gbp: number | null
   } | null
 }
 
+function formatGBP(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+  return value.toFixed(0)
+}
+
 export default function AnalyticsPage() {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('month')
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('all')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [categories, setCategories] = useState<CategoryAnalytics[]>([])
+  const [monthly, setMonthly] = useState<MonthlyData[]>([])
+  const [marketplaces, setMarketplaces] = useState<MarketplaceData[]>([])
   const [aging, setAging] = useState<AgingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -70,23 +93,24 @@ export default function AnalyticsPage() {
         setIsLoading(true)
         setError(null)
 
-        const [summaryRes, categoriesRes, agingRes] = await Promise.all([
-          fetch('/api/analytics/summary'),
-          fetch('/api/analytics/by-category'),
-          fetch('/api/analytics/aging'),
-        ])
+        const [summaryRes, categoriesRes, monthlyRes, marketplaceRes, agingRes] =
+          await Promise.all([
+            fetch(`/api/analytics/summary?period=${timePeriod}`),
+            fetch('/api/analytics/by-category'),
+            fetch('/api/analytics/monthly'),
+            fetch('/api/analytics/by-marketplace'),
+            fetch('/api/analytics/aging'),
+          ])
 
-        if (!summaryRes.ok || !categoriesRes.ok || !agingRes.ok) {
-          throw new Error('Failed to fetch analytics data')
-        }
+        if (!summaryRes.ok) throw new Error('Failed to fetch summary')
 
         const summaryData = await summaryRes.json()
-        const categoriesData = await categoriesRes.json()
-        const agingData = await agingRes.json()
-
         setSummary(summaryData)
-        setCategories(categoriesData)
-        setAging(agingData)
+
+        if (categoriesRes.ok) setCategories(await categoriesRes.json())
+        if (monthlyRes.ok) setMonthly(await monthlyRes.json())
+        if (marketplaceRes.ok) setMarketplaces(await marketplaceRes.json())
+        if (agingRes.ok) setAging(await agingRes.json())
       } catch (err) {
         console.error('Error fetching analytics:', err)
         setError(err instanceof Error ? err.message : 'Failed to load analytics')
@@ -96,30 +120,10 @@ export default function AnalyticsPage() {
     }
 
     fetchData()
-  }, [])
+  }, [timePeriod])
 
-  // Generate monthly data for visualization (last 6 months)
-  const monthlyData: MonthlyData[] = (() => {
-    const now = new Date()
-    const labels: string[] = []
-
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      labels.push(d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }))
-    }
-
-    // For now, use this month's revenue across the timeline
-    // In production, you'd want detailed monthly breakdown
-    const now_key = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-    const maxRevenue = Math.max(summary?.this_month_revenue || 1, 1)
-
-    return labels.map((month) => ({
-      month: month.split(' ')[0] || month,
-      revenue: month === now_key ? summary?.this_month_revenue || 0 : 0,
-      percentage: month === now_key ? 100 : 0,
-      highlight: month === now_key,
-    }))
-  })()
+  // Chart helpers
+  const maxSales = Math.max(...monthly.map((m) => m.sales), 1)
 
   if (error) {
     return (
@@ -158,34 +162,91 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Hero stats */}
+      {/* Hero stats — the numbers that matter */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-20 bg-sage/10 rounded animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
-            label="Total revenue"
-            value={summary?.total_revenue_gbp || 0}
+            label="Profit"
+            value={summary?.gross_profit || 0}
             prefix="£"
-            delta={summary ? `${summary.sold_finds} items sold` : 'no sales yet'}
-            suffix=""
+            delta={
+              summary && summary.sold_finds > 0
+                ? `£${summary.avg_profit_per_item.toFixed(0)} avg per item`
+                : 'no sales yet'
+            }
           />
           <StatCard
-            label="Gross margin"
-            value={summary?.gross_margin_pct || 0}
+            label="Total sales"
+            value={summary?.total_sales || 0}
+            prefix="£"
+            delta={
+              summary ? `${summary.sold_finds} item${summary.sold_finds !== 1 ? 's' : ''} sold` : '—'
+            }
+          />
+          <StatCard
+            label="Profit margin"
+            value={summary?.profit_margin_pct || 0}
             suffix="%"
-            delta={summary ? 'from sold items' : '—'}
+            delta={summary && summary.cogs > 0 ? `£${summary.cogs.toFixed(0)} COGS` : '—'}
           />
           <StatCard
-            label="Avg days to sell"
-            value={summary?.avg_days_to_sell || 0}
-            suffix=" days"
-            delta={summary ? 'average' : '—'}
+            label="Sell-through rate"
+            value={summary?.sell_through_pct || 0}
+            suffix="%"
+            delta={
+              summary
+                ? `${summary.avg_days_to_sell}d avg to sell`
+                : '—'
+            }
           />
+        </div>
+      )}
+
+      {/* Stock value card */}
+      {!isLoading && summary && summary.stock_count > 0 && (
+        <div className="bg-white border border-sage/14 rounded-md p-5">
+          <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
+            Stock on hand
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-[11px] text-ink-lt mb-1">Items in stock</div>
+              <div className="font-serif text-xl text-ink">{summary.stock_count}</div>
+              <div className="text-[11px] text-ink-lt">
+                {summary.listed_finds} listed · {summary.draft_finds} draft
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-1">What you paid</div>
+              <div className="font-serif text-xl text-ink">
+                <span className="font-mono text-sm">£</span>
+                {formatGBP(summary.stock_cost)}
+              </div>
+              <div className="text-[11px] text-ink-lt">capital tied up</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-1">Listed value</div>
+              <div className="font-serif text-xl text-ink">
+                <span className="font-mono text-sm">£</span>
+                {formatGBP(summary.stock_listed_value)}
+              </div>
+              <div className="text-[11px] text-ink-lt">asking prices</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-1">Potential profit</div>
+              <div className="font-serif text-xl text-ink" style={{ color: '#4A7A45' }}>
+                <span className="font-mono text-sm">£</span>
+                {formatGBP(summary.stock_listed_value - summary.stock_cost)}
+              </div>
+              <div className="text-[11px] text-ink-lt">if all sells at asking</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -197,74 +258,115 @@ export default function AnalyticsPage() {
       )}
 
       {/* Aged stock alert */}
-      {!isLoading && aging && (aging.aged_30 > 0 || aging.aged_60 > 0) && (
-        <div className="bg-amber/10 border border-amber/30 rounded p-4">
-          <p className="text-sm text-amber font-medium mb-2">
-            📦 Aged stock alert
-          </p>
-          <p className="text-sm text-amber-900 mb-3">
-            {aging.aged_60} items listed 60+ days · {aging.aged_30 - aging.aged_60} items listed 30+ days
-            {aging.oldest_item && (
-              <>
-                <br />
-                <span className="text-xs">Oldest: {aging.oldest_item.name} ({aging.oldest_item.days_listed}d)</span>
-              </>
+      {!isLoading && aging && aging.aged_30 > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+          <p className="text-sm text-amber-700 font-medium mb-2">Aged stock alert</p>
+          <p className="text-sm text-amber-900 mb-1">
+            {aging.aged_90 > 0 && <>{aging.aged_90} items 90+ days · </>}
+            {aging.aged_60 - (aging.aged_90 || 0) > 0 && (
+              <>{aging.aged_60 - (aging.aged_90 || 0)} items 60+ days · </>
             )}
+            {aging.aged_30 - aging.aged_60} items 30+ days
           </p>
-          <button
-            onClick={() => {
-              // Navigate to inventory with aging filter
-              window.location.href = '/finds?filter=aging'
-            }}
-            className="text-sm underline underline-offset-2 text-amber hover:text-amber-900 transition-colors"
-          >
-            Review aged inventory →
-          </button>
+          {aging.aged_stock_value > 0 && (
+            <p className="text-xs text-amber-800 mb-2">
+              £{aging.aged_stock_value.toFixed(0)} tied up in aging stock
+            </p>
+          )}
+          {aging.oldest_item && (
+            <p className="text-xs text-amber-700">
+              Oldest: {aging.oldest_item.name} ({aging.oldest_item.days_listed}d)
+            </p>
+          )}
         </div>
       )}
 
-      {/* Charts and tables */}
+      {/* This month snapshot */}
+      {!isLoading && summary && (
+        <Panel title="this month">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <div className="text-[11px] text-ink-lt mb-0.5">Sales</div>
+              <div className="font-mono text-sm font-medium text-ink">
+                £{summary.this_month_sales.toFixed(0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-0.5">Profit</div>
+              <div
+                className="font-mono text-sm font-medium"
+                style={{ color: summary.this_month_profit >= 0 ? '#4A7A45' : '#dc2626' }}
+              >
+                £{summary.this_month_profit.toFixed(0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-0.5">Items sold</div>
+              <div className="font-mono text-sm font-medium text-ink">
+                {summary.this_month_items_sold}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-0.5">Items sourced</div>
+              <div className="font-mono text-sm font-medium text-ink">
+                {summary.this_month_items_sourced}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-ink-lt mb-0.5">Expenses + mileage</div>
+              <div className="font-mono text-sm font-medium text-ink">
+                £{(summary.this_month_expenses + summary.this_month_mileage_gbp).toFixed(0)}
+              </div>
+            </div>
+          </div>
+        </Panel>
+      )}
+
+      {/* Charts row */}
       {!isLoading && summary && summary.total_finds > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Monthly revenue chart - spans 2 columns */}
+          {/* Monthly sales chart — real data */}
           <div className="lg:col-span-2">
-            <Panel title="monthly revenue">
-              {monthlyData.some((m) => m.revenue > 0) ? (
+            <Panel title="monthly sales">
+              {monthly.some((m) => m.sales > 0) ? (
                 <div className="space-y-4">
-                  {/* Bar chart */}
                   <div className="flex items-end gap-2 h-40 px-2">
-                    {monthlyData.map((item) => (
-                      <div
-                        key={item.month}
-                        className="flex-1 flex flex-col items-center gap-1.5"
-                      >
-                        {/* Value label */}
+                    {monthly.map((item, idx) => {
+                      const isLast = idx === monthly.length - 1
+                      const pct = maxSales > 0 ? (item.sales / maxSales) * 100 : 0
+                      return (
                         <div
-                          className={`text-xs font-mono font-medium ${
-                            item.highlight ? 'text-sage' : 'text-ink-md'
-                          }`}
+                          key={item.month}
+                          className="flex-1 flex flex-col items-center gap-1.5"
                         >
-                          £{item.revenue > 0 ? item.revenue.toFixed(0) : '0'}
+                          <div
+                            className={`text-xs font-mono font-medium ${
+                              isLast ? 'text-sage' : 'text-ink-md'
+                            }`}
+                          >
+                            {item.sales > 0 ? `£${formatGBP(item.sales)}` : '—'}
+                          </div>
+                          <div
+                            className={`w-full rounded-t transition-all ${
+                              isLast ? 'bg-sage' : 'bg-sage-pale'
+                            }`}
+                            style={{ height: `${Math.max(pct, 4)}%` }}
+                          />
+                          <div
+                            className={`text-xs font-medium ${
+                              isLast ? 'text-sage' : 'text-ink-lt'
+                            }`}
+                          >
+                            {item.label}
+                          </div>
+                          {item.items_sold > 0 && (
+                            <div className="text-[10px] text-ink-lt">
+                              {item.items_sold} sold
+                            </div>
+                          )}
                         </div>
-
-                        {/* Bar */}
-                        <div
-                          className={`w-full rounded-t ${
-                            item.highlight ? 'bg-sage' : 'bg-sage-pale'
-                          }`}
-                          style={{ height: `${Math.max(item.percentage, 5)}%` }}
-                        />
-
-                        {/* Month label */}
-                        <div
-                          className={`text-xs font-medium ${
-                            item.highlight ? 'text-sage' : 'text-ink-lt'
-                          }`}
-                        >
-                          {item.month} {item.highlight ? '↑' : ''}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               ) : (
@@ -273,84 +375,123 @@ export default function AnalyticsPage() {
             </Panel>
           </div>
 
-          {/* By Category table */}
-          <Panel title="by category">
-            {categories.length > 0 ? (
-              <table className="w-full text-sm">
-                <tbody>
-                  {categories.slice(0, 5).map((item, idx) => (
-                    <tr
-                      key={item.category}
-                      className={`border-b border-sage/14 ${
-                        idx === Math.min(categories.length - 1, 4) ? 'border-0' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-3 text-ink-md text-xs">{item.category}</td>
-                      <td className="py-3 px-3 text-right font-mono text-xs">
-                        £{item.total_revenue.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* By marketplace */}
+          <Panel title="by marketplace">
+            {marketplaces.length > 0 ? (
+              <div className="space-y-3">
+                {marketplaces.map((mp) => {
+                  const maxRev = Math.max(...marketplaces.map((m) => m.total_revenue), 1)
+                  const pct = (mp.total_revenue / maxRev) * 100
+                  return (
+                    <div key={mp.marketplace}>
+                      <div className="flex justify-between items-baseline mb-1">
+                        <span className="text-xs text-ink-md">{mp.marketplace}</span>
+                        <span className="font-mono text-xs text-ink">
+                          £{mp.total_revenue.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-sage/10 rounded-full">
+                        <div
+                          className="h-full bg-sage rounded-full transition-all"
+                          style={{ width: `${Math.max(pct, 3)}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-ink-lt mt-0.5">
+                        {mp.listed_count} listed · {mp.sold_count} sold
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             ) : (
-              <p className="text-ink-lt text-sm py-4">No categories yet</p>
+              <p className="text-ink-lt text-sm py-4">No marketplace data yet</p>
             )}
           </Panel>
         </div>
       )}
 
-      {/* Category breakdown table - full width */}
+      {/* Category breakdown table */}
       {!isLoading && summary && categories.length > 0 && (
         <Panel title="category breakdown">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
-              <tr>
-                <th className="text-left py-3 px-3">category</th>
-                <th className="text-right py-3 px-3">count</th>
-                <th className="text-right py-3 px-3">revenue</th>
-                <th className="text-right py-3 px-3">avg price</th>
-                <th className="text-right py-3 px-3">avg days</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((item, idx) => (
-                <tr
-                  key={item.category}
-                  className={`border-b border-sage/14 ${
-                    idx === categories.length - 1 ? 'border-0' : ''
-                  }`}
-                >
-                  <td className="py-3 px-3 text-ink-md">{item.category}</td>
-                  <td className="py-3 px-3 text-right font-mono text-xs">{item.count}</td>
-                  <td className="py-3 px-3 text-right font-mono text-xs">
-                    £{item.total_revenue.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-xs">
-                    £{item.avg_price.toFixed(2)}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-xs">
-                    {item.avg_days_to_sell}d
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
+                <tr>
+                  <th className="text-left py-3 px-3">category</th>
+                  <th className="text-right py-3 px-3">items</th>
+                  <th className="text-right py-3 px-3">revenue</th>
+                  <th className="text-right py-3 px-3">avg sold price</th>
+                  <th className="text-right py-3 px-3">avg days to sell</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {categories.map((item, idx) => (
+                  <tr
+                    key={item.category}
+                    className={`border-b border-sage/14 ${
+                      idx === categories.length - 1 ? 'border-0' : ''
+                    }`}
+                  >
+                    <td className="py-3 px-3 text-ink-md">{item.category}</td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">{item.count}</td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      £{item.total_revenue.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      {item.avg_price > 0 ? `£${item.avg_price.toFixed(0)}` : '—'}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      {item.avg_days_to_sell > 0 ? `${item.avg_days_to_sell}d` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
 
-      {/* Insight card */}
-      <InsightCard
-        text={
-          summary && summary.total_finds > 0
-            ? `You've listed ${summary.total_finds} items and sold ${summary.sold_finds} with an average margin of ${summary.gross_margin_pct}%. Keep up the momentum!`
-            : 'Add items to your inventory to start tracking metrics and insights.'
-        }
-        link={{
-          text: summary && summary.total_finds > 0 ? 'view inventory' : 'add first find',
-          onClick: () => {},
-        }}
-      />
+      {/* Dynamic insight */}
+      {!isLoading && summary && (
+        <InsightCard
+          type={summary.sell_through_pct > 50 ? 'tip' : 'info'}
+          text={generateInsight(summary, aging)}
+          link={{
+            text: summary.total_finds > 0 ? 'view inventory' : 'add first find',
+            onClick: () => {
+              window.location.href = summary.total_finds > 0 ? '/finds' : '/add-find'
+            },
+          }}
+        />
+      )}
     </div>
   )
+}
+
+function generateInsight(
+  summary: AnalyticsSummary,
+  aging: AgingData | null,
+): string {
+  if (summary.total_finds === 0) {
+    return 'Add items to your inventory to start tracking metrics and insights.'
+  }
+
+  if (summary.sold_finds === 0) {
+    return `You have ${summary.stock_count} items worth £${summary.stock_listed_value.toFixed(0)} listed. Once you start selling, profit and margin metrics will appear here.`
+  }
+
+  // Pick the most useful insight
+  if (aging && aging.aged_60 > 5) {
+    return `${aging.aged_60} items have been listed for over 60 days — £${aging.aged_stock_value.toFixed(0)} tied up. Consider repricing or bundling slow movers.`
+  }
+
+  if (summary.sell_through_pct >= 60) {
+    return `${summary.sell_through_pct}% sell-through rate is strong. You're averaging £${summary.avg_profit_per_item.toFixed(0)} profit per item across ${summary.sold_finds} sales.`
+  }
+
+  if (summary.profit_margin_pct < 30 && summary.sold_finds > 3) {
+    return `Your margin is ${summary.profit_margin_pct}% — tight for resale. Look at your best-performing categories and focus sourcing there.`
+  }
+
+  return `${summary.sold_finds} items sold at ${summary.profit_margin_pct}% margin, averaging £${summary.avg_profit_per_item.toFixed(0)} profit each. Sell-through rate: ${summary.sell_through_pct}%.`
 }
