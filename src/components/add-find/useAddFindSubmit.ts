@@ -196,6 +196,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
   const handlePublish = async () => {
     if (!formData.title.trim()) { setError('Title is required'); return }
     if (!formData.category) { setError('Category is required'); return }
+    if (!formData.price || formData.price <= 0) { setError('Price is required to publish'); return }
+    if (!formData.condition) { setError('Condition is required to publish'); return }
+    if (formData.photos.length === 0) { setError('At least one photo is required to publish'); return }
     if (formData.selectedPlatforms.length === 0) { setError('Select at least one marketplace'); return }
     if (formData.category && formData.selectedPlatforms.length > 0 && !fieldConfig) {
       setError('Loading field requirements — please try again'); return
