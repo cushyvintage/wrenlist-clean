@@ -206,11 +206,11 @@ function LoginInner() {
         <div className="mt-8 text-center text-xs text-ink-lt space-y-1">
           <p>Wrenlist is a SaaS for UK resellers</p>
           <p>
-            <a href="#" className="text-sage-lt hover:text-sage transition-colors">
+            <a href="/terms" className="text-sage-lt hover:text-sage transition-colors">
               Terms of Service
             </a>
             {' · '}
-            <a href="#" className="text-sage-lt hover:text-sage transition-colors">
+            <a href="/privacy" className="text-sage-lt hover:text-sage transition-colors">
               Privacy Policy
             </a>
           </p>

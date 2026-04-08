@@ -284,11 +284,11 @@ export default function RegisterPage() {
             {/* Terms */}
             <p className="text-center text-xs text-ink-lt mt-4">
               By signing up you agree to our{' '}
-              <a href="#" className="text-sage-lt hover:text-sage font-medium">
+              <a href="/terms" className="text-sage-lt hover:text-sage font-medium">
                 Terms
               </a>
               {' '}and{' '}
-              <a href="#" className="text-sage-lt hover:text-sage font-medium">
+              <a href="/privacy" className="text-sage-lt hover:text-sage font-medium">
                 Privacy Policy
               </a>
             </p>
@@ -307,11 +307,11 @@ export default function RegisterPage() {
         <div className="mt-8 text-center text-xs text-ink-lt space-y-1">
           <p>Wrenlist is a SaaS for UK resellers</p>
           <p>
-            <a href="#" className="text-sage-lt hover:text-sage transition-colors">
+            <a href="/terms" className="text-sage-lt hover:text-sage transition-colors">
               Terms of Service
             </a>
             {' · '}
-            <a href="#" className="text-sage-lt hover:text-sage transition-colors">
+            <a href="/privacy" className="text-sage-lt hover:text-sage transition-colors">
               Privacy Policy
             </a>
           </p>

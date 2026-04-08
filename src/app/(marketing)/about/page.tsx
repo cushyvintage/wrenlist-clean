@@ -1,16 +1,16 @@
-import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
+import { MarketingFooter } from '@/components/layout/MarketingFooter'
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-[#f5f0e8]">
       <MarketingNav />
 
       {/* HEADER */}
-      <div className="bg-white border-b border-[rgba(61,92,58,0.14)] px-12 py-12">
+      <div className="bg-white border-b border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-12">
         <div className="max-w-2xl mx-auto">
-          <div className="text-10px font-medium uppercase tracking-wider text-sage-dim mb-2.5">why wrenlist</div>
-          <h1 className="font-serif text-3xl font-light text-ink mb-1">
+          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">why wrenlist</div>
+          <h1 className="font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
             Not just another<br />
             <em className="italic">crosslisting tool.</em>
           </h1>
@@ -18,24 +18,24 @@ export default function AboutPage() {
       </div>
 
       {/* CONTENT */}
-      <div className="grid grid-cols-2 border-b border-[rgba(61,92,58,0.14)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-[rgba(61,92,58,0.14)]">
         {/* LEFT: THE PROBLEM */}
-        <div className="border-r border-[rgba(61,92,58,0.14)] px-12 py-10">
-          <h2 className="font-serif text-2xl font-light text-ink mb-3.5">The problem with other tools</h2>
-          <p className="text-sm font-light leading-relaxed text-ink-lt mb-4">
-            Vendoo and Crosslist are built for listing speed. They're great at taking something you've already decided to sell and pushing it to multiple platforms. That's useful.
+        <div className="border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-10">
+          <h2 className="font-serif text-2xl font-normal text-[#1e2e1c] mb-3.5">The problem with other tools</h2>
+          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a] mb-4">
+            Vendoo and Crosslist are built for listing speed. They&apos;re great at taking something you&apos;ve already decided to sell and pushing it to multiple platforms. That&apos;s useful.
           </p>
-          <p className="text-sm font-light leading-relaxed text-ink-lt mb-4">
-            But most UK thrifters don't have a listing problem. They have a <em className="font-serif text-base text-ink">business clarity</em> problem. What did I pay for this? Where did I source it? Which categories actually make money? Which platforms convert fastest? Which hauls were worth doing again?
+          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a] mb-4">
+            But most UK thrifters don&apos;t have a listing problem. They have a <em className="font-serif text-base text-[#1e2e1c]">business clarity</em> problem. What did I pay for this? Where did I source it? Which categories actually make money? Which platforms convert fastest? Which hauls were worth doing again?
           </p>
-          <p className="text-sm font-light leading-relaxed text-ink-lt">
+          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a]">
             Those questions live in a Notes app, a spreadsheet, or nowhere at all. Wrenlist is the answer to all of them — built specifically for the way UK thrifters actually work.
           </p>
         </div>
 
         {/* RIGHT: WHAT MAKES US DIFFERENT */}
-        <div className="px-12 py-10">
-          <h2 className="font-serif text-2xl font-light text-ink mb-4">What makes us different</h2>
+        <div className="px-5 sm:px-8 lg:px-12 py-10">
+          <h2 className="font-serif text-2xl font-normal text-[#1e2e1c] mb-4">What makes us different</h2>
           <div className="space-y-4">
             {[
               {
@@ -60,12 +60,12 @@ export default function AboutPage() {
               },
             ].map((item, i) => (
               <div key={i} className="flex gap-3.5 items-start">
-                <div className="w-8 h-8 rounded-full bg-sage-pale flex items-center justify-center flex-shrink-0 text-sm font-semibold text-sage mt-0.5">
+                <div className="w-8 h-8 rounded-full bg-[#d4e2d2] flex items-center justify-center flex-shrink-0 text-sm font-semibold text-[#5a7a57] mt-0.5">
                   {item.num}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-ink mb-1">{item.title}</div>
-                  <div className="text-sm font-light text-ink-lt leading-relaxed">{item.desc}</div>
+                  <div className="text-sm font-medium text-[#1e2e1c] mb-1">{item.title}</div>
+                  <div className="text-sm font-normal text-[#6b7d6a] leading-relaxed">{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -74,52 +74,20 @@ export default function AboutPage() {
       </div>
 
       {/* TESTIMONIAL */}
-      <div className="grid grid-cols-2 border-b border-[rgba(61,92,58,0.14)] bg-sage-pale px-12 py-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 border-b border-[rgba(61,92,58,0.14)] bg-[#d4e2d2] px-5 sm:px-8 lg:px-12 py-10 lg:py-12">
         <div>
-          <p className="font-serif text-lg leading-relaxed text-ink">
-            "Wrenlist told me my house clearance hauls have a 94% margin versus 67% from charity shops. I changed my whole sourcing strategy."
+          <p className="font-serif text-lg sm:text-xl font-normal leading-relaxed text-[#1e2e1c]">
+            &ldquo;Wrenlist showed me exactly which sourcing locations were worth my time. That changed everything about how I plan my weekends.&rdquo;
           </p>
-          <p className="mt-4 text-sm text-ink-lt">— Sam R., reseller · Manchester, UK</p>
+          <p className="mt-4 text-xs text-[#8a9e88]">— Early access user · UK reseller</p>
         </div>
-        <div className="text-center">
-          <div className="font-serif text-4xl font-medium text-ink">11.4</div>
-          <div className="text-xs font-semibold uppercase text-sage-dim mt-2">avg days to sell</div>
+        <div className="text-center flex flex-col items-center justify-center">
+          <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">5</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-2">marketplaces supported</div>
         </div>
       </div>
 
-      {/* FOOTER */}
-      <footer className="bg-ink text-cream px-12 py-16">
-        <div className="grid grid-cols-4 gap-12 max-w-5xl mx-auto mb-12">
-          <div>
-            <div className="font-serif text-xl font-medium mb-3">
-              WREN<em className="italic font-light text-sage-lt">list</em>
-            </div>
-            <p className="text-sm font-light text-cream mb-4">The operating system for UK thrifters and resellers.</p>
-          </div>
-          <div>
-            <div className="text-xs font-semibold uppercase mb-4">Platform</div>
-            <div className="flex flex-col gap-3 text-sm font-light">
-              <a href="#">Pricing</a>
-              <a href="#">Why Wrenlist</a>
-              <a href="#">Marketplaces</a>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-semibold uppercase mb-4">Resources</div>
-            <div className="flex flex-col gap-3 text-sm font-light">
-              <a href="#">Blog</a>
-              <Link href="/roadmap">Roadmap</Link>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-semibold uppercase mb-4">Company</div>
-            <div className="flex flex-col gap-3 text-sm font-light">
-              <Link href="/story">Our story</Link>
-              <a href="#">Terms</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   )
 }

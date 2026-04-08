@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
+import { MarketingFooter } from '@/components/layout/MarketingFooter'
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -120,7 +121,7 @@ export default function LandingPage() {
   const features = [
     { icon: InventoryIcon, title: 'Inventory tracker', desc: 'Every find, every status, one place' },
     { icon: MarginIcon, title: 'Cost & margin tracking', desc: 'Margin % on every find, always visible' },
-    { icon: CrosslistIcon, title: 'Crosslist to 4 platforms', desc: 'Vinted, eBay, Etsy & Shopify at once' },
+    { icon: CrosslistIcon, title: 'Crosslist to 5 platforms', desc: 'Vinted, eBay, Etsy, Shopify & Depop' },
     { icon: DelistIcon, title: 'Auto-delist on sale', desc: 'Sold on one platform? All others come down' },
     { icon: AIListingIcon, title: 'AI listing writer', desc: 'Wren AI drafts titles & descriptions' },
     { icon: PriceIcon, title: 'Price suggestions', desc: 'Live comp data across UK marketplaces' },
@@ -151,20 +152,20 @@ export default function LandingPage() {
             for.
           </h1>
           <p className="mb-7 max-w-sm font-normal leading-relaxed text-[#6b7d6a]">
-            Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy & Shopify — so you can spend more time at the rack.
+            Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
           </p>
           <div className="flex gap-4 items-center">
             <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
               Start free — no card needed
             </a>
-            <a href="/dashboard" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
-              see the app →
-            </a>
+            <Link href="/pricing" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
+              see pricing →
+            </Link>
           </div>
         </div>
 
         <div className="flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88]">your inventory · march 2026</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88]">your inventory at a glance</div>
 
           {/* Inventory Cards */}
           {[
@@ -209,7 +210,7 @@ export default function LandingPage() {
         {[
           { num: '01', title: 'Log every find instantly', body: 'Snap a photo, enter cost, done. Wrenlist fills in category, condition, and comparable sold prices before you leave the shop floor.' },
           { num: '02', title: 'Price with confidence', body: 'Live comp data from Vinted, eBay, Etsy and more. Know what your piece is worth before you list it, not after it sits for 60 days.' },
-          { num: '03', title: 'List everywhere at once', body: 'Cross-post to Vinted, eBay, Etsy & Shopify from one screen. When it sells, every other listing comes down automatically.' },
+          { num: '03', title: 'List everywhere at once', body: 'Cross-post to Vinted, eBay, Etsy, Shopify & more from one screen. When it sells, every other listing comes down automatically.' },
         ].map((feat, i) => (
           <div key={i} className={`px-5 sm:px-10 py-9 ${i < 2 ? 'border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.12)]' : ''}`}>
             <div className="font-serif text-4xl md:text-5xl text-[#e0d9cc] mb-2.5">{feat.num}</div>
@@ -266,53 +267,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* FOOTER */}
-      <footer className="bg-[#1e2e1c] text-[#7a9a78] px-5 sm:px-8 lg:px-12 py-10">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10 max-w-6xl mx-auto mb-10">
-          <div>
-            <div className="font-serif text-lg font-medium text-[#f5f0e8] mb-2">
-              WREN<em className="italic font-light text-[#5a7a57]">list</em>
-            </div>
-            <p className="text-sm font-normal text-[#7a9a78] mb-4">The operating system for UK thrifters and resellers.</p>
-          </div>
-          <div>
-            <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Platform</div>
-            <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
-              <Link href="/pricing">Pricing</Link>
-              <Link href="/about">Why Wrenlist</Link>
-              <a href="#">Marketplaces</a>
-              <a href="#">Dashboard</a>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Resources</div>
-            <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
-              <a href="#">Blog</a>
-              <a href="#">Changelog</a>
-              <Link href="/roadmap">Roadmap</Link>
-              <a href="#">Fee calculator</a>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Company</div>
-            <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
-              <Link href="/story">Our story</Link>
-              <a href="#">Terms</a>
-              <a href="#">Privacy</a>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Compare</div>
-            <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
-              <a href="#">Vendoo alternative</a>
-              <a href="#">Crosslist alternative</a>
-            </div>
-          </div>
-        </div>
-        <div className="border-t border-opacity-10 border-white pt-6 text-center text-xs font-normal text-[#7a9a78]">
-          © 2026 Wrenlist. Built by thrifters, for thrifters.
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   )
 }

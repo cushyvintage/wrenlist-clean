@@ -5,22 +5,27 @@ import { useState } from 'react'
 interface PricingCardProps {
   tier: string
   price: string
+  annualMonthly?: string
   description: string
   limit: string
   features: string[]
   featured?: boolean
+  isAnnual?: boolean
 }
 
-const PricingCard = ({ tier, price, description, limit, features, featured = false }: PricingCardProps) => (
-  <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-sage bg-opacity-5 bg-sage relative' : 'border-[rgba(61,92,58,0.14)] bg-cream'}`}>
-    {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-sage-pale text-sage px-2 py-1 rounded">most popular</div>}
-    <div className={`text-sm font-medium text-ink mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
-    <div className="flex items-baseline gap-1 mb-2">
-      <span className="text-sm font-light text-ink-lt">£</span>
-      <span className="font-serif text-3xl font-medium text-ink">{price}</span>
-      <span className="text-sm font-light text-ink-lt">/mo</span>
+const PricingCard = ({ tier, price, annualMonthly, description, limit, features, featured = false, isAnnual = false }: PricingCardProps) => (
+  <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]'}`}>
+    {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium uppercase bg-[#d4e2d2] text-[#5a7a57] px-2 py-1 rounded">most popular</div>}
+    <div className={`text-sm font-medium text-[#1e2e1c] mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
+    <div className="flex items-baseline gap-1 mb-1">
+      <span className="text-sm font-normal text-[#6b7d6a]">£</span>
+      <span className="font-serif text-3xl font-medium text-[#1e2e1c]">{isAnnual && annualMonthly ? annualMonthly : price}</span>
+      <span className="text-sm font-normal text-[#6b7d6a]">/mo</span>
     </div>
-    <p className="text-sm font-light text-ink-lt mb-6 h-10">{description}</p>
+    {isAnnual && annualMonthly && price !== '0' && (
+      <div className="text-xs text-[#8a9e88] mb-2">£{price} billed annually</div>
+    )}
+    <p className="text-sm font-normal text-[#6b7d6a] mb-6 h-10">{description}</p>
     <div className="mb-6">
       <div className="text-2xl font-serif font-medium text-ink">{limit}</div>
       <div className="text-10px font-semibold uppercase text-sage-dim">finds / month</div>
@@ -55,6 +60,7 @@ export function PricingSection() {
     {
       tier: 'Nester',
       price: annual ? '134' : '14',
+      annualMonthly: '11',
       description: 'For casual thrifters listing regularly.',
       limit: '100',
       featured: false,
@@ -63,6 +69,7 @@ export function PricingSection() {
     {
       tier: 'Forager',
       price: annual ? '290' : '29',
+      annualMonthly: '24',
       description: 'For serious resellers building a real business.',
       limit: '500',
       featured: true,
@@ -71,6 +78,7 @@ export function PricingSection() {
     {
       tier: 'Flock',
       price: annual ? '590' : '59',
+      annualMonthly: '49',
       description: 'For high-volume sellers and small teams.',
       limit: 'Unlimited',
       featured: false,
@@ -93,7 +101,7 @@ export function PricingSection() {
       {/* PRICING CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pt-4">
         {plans.map((plan, i) => (
-          <PricingCard key={i} {...plan} />
+          <PricingCard key={i} {...plan} isAnnual={annual} />
         ))}
       </div>
     </>
