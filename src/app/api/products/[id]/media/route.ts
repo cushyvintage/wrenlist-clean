@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { withAuth } from '@/lib/with-auth'
 
 type RouteParams = Promise<{ id: string }>
 
@@ -23,15 +24,18 @@ const fetchWithTimeout = async (url: string, timeoutMs = 10000): Promise<Respons
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: RouteParams }) {
-  const { id } = await params
+export const GET = withAuth(async (request: NextRequest, user) => {
+  // Extract route param from URL since withAuth doesn't pass params
+  const urlParts = request.nextUrl.pathname.split('/')
+  const idIndex = urlParts.indexOf('products') + 1
+  const id = urlParts[idIndex]
+
+  if (!id) {
+    return NextResponse.json({ error: 'Missing product ID' }, { status: 400 })
+  }
 
   try {
     const supabase = await createSupabaseServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const { data: find, error: findError } = await supabase
       .from('finds')
@@ -99,4 +103,4 @@ export async function GET(request: NextRequest, { params }: { params: RouteParam
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
