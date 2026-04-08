@@ -16,6 +16,7 @@ interface VintedSaleItem {
 
 interface VintedSalePayload {
   transactionId?: string
+  shipmentId?: string
   items?: VintedSaleItem[]
   buyer?: { id?: string; username?: string; profileUrl?: string; location?: string }
   grossAmount?: number
@@ -211,6 +212,7 @@ export const POST = withAuth(async (req, user) => {
         // Sale metadata to store in PMD fields
         const saleData = {
           transactionId,
+          shipmentId: sale.shipmentId || null,
           buyer: sale.buyer || null,
           grossAmount: sale.grossAmount,
           serviceFee: sale.serviceFee,

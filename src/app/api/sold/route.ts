@@ -36,6 +36,9 @@ interface SoldItem {
   serviceFee?: number | null
   netAmount?: number | null
   trackingNumber?: string | null
+  transactionId?: string | null
+  shipmentId?: string | null
+  labelUrl?: string | null
 }
 
 /**
@@ -161,6 +164,9 @@ export const GET = withAuth(async (req, user) => {
         serviceFee: (sale?.serviceFee as number) || null,
         netAmount: (sale?.netAmount as number) || null,
         trackingNumber: (sale?.trackingNumber as string) || null,
+        transactionId: (sale?.transactionId as string) || null,
+        shipmentId: (sale?.shipmentId as string) || null,
+        labelUrl: (sale?.labelUrl as string) || null,
       }
     })
 

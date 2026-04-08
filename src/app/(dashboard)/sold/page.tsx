@@ -11,6 +11,7 @@ import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import type { Platform } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
+import { ShippingLabelModal } from '@/components/sold/ShippingLabelModal'
 
 interface SoldItem {
   id: string
@@ -30,6 +31,9 @@ interface SoldItem {
   serviceFee?: number | null
   netAmount?: number | null
   trackingNumber?: string | null
+  transactionId?: string | null
+  shipmentId?: string | null
+  labelUrl?: string | null
 }
 
 interface Metrics {
@@ -95,10 +99,12 @@ function ShipmentBadge({ status }: { status: string | null | undefined }) {
 function OrderCard({
   item,
   onUpdateStatus,
+  onGenerateLabel,
   formatDate,
 }: {
   item: SoldItem
   onUpdateStatus: (id: string, status: string, trackingNumber?: string) => Promise<void>
+  onGenerateLabel?: (item: SoldItem) => void
   formatDate: (d: string | null) => string
 }) {
   const router = useRouter()
@@ -237,6 +243,24 @@ function OrderCard({
               Mark Delivered
             </button>
           )}
+          {onGenerateLabel && item.marketplace === 'vinted' && !item.labelUrl && (
+            <button
+              onClick={() => onGenerateLabel(item)}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition"
+            >
+              Generate Label
+            </button>
+          )}
+          {item.labelUrl && (
+            <a
+              href={item.labelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition inline-block"
+            >
+              View Label
+            </a>
+          )}
         </div>
       )}
     </div>
@@ -253,6 +277,16 @@ export default function SoldHistoryPage() {
   const [isBackfilling, setIsBackfilling] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [showAllAction, setShowAllAction] = useState(false)
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterPlatform, setFilterPlatform] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+
+  // Label modal state
+  const [labelModalOpen, setLabelModalOpen] = useState(false)
+  const [labelOrder, setLabelOrder] = useState<SoldItem | null>(null)
 
   const loadSoldItems = useCallback(() => {
     call(() => fetchApi<SoldResponse>(`/api/sold?timeframe=${timeframe}`))
@@ -269,7 +303,19 @@ export default function SoldHistoryPage() {
   const actionItems = allItems
     .filter(needsAction)
     .sort((a, b) => new Date(a.sold_at || 0).getTime() - new Date(b.sold_at || 0).getTime())
-  const completedItems = allItems.filter((item) => !needsAction(item))
+
+  // Filter history table items
+  const filteredItems = allItems.filter((item) => {
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    if (filterPlatform !== 'all' && item.marketplace !== filterPlatform) return false
+    if (filterStatus === 'awaiting' && normalizeStatus(item.shipmentStatus) !== null) return false
+    if (filterStatus === 'delivered' && normalizeStatus(item.shipmentStatus) !== 'delivered') return false
+    if (filterStatus === 'shipped' && !['shipped', 'in transit'].includes(normalizeStatus(item.shipmentStatus) || '')) return false
+    return true
+  })
+
+  // Unique platforms for filter dropdown
+  const platforms = [...new Set(allItems.map((i) => i.marketplace).filter((m) => m && m !== 'unknown'))]
 
   /* ── Shipment status update handler ──────────────────────── */
 
@@ -286,6 +332,30 @@ export default function SoldHistoryPage() {
     // Reload to reflect changes
     loadSoldItems()
   }, [loadSoldItems])
+
+  /* ── Bulk mark all delivered ───────────────────────────────── */
+
+  const handleBulkDelivered = useCallback(async () => {
+    if (isBulkUpdating || actionItems.length === 0) return
+    if (!confirm(`Mark all ${actionItems.length} orders as delivered?`)) return
+
+    setIsBulkUpdating(true)
+    try {
+      await fetchApi('/api/sold/bulk-shipment', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          findIds: actionItems.map((i) => i.id),
+          shipmentStatus: 'delivered',
+        }),
+      })
+      loadSoldItems()
+    } catch (err) {
+      console.error('Bulk update failed:', err)
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }, [isBulkUpdating, actionItems, loadSoldItems])
 
   /* ── Vinted sync handlers (unchanged) ────────────────────── */
 
@@ -463,13 +533,22 @@ export default function SoldHistoryPage() {
         const hasMore = actionItems.length > PREVIEW_COUNT
         return (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
-                Needs action
-              </h2>
-              <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
-                {actionItems.length}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
+                  Needs action
+                </h2>
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
+                  {actionItems.length}
+                </span>
+              </div>
+              <button
+                onClick={handleBulkDelivered}
+                disabled={isBulkUpdating}
+                className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
+              >
+                {isBulkUpdating ? 'Updating...' : 'Mark all delivered'}
+              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {visibleActions.map((item) => (
@@ -477,6 +556,7 @@ export default function SoldHistoryPage() {
                   key={item.id}
                   item={item}
                   onUpdateStatus={handleUpdateShipment}
+                  onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
                   formatDate={formatDate}
                 />
               ))}
@@ -575,9 +655,43 @@ export default function SoldHistoryPage() {
       {/* ── Sold History table ────────────────────────────────── */}
       {!isLoading && allItems.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
-            Sold history
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
+              Sold history
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="px-2.5 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage w-40"
+              />
+              <select
+                value={filterPlatform}
+                onChange={(e) => setFilterPlatform(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+              >
+                <option value="all">All platforms</option>
+                {platforms.map((p) => (
+                  <option key={p} value={p}>{(p as string).charAt(0).toUpperCase() + (p as string).slice(1)}</option>
+                ))}
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+              >
+                <option value="all">All statuses</option>
+                <option value="awaiting">Awaiting shipment</option>
+                <option value="shipped">Shipped / In transit</option>
+                <option value="delivered">Delivered</option>
+              </select>
+              {(searchQuery || filterPlatform !== 'all' || filterStatus !== 'all') && (
+                <span className="text-[10px] text-ink-lt">{filteredItems.length} of {allItems.length}</span>
+              )}
+            </div>
+          </div>
           <Panel className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -596,7 +710,7 @@ export default function SoldHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allItems.map((item) => (
+                  {filteredItems.map((item) => (
                     <tr
                       key={item.id}
                       className="border-b border-border hover:bg-cream-md transition cursor-pointer"
@@ -659,6 +773,23 @@ export default function SoldHistoryPage() {
             </div>
           </Panel>
         </div>
+      )}
+
+      {/* ── Shipping Label Modal ───────────────────────────────── */}
+      {labelOrder && (
+        <ShippingLabelModal
+          open={labelModalOpen}
+          onClose={() => { setLabelModalOpen(false); setLabelOrder(null) }}
+          order={{
+            findId: labelOrder.id,
+            transactionId: labelOrder.transactionId || null,
+            shipmentId: labelOrder.shipmentId || null,
+            marketplace: labelOrder.marketplace || 'vinted',
+            buyerName: labelOrder.buyer || null,
+            existingLabelUrl: labelOrder.labelUrl || null,
+          }}
+          onLabelGenerated={loadSoldItems}
+        />
       )}
     </div>
   )
