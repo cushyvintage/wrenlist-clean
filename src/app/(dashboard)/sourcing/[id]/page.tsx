@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { SOURCING_TRIP_TYPES } from '@/types'
 import type { SourcingTripWithStats, Find } from '@/types'
 
@@ -12,7 +11,6 @@ interface TripDetail extends SourcingTripWithStats {
 }
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,12 +62,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   if (error || !trip) {
     return (
       <div className="flex flex-col gap-4">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1 text-sage hover:text-sage-dk text-sm font-medium"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
+        <Link href="/sourcing" className="text-xs text-sage hover:text-ink inline-flex items-center gap-1">&larr; Back to Sourcing</Link>
         <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
           {error || 'Trip not found'}
         </div>
@@ -83,12 +76,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex flex-col gap-6">
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1 text-sage hover:text-sage-dk text-sm font-medium w-fit"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
+      <Link href="/sourcing" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Sourcing</Link>
 
       <div className="border-b border-sage/14 pb-6">
         <div className="mb-4">

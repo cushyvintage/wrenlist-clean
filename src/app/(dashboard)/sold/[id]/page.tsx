@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -115,6 +115,23 @@ export default function SoldDetailPage() {
   const router = useRouter()
   const id = params.id as string
   const { data, isLoading, error, call } = useApiCall<SoldDetail>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true)
+      setDeleteError(null)
+      const res = await fetch(`/api/sold/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      router.push('/sold')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   useEffect(() => {
     call(() => fetchApi<SoldDetail>(`/api/sold/${id}`))
@@ -131,7 +148,7 @@ export default function SoldDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link href="/sold" className="text-xs text-sage hover:underline">&larr; back to sold</Link>
+        <Link href="/sold" className="text-xs text-sage hover:text-ink inline-flex items-center gap-1">&larr; Back to Sold</Link>
         <div className="bg-red-lt border border-red-dk/20 rounded p-4 text-sm text-red-dk">
           {error}
         </div>
@@ -140,6 +157,54 @@ export default function SoldDetailPage() {
   }
 
   if (!data) return null
+
+  if (deleteConfirm) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div
+          className="p-8 rounded text-center"
+          style={{
+            backgroundColor: '#FFF9F3',
+            borderWidth: '1px',
+            borderColor: 'rgba(196,138,58,.2)',
+          }}
+        >
+          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
+            Delete &ldquo;{data.name}&rdquo;?
+          </h2>
+          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
+            This will permanently delete this sold record. This action cannot be undone.
+          </p>
+          {deleteError && (
+            <p className="text-sm text-red-600 mb-4">{deleteError}</p>
+          )}
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.22)',
+                backgroundColor: 'transparent',
+                color: '#3D5C3A',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const { sale } = data
   const profit = sale.netAmount != null && data.cost_gbp != null
@@ -161,10 +226,7 @@ export default function SoldDetailPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Back link */}
-      <Link href="/sold" className="inline-flex items-center gap-1 text-xs text-sage hover:underline">
-        &larr; back to sold
-      </Link>
+      <Link href="/sold" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Sold</Link>
 
       {/* Profit highlight */}
       {profit != null && (
@@ -243,13 +305,21 @@ export default function SoldDetailPage() {
               <span>ID: <span className="font-mono text-ink">{sale.platformListingId}</span></span>
             )}
           </div>
-          {/* Edit link */}
-          <Link
-            href={`/finds/${data.id}`}
-            className="inline-block mt-2 text-xs text-sage hover:underline"
-          >
-            edit item &rarr;
-          </Link>
+          {/* Actions */}
+          <div className="flex items-center gap-3 mt-2">
+            <Link
+              href={`/finds/${data.id}`}
+              className="text-xs text-sage hover:underline"
+            >
+              edit item &rarr;
+            </Link>
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="text-xs text-red-600 hover:underline"
+            >
+              delete
+            </button>
+          </div>
         </div>
       </div>
 

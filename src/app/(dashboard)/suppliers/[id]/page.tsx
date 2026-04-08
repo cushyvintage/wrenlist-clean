@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Trash2 } from 'lucide-react'
 import type { Supplier, SupplierType, Find } from '@/types'
 
 const typeLabel: Record<SupplierType, string> = {
@@ -126,9 +126,7 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
   if (!supplier) {
     return (
       <div className="flex flex-col gap-6">
-        <Link href="/suppliers" className="flex items-center gap-2 text-sage hover:text-sage-dk text-sm font-medium">
-          <ArrowLeft size={16} /> Back to suppliers
-        </Link>
+        <Link href="/suppliers" className="text-xs text-sage hover:text-ink inline-flex items-center gap-1">&larr; Back to Suppliers</Link>
         <div className="text-center py-12 text-red-600">
           Supplier not found
         </div>
@@ -143,10 +141,7 @@ export default function SupplierDetailPage({ params: paramsPromise }: { params: 
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Back Button */}
-      <Link href="/suppliers" className="flex items-center gap-2 text-sage hover:text-sage-dk text-sm font-medium">
-        <ArrowLeft size={16} /> Back to suppliers
-      </Link>
+      <Link href="/suppliers" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Suppliers</Link>
 
       {error && (
         <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-sm text-red-700 text-sm">

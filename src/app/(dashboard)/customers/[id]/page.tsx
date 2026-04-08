@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Panel } from '@/components/wren/Panel'
@@ -46,10 +46,28 @@ function formatDate(d: string | null): string {
 
 export default function CustomerDetailPage() {
   const { id } = useParams()
+  const router = useRouter()
   const { data, isLoading, error, call } = useApiCall<CustomerDetailResponse>(null)
   const [notes, setNotes] = useState('')
   const [notesSaving, setNotesSaving] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true)
+      setDeleteError(null)
+      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      router.push('/customers')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   useEffect(() => {
     call(() => fetchApi<CustomerDetailResponse>(`/api/customers/${id}`))
@@ -82,13 +100,62 @@ export default function CustomerDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link href="/customers" className="text-xs text-sage hover:underline">&larr; back to customers</Link>
+        <Link href="/customers" className="text-xs text-sage hover:text-ink inline-flex items-center gap-1">&larr; Back to Customers</Link>
         <div className="bg-red-lt border border-red-dk/20 rounded p-4 text-sm text-red-dk">{error}</div>
       </div>
     )
   }
 
   if (!data) return null
+
+  if (deleteConfirm) {
+    const customerName = data.customer.full_name || data.customer.username || 'this customer'
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div
+          className="p-8 rounded text-center"
+          style={{
+            backgroundColor: '#FFF9F3',
+            borderWidth: '1px',
+            borderColor: 'rgba(196,138,58,.2)',
+          }}
+        >
+          <h2 className="text-lg font-medium mb-2" style={{ color: '#1E2E1C' }}>
+            Delete &ldquo;{customerName}&rdquo;?
+          </h2>
+          <p className="text-sm mb-6" style={{ color: '#6B7D6A' }}>
+            This will permanently delete this customer record. This action cannot be undone.
+          </p>
+          {deleteError && (
+            <p className="text-sm text-red-600 mb-4">{deleteError}</p>
+          )}
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors"
+              style={{
+                borderWidth: '1px',
+                borderColor: 'rgba(61,92,58,.22)',
+                backgroundColor: 'transparent',
+                color: '#3D5C3A',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              style={{ backgroundColor: '#C4883A', color: '#FFF9F3' }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const { customer: c, orders, pnl } = data
   const daysSinceFirst = c.first_order_at
@@ -97,9 +164,7 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Link href="/customers" className="inline-flex items-center gap-1 text-xs text-sage hover:underline">
-        &larr; back to customers
-      </Link>
+      <Link href="/customers" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Customers</Link>
 
       {/* Header */}
       <div className="flex items-start gap-4">
@@ -121,6 +186,14 @@ export default function CustomerDetailPage() {
               Repeat customer &middot; {c.total_orders} orders &middot; £{Number(c.total_spent_gbp).toFixed(2)} total
             </span>
           )}
+          <div className="mt-2">
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="text-xs text-red-600 hover:underline"
+            >
+              delete customer
+            </button>
+          </div>
         </div>
       </div>
 

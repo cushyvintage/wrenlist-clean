@@ -869,9 +869,42 @@ export default function InventoryPage() {
 
       {/* Loading state */}
       {isLoading && (
-        <div className="text-center text-ink-lt py-8">
-          Loading finds...
-        </div>
+        <Panel className="overflow-x-auto">
+          <table className="w-full text-sm min-w-max">
+            <thead style={{ color: '#8A9E88' }}>
+              <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                <th className="text-left py-[10px] px-[18px] w-8"><div className="w-4 h-4 rounded bg-sage/10 animate-pulse" /></th>
+                <th className="text-left py-[10px] px-[18px] min-w-[180px] text-[10px] uppercase tracking-[.08em] font-medium">item</th>
+                <th className="text-left py-[10px] px-[18px] min-w-[90px] text-[10px] uppercase tracking-[.08em] font-medium hidden md:table-cell">source</th>
+                <th className="text-right py-[10px] px-[10px] w-12 text-[10px] uppercase tracking-[.08em] font-medium">cost</th>
+                <th className="text-right py-[10px] px-[12px] w-14 text-[10px] uppercase tracking-[.08em] font-medium">asking</th>
+                <th className="text-right py-[10px] px-[12px] w-16 text-[10px] uppercase tracking-[.08em] font-medium">margin</th>
+                <th className="text-left py-[10px] px-[12px] min-w-[160px] text-[10px] uppercase tracking-[.08em] font-medium">status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>
+                  <td className="py-[12px] px-[18px]"><div className="w-4 h-4 rounded bg-sage/10 animate-pulse" /></td>
+                  <td className="py-[12px] px-[18px]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-sage/10 animate-pulse flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 rounded bg-sage/10 animate-pulse" style={{ width: `${120 + (i % 3) * 40}px` }} />
+                        <div className="h-2.5 rounded bg-sage/10 animate-pulse w-16" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-[12px] px-[18px] hidden md:table-cell"><div className="h-3 rounded bg-sage/10 animate-pulse w-14" /></td>
+                  <td className="py-[12px] px-[18px]"><div className="h-3 rounded bg-sage/10 animate-pulse w-10 ml-auto" /></td>
+                  <td className="py-[12px] px-[18px]"><div className="h-3 rounded bg-sage/10 animate-pulse w-10 ml-auto" /></td>
+                  <td className="py-[12px] px-[18px]"><div className="h-3 rounded bg-sage/10 animate-pulse w-8 ml-auto" /></td>
+                  <td className="py-[12px] px-[12px]"><div className="h-5 rounded-full bg-sage/10 animate-pulse w-16" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
       )}
 
       {/* Inventory table */}

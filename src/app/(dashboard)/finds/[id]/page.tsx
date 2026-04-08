@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { arrayMove } from '@dnd-kit/sortable'
 import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
@@ -1015,6 +1016,8 @@ export default function InventoryDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Link href="/finds" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Finds</Link>
+
       {/* Header */}
       <InventoryItemHeader
         find={find}
