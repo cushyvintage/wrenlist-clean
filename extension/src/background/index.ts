@@ -539,6 +539,7 @@ type ExternalMessage = Record<string, unknown>;
           const pf = (find.platform_fields ?? {}) as Record<string, unknown>;
           const sharedFields = (pf.shared ?? {}) as Record<string, unknown>;
           const vintedFields = (pf.vinted ?? {}) as Record<string, unknown>;
+          const vintedMeta = (vintedFields.vintedMetadata ?? {}) as Record<string, unknown>;
           const vintedPrimaryColor = typeof vintedFields.primaryColor === "number" ? vintedFields.primaryColor : null;
           const vintedSecondaryColor = typeof vintedFields.secondaryColor === "number" ? vintedFields.secondaryColor : null;
           const vintedColorIds = [vintedPrimaryColor, vintedSecondaryColor].filter((id): id is number => id !== null && id > 0);
@@ -615,10 +616,15 @@ type ExternalMessage = Record<string, unknown>;
               ...(userWhoMade ? { whoMade: userWhoMade } : {}),
               ...(depopSource.length > 0 ? { Source: depopSource[0] } : {}),
               ...(depopAge ? { age: depopAge } : {}),
-              // Also pass as dynamic property for fallback
+              // Vinted-specific: pass catalogId, packageSizeId, ISBN from vintedMetadata
               ...(mp === "vinted" && item.platform_category_id
                 ? { vintedCatalogId: Number(item.platform_category_id) }
                 : {}),
+              ...(mp === "vinted" && vintedMeta?.package_size_id
+                ? { packageSizeId: Number(vintedMeta.package_size_id) }
+                : {}),
+              // ISBN for book categories — triggers Vinted language_book attribute
+              ...(sharedFields.isbn ? { ISBN: String(sharedFields.isbn) } : {}),
             },
           };
 

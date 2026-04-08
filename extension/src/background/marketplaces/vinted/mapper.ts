@@ -711,28 +711,30 @@ export class VintedMapper {
     const uploadSessionId = await this.vintedClient.refreshUploadSessionId();
     const tempUuid = uploadSessionId;
 
-    // Calculate package size from weight using available options for this category.
-    // Falls back to dynamicProperties.packageSizeId or default (2 = Medium) if API call fails.
+    // Use pre-set package_size_id from vintedMetadata if available (set by form).
+    // Only calculate from API if not pre-set. This avoids the API returning invalid IDs.
+    const presetPkgSize = product.dynamicProperties?.packageSizeId;
     let packageSizeId: number;
-    try {
-      if (catalogId) {
-        packageSizeId = await this.getPackageSizeForCategory(
-          catalogId,
-          product.shipping.shippingWeight as { inGrams?: number; inOunces?: number } | undefined,
-          product.shipping.shippingType as string | undefined,
-        );
-        console.log('[Vinted Mapper] Calculated packageSizeId:', packageSizeId, 'for catalog:', catalogId);
-      } else {
-        // No catalog ID — use fallback
-        const fallback = product.dynamicProperties?.packageSizeId;
-        packageSizeId = typeof fallback === 'number' ? fallback : 2;
-        console.warn('[Vinted Mapper] No catalogId, using fallback package size:', packageSizeId);
+    if (typeof presetPkgSize === 'number' && presetPkgSize > 0) {
+      packageSizeId = presetPkgSize;
+      console.log('[Vinted Mapper] Using pre-set packageSizeId:', packageSizeId);
+    } else {
+      try {
+        if (catalogId) {
+          packageSizeId = await this.getPackageSizeForCategory(
+            catalogId,
+            product.shipping.shippingWeight as { inGrams?: number; inOunces?: number } | undefined,
+            product.shipping.shippingType as string | undefined,
+          );
+          console.log('[Vinted Mapper] Calculated packageSizeId:', packageSizeId, 'for catalog:', catalogId);
+        } else {
+          packageSizeId = 2;
+          console.warn('[Vinted Mapper] No catalogId or preset, defaulting to Medium (2)');
+        }
+      } catch (pkgError) {
+        packageSizeId = 2;
+        console.warn('[Vinted Mapper] Package size fetch failed, defaulting to Medium (2):', pkgError);
       }
-    } catch (pkgError) {
-      // Fallback to provided packageSizeId or default Medium (2)
-      const fallback = product.dynamicProperties?.packageSizeId;
-      packageSizeId = typeof fallback === 'number' ? fallback : 2;
-      console.warn('[Vinted Mapper] Package size fetch failed, using fallback:', packageSizeId, pkgError);
     }
 
     // Validate package_size_id against known valid Vinted UK IDs
