@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { createPublishJob } from '@/lib/publish-jobs'
@@ -30,6 +30,139 @@ interface VintedSalePayload {
   completedDate?: string
   isBundle?: boolean
   itemCount?: number
+}
+
+/**
+ * Upsert a customer record from Vinted sale data.
+ * Match priority: marketplace_user_id first, then username.
+ * Returns the customer ID.
+ */
+async function upsertVintedCustomer(
+  supabase: SupabaseClient,
+  userId: string,
+  sale: VintedSalePayload
+): Promise<string | null> {
+  const buyer = sale.buyer
+  if (!buyer?.id && !buyer?.username) return null
+
+  const marketplaceUserId = buyer.id ? String(buyer.id) : null
+  const username = buyer.username || null
+
+  // Try to find existing customer
+  let existingId: string | null = null
+  if (marketplaceUserId) {
+    const { data } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('marketplace', 'vinted')
+      .eq('marketplace_user_id', marketplaceUserId)
+      .maybeSingle()
+    existingId = data?.id || null
+  }
+  if (!existingId && username) {
+    const { data } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('marketplace', 'vinted')
+      .eq('username', username)
+      .maybeSingle()
+    existingId = data?.id || null
+  }
+
+  // Extract address from shippingAddress
+  const addr = sale.shippingAddress || {}
+  const addressFields = {
+    address_line1: (addr.line1 as string) || (addr.address1 as string) || (addr.street as string) || null,
+    address_line2: (addr.line2 as string) || (addr.address2 as string) || null,
+    city: (addr.city as string) || null,
+    postcode: (addr.postalCode as string) || (addr.postal_code as string) || (addr.zip as string) || null,
+    country: (addr.country as string) || (addr.country_title as string) || null,
+  }
+
+  // Extract name from shippingAddress or buyer
+  const fullName = (addr.full_name as string) || (addr.name as string) || null
+  const email = (addr.email as string) || null
+  const phone = (addr.phone_number as string) || (addr.phone as string) || null
+
+  const customerData = {
+    user_id: userId,
+    marketplace: 'vinted' as const,
+    marketplace_user_id: marketplaceUserId,
+    username,
+    full_name: fullName,
+    email,
+    phone,
+    ...addressFields,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (existingId) {
+    // Update existing — only overwrite address/name if we have new data
+    const updateData: Record<string, unknown> = { updated_at: customerData.updated_at }
+    if (marketplaceUserId) updateData.marketplace_user_id = marketplaceUserId
+    if (username) updateData.username = username
+    if (fullName) updateData.full_name = fullName
+    if (email) updateData.email = email
+    if (phone) updateData.phone = phone
+    if (addressFields.address_line1) Object.assign(updateData, addressFields)
+
+    await supabase.from('customers').update(updateData).eq('id', existingId)
+    return existingId
+  } else {
+    // Insert new customer
+    const { data, error } = await supabase
+      .from('customers')
+      .insert(customerData)
+      .select('id')
+      .single()
+    if (error || !data) {
+      console.error('[upsertVintedCustomer] Insert failed:', error)
+      return null
+    }
+    return data.id
+  }
+}
+
+/**
+ * Recompute customer aggregate stats from linked PMD records.
+ */
+async function recomputeCustomerAggregates(
+  supabase: SupabaseClient,
+  customerId: string
+): Promise<void> {
+  const { data: pmds } = await supabase
+    .from('product_marketplace_data')
+    .select('fields')
+    .eq('customer_id', customerId)
+    .eq('status', 'sold')
+
+  if (!pmds || pmds.length === 0) return
+
+  let totalSpent = 0
+  let firstOrder: string | null = null
+  let lastOrder: string | null = null
+
+  for (const pmd of pmds) {
+    const sale = (pmd.fields as Record<string, unknown>)?.sale as Record<string, unknown> | undefined
+    if (!sale) continue
+    const amount = (sale.grossAmount as number) || 0
+    totalSpent += amount
+    const orderDate = (sale.orderDate as string) || null
+    if (orderDate) {
+      if (!firstOrder || orderDate < firstOrder) firstOrder = orderDate
+      if (!lastOrder || orderDate > lastOrder) lastOrder = orderDate
+    }
+  }
+
+  await supabase.from('customers').update({
+    total_orders: pmds.length,
+    total_spent_gbp: totalSpent,
+    first_order_at: firstOrder,
+    last_order_at: lastOrder,
+    updated_at: new Date().toISOString(),
+  }).eq('id', customerId)
 }
 
 /**
@@ -88,6 +221,9 @@ export const POST = withAuth(async (req, user) => {
           const itemId = String(item.itemId || '')
           if (!itemId) continue
 
+          // Upsert customer before processing find/PMD (runs even for already-synced sales)
+          const customerId = await upsertVintedCustomer(supabase, user.id, sale)
+
           // Try to match to existing find via product_marketplace_data
           const { data: existingPmd } = await supabase
             .from('product_marketplace_data')
@@ -110,10 +246,24 @@ export const POST = withAuth(async (req, user) => {
 
             if (!find) { skipped++; continue }
 
-            // If already sold AND already enriched with this transaction, skip
+            // If already sold AND already enriched with this transaction, skip find update
+            // but still link customer if missing
             const existingFields = existingPmd.fields as Record<string, unknown> | null
             const existingSale = existingFields?.sale as Record<string, unknown> | undefined
             if (find.status === 'sold' && existingSale?.transactionId === transactionId) {
+              // Link customer to PMD if not yet linked
+              if (customerId && !existingPmd.fields) {
+                await supabase.from('product_marketplace_data').update({
+                  customer_id: customerId,
+                }).eq('find_id', find.id).eq('marketplace', 'vinted')
+              }
+              if (customerId) {
+                // Always ensure customer_id is set
+                await supabase.from('product_marketplace_data').update({
+                  customer_id: customerId,
+                }).eq('find_id', find.id).eq('marketplace', 'vinted')
+                await recomputeCustomerAggregates(supabase, customerId)
+              }
               skipped++; continue
             }
 
@@ -132,6 +282,7 @@ export const POST = withAuth(async (req, user) => {
             await supabase.from('product_marketplace_data').update({
               status: 'sold',
               fields: { ...(existingFields || {}), sale: saleData },
+              customer_id: customerId,
               updated_at: new Date().toISOString(),
             }).eq('find_id', findId).eq('marketplace', 'vinted')
 
@@ -176,9 +327,15 @@ export const POST = withAuth(async (req, user) => {
               listing_price: item.price || sale.grossAmount,
               status: 'sold',
               fields: { sale: saleData },
+              customer_id: customerId,
             })
 
             created++
+          }
+
+          // Recompute customer aggregates after linking
+          if (customerId) {
+            await recomputeCustomerAggregates(supabase, customerId)
           }
 
           // Check if photos need mirroring to Supabase Storage

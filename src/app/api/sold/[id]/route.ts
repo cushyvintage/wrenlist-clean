@@ -31,11 +31,17 @@ export const GET = withAuth(async (req, user, params) => {
   // Fetch PMD records separately
   const { data: pmdRecords } = await supabase
     .from('product_marketplace_data')
-    .select('marketplace, status, platform_listing_id, platform_listing_url, listing_price, fields, last_synced_at')
+    .select('marketplace, status, platform_listing_id, platform_listing_url, listing_price, fields, last_synced_at, customer_id')
     .eq('find_id', id)
 
   const soldPmd = pmdRecords?.find((m) => m.status === 'sold')
   const sale = (soldPmd?.fields as Record<string, unknown> | null)?.sale as Record<string, unknown> | undefined
+
+  // Fetch linked customer if available
+  const customerId = (soldPmd as Record<string, unknown> | undefined)?.customer_id as string | null
+  const { data: customer } = customerId
+    ? await supabase.from('customers').select('*').eq('id', customerId).single()
+    : { data: null }
 
   return ApiResponseHelper.success({
     ...find,
@@ -52,5 +58,6 @@ export const GET = withAuth(async (req, user, params) => {
       netAmount: (sale?.netAmount as number) ?? null,
       trackingNumber: (sale?.trackingNumber as string) ?? null,
     },
+    customer: customer || null,
   })
 })

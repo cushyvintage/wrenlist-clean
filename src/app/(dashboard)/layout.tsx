@@ -32,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
     { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
     { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },
+    { id: 'customers', label: 'Customers', icon: NavIcons.customers, path: '/customers', section: 'INSIGHTS', pageTitle: 'Customers' },
     // OPERATIONS
     { id: 'sourcing', label: 'Sourcing', icon: NavIcons.sourcing, path: '/sourcing', section: 'OPERATIONS', pageTitle: 'Sourcing' },
     { id: 'suppliers', label: 'Suppliers', icon: NavIcons.suppliers, path: '/suppliers', section: 'OPERATIONS', pageTitle: 'Suppliers' },

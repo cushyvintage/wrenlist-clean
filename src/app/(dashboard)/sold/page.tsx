@@ -72,6 +72,7 @@ export default function SoldHistoryPage() {
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'all'>('month')
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isBackfilling, setIsBackfilling] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -154,6 +155,53 @@ export default function SoldHistoryPage() {
     }
   }, [isSyncing, loadSoldItems])
 
+  const handleBackfillAddresses = useCallback(async () => {
+    if (isBackfilling) return
+    setIsBackfilling(true)
+    setSyncMessage(null)
+
+    try {
+      const sales = await new Promise<unknown[]>((resolve, reject) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+          reject(new Error('Extension not available'))
+          return
+        }
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'get_vinted_sales', params: { pages: 10, perPage: 100, enrich: true } },
+          (response: Record<string, unknown> | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+              return
+            }
+            if (!response?.success) {
+              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
+              return
+            }
+            resolve((response.sales as unknown[]) || [])
+          }
+        )
+      })
+
+      if (!Array.isArray(sales) || sales.length === 0) {
+        setSyncMessage('No sales found to backfill')
+        return
+      }
+
+      const syncData = await fetchApi<{ synced: number; created: number; errors: number }>(
+        '/api/vinted/sync-sales',
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sales }) }
+      )
+
+      setSyncMessage(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
+      loadSoldItems()
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'Backfill failed')
+    } finally {
+      setIsBackfilling(false)
+    }
+  }, [isBackfilling, loadSoldItems])
+
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return '--'
     const date = new Date(dateString)
@@ -184,6 +232,13 @@ export default function SoldHistoryPage() {
             className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
           >
             {isSyncing ? 'Syncing...' : 'Sync Vinted Sales'}
+          </button>
+          <button
+            onClick={handleBackfillAddresses}
+            disabled={isBackfilling}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
+          >
+            {isBackfilling ? 'Backfilling...' : 'Backfill addresses'}
           </button>
           {syncMessage && (
             <span className="text-xs text-ink-lt">{syncMessage}</span>
@@ -337,9 +392,11 @@ export default function SoldHistoryPage() {
                       £{item.sold_price_gbp?.toFixed(2) || '--'}
                     </td>
 
-                    {/* Fees */}
+                    {/* Fees — only show when actually deducted from seller */}
                     <td className="px-3 py-2 text-right font-mono text-xs text-ink-lt">
-                      {item.serviceFee != null ? `−£${item.serviceFee.toFixed(2)}` : '--'}
+                      {item.serviceFee != null && item.serviceFee > 0 && item.grossAmount != null && item.netAmount != null && item.grossAmount !== item.netAmount
+                        ? `−£${item.serviceFee.toFixed(2)}`
+                        : '--'}
                     </td>
 
                     {/* Net */}

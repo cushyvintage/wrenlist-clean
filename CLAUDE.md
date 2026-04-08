@@ -114,11 +114,13 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `shopify_connections` | Shopify store connections | ON |
 | `price_research_history` | Price research lookups with results for QA | ON |
 | `expense_categories` | Expense category lookup (DB-driven) | ON (read-only) |
+| `customers` | Buyer CRM — one row per buyer per marketplace | ON |
 | `daily_metrics` | Daily KPIs (not yet populated) | ON |
 | `monthly_metrics` | Monthly performance (not yet populated) | ON |
 
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
+- **`product_marketplace_data.customer_id`** (uuid FK) links sold items to `customers` table
 - **`finds.platform_fields`** (jsonb) stores platform-specific form fields
 - **`finds.selected_marketplaces`** (text[]) stores which platforms a find targets
 - All `user_id` FKs reference **`auth.users(id)`** — there is no `public.users` table

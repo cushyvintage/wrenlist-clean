@@ -9,7 +9,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import { getCategoryNode } from '@/data/marketplace-category-map'
-import type { Platform, FindCondition } from '@/types'
+import type { Platform, FindCondition, Customer } from '@/types'
 
 interface SoldDetail {
   id: string
@@ -42,6 +42,7 @@ interface SoldDetail {
     netAmount: number | null
     trackingNumber: string | null
   }
+  customer: Customer | null
 }
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -265,7 +266,15 @@ export default function SoldDetailPage() {
               {sale.marketplace}
             </span>
           </DetailRow>
-          <DetailRow label="buyer">{sale.buyer || '--'}</DetailRow>
+          <DetailRow label="buyer">
+            {data.customer ? (
+              <Link href={`/customers/${data.customer.id}`} className="text-sage hover:underline">
+                {data.customer.full_name || data.customer.username || sale.buyer || '--'}
+              </Link>
+            ) : (
+              sale.buyer || '--'
+            )}
+          </DetailRow>
           {sale.platformListingUrl && (
             <DetailRow label="listing">
               <a
@@ -338,6 +347,44 @@ export default function SoldDetailPage() {
             </DetailRow>
           )}
         </Panel>
+
+        {/* Customer */}
+        {data.customer && (
+          <Panel title="customer">
+            <div className="flex items-start gap-3 pb-3 border-b border-border">
+              <div className="w-10 h-10 rounded-full bg-sage flex items-center justify-center text-cream text-sm font-serif flex-shrink-0">
+                {(data.customer.full_name || data.customer.username || '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">{data.customer.full_name || data.customer.username}</p>
+                {data.customer.email && (
+                  <a href={`mailto:${data.customer.email}`} className="text-xs text-sage hover:underline block">{data.customer.email}</a>
+                )}
+                {data.customer.phone && <p className="text-xs text-ink-lt">{data.customer.phone}</p>}
+              </div>
+            </div>
+            {data.customer.address_line1 && (
+              <div className="py-2 border-b border-border text-xs text-ink leading-relaxed">
+                <p>{data.customer.address_line1}</p>
+                {data.customer.address_line2 && <p>{data.customer.address_line2}</p>}
+                <p>{[data.customer.city, data.customer.postcode].filter(Boolean).join(', ')}</p>
+                {data.customer.country && <p>{data.customer.country}</p>}
+              </div>
+            )}
+            {data.customer.total_orders > 1 && (
+              <div className="py-2 border-b border-border">
+                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800">
+                  Repeat customer &middot; {data.customer.total_orders} orders &middot; £{Number(data.customer.total_spent_gbp).toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="pt-2">
+              <Link href={`/customers/${data.customer.id}`} className="text-xs text-sage hover:underline">
+                view customer &rarr;
+              </Link>
+            </div>
+          </Panel>
+        )}
 
         {/* Item Details */}
         {hasItemDetails && (

@@ -199,6 +199,34 @@ export interface ProductMarketplaceData {
   status: MarketplaceDataStatus
   error_message: string | null
   last_synced_at: string | null
+  customer_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
+// CUSTOMERS (CRM)
+// ============================================================================
+
+export interface Customer {
+  id: string
+  user_id: string
+  marketplace: Platform
+  marketplace_user_id: string | null
+  username: string | null
+  full_name: string | null
+  email: string | null
+  phone: string | null
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  postcode: string | null
+  country: string | null
+  total_orders: number
+  total_spent_gbp: number
+  first_order_at: string | null
+  last_order_at: string | null
+  notes: string | null
   created_at: string
   updated_at: string
 }

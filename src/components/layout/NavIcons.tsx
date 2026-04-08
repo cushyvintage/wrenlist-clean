@@ -105,6 +105,14 @@ export const NavIcons: Record<string, React.ReactNode> = {
       <path d="M2 3h3v8H2zM6 5h3v6H6zM10 1h3v11h-3z" stroke="currentColor" {...s} />
     </svg>
   ),
+  customers: (
+    <svg viewBox="0 0 14 14" fill="none">
+      <circle cx="5" cy="4" r="2" stroke="currentColor" strokeWidth={1.1} />
+      <path d="M1 12c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" {...s} />
+      <circle cx="10" cy="5" r="1.5" stroke="currentColor" strokeWidth={1.1} />
+      <path d="M10 8.5c1.7 0 3 1.3 3 3" stroke="currentColor" {...s} />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 14 14" fill="none">
       <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth={1.1} />

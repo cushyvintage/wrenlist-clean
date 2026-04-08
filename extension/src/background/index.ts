@@ -1643,41 +1643,63 @@ async function handleGetListing(message: ExternalMessage) {
 async function handleGetVintedSales(message: ExternalMessage) {
   try {
     const params = (message.params as Record<string, unknown>) ?? {};
-    const page = (params.page as number | undefined) ?? (message.page as number | undefined) ?? 1;
+    const startPage = (params.page as number | undefined) ?? (message.page as number | undefined) ?? 1;
     const perPage = (params.perPage as number | undefined) ?? (message.perPage as number | undefined) ?? 20;
     const tld = (params.tld as string | undefined) ?? (message.tld as string | undefined) ?? 'co.uk';
     const stopAtId = (params.stopAtId as string | undefined) ?? (message.stopAtId as string | undefined);
     // enrich: call getOrderDetails per sale for buyer/fees/shipment data
     const enrich = (params.enrich as boolean | undefined) ?? (message.enrich as boolean | undefined) ?? false;
+    // pages: how many pages to fetch (default 1, for backfill pass e.g. 10)
+    const totalPages = (params.pages as number | undefined) ?? (message.pages as number | undefined) ?? 1;
 
     const { client } = createVintedServices({ tld });
     await client.bootstrap();
 
-    const result = await client.getSales(page, perPage, stopAtId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let allSales: any[] = [];
+    let stoppedEarly = false;
+    let lastPagination: unknown = null;
 
-    let sales = result.sales;
+    for (let p = startPage; p < startPage + totalPages; p++) {
+      // Keep service worker alive during long backfills
+      try { chrome.storage.local.set({ _keepAlive: Date.now() }); } catch { /* noop */ }
 
-    // Enrich each sale with full order details if requested
-    if (enrich && sales.length > 0) {
-      const enriched = [];
-      for (const sale of sales) {
-        try {
-          const details = await client.getOrderDetails(sale.transactionId);
-          enriched.push(details || sale);
-          // Small delay to avoid Vinted rate limiting
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch {
-          enriched.push(sale);
+      const result = await client.getSales(p, perPage, stopAtId);
+      lastPagination = result.pagination;
+
+      if (!result.sales.length) break;
+
+      let pageSales = result.sales;
+
+      // Enrich each sale with full order details if requested
+      if (enrich && pageSales.length > 0) {
+        const enriched = [];
+        for (const sale of pageSales) {
+          try {
+            const details = await client.getOrderDetails(sale.transactionId);
+            enriched.push(details || sale);
+            // Small delay to avoid Vinted rate limiting
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch {
+            enriched.push(sale);
+          }
         }
+        pageSales = enriched;
       }
-      sales = enriched;
+
+      allSales = allSales.concat(pageSales);
+
+      if (result.stoppedEarly) {
+        stoppedEarly = true;
+        break;
+      }
     }
 
     return {
       success: true,
-      sales,
-      pagination: result.pagination,
-      stoppedEarly: result.stoppedEarly || false,
+      sales: allSales,
+      pagination: lastPagination,
+      stoppedEarly,
     };
   } catch (error) {
     console.error('[handleGetVintedSales] Error:', error);
