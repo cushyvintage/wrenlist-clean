@@ -3,8 +3,36 @@ import '@/styles/globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata: Metadata = {
-  title: 'Wrenlist',
-  description: 'Vintage resale management platform',
+  title: {
+    default: 'Wrenlist — The Thrifter\'s Operating System',
+    template: '%s | Wrenlist',
+  },
+  description: 'Track inventory, crosslist to Vinted, eBay, Etsy & Shopify, and grow your vintage resale business. Built for UK thrifters.',
+  icons: {
+    icon: '/wrenlist-logo.png',
+    apple: '/wrenlist-logo.png',
+  },
+  openGraph: {
+    title: 'Wrenlist — The Thrifter\'s Operating System',
+    description: 'Track inventory, crosslist to Vinted, eBay, Etsy & Shopify, and grow your vintage resale business. Built for UK thrifters.',
+    url: 'https://wrenlist.com',
+    siteName: 'Wrenlist',
+    locale: 'en_GB',
+    type: 'website',
+    images: [
+      {
+        url: '/wrenlist-logo.png',
+        width: 600,
+        height: 600,
+        alt: 'Wrenlist — The Thrifter\'s Operating System',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Wrenlist — The Thrifter\'s Operating System',
+    description: 'Track inventory, crosslist to Vinted, eBay, Etsy & Shopify, and grow your vintage resale business.',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

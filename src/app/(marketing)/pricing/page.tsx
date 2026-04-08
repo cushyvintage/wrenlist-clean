@@ -79,7 +79,7 @@ export default function PricingPage() {
       {/* NAV */}
       <nav className="sticky top-0 z-100 flex items-center justify-between border-b border-[rgba(61,92,58,0.14)] bg-cream pl-6 sm:pl-10 pr-6 sm:pr-12 py-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="h-9 w-9 flex-shrink-0 bg-sage"></div>
+          <img src="/wrenlist-logo.png" alt="Wrenlist" width={36} height={36} className="rounded-sm flex-shrink-0" style={{ mixBlendMode: 'multiply' }} />
           <div className="font-serif text-xl font-medium tracking-wider text-ink">
             WREN<em className="font-light italic text-sage-lt">list</em>
           </div>

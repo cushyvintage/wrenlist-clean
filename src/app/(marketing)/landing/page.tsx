@@ -142,7 +142,7 @@ export default function LandingPage() {
       {/* NAV */}
       <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] px-4 sm:px-10 py-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="h-9 w-9 flex-shrink-0 bg-[#3d5c3a]"></div>
+          <img src="/wrenlist-logo.png" alt="Wrenlist" width={36} height={36} className="rounded-sm flex-shrink-0" style={{ mixBlendMode: 'multiply' }} />
           <div className="font-serif text-xl font-medium tracking-wider text-[#1e2e1c]">
             WREN<em className="font-light italic text-[#5a7a57]">list</em>
           </div>
