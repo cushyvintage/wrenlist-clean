@@ -31,15 +31,23 @@ export const GET = withAuth(async (req, user, params) => {
   if (findIds.length > 0) {
     const { data: finds } = await supabase
       .from('finds')
-      .select('id, name, photos, sold_price_gbp, sold_at, category')
+      .select('id, name, photos, sold_price_gbp, sold_at, category, cost_gbp')
       .in('id', findIds)
 
     orders = (finds || []).map(f => {
       const pmd = pmdRecords?.find(p => p.find_id === f.id)
       const sale = (pmd?.fields as Record<string, unknown>)?.sale as Record<string, unknown> | undefined
+      const grossAmount = (sale?.grossAmount as number) ?? f.sold_price_gbp ?? 0
+      const netAmount = (sale?.netAmount as number) ?? grossAmount
+      const serviceFee = (sale?.serviceFee as number) ?? 0
+      const costGbp = f.cost_gbp ?? 0
+      const profit = netAmount - costGbp
       return {
         ...f,
-        grossAmount: (sale?.grossAmount as number) ?? f.sold_price_gbp,
+        grossAmount,
+        netAmount,
+        serviceFee,
+        profit,
         orderDate: (sale?.orderDate as string) ?? f.sold_at,
       }
     }).sort((a, b) => {
@@ -49,7 +57,18 @@ export const GET = withAuth(async (req, user, params) => {
     })
   }
 
-  return ApiResponseHelper.success({ customer, orders })
+  // Compute P&L summary
+  const totalRevenue = orders.reduce((s, o) => s + ((o.grossAmount as number) || 0), 0)
+  const totalFees = orders.reduce((s, o) => s + ((o.serviceFee as number) || 0), 0)
+  const totalNet = orders.reduce((s, o) => s + ((o.netAmount as number) || 0), 0)
+  const totalCost = orders.reduce((s, o) => s + ((o.cost_gbp as number) || 0), 0)
+  const totalProfit = orders.reduce((s, o) => s + ((o.profit as number) || 0), 0)
+
+  return ApiResponseHelper.success({
+    customer,
+    orders,
+    pnl: { totalRevenue, totalFees, totalNet, totalCost, totalProfit },
+  })
 })
 
 export const PATCH = withAuth(async (req, user, params) => {

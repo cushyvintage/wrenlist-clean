@@ -15,15 +15,28 @@ interface OrderItem {
   name: string
   photos: string[] | null
   sold_price_gbp: number | null
+  cost_gbp: number | null
   sold_at: string | null
   category: string | null
-  grossAmount: number | null
+  grossAmount: number
+  netAmount: number
+  serviceFee: number
+  profit: number
   orderDate: string | null
+}
+
+interface PnL {
+  totalRevenue: number
+  totalFees: number
+  totalNet: number
+  totalCost: number
+  totalProfit: number
 }
 
 interface CustomerDetailResponse {
   customer: Customer
   orders: OrderItem[]
+  pnl: PnL
 }
 
 function formatDate(d: string | null): string {
@@ -77,7 +90,7 @@ export default function CustomerDetailPage() {
 
   if (!data) return null
 
-  const { customer: c, orders } = data
+  const { customer: c, orders, pnl } = data
   const daysSinceFirst = c.first_order_at
     ? Math.round((Date.now() - new Date(c.first_order_at).getTime()) / 86400000)
     : null
@@ -111,6 +124,27 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
+      {/* P&L highlight */}
+      {pnl && pnl.totalRevenue > 0 && (
+        <div className={`flex items-center justify-between rounded-md border px-5 py-3 ${
+          pnl.totalProfit > 0 ? 'bg-green-50 border-green-200' : pnl.totalProfit < 0 ? 'bg-red-50 border-red-200' : 'bg-cream border-border'
+        }`}>
+          <div>
+            <span className="text-xs text-ink-lt">profit from this customer</span>
+            <span className={`ml-3 text-xl font-mono font-semibold ${
+              pnl.totalProfit > 0 ? 'text-green-700' : pnl.totalProfit < 0 ? 'text-red-700' : 'text-ink'
+            }`}>
+              {pnl.totalProfit >= 0 ? '+' : ''}£{pnl.totalProfit.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-ink-lt">
+            <span>£{pnl.totalRevenue.toFixed(2)} revenue</span>
+            {pnl.totalFees > 0 && <span>£{pnl.totalFees.toFixed(2)} fees</span>}
+            <span>£{pnl.totalCost.toFixed(2)} cost</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         {/* Stats */}
         <Panel title="overview">
@@ -119,9 +153,35 @@ export default function CustomerDetailPage() {
             <span className="text-sm font-mono">{c.total_orders}</span>
           </div>
           <div className="flex justify-between items-baseline py-2 border-b border-border">
-            <span className="text-xs text-ink-lt">total spent</span>
-            <span className="text-sm font-mono">£{Number(c.total_spent_gbp).toFixed(2)}</span>
+            <span className="text-xs text-ink-lt">total revenue</span>
+            <span className="text-sm font-mono">£{(pnl?.totalRevenue ?? Number(c.total_spent_gbp)).toFixed(2)}</span>
           </div>
+          {pnl && pnl.totalFees > 0 && (
+            <div className="flex justify-between items-baseline py-2 border-b border-border">
+              <span className="text-xs text-ink-lt">platform fees</span>
+              <span className="text-sm font-mono text-red-600">-£{pnl.totalFees.toFixed(2)}</span>
+            </div>
+          )}
+          {pnl && (
+            <div className="flex justify-between items-baseline py-2 border-b border-border">
+              <span className="text-xs text-ink-lt">net received</span>
+              <span className="text-sm font-mono">£{pnl.totalNet.toFixed(2)}</span>
+            </div>
+          )}
+          {pnl && (
+            <div className="flex justify-between items-baseline py-2 border-b border-border">
+              <span className="text-xs text-ink-lt">total cost</span>
+              <span className="text-sm font-mono">£{pnl.totalCost.toFixed(2)}</span>
+            </div>
+          )}
+          {pnl && (
+            <div className="flex justify-between items-baseline py-2 border-b border-border">
+              <span className="text-xs text-ink-lt">profit</span>
+              <span className={`text-sm font-mono font-medium ${pnl.totalProfit > 0 ? 'text-green-600' : pnl.totalProfit < 0 ? 'text-red-600' : ''}`}>
+                £{pnl.totalProfit.toFixed(2)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between items-baseline py-2 border-b border-border">
             <span className="text-xs text-ink-lt">first order</span>
             <span className="text-sm">{formatDate(c.first_order_at)}</span>
@@ -193,9 +253,14 @@ export default function CustomerDetailPage() {
                   <p className="text-sm text-ink truncate">{o.name}</p>
                   <p className="text-xs text-ink-lt">{formatDate(o.orderDate || o.sold_at)}</p>
                 </div>
-                <span className="text-sm font-mono text-ink">
-                  £{(o.grossAmount ?? o.sold_price_gbp ?? 0).toFixed(2)}
-                </span>
+                <div className="text-right flex-shrink-0">
+                  <span className="text-sm font-mono text-ink block">
+                    £{o.grossAmount.toFixed(2)}
+                  </span>
+                  <span className={`text-[11px] font-mono ${o.profit > 0 ? 'text-green-600' : o.profit < 0 ? 'text-red-600' : 'text-ink-lt'}`}>
+                    {o.profit >= 0 ? '+' : ''}£{o.profit.toFixed(2)}
+                  </span>
+                </div>
               </Link>
             ))}
           </div>
