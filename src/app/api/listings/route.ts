@@ -62,7 +62,7 @@ export const GET = withAuth(async (req, user) => {
     const marketplace = searchParams.get('marketplace')
     const status = searchParams.get('status')
     const search = searchParams.get('search')
-    const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const limit = parseInt(searchParams.get('limit') || '5000', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     // 1. Query product_marketplace_data joined with finds
