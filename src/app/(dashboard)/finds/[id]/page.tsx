@@ -492,7 +492,8 @@ export default function InventoryDetailPage() {
       })
 
       if (!res.ok) {
-        throw new Error('Failed to delete')
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string }).error || 'Failed to delete')
       }
 
       router.push('/finds')
@@ -1006,7 +1007,6 @@ export default function InventoryDetailPage() {
     return (
       <DeleteConfirmModal
         itemName={find.name}
-        isOpen={deleteConfirm}
         isLoading={isSaving}
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirm(false)}

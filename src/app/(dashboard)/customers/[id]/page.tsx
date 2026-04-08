@@ -118,7 +118,6 @@ export default function CustomerDetailPage() {
       <DeleteConfirmModal
         itemName={customerName}
         message="This will permanently delete this customer record. This action cannot be undone."
-        isOpen={deleteConfirm}
         isLoading={isDeleting}
         error={deleteError}
         onConfirm={handleDelete}

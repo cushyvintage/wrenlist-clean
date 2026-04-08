@@ -3,7 +3,6 @@
 interface DeleteConfirmModalProps {
   itemName: string
   message?: string
-  isOpen: boolean
   isLoading: boolean
   error?: string | null
   onConfirm: () => void
@@ -13,13 +12,11 @@ interface DeleteConfirmModalProps {
 export default function DeleteConfirmModal({
   itemName,
   message = 'This action cannot be undone.',
-  isOpen,
   isLoading,
   error,
   onConfirm,
   onCancel,
 }: DeleteConfirmModalProps) {
-  if (!isOpen) return null
 
   return (
     <div className="max-w-2xl mx-auto">
