@@ -554,3 +554,63 @@ export interface PaginatedResponse<T> {
     pages: number
   }
 }
+
+// ============================================================================
+// TEST TRACKER
+// ============================================================================
+
+export type TestRunStatus = 'pending' | 'running' | 'passed' | 'failed'
+export type TestResultStatus = 'pending' | 'passed' | 'failed' | 'skipped'
+export type TestPhase =
+  | 'auth'
+  | 'onboarding'
+  | 'dashboard'
+  | 'draft'
+  | 'edge-case'
+  | 'finds-crud'
+  | 'platform-connect'
+  | 'publish'
+  | 'data-flow'
+  | 'listings'
+  | 'sold-customers'
+  | 'expenses-mileage'
+  | 'sourcing'
+  | 'analytics'
+  | 'settings-billing'
+  | 'marketing'
+  | 'ux-audit'
+export type TestSeverity = 'P0' | 'P1' | 'P2' | 'P3'
+
+export interface TestRun {
+  id: string
+  user_id: string
+  name: string
+  status: TestRunStatus
+  total_tests: number
+  passed_count: number
+  failed_count: number
+  skipped_count: number
+  notes: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+export interface TestResult {
+  id: string
+  run_id: string
+  user_id: string
+  test_name: string
+  phase: TestPhase
+  status: TestResultStatus
+  severity: TestSeverity | null
+  expected: string | null
+  actual: string | null
+  db_snapshot: Record<string, unknown> | null
+  screenshot_url: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface TestRunWithResults extends TestRun {
+  results: TestResult[]
+}
