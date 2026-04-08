@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="list-item-title">${escapeHtml(title)}</div>
               </div>
               <span class="list-item-arrow">&rarr;</span>
-              <span class="list-item-platform">${capitalize(platform)}</span>
+              <span class="list-item-platform">${escapeHtml(capitalize(platform))}</span>
               <div class="list-item-status pending"></div>
             </div>
           `

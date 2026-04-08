@@ -25,7 +25,7 @@ async function getUserFromBearerToken(req: NextRequest): Promise<User | null> {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { global: { headers: { Authorization: `Bearer ${token}` } } }
   )
-  const { data: { user } } = await supabase.auth.getUser(token)
+  const { data: { user } } = await supabase.auth.getUser()
   return user
 }
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       user = await getUserFromBearerToken(req)
-      fromBearer = true
+      if (user) fromBearer = true
     }
 
     if (!user) {
