@@ -803,7 +803,17 @@ export class VintedMapper {
       },
       feedback_id: null,
       push_up: false,
-      parcel: null,
+      parcel: product.shipping.shippingWeight ? {
+        dimensions: {
+          height: product.shipping.shippingHeight ? product.shipping.shippingHeight * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
+          length: product.shipping.shippingLength ? product.shipping.shippingLength * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
+          width: product.shipping.shippingWidth ? product.shipping.shippingWidth * (this.tld === 'co.uk' ? 2.54 : 1) : 10,
+        },
+        weight: this.tld === 'co.uk'
+          ? Math.floor(((product.shipping.shippingWeight as { inGrams?: number }).inGrams || 0) / 1000) || 1
+          : Math.floor(((product.shipping.shippingWeight as { inOunces?: number }).inOunces || 0) / 16) || 1,
+        migrate_uk_metric_units: false,
+      } : null,
       package_size_id: packageSizeId,
       upload_session_id: uploadSessionId,
       // shippingAddress is stripped by client.ts before posting, used for address fallback
