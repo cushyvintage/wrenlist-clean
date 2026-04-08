@@ -54,12 +54,12 @@ interface SoldResponse {
 /* ── Shipment helpers ─────────────────────────────────────────── */
 
 const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  delivered: { bg: 'bg-green-100', text: 'text-green-800', label: 'Delivered' },
-  'in transit': { bg: 'bg-amber-100', text: 'text-amber-800', label: 'In Transit' },
-  'label sent': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Label Sent' },
-  shipped: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Shipped' },
-  refunded: { bg: 'bg-red-100', text: 'text-red-800', label: 'Refunded' },
-  cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+  delivered: { bg: 'bg-status-success-bg', text: 'text-status-success', label: 'Delivered' },
+  'in transit': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'In Transit' },
+  'label sent': { bg: 'bg-status-info-bg', text: 'text-status-info', label: 'Label Sent' },
+  shipped: { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Shipped' },
+  refunded: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Refunded' },
+  cancelled: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Cancelled' },
 }
 
 /** Statuses that mean the order still needs seller action */

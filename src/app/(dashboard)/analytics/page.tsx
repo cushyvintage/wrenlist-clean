@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
+import { Button } from '@/components/wren/Button'
 
 type TimePeriod = 'month' | '3months' | 'all'
 
@@ -128,12 +129,9 @@ export default function AnalyticsPage() {
         <h1 className="font-serif text-2xl italic text-ink">analytics</h1>
         <div className="text-center py-12">
           <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="px-4 py-2 bg-sage text-white rounded font-medium text-sm hover:bg-sage-dk transition-colors"
-          >
+          <Button variant="primary" onClick={() => setRetryCount((c) => c + 1)}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -150,17 +148,19 @@ export default function AnalyticsPage() {
             { value: '3months' as const, label: '3 months' },
             { value: 'all' as const, label: 'all time' },
           ].map(({ value, label }) => (
-            <button
+            <Button
               key={value}
+              size="sm"
+              variant={timePeriod === value ? 'secondary' : 'ghost'}
               onClick={() => setTimePeriod(value)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={
                 timePeriod === value
-                  ? 'bg-sage-pale border border-sage text-sage'
-                  : 'bg-white border border-sage/14 text-ink-lt hover:bg-cream-md'
-              }`}
+                  ? 'bg-sage-pale'
+                  : 'bg-white border-sage/14 hover:bg-cream-md'
+              }
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

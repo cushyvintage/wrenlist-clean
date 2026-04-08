@@ -49,7 +49,7 @@ export function StatCard({
 
       {/* Delta: 11px, green for positive */}
       {delta && (
-        <div className="text-[11px] font-medium" style={{ color: '#4A7A45' }}>
+        <div className="text-[11px] font-medium text-status-success">
           {delta}
         </div>
       )}

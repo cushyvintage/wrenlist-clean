@@ -43,6 +43,16 @@ const config: Config = {
           dk: '#154180',
         },
         sidebar: '#1E2E1C',
+        status: {
+          success: '#4A7A45',
+          'success-bg': '#E8F0E7',
+          warning: '#8A6D2F',
+          'warning-bg': '#F5EDD8',
+          error: '#8B3232',
+          'error-bg': '#F5E0E0',
+          info: '#2F5C8B',
+          'info-bg': '#E0EBF5',
+        },
       },
       fontFamily: {
         serif: ['Cormorant Garamond', 'Georgia', 'serif'],

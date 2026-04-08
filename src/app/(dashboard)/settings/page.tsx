@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
+import { Button } from '@/components/wren/Button'
 import AIAutoFillSettings from '@/components/settings/AIAutoFillSettings'
 
 type SettingsTab = 'account' | 'workspace' | 'integrations' | 'ai' | 'billing' | 'legal'
@@ -332,25 +333,28 @@ export default function SettingsPage() {
                 <div className="w-16 h-16 bg-sage-pale rounded-md flex items-center justify-center text-2xl border border-sage/22">
                   👤
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   disabled
                   title="Coming soon"
-                  className="px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-sm font-medium text-ink-lt cursor-not-allowed opacity-50"
+                  className="border-sage/22 bg-cream-md text-ink-lt"
                 >
                   Upload photo
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Save Changes */}
             <div className="border-t border-sage/14 pt-6">
-              <button
+              <Button
+                variant="primary"
                 onClick={handleSaveAccountChanges}
                 disabled={isSaving || isLoadingProfile}
-                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isSaving}
               >
                 {isSaving ? 'Saving...' : 'Save changes'}
-              </button>
+              </Button>
             </div>
 
             {/* Change Password */}
@@ -447,13 +451,14 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="border-t border-sage/14 pt-6">
-              <button
+              <Button
+                variant="primary"
                 onClick={handleSaveWorkspaceChanges}
                 disabled={isSavingWorkspace || isLoadingWorkspace}
-                className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isSavingWorkspace}
               >
                 {isSavingWorkspace ? 'Saving...' : 'Save changes'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -507,14 +512,18 @@ export default function SettingsPage() {
                     <div>
                       {platform.status === 'connected' ? (
                         <div className="flex gap-2">
-                          <button className="px-3 py-1.5 text-xs bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream rounded-sm transition-colors font-medium">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="border-sage/22 bg-cream-md text-ink-lt hover:bg-cream"
+                          >
                             Disconnect
-                          </button>
+                          </Button>
                         </div>
                       ) : (
-                        <button className="px-3 py-1.5 text-xs bg-sage text-cream hover:bg-sage-dk rounded-sm transition-colors font-medium">
+                        <Button variant="primary" size="sm">
                           Connect
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -560,17 +569,20 @@ export default function SettingsPage() {
               >
                 Terms of Service
               </a>
-              <button className="w-full text-left px-4 py-3 bg-cream-md rounded-sm text-sm font-medium text-ink hover:bg-cream transition-colors">
+              <Button
+                variant="ghost"
+                className="w-full justify-start bg-cream-md text-ink hover:bg-cream"
+              >
                 Data Export (GDPR)
-              </button>
+              </Button>
             </div>
 
             {/* Danger Zone */}
             <div className="border-t border-sage/14 pt-6">
               <h3 className="font-medium text-red text-sm mb-4">Danger Zone</h3>
-              <button className="px-4 py-2 bg-red text-white rounded-sm font-medium text-sm hover:bg-red-dk transition-colors">
+              <Button variant="danger">
                 Delete Account
-              </button>
+              </Button>
               <p className="text-xs text-ink-lt mt-2">
                 This action cannot be undone. All your data will be permanently
                 deleted.

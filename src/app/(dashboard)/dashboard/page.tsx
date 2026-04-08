@@ -5,6 +5,7 @@ import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { InventoryRow } from '@/components/wren/InventoryRow'
+import { Button } from '@/components/wren/Button'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { unwrapApiResponse } from '@/lib/api-utils'
@@ -154,12 +155,13 @@ export default function DashboardPage() {
             {findsList === 'empty' ? (
               <div className="py-8 text-center">
                 <p className="text-ink-lt mb-4">No items in your inventory yet</p>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => router.push('/add-find')}
-                  className="text-sage hover:text-sage-dk font-medium transition-colors"
+                  className="text-sage hover:text-sage-dk"
                 >
                   Add your first find →
-                </button>
+                </Button>
               </div>
             ) : findsList === 'skeleton' ? (
               <div className="space-y-3">
@@ -227,12 +229,14 @@ export default function DashboardPage() {
           </Panel>
 
           {/* CTA */}
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={() => router.push('/add-find')}
-            className="w-full px-4 py-3 bg-sage text-white hover:bg-sage-dk rounded font-medium transition-colors"
+            className="w-full"
           >
             ➕ Add new find
-          </button>
+          </Button>
         </div>
       </div>
 

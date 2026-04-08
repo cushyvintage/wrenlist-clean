@@ -9,6 +9,7 @@ import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import type { Customer, Platform } from '@/types'
 import Link from 'next/link'
+import { Button } from '@/components/wren/Button'
 
 interface CustomersResponse {
   customers: Customer[]
@@ -84,8 +85,8 @@ export default function CustomersPage() {
           <div className="py-12 text-center">
             <p className="text-ink-lt text-sm mb-4">No customers yet</p>
             <p className="text-xs text-ink-lt mb-6">Customers are created automatically when you sync sales from your marketplaces.</p>
-            <Link href="/sold" className="inline-block px-4 py-2 bg-sage text-cream rounded text-sm font-medium hover:bg-sage-lt transition-colors">
-              Go to sold items
+            <Link href="/sold">
+              <Button variant="primary">Go to sold items</Button>
             </Link>
           </div>
         </Panel>
@@ -118,7 +119,7 @@ export default function CustomersPage() {
                     <td className="px-3 py-2">
                       <span className="text-ink font-medium">{c.full_name || c.username || '--'}</span>
                       {c.total_orders >= 2 && (
-                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">repeat</span>
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-status-success-bg text-status-success">repeat</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-ink-lt text-xs">{c.username || '--'}</td>
