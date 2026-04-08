@@ -115,6 +115,8 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `price_research_history` | Price research lookups with results for QA | ON |
 | `expense_categories` | Expense category lookup (DB-driven) | ON (read-only) |
 | `customers` | Buyer CRM — one row per buyer per marketplace | ON |
+| `test_runs` | Internal E2E test run tracking | ON |
+| `test_results` | Individual test case results per run | ON |
 | `daily_metrics` | Daily KPIs (not yet populated) | ON |
 | `monthly_metrics` | Monthly performance (not yet populated) | ON |
 

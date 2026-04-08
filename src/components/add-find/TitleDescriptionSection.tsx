@@ -2,6 +2,7 @@
 
 import ISBNLookup from '@/components/add-find/ISBNLookup'
 import { Platform } from '@/types'
+import { PLATFORM_DESCRIPTION_LIMITS } from '@/data/unified-colours'
 
 interface TitleDescriptionSectionProps {
   title: string
@@ -109,7 +110,15 @@ export default function TitleDescriptionSection({
         <div className="flex justify-between items-start mt-1">
           <div className={`text-xs ${description.length > descriptionCharLimit ? 'text-amber-600 font-medium' : 'text-sage-dim'}`}>
             {description.length}/{descriptionCharLimit}
-            {description.length > descriptionCharLimit && ' — will be truncated on some platforms'}
+            {description.length > descriptionCharLimit && (() => {
+              const truncated = selectedPlatforms.filter(
+                p => description.length > (PLATFORM_DESCRIPTION_LIMITS[p] ?? 12000)
+              )
+              const names = truncated.map(p => p.charAt(0).toUpperCase() + p.slice(1))
+              return names.length > 0
+                ? ` — will be truncated on ${names.join(', ')}`
+                : ' — will be truncated on some platforms'
+            })()}
           </div>
           {incompleteRequiredFields.has('description') && (
             <span className="text-xs text-amber-600">Required — complete before publishing</span>
