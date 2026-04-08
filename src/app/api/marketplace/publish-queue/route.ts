@@ -68,11 +68,20 @@ export const GET = withAuth(async (_req, user) => {
 
   const queue = items.map((item) => {
     const find = findsMap[item.find_id] || null
-    // Resolve platform_category_id from category map if not stored in PMD
+    // Resolve platform_category_id: PMD → vintedMetadata → category map
     let categoryId = item.platform_category_id || null
-    if (!categoryId && find?.category && ['vinted', 'depop', 'etsy', 'shopify'].includes(item.marketplace)) {
-      const mapped = getPlatformCategoryId(find.category as string, item.marketplace as 'vinted' | 'depop' | 'etsy' | 'shopify')
-      if (mapped) categoryId = mapped
+    if (!categoryId && find) {
+      // For Vinted: prefer vintedMetadata.catalog_id (specific sub-category from form/import)
+      const pf = (find.platform_fields ?? {}) as Record<string, unknown>
+      const vintedMeta = ((pf.vinted ?? {}) as Record<string, unknown>).vintedMetadata as Record<string, unknown> | undefined
+      if (item.marketplace === 'vinted' && vintedMeta?.catalog_id) {
+        categoryId = String(vintedMeta.catalog_id)
+      }
+      // Fallback: resolve from category map
+      if (!categoryId && find.category && ['vinted', 'depop', 'etsy', 'shopify'].includes(item.marketplace)) {
+        const mapped = getPlatformCategoryId(find.category as string, item.marketplace as 'vinted' | 'depop' | 'etsy' | 'shopify')
+        if (mapped) categoryId = mapped
+      }
     }
     return {
       find_id: item.find_id,
