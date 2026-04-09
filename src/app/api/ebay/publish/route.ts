@@ -205,6 +205,16 @@ export async function POST(request: NextRequest) {
       aspects['Neckline'] = 'Round Neck'
     }
 
+    // Outer Shell Material — required for coats/jackets/outerwear
+    if (!aspects['Outer Shell Material'] && category.startsWith('clothing')) {
+      aspects['Outer Shell Material'] = aspects['Material'] || 'Cotton'
+    }
+
+    // Lining Material — sometimes required for outerwear
+    if (!aspects['Lining Material'] && (category.includes('coats') || category.includes('jackets'))) {
+      aspects['Lining Material'] = 'Polyester'
+    }
+
     // Sleeve Length — commonly required for clothing
     if (!aspects['Sleeve Length'] && category.startsWith('clothing')) {
       aspects['Sleeve Length'] = 'Short Sleeve'
