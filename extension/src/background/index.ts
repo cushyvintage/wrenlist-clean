@@ -540,7 +540,9 @@ type ExternalMessage = Record<string, unknown>;
   const USE_JOB_QUEUE_KEY = "useJobQueue";
 
   // Cached flag — avoids async chrome.storage.sync.get during poll guard window
-  let cachedUseJobQueue = false;
+  // Default ON: extension uses /api/jobs/poll (new system). Set to false in
+  // chrome.storage.sync to revert to legacy publish-queue/delist-queue endpoints.
+  let cachedUseJobQueue = true;
   chrome.storage.sync.get([USE_JOB_QUEUE_KEY]).then(({ [USE_JOB_QUEUE_KEY]: v }) => {
     cachedUseJobQueue = !!v;
   });
@@ -843,7 +845,7 @@ type ExternalMessage = Record<string, unknown>;
           }
 
           // Pass settings with TLD overrides for UK marketplaces
-          // Read publishMode from PMD fields if present (default: "draft" for Etsy)
+          // Read publishMode from PMD fields if present (default: "publish" for Etsy)
           const itemFields = (item as Record<string, unknown>).fields as Record<string, unknown> | undefined;
           const publishOptions = {
             settings: {
@@ -851,7 +853,7 @@ type ExternalMessage = Record<string, unknown>;
               depopTld: "co.uk",
               facebookTld: "co.uk",
             },
-            publishMode: (itemFields?.publishMode as "draft" | "publish" | undefined) ?? "draft",
+            publishMode: (itemFields?.publishMode as "draft" | "publish" | undefined) ?? "publish",
           };
           let result: Awaited<ReturnType<typeof publishToMarketplace>>;
           try {
