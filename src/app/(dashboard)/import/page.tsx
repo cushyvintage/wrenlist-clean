@@ -10,6 +10,7 @@ import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { ImportProgressBar } from '@/components/wren/ImportProgressBar'
 import { InsightCard } from '@/components/wren/InsightCard'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { PlatformGrid } from '@/components/import/PlatformGrid'
 import { ImportHeader } from '@/components/import/ImportHeader'
 import { ImportItemList } from '@/components/import/ImportItemList'
@@ -746,6 +747,64 @@ export default function ImportPage() {
           <p className="text-sm text-ink-lt">
             We&apos;re working on importing from {formatPlatformName(selectedPlatform)}. In the meantime, you can import from eBay, Vinted, or Shopify.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Post-import completion view ---
+  if (vintedImport.state.phase === 'done') {
+    const { imported, skipped, errors } = vintedImport.state
+    return (
+      <div className="space-y-4">
+        {/* Minimal header */}
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
+            ← back
+          </button>
+          <MarketplaceIcon platform={selectedPlatform} size="lg" />
+          <h1 className="text-lg font-serif italic text-ink">
+            import from {formatPlatformName(selectedPlatform)}
+          </h1>
+        </div>
+
+        {/* Success card */}
+        <div className="bg-white border border-sage/14 rounded-md p-8 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-50">
+            <span className="text-2xl text-green-600">✓</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-medium text-ink">
+              {imported} find{imported !== 1 ? 's' : ''} imported
+            </h2>
+            <div className="flex items-center justify-center gap-3 mt-1 text-sm text-ink-lt">
+              {skipped > 0 && <span>{skipped} already in Wren</span>}
+              {errors > 0 && <span className="text-amber-600">{errors} error{errors !== 1 ? 's' : ''}</span>}
+            </div>
+          </div>
+          <p className="text-sm text-ink-lt max-w-md mx-auto">
+            Your listings are now in Wrenlist. Add cost prices for accurate margin tracking.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <a
+              href="/finds"
+              className="px-5 py-2.5 text-sm font-medium bg-sage text-white rounded hover:bg-sage-dk transition"
+            >
+              View your finds →
+            </a>
+            <button
+              onClick={() => {
+                vintedImport.reset()
+                // Re-fetch to show updated imported status
+                if (selectedPlatform === 'ebay') loadEbayInventory()
+                else if (selectedPlatform === 'vinted') loadVintedListings()
+                else if (selectedPlatform === 'shopify') loadShopifyListings()
+              }}
+              className="px-5 py-2.5 text-sm font-medium bg-cream-md text-ink rounded hover:bg-cream-dk transition"
+            >
+              Import more
+            </button>
+          </div>
         </div>
       </div>
     )
