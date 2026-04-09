@@ -118,11 +118,14 @@ export function PlatformTag({
 
   // Wrap in a tooltip container when there is an error message
   if (state === 'error' && errorMessage) {
+    // Lazy-import to avoid circular deps — friendlyError is a pure function
+    const { friendlyError } = require('@/lib/friendly-errors')
+    const displayError = friendlyError(platform, errorMessage)
     return (
       <span className="relative group inline-block">
         {tag}
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block px-2 py-1 rounded bg-ink text-cream text-[11px] whitespace-nowrap z-20 shadow-md">
-          {errorMessage}
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block px-2 py-1 rounded bg-ink text-cream text-[11px] max-w-[250px] whitespace-normal z-20 shadow-md">
+          {displayError}
         </span>
       </span>
     )
