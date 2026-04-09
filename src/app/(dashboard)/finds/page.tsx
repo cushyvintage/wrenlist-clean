@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { PLAN_LIMITS } from '@/config/plans'
-import type { Find, Profile, PlanId } from '@/types'
+import type { Find, Profile, PlanId, Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { formatCategory } from '@/lib/format-category'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { crosslistFind, formatPlatformName } from '@/lib/crosslist'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
 // Emoji mapping for categories
 const categoryEmojis: Record<string, string> = {
@@ -56,6 +59,11 @@ export default function InventoryPage() {
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0 })
+  const [showBulkCrosslist, setShowBulkCrosslist] = useState(false)
+  const [bulkCrosslistTargets, setBulkCrosslistTargets] = useState<Platform[]>([])
+  const [bulkCrosslisting, setBulkCrosslisting] = useState(false)
+  const [bulkCrosslistResult, setBulkCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
 
   /**
    * Debounce search input (300ms)
@@ -362,6 +370,42 @@ export default function InventoryPage() {
     }
   }
 
+  const handleBulkCrosslist = async () => {
+    if (bulkCrosslistTargets.length === 0) return
+    setBulkCrosslisting(true)
+    setBulkCrosslistResult(null)
+
+    const findIds = Array.from(selectedItems)
+    let succeeded = 0
+    let failed = 0
+    const errors: string[] = []
+
+    for (const findId of findIds) {
+      try {
+        const outcome = await crosslistFind(findId, bulkCrosslistTargets, recheckPlatforms)
+        if (outcome.ok) {
+          succeeded++
+        } else {
+          failed++
+          errors.push(`${findId.slice(0, 8)}: ${outcome.message}`)
+        }
+      } catch (err) {
+        failed++
+        errors.push(`${findId.slice(0, 8)}: ${err instanceof Error ? err.message : 'unknown error'}`)
+      }
+    }
+
+    const parts: string[] = []
+    if (succeeded > 0) parts.push(`${succeeded} item${succeeded !== 1 ? 's' : ''} queued`)
+    if (failed > 0) parts.push(`${failed} failed`)
+    setBulkCrosslistResult({ ok: failed === 0, message: parts.join(', ') + (errors.length > 0 ? ` — ${errors[0]}` : '') })
+    setShowBulkCrosslist(false)
+    setBulkCrosslistTargets([])
+    setSelectedItems(new Set())
+    setRefreshTrigger((n) => n + 1)
+    setBulkCrosslisting(false)
+  }
+
   const planLimit = profile ? PLAN_LIMITS[profile.plan as PlanId]?.finds : null
   const findsUsed = totalCount
   const totalPages = Math.ceil(totalCount / LIMIT)
@@ -534,6 +578,13 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {/* Bulk crosslist result */}
+      {bulkCrosslistResult && (
+        <div className={`rounded p-3 text-sm ${bulkCrosslistResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {bulkCrosslistResult.message}
+        </div>
+      )}
+
       {/* Bulk action bar */}
       {selectedItems.size > 0 && (
         <div
@@ -548,7 +599,70 @@ export default function InventoryPage() {
             {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
           </span>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative">
+            {/* Crosslist button */}
+            {allConnectedPlatforms.length > 0 && (
+              <button
+                onClick={() => setShowBulkCrosslist(!showBulkCrosslist)}
+                disabled={bulkCrosslisting}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: '#3D5C3A',
+                  color: '#F5F0E8',
+                }}
+                onMouseEnter={(e) => !bulkCrosslisting && (e.currentTarget.style.backgroundColor = '#2C4428')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3D5C3A')}
+              >
+                {bulkCrosslisting ? 'Publishing...' : '↗ Crosslist'}
+              </button>
+            )}
+
+            {/* Bulk crosslist picker */}
+            {showBulkCrosslist && (
+              <div
+                className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-50 min-w-[220px]"
+                style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)' }}
+              >
+                <p className="text-xs uppercase tracking-wider font-medium mb-2" style={{ color: '#8A9E88' }}>
+                  Publish {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} to
+                </p>
+                {allConnectedPlatforms.map(({ platform, username }) => (
+                  <label key={platform} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkCrosslistTargets.includes(platform)}
+                      onChange={() => setBulkCrosslistTargets((prev) =>
+                        prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
+                      )}
+                      className="rounded"
+                    />
+                    <MarketplaceIcon platform={platform} size="sm" />
+                    <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                      {formatPlatformName(platform)}
+                      {username && <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>}
+                    </span>
+                  </label>
+                ))}
+                <div className="flex gap-2 mt-3 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
+                  <button
+                    onClick={handleBulkCrosslist}
+                    disabled={bulkCrosslistTargets.length === 0 || bulkCrosslisting}
+                    className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-40"
+                    style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+                  >
+                    Publish now
+                  </button>
+                  <button
+                    onClick={() => { setShowBulkCrosslist(false); setBulkCrosslistTargets([]) }}
+                    className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+                    style={{ borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', backgroundColor: 'transparent', color: '#3D5C3A' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Mark as sold button */}
             <button
               onClick={() => setShowMarkSoldForm(!showMarkSoldForm)}

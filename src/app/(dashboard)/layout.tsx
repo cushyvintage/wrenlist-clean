@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { AppTopbar } from '@/components/layout/AppTopbar'
+import { BetaBanner } from '@/components/layout/BetaBanner'
 import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
@@ -102,7 +103,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar
         userInfo={{
           name: user?.full_name || user?.email?.split('@')[0] || 'User',
-          plan: 'Nester',
+          plan: 'Beta',
         }}
       >
         {/* Group nav items by section */}
@@ -145,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onClose={closeMobileMenu}
         userInfo={{
           name: user?.full_name || user?.email?.split('@')[0] || 'User',
-          plan: 'Nester',
+          plan: 'Beta',
         }}
       >
         {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS'].map((section) => (
@@ -183,6 +184,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content area */}
       <div className="md:ml-[210px] flex flex-col">
+        {/* Beta banner */}
+        <BetaBanner />
+
         {/* Top bar with user menu */}
         <AppTopbar
           title={pageTitle}

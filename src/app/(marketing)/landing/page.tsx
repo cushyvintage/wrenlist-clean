@@ -144,7 +144,12 @@ export default function LandingPage() {
       {/* HERO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
         <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
-          <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter's operating system</p>
+          {/* Beta badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3d5c3a]/10 border border-[#3d5c3a]/20 mb-5 w-fit">
+            <span className="w-2 h-2 rounded-full bg-[#3d5c3a] animate-pulse" />
+            <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Open Beta — Free for 3 months</span>
+          </div>
+          <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter&apos;s operating system</p>
           <h1 className="mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
             Every find,<br />
             <em className="italic text-[#5a7a57]">accounted</em>
@@ -156,7 +161,7 @@ export default function LandingPage() {
           </p>
           <div className="flex gap-4 items-center">
             <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
-              Start free — no card needed
+              Start your free beta
             </a>
             <Link href="/pricing" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
               see pricing →
@@ -248,7 +253,7 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center text-xs text-[#6b7d6a] font-normal mt-5">
-            All features included on paid plans. <Link href="/pricing" className="text-[#5a7a57] underline">See plan comparison →</Link>
+            All features included during beta. <Link href="/pricing" className="text-[#5a7a57] underline">See pricing after beta →</Link>
           </div>
         </div>
       </section>

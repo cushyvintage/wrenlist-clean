@@ -4,22 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/services/supabase'
 
-type PlanType = 'free' | 'nester' | 'forager' | 'flock'
-
-const PLANS: Record<PlanType, { name: string; price: number; finds: string; popular?: boolean }> = {
-  free: { name: 'Free', price: 0, finds: '10 finds/mo' },
-  nester: { name: 'Nester', price: 14, finds: '100 finds/mo' },
-  forager: { name: 'Forager', price: 29, finds: '500 finds/mo', popular: true },
-  flock: { name: 'Flock', price: 59, finds: 'Unlimited' },
-}
-
 export default function RegisterPage() {
   const router = useRouter()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('free')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -61,7 +51,7 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: `${firstName} ${lastName}`,
-            plan: selectedPlan,
+            plan: 'beta',
           },
         },
       })
@@ -111,15 +101,16 @@ export default function RegisterPage() {
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
         </div>
 
-        {/* Early access banner */}
-        <div className="mb-6 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-lt text-center">
-          Wrenlist is in early access. Sign up free — no card needed.
+        {/* Beta banner */}
+        <div className="mb-6 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-md text-center flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-sage animate-pulse" />
+          Open Beta — all features free for 3 months. No card needed.
         </div>
 
         {/* Register card */}
         <div className="bg-white border border-sage/14 rounded-lg p-8">
           <h2 className="text-2xl font-serif text-ink mb-2">Create your <span className="italic">account</span></h2>
-          <p className="text-ink-lt text-sm mb-6">Free forever on the Free plan. No card needed.</p>
+          <p className="text-ink-lt text-sm mb-6">All features unlocked. We just want your feedback.</p>
 
           {/* Error message */}
           {error && (
@@ -241,23 +232,21 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Plan selection */}
-            <div>
+            {/* Pricing preview */}
+            <div className="pt-2">
               <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
-                Choose your plan
+                Plans after beta
               </label>
               <div className="grid grid-cols-4 gap-3">
-                {Object.entries(PLANS).map(([key, plan]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSelectedPlan(key as PlanType)}
-                    disabled={isLoading}
-                    className={`relative p-3 border rounded text-center transition-all disabled:opacity-50 ${
-                      selectedPlan === key
-                        ? 'border-sage bg-sage/5'
-                        : 'border-sage/14 hover:border-sage/30'
-                    }`}
+                {[
+                  { name: 'Free', price: 0, finds: '10 finds/mo' },
+                  { name: 'Nester', price: 14, finds: '100 finds/mo' },
+                  { name: 'Forager', price: 29, finds: '500 finds/mo', popular: true },
+                  { name: 'Flock', price: 59, finds: 'Unlimited' },
+                ].map((plan) => (
+                  <div
+                    key={plan.name}
+                    className="relative p-3 border border-sage/14 rounded text-center opacity-60"
                   >
                     {plan.popular && (
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
@@ -265,11 +254,14 @@ export default function RegisterPage() {
                       </div>
                     )}
                     <div className="font-medium text-ink">{plan.name}</div>
-                    <div className="text-lg font-semibold text-sage mt-1">£{plan.price}</div>
+                    <div className="text-lg font-semibold text-sage mt-1">&pound;{plan.price}</div>
                     <div className="text-xs text-ink-lt mt-1">{plan.finds}</div>
-                  </button>
+                  </div>
                 ))}
               </div>
+              <p className="text-center text-xs text-sage-dim mt-2">
+                Beta users get all features free for 3 months
+              </p>
             </div>
 
             {/* Submit button */}
