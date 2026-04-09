@@ -16,6 +16,7 @@ import { useAddFindForm } from '@/components/add-find/useAddFindForm'
 import { useAddFindHandlers } from '@/components/add-find/useAddFindHandlers'
 import { useAddFindSubmit } from '@/components/add-find/useAddFindSubmit'
 import PublishProgressPanel from '@/components/publish/PublishProgressPanel'
+import CategoryPlatformStatus from '@/components/add-find/CategoryPlatformStatus'
 
 declare const chrome: any
 
@@ -178,6 +179,10 @@ export default function AddFindPage() {
           <CategoryPicker
             value={form.formData.category}
             onChange={(value) => handlers.handleInputChange('category', value)}
+            selectedPlatforms={form.formData.selectedPlatforms}
+          />
+          <CategoryPlatformStatus
+            category={form.formData.category}
             selectedPlatforms={form.formData.selectedPlatforms}
           />
         </div>
