@@ -815,7 +815,12 @@ type ExternalMessage = Record<string, unknown>;
           };
 
           // --- Idempotency check: skip publish if already done this session ---
+          // If the item is back in needs_publish (user retried), clear the cache
           const idempotencyKey = `${find.id}_${mp}`;
+          if (publishedThisSession.has(idempotencyKey) && retryCount === 0) {
+            // Item was re-queued (retry_count reset to 0) — clear stale cache
+            publishedThisSession.delete(idempotencyKey);
+          }
           const cachedResult = publishedThisSession.get(idempotencyKey);
           if (cachedResult) {
             console.log(`[QueuePoll] Already published ${find.name} to ${mp} this session — retrying report-back only`);
