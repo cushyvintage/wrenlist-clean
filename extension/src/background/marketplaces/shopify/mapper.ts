@@ -176,7 +176,7 @@ export class ShopifyMapper {
       title: product.title,
       descriptionHtml: (product.description ?? "").replace(/\n/g, "<br/>"),
       category: product.category?.[0]
-        ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
+        ? (product.category[0].startsWith('gid://') ? product.category[0] : `gid://shopify/TaxonomyCategory/${product.category[0]}`)
         : null,
       customProductType: product.dynamicProperties?.productType ?? "",
       collectionsToJoin: collectionIds,
@@ -231,7 +231,7 @@ export class ShopifyMapper {
       vendor: product.brand ?? "",
       tags,
       category: product.category?.[0]
-        ? `gid://shopify/TaxonomyCategory/${product.category[0]}`
+        ? (product.category[0].startsWith('gid://') ? product.category[0] : `gid://shopify/TaxonomyCategory/${product.category[0]}`)
         : null,
       workflow: "product-details-update",
     };
