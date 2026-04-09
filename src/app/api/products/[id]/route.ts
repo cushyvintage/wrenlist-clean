@@ -4,109 +4,44 @@
  * DELETE /api/products/[id] - Delete a find (legacy endpoint, use /api/finds/[id])
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerUser } from '@/lib/supabase-server'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/with-auth'
 import { getFind, updateFind, deleteFind } from '@/services/products.service'
 
-type RouteParams = Promise<{ id: string }>
+export const GET = withAuth(async (req, user, params) => {
+  const id = params!.id as string
 
-/**
- * GET /api/products/[id]
- */
-export async function GET(request: NextRequest, { params }: { params: RouteParams }) {
-  const { id } = await params
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const find = await getFind(id, user.id)
-
-    if (!find) {
-      return NextResponse.json(
-        { error: 'Find not found' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({ find })
-  } catch (error: any) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`GET /api/products/${id} error:`, error)
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  const find = await getFind(id, user.id)
+  if (!find) {
+    return NextResponse.json({ error: 'Find not found' }, { status: 404 })
   }
-}
 
-/**
- * PUT /api/products/[id]
- */
-export async function PUT(request: NextRequest, { params }: { params: RouteParams }) {
-  const { id } = await params
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return NextResponse.json({ find })
+})
 
-    // Verify ownership first (scoped query)
-    const find = await getFind(id, user.id)
-    if (!find) {
-      return NextResponse.json(
-        { error: 'Find not found' },
-        { status: 404 }
-      )
-    }
+export const PUT = withAuth(async (req, user, params) => {
+  const id = params!.id as string
 
-    const body = await request.json()
-    const updated = await updateFind(id, user.id, body)
-
-    return NextResponse.json({ find: updated })
-  } catch (error: any) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`PUT /api/products/${id} error:`, error)
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  const find = await getFind(id, user.id)
+  if (!find) {
+    return NextResponse.json({ error: 'Find not found' }, { status: 404 })
   }
-}
 
-/**
- * DELETE /api/products/[id]
- */
-export async function DELETE(request: NextRequest, { params }: { params: RouteParams }) {
-  const { id } = await params
-  try {
-    const user = await getServerUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const body = await req.json()
+  const updated = await updateFind(id, user.id, body)
 
-    // Verify ownership first (scoped query)
-    const find = await getFind(id, user.id)
-    if (!find) {
-      return NextResponse.json(
-        { error: 'Find not found' },
-        { status: 404 }
-      )
-    }
+  return NextResponse.json({ find: updated })
+})
 
-    await deleteFind(id, user.id)
+export const DELETE = withAuth(async (req, user, params) => {
+  const id = params!.id as string
 
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`DELETE /api/products/${id} error:`, error)
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  const find = await getFind(id, user.id)
+  if (!find) {
+    return NextResponse.json({ error: 'Find not found' }, { status: 404 })
   }
-}
+
+  await deleteFind(id, user.id)
+
+  return NextResponse.json({ success: true })
+})
