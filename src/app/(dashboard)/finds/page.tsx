@@ -840,12 +840,11 @@ export default function InventoryPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <td className="py-[12px] px-[18px]">
+                    <td className="py-[12px] px-[18px]" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedItems.has(find.id)}
                         onChange={() => toggleItemSelection(find.id)}
-                        onClick={(e) => e.stopPropagation()}
                         className="cursor-pointer"
                       />
                     </td>
