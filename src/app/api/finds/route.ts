@@ -173,10 +173,8 @@ export const POST = withAuth(async (req, user) => {
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', error)
-      }
-      return ApiResponseHelper.internalError()
+      console.error('Supabase insert error:', error.message, error.details, error.hint, error.code)
+      return ApiResponseHelper.internalError(error.message)
     }
 
     // Increment finds_this_month on profile (skip if import)
