@@ -643,7 +643,10 @@ export default function InventoryPage() {
                     </span>
                   </label>
                 ))}
-                <div className="flex gap-2 mt-3 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
+                <p className="text-[11px] mt-2 leading-snug" style={{ color: '#92700C' }}>
+                  Platforms other than eBay require the Wrenlist Chrome extension
+                </p>
+                <div className="flex gap-2 mt-2 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
                   <button
                     onClick={handleBulkCrosslist}
                     disabled={bulkCrosslistTargets.length === 0 || bulkCrosslisting}

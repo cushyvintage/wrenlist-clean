@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { fetchApi } from '@/lib/api-utils'
+import { friendlyError } from '@/lib/friendly-errors'
 import type { PublishJob, Platform, JobStatus } from '@/types'
 
 type TabFilter = 'all' | 'pending' | 'scheduled' | 'running' | 'completed' | 'failed'
@@ -297,7 +298,7 @@ export default function JobsPage() {
                     </div>
                     {expandedError === job.id && job.error_message && (
                       <div className="mt-2 p-2 bg-red-50 border border-red/20 rounded text-xs text-red max-w-[300px]">
-                        {job.error_message}
+                        {friendlyError(job.platform, job.error_message)}
                       </div>
                     )}
                   </td>

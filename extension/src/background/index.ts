@@ -429,6 +429,21 @@ type ExternalMessage = Record<string, unknown>;
   const QUEUE_POLL_ALARM = "queue_poll";
   const QUEUE_POLL_INTERVAL_MINUTES = 1;
   const MAX_PUBLISH_RETRIES = 3;
+
+  /**
+   * Idempotency guard: prevents duplicate listings when the report-back POST
+   * fails (network issue, Vercel cold start) and the queue still shows
+   * needs_publish on the next poll cycle.
+   *
+   * Key: `${find_id}_${marketplace}`, Value: cached publish result.
+   * Naturally resets when the MV3 service worker restarts.
+   */
+  const publishedThisSession = new Map<string, {
+    listingId?: string;
+    listingUrl?: string;
+    publishMode?: "draft" | "publish";
+  }>();
+
   const USE_JOB_QUEUE_KEY = "useJobQueue";
 
   // Cached flag — avoids async chrome.storage.sync.get during poll guard window
@@ -694,6 +709,36 @@ type ExternalMessage = Record<string, unknown>;
             },
           };
 
+          // --- Idempotency check: skip publish if already done this session ---
+          const idempotencyKey = `${find.id}_${mp}`;
+          const cachedResult = publishedThisSession.get(idempotencyKey);
+          if (cachedResult) {
+            console.log(`[QueuePoll] Already published ${find.name} to ${mp} this session — retrying report-back only`);
+            await remoteLog("info", "queue", `Idempotency hit for ${find.name} on ${mp} — skipping publish, retrying report`);
+            // Retry the report-back with the cached result
+            try {
+              const reportStatus = mp === "etsy"
+                ? (cachedResult.publishMode === "publish" ? "listed" : "draft")
+                : "listed";
+              await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  find_id: item.find_id,
+                  marketplace: mp,
+                  status: reportStatus,
+                  platform_listing_id: cachedResult.listingId ?? null,
+                  platform_listing_url: cachedResult.listingUrl ?? null,
+                }),
+              });
+              console.log(`[QueuePoll] Report-back retry succeeded for ${find.name} on ${mp}`);
+              publishCount++;
+            } catch (e) {
+              console.warn(`[QueuePoll] Report-back retry failed for ${find.name} on ${mp}:`, e);
+            }
+            continue;
+          }
+
           // Pass settings with TLD overrides for UK marketplaces
           // Read publishMode from PMD fields if present (default: "draft" for Etsy)
           const itemFields = (item as Record<string, unknown>).fields as Record<string, unknown> | undefined;
@@ -714,6 +759,14 @@ type ExternalMessage = Record<string, unknown>;
               message: result.message?.substring(0, 200),
               ...(result.success ? {} : { internalErrors: (result as unknown as Record<string, unknown>).internalErrors?.toString().substring(0, 500) }),
             });
+            // Cache successful publish for idempotency
+            if (result.success) {
+              publishedThisSession.set(idempotencyKey, {
+                listingId: result.product?.id ? String(result.product.id) : undefined,
+                listingUrl: result.product?.url ?? undefined,
+                publishMode: (result as unknown as Record<string, unknown>).publishMode as "draft" | "publish" | undefined,
+              });
+            }
           } catch (publishError) {
             // publishToMarketplace threw (e.g. not logged in, CSRF missing) — treat as a failed attempt
             // Mapper throws {success, message, errors} objects — extract message properly

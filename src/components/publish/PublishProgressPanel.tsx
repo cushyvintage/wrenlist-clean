@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Platform } from '@/types'
 import { fetchApi } from '@/lib/api-utils'
+import { friendlyError } from '@/lib/friendly-errors'
 
 export type PublishStep = 'saving' | 'uploading' | 'publishing' | 'polling' | 'done'
 
@@ -89,7 +90,7 @@ function MarketplaceRow({ ms, onRetry }: { ms: MarketplaceStatus; onRetry?: () =
         )}
         {ms.status === 'error' && (
           <div className="flex items-center gap-1">
-            <span className="text-xs text-red-500 max-w-[150px] truncate">{ms.error || 'Failed'}</span>
+            <span className="text-xs text-red-500 max-w-[150px] truncate">{ms.error ? friendlyError(ms.marketplace, ms.error) : 'Failed'}</span>
             {onRetry && (
               <button onClick={onRetry} className="text-xs text-sage underline hover:text-sage-dark">
                 Retry

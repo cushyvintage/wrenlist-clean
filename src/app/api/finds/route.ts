@@ -158,6 +158,7 @@ export const POST = withAuth(async (req, user) => {
     const find = {
       user_id: user.id,
       ...validation.data,
+      shipping_weight_grams: validation.data.shipping_weight_grams || 500,
       sku,
       sourced_at: validation.data.sourced_at || new Date().toISOString(),
       sourcing_trip_id: validation.data.sourcing_trip_id || null,

@@ -86,7 +86,7 @@ export const GET = withAuth(async (_req, user) => {
     return {
       find_id: item.find_id,
       marketplace: item.marketplace,
-      find,
+      find: find ? { ...find, shipping_weight_grams: find.shipping_weight_grams || 500 } : find,
       listing_price: item.listing_price || null,
       platform_category_id: categoryId,
       fields: item.fields || null,

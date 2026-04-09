@@ -1,46 +1,6 @@
 'use client'
 
-function friendlyError(marketplace: string, raw: string): string {
-  const lower = raw.toLowerCase()
-
-  // Vinted
-  if (lower.includes('listing request failed: 400') || lower.includes('400'))
-    return 'Listing was rejected — check category, size, and required fields are filled in.'
-  if (lower.includes('catalog_id') || lower.includes('catalog'))
-    return 'Could not match category on Vinted. Try selecting a different category.'
-  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('token'))
-    return 'Session expired — please reconnect your account.'
-
-  // Depop
-  if (lower.includes('json validation error') || lower.includes('jsonvalidationerror'))
-    return 'Missing required fields — check category, size, and condition are set.'
-  if (lower.includes('producttype'))
-    return 'Product type is missing or invalid. Select a category for this item.'
-
-  // eBay
-  if (lower.includes('input data is invalid') || lower.includes('inputdatainvalid'))
-    return 'eBay rejected the listing data — check item specifics and category.'
-  if (lower.includes('duplicate') || lower.includes('already exists'))
-    return 'A listing with this title already exists on the platform.'
-
-  // Shopify
-  if (lower.includes('shopify') && lower.includes('422'))
-    return 'Shopify rejected the listing — check required product fields.'
-
-  // Generic network / auth
-  if (lower.includes('network') || lower.includes('fetch') || lower.includes('timeout'))
-    return 'Network error — check your connection and try again.'
-  if (lower.includes('403') || lower.includes('forbidden'))
-    return 'Access denied — you may need to reconnect your account.'
-  if (lower.includes('500') || lower.includes('internal server'))
-    return 'Something went wrong on our end. Please try again.'
-
-  // Fallback: if the raw message is overly technical (long or has code patterns), simplify
-  if (raw.length > 80 || /List\(|Error\(|exception|stack|trace/i.test(raw))
-    return `Publishing to ${marketplace} failed. Please check your listing details and try again.`
-
-  return raw
-}
+import { friendlyError } from '@/lib/friendly-errors'
 
 interface MarketplaceData {
   marketplace: string

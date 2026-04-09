@@ -18,8 +18,7 @@ const SUPPORTED_MARKETPLACES: Platform[] = [
  *
  * Delists a find from a single marketplace.
  * - eBay: calls /api/ebay/delist (direct API)
- * - Shopify: calls /api/shopify/delist (direct API)
- * - Others: sets product_marketplace_data.status = 'needs_delist' (extension polls)
+ * - Others (Shopify, Vinted, Depop, Etsy, etc.): sets product_marketplace_data.status = 'needs_delist' (extension polls)
  *
  * Body: { findId: string, marketplace: string }
  */

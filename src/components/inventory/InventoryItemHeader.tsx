@@ -223,14 +223,14 @@ export default function InventoryItemHeader({
               )
             })}
             {extensionDetected === false && (
-              <p className="text-xs py-1" style={{ color: '#8A9E88' }}>
-                Install the extension to connect more platforms
-              </p>
+              <div className="mt-2 px-2.5 py-2 rounded text-xs" style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}>
+                <span className="font-medium">Extension required</span> — Install the Wrenlist Chrome extension to publish to Vinted, Etsy, Depop, Shopify, and Facebook. eBay works without it.
+              </div>
             )}
             {extensionOnline === false && extensionDetected !== false && (
-              <p className="text-xs py-1 text-amber-600">
-                Extension offline — jobs will run when your desktop is back
-              </p>
+              <div className="mt-2 px-2.5 py-2 rounded text-xs" style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}>
+                <span className="font-medium">Extension offline</span> — listings will publish when Chrome is running
+              </div>
             )}
             <Link href="/platform-connect" className="block text-xs py-1" style={{ color: '#8A9E88' }} onClick={(e) => e.stopPropagation()}>
               Manage connections →
@@ -296,7 +296,11 @@ export default function InventoryItemHeader({
                 className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-40"
                 style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
               >
-                {showSchedule && scheduledFor ? 'Schedule' : 'Publish now'}
+                {showSchedule && scheduledFor
+                  ? 'Schedule'
+                  : extensionDetected === false && crosslistTargets.every((p) => p === 'ebay')
+                    ? 'Publish now (eBay only)'
+                    : 'Publish now'}
               </button>
               <button
                 onClick={onCrosslistCancel}
