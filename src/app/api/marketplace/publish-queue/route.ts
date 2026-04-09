@@ -205,5 +205,29 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       : { platform_listing_id, platform_listing_url, find_name: find.name },
   })
 
+  // Sync publish_jobs table — the extension still uses this old endpoint but
+  // the Jobs page reads from publish_jobs. Mark matching pending/running publish
+  // jobs as completed or failed so the UI stays in sync.
+  const jobStatus = (targetStatus === 'listed' || targetStatus === 'draft') ? 'completed' : targetStatus === 'error' ? 'failed' : null
+  if (jobStatus) {
+    const now = new Date().toISOString()
+    await supabaseAdmin
+      .from('publish_jobs')
+      .update({
+        status: jobStatus,
+        completed_at: now,
+        updated_at: now,
+        ...(jobStatus === 'completed' ? {
+          result: { platform_listing_id, platform_listing_url, status: targetStatus },
+        } : {}),
+        ...(jobStatus === 'failed' && errorMessage ? { error_message: errorMessage } : {}),
+      })
+      .eq('find_id', findId)
+      .eq('platform', marketplace)
+      .eq('action', 'publish')
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'claimed', 'running'])
+  }
+
   return ApiResponseHelper.success({ message: `Status updated to ${targetStatus}` })
 })
