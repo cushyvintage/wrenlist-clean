@@ -9,6 +9,8 @@ import { Button } from '@/components/wren/Button'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import type { Find } from '@/types'
 
 interface AnalyticsSummary {
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const [finds, setFinds] = useState<Find[]>([])
   const [insight, setInsight] = useState<WrenInsight | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { disconnected } = useConnectedPlatforms({ pollInterval: 60_000 })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,6 +103,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <SessionExpiryBanner disconnected={disconnected} />
+
       {/* Welcome section */}
       <div>
         <h1 className="font-serif text-4xl italic font-normal mb-2" style={{ color: '#1E2E1C' }}>

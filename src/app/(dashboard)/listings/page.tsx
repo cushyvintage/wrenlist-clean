@@ -7,6 +7,7 @@ import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { formatPlatformName, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 import { formatCategory } from '@/lib/format-category'
@@ -72,7 +73,7 @@ export default function ListingsPage() {
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistError, setCrosslistError] = useState<string | null>(null)
   const [crosslistProgress, setCrosslistProgress] = useState<string | null>(null)
-  const { connected: connectedPlatforms, disconnected: disconnectedPlatforms, loading: platformsLoading, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 300_000 })
+  const { connected: connectedPlatforms, disconnected: disconnectedPlatforms, loading: platformsLoading, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 60_000 })
   const extensionInfo = useExtensionInfo()
   const [sessionExpired, setSessionExpired] = useState<Platform[]>([])
   const [successToast, setSuccessToast] = useState<string | null>(null)
@@ -477,6 +478,8 @@ export default function ListingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SessionExpiryBanner disconnected={disconnectedPlatforms} />
+
       {/* Page Header */}
       <div className="border-b border-sage/14 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">

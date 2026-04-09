@@ -9,6 +9,7 @@ import type { Find, Profile, PlanId, Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { formatCategory } from '@/lib/format-category'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { crosslistFind, formatPlatformName } from '@/lib/crosslist'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 
@@ -63,7 +64,7 @@ function InventoryPageContent() {
   const [bulkCrosslistTargets, setBulkCrosslistTargets] = useState<Platform[]>([])
   const [bulkCrosslisting, setBulkCrosslisting] = useState(false)
   const [bulkCrosslistResult, setBulkCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
-  const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
+  const { connected: allConnectedPlatforms, disconnected: disconnectedPlatforms, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 60_000 })
   const searchParams = useSearchParams()
   const [showPublishedBanner, setShowPublishedBanner] = useState(false)
 
@@ -514,6 +515,8 @@ function InventoryPageContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SessionExpiryBanner disconnected={disconnectedPlatforms} />
+
       {/* Published success banner */}
       {showPublishedBanner && (
         <div className="bg-sage/10 border border-sage/20 rounded-lg px-4 py-3 text-sm text-sage-dark flex items-center justify-between">

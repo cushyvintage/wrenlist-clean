@@ -14,6 +14,7 @@ import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { parseApiError, unwrapApiResponse } from '@/lib/api-utils'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { crosslistFind, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 import { useFindMarketplaceActions } from '@/hooks/useFindMarketplaceActions'
 import { FindNotificationBanners } from '@/components/finds/FindNotificationBanners'
@@ -90,7 +91,7 @@ export default function InventoryDetailPage() {
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
   const extensionInfo = useExtensionInfo()
   const heartbeat = useExtensionHeartbeat()
-  const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
+  const { connected: allConnectedPlatforms, disconnected: disconnectedPlatforms, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 60_000 })
 
   // Fetch marketplace data from product_marketplace_data
   const refreshMarketplaceData = useCallback(() => {
@@ -563,6 +564,8 @@ export default function InventoryDetailPage() {
   return (
     <div className="space-y-6">
       <Link href="/finds" className="text-xs text-sage hover:text-ink mb-4 inline-flex items-center gap-1">&larr; Back to Finds</Link>
+
+      <SessionExpiryBanner disconnected={disconnectedPlatforms} />
 
       <InventoryItemHeader
         find={find}

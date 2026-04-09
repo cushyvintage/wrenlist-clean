@@ -17,6 +17,8 @@ import { useAddFindHandlers } from '@/components/add-find/useAddFindHandlers'
 import { useAddFindSubmit } from '@/components/add-find/useAddFindSubmit'
 import PublishProgressPanel from '@/components/publish/PublishProgressPanel'
 import CategoryPlatformStatus from '@/components/add-find/CategoryPlatformStatus'
+import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 
 declare const chrome: any
 
@@ -32,6 +34,7 @@ export default function AddFindPage() {
     setAutoDetectedCategory: form.setAutoDetectedCategory,
     setClassifyingPhotoIndex: form.setClassifyingPhotoIndex,
   })
+  const { disconnected } = useConnectedPlatforms({ pollInterval: 60_000 })
   const { handleSaveDraft, handlePublish } = useAddFindSubmit({
     formData: form.formData,
     fieldConfig: form.fieldConfig,
@@ -54,6 +57,11 @@ export default function AddFindPage() {
           }}
         />
       )}
+
+      {/* Session expiry warning */}
+      <div className="max-w-2xl mx-auto">
+        <SessionExpiryBanner disconnected={disconnected} />
+      </div>
 
       {/* Error message */}
       {form.error && !form.publishProgress && (
