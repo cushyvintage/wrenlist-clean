@@ -625,13 +625,19 @@ type ExternalMessage = Record<string, unknown>;
           const parsedSizeId = typeof sharedFields.vintedSizeId === "string" ? parseInt(sharedFields.vintedSizeId as string, 10) : null;
           const vintedSizeId = (parsedSizeId !== null && !isNaN(parsedSizeId) && parsedSizeId > 0) ? parsedSizeId : null;
 
-          // Map category per marketplace
+          // Map category per marketplace.
+          // Priority: platform_category_id from publish-queue (resolved from 570-leaf tree)
+          //         → hardcoded extension maps (fallback)
+          //         → raw category string (last resort)
+          const treeCategoryId = item.platform_category_id as string | null;
           const productCategory = mp === "shopify"
             ? shopifyCategory
             : mp === "facebook"
-            ? mapCategoryToFacebook(find.category, item.platform_category_id)
+            ? mapCategoryToFacebook(find.category, treeCategoryId)
+            : mp === "depop" && treeCategoryId
+            ? treeCategoryId.split("|") // Tree stores Depop IDs as "dept|group|type" pipe-separated
             : mp === "depop"
-            ? mapCategoryToDepop(find.category)
+            ? mapCategoryToDepop(find.category) // Fallback to hardcoded map
             : find.category ? [find.category] : [];
 
           const product: Product = {
