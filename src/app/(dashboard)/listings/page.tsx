@@ -78,6 +78,9 @@ export default function ListingsPage() {
   const [failedTargets, setFailedTargets] = useState<Platform[]>([])
   const [delistConfirm, setDelistConfirm] = useState<string | null>(null) // "findId:marketplace" key
   const [delisting, setDelisting] = useState<string | null>(null)
+  const [showBulkDelist, setShowBulkDelist] = useState(false)
+  const [bulkDelisting, setBulkDelisting] = useState(false)
+  const [bulkDelistResult, setBulkDelistResult] = useState<string | null>(null)
 
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
   const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false)
@@ -239,6 +242,37 @@ export default function ListingsPage() {
       setDelisting(null)
       setDelistConfirm(null)
     }
+  }
+
+  const handleBulkDelist = async () => {
+    const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
+    setBulkDelisting(true)
+    setBulkDelistResult(null)
+    let succeeded = 0
+    let failed = 0
+    for (const group of selectedGroups) {
+      // Delist all listed/draft marketplaces for each selected find
+      const toDelete = group.marketplaces.filter((mp) => mp.status === 'listed' || mp.status === 'draft')
+      for (const mp of toDelete) {
+        try {
+          const res = await fetch('/api/crosslist/delist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ findId: group.find_id, marketplace: mp.marketplace }),
+          })
+          if (res.ok) succeeded++
+          else failed++
+        } catch { failed++ }
+      }
+    }
+    setBulkDelisting(false)
+    setShowBulkDelist(false)
+    setSelectedItems(new Set())
+    loadListings(true)
+    const msg = succeeded > 0 ? `${succeeded} listing${succeeded !== 1 ? 's' : ''} delisted` : ''
+    const err = failed > 0 ? `${failed} failed` : ''
+    setBulkDelistResult([msg, err].filter(Boolean).join(', '))
+    setTimeout(() => setBulkDelistResult(null), 5000)
   }
 
   const handleBulkCrosslist = async (retryPlatforms?: Platform[]) => {
@@ -591,7 +625,7 @@ export default function ListingsPage() {
           <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
             {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative">
             <button
               onClick={() => setShowCrosslistModal(true)}
               className="px-4 py-2 text-sm font-medium rounded transition-colors"
@@ -601,6 +635,42 @@ export default function ListingsPage() {
             >
               Crosslist
             </button>
+            <button
+              onClick={() => setShowBulkDelist(!showBulkDelist)}
+              disabled={bulkDelisting}
+              className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'transparent', borderWidth: '1px', borderColor: '#C0392B', color: '#C0392B' }}
+              onMouseEnter={(e) => !bulkDelisting && (e.currentTarget.style.backgroundColor = 'rgba(192,57,43,.06)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {bulkDelisting ? 'Delisting...' : 'Delist'}
+            </button>
+            {showBulkDelist && (
+              <div className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-50 min-w-[240px]" style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(192,57,43,.22)' }}>
+                <p className="text-xs font-medium mb-2" style={{ color: '#C0392B' }}>
+                  Delist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} from all platforms?
+                </p>
+                <p className="text-[11px] mb-3" style={{ color: '#8A9E88' }}>
+                  This will remove all active listings for the selected items.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkDelist}
+                    className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors"
+                    style={{ backgroundColor: '#C0392B', color: '#fff' }}
+                  >
+                    Delist all
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDelist(false)}
+                    className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+                    style={{ borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', color: '#3D5C3A' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setSelectedItems(new Set())}
               className="px-4 py-2 text-sm font-medium rounded transition-colors"
@@ -618,6 +688,13 @@ export default function ListingsPage() {
       {successToast && (
         <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-sm font-medium" style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}>
           {successToast}
+        </div>
+      )}
+
+      {/* Bulk delist result */}
+      {bulkDelistResult && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-sm font-medium" style={{ backgroundColor: '#C0392B', color: '#fff' }}>
+          {bulkDelistResult}
         </div>
       )}
 
