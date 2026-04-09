@@ -54,10 +54,26 @@ export function MarketplaceStatusPanel({
                   {md.marketplace}
                 </p>
                 <span
-                  className="text-xs capitalize"
-                  style={{ color: md.status === 'listed' ? '#3D5C3A' : md.status === 'draft' ? '#B8860B' : md.status === 'error' ? '#DC2626' : '#8A9E88' }}
+                  className="text-xs flex items-center gap-1"
+                  style={{
+                    color: md.status === 'listed' ? '#3D5C3A'
+                      : md.status === 'draft' ? '#B8860B'
+                      : md.status === 'error' ? '#DC2626'
+                      : md.status === 'needs_delist' ? '#C0392B'
+                      : md.status === 'needs_publish' ? '#B8860B'
+                      : '#8A9E88'
+                  }}
                 >
-                  {md.status === 'error' ? 'Error' : md.status === 'draft' ? 'Draft' : md.status.replace('_', ' ')}
+                  {(md.status === 'needs_delist' || md.status === 'needs_publish') && (
+                    <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {md.status === 'needs_delist' ? 'Delisting…'
+                    : md.status === 'needs_publish' ? 'Publishing…'
+                    : md.status === 'error' ? 'Error'
+                    : md.status === 'draft' ? 'Draft'
+                    : md.status === 'listed' ? 'Listed'
+                    : md.status === 'delisted' ? 'Delisted'
+                    : md.status}
                 </span>
               </div>
               <div className="flex items-center gap-2">
