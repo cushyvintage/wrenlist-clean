@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
+import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { findColourByVintedId } from '@/data/unified-colours'
 
@@ -149,8 +150,10 @@ export async function POST(request: NextRequest) {
           : (isHidden || vintedStatus === 'hidden') ? 'hidden'
           : 'listed'
 
-        // Category: prefer catalog_id mapping, fall back to text category
-        let category = lookupVintedCategory(item.catalog_id ?? item.vintedMetadata?.catalog_id)
+        // Category: prefer leaf from reverse map, fall back to top-level lookup
+        const rawCatalogId = item.catalog_id ?? item.vintedMetadata?.catalog_id
+        const catalogIdStr = rawCatalogId ? String(rawCatalogId) : undefined
+        let category = (catalogIdStr && getLeafCategoryByVintedId(catalogIdStr)) || lookupVintedCategory(rawCatalogId)
 
         // If still "other", try text-based fallback from item.category
         if (category === 'other' && item.category) {

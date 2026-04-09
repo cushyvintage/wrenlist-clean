@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
+import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
 import { findColourByVintedId } from '@/data/unified-colours'
 
 // Map Vinted status string → Wrenlist condition
@@ -52,8 +53,10 @@ export async function POST(request: NextRequest) {
 
         // Map condition
         const condition = CONDITION_MAP[item.status] || 'good'
-        // catalog_id may be absent in wardrobe list response — uses comprehensive lookup
-        const category = lookupVintedCategory(item.catalog_id)
+        // catalog_id may be absent in wardrobe list response
+        // Prefer leaf category from reverse map, fall back to top-level lookup
+        const catalogIdStr = item.catalog_id ? String(item.catalog_id) : undefined
+        const category = (catalogIdStr && getLeafCategoryByVintedId(catalogIdStr)) || lookupVintedCategory(item.catalog_id)
         // Wardrobe endpoint uses `brand` field, catalog endpoint uses `brand_title`
         const brand = item.brand_title || item.brand || null
         // Generate SKU early — needed for photo filenames

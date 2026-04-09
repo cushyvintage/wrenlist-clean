@@ -5185,6 +5185,66 @@ export function getPlatformCategoryId(
   return node?.platforms[platform]?.id
 }
 
+/**
+ * Reverse map: Vinted catalog ID → canonical leaf category value
+ * Built once at module load time from CATEGORY_TREE.
+ * Also includes entries from VINTED_LEAF_FALLBACKS (used in useAddFindSubmit)
+ * so that reverse lookups cover all known Vinted IDs.
+ */
+const VINTED_ID_TO_LEAF: Record<string, string> = (() => {
+  const map: Record<string, string> = {}
+
+  // Primary source: CATEGORY_TREE leaf nodes with Vinted platform IDs
+  for (const subcats of Object.values(CATEGORY_TREE)) {
+    for (const node of Object.values(subcats)) {
+      const vintedId = node.platforms.vinted?.id
+      if (vintedId && !map[vintedId]) {
+        map[vintedId] = node.value
+      }
+    }
+  }
+
+  // Secondary: known Vinted IDs from VINTED_LEAF_FALLBACKS that map to
+  // specific leaf categories but may not appear in the tree (parent/sibling IDs).
+  // Only add if not already covered by the tree scan above.
+  const fallbackIdToLeaf: Record<string, string> = {
+    '2997': 'books_media_books',
+    '2993': 'books_media_movies',
+    '2995': 'electronics_video_games_and_consoles',
+    '1934': 'home_garden_general',
+    '3822': 'home_garden_home_decor',
+    '1920': 'home_garden_kitchen_and_dining',
+    '3154': 'home_garden_furniture',
+    '3816': 'home_garden_bedding',
+    '3832': 'home_garden_bath',
+    '3512': 'home_garden_appliances',
+    '3823': 'collectibles_general',
+    '4': 'clothing_womenswear_general',
+    '2050': 'clothing_menswear_general',
+    '1187': 'craft_supplies_general',
+    '1499': 'toys_games_general',
+    '3847': 'art_paintings',
+    '3849': 'art_posters_and_prints',
+    '1193': 'baby_toddler_general',
+    '5196': 'pet_supplies_general',
+    '1960': 'home_garden_kitchen_and_dining',
+    '1959': 'home_garden_kitchen_and_dining',
+  }
+  for (const [id, leaf] of Object.entries(fallbackIdToLeaf)) {
+    if (!map[id]) map[id] = leaf
+  }
+
+  return map
+})()
+
+/**
+ * Look up canonical leaf category value from Vinted catalog ID.
+ * Returns the specific leaf (e.g. 'home_garden_kitchen_and_dining') or undefined.
+ */
+export function getLeafCategoryByVintedId(vintedCatalogId: string): string | undefined {
+  return VINTED_ID_TO_LEAF[vintedCatalogId]
+}
+
 /** Extract the top-level key from a canonical value */
 /** Valid top-level keys for fallback resolution */
 const TOP_LEVEL_KEYS = new Set(Object.keys(CATEGORY_TREE))

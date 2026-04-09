@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { CATEGORY_TREE } from '@/data/marketplace-category-map'
+import { refineToLeafCategory } from '@/lib/ai-category-refine'
 
 const VALID_TOP_LEVELS = Object.keys(CATEGORY_TREE)
 
@@ -53,51 +54,12 @@ export const POST = withAuth(async (request, user) => {
     topLevel = topLevel.replace(/[^a-z_]/g, '')
     if (!VALID_TOP_LEVELS.includes(topLevel)) topLevel = 'other'
 
-    // Step 2: Classify subcategory within the top-level
-    const subcats = CATEGORY_TREE[topLevel]
-    const subcatNodes = subcats ? Object.values(subcats) : []
-
-    // If only 0-1 subcategories or "other", skip step 2
-    if (topLevel === 'other' || subcatNodes.length <= 1) {
-      const category = subcatNodes[0]?.value ?? topLevel
-      return NextResponse.json({ category, topLevel, confidence: 'low' as const })
-    }
-
-    // Build subcategory list for the prompt (value: label format)
-    const subcatList = subcatNodes.map(n => `${n.value}`).join(', ')
-
-    const step2Response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: 60,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: photoUrl, detail: 'low' } },
-            {
-              type: 'text',
-              text: `This item is in the "${topLevel.replace(/_/g, ' ')}" category. Which specific subcategory best fits? Options: ${subcatList}. Reply with ONLY the subcategory value, nothing else.`,
-            },
-          ],
-        }],
-      }),
-    })
-
-    let category = subcatNodes[0]?.value ?? topLevel
-    if (step2Response.ok) {
-      const step2Data = await step2Response.json() as { choices: Array<{ message: { content: string } }> }
-      let subcategory = step2Data.choices[0]?.message?.content?.toLowerCase().trim() ?? ''
-      subcategory = subcategory.replace(/[^a-z_]/g, '')
-      // Validate the subcategory exists in the tree
-      if (subcatNodes.some(n => n.value === subcategory)) {
-        category = subcategory
-      }
-    }
+    // Step 2: Refine to leaf category
+    const category = await refineToLeafCategory(
+      topLevel,
+      photoUrl,
+      process.env.OPENAI_API_KEY!,
+    )
 
     const confidence: 'high' | 'medium' | 'low' =
       ['clothing', 'books_media', 'home_garden', 'electronics', 'toys_games', 'art', 'antiques'].includes(topLevel)

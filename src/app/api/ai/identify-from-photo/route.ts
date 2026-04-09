@@ -2,16 +2,10 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { CATEGORY_TREE } from '@/data/marketplace-category-map'
+import { refineToLeafCategory } from '@/lib/ai-category-refine'
 
 const VALID_TOP_LEVELS = Object.keys(CATEGORY_TREE)
 const TOP_LEVEL_LIST = VALID_TOP_LEVELS.join(', ')
-
-/** Build a subcategory value list for a given top-level */
-function getSubcategoryValues(topLevel: string): string[] {
-  const subcats = CATEGORY_TREE[topLevel]
-  if (!subcats) return []
-  return Object.values(subcats).map(n => n.value)
-}
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -98,51 +92,17 @@ Return ONLY valid JSON:
     // Validate top-level category
     const topLevel = VALID_TOP_LEVELS.includes(result.category) ? result.category : 'other'
 
-    // Step 2: Refine to subcategory (if top-level has multiple subcategories)
-    const subcatValues = getSubcategoryValues(topLevel)
-    let subcategory: string | undefined
-
-    if (topLevel !== 'other' && subcatValues.length > 1) {
-      try {
-        const step2Response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            max_tokens: 60,
-            messages: [{
-              role: 'user',
-              content: [
-                { type: 'image_url', image_url: { url: images[0], detail: 'low' } },
-                {
-                  type: 'text',
-                  text: `This is a "${result.title}" in the "${topLevel.replace(/_/g, ' ')}" category. Which specific subcategory? Options: ${subcatValues.join(', ')}. Reply with ONLY the subcategory value.`,
-                },
-              ],
-            }],
-          }),
-        })
-
-        if (step2Response.ok) {
-          const step2Data = await step2Response.json() as { choices: Array<{ message: { content: string } }> }
-          const raw2 = step2Data.choices[0]?.message?.content?.toLowerCase().trim().replace(/[^a-z_]/g, '') ?? ''
-          if (subcatValues.includes(raw2)) {
-            subcategory = raw2
-          }
-        }
-      } catch {
-        // Step 2 failed — fall back to top-level only
-      }
-    } else if (subcatValues.length === 1) {
-      subcategory = subcatValues[0]
-    }
+    // Step 2: Refine to leaf category
+    const category = await refineToLeafCategory(
+      topLevel,
+      images[0] ?? '',
+      process.env.OPENAI_API_KEY!,
+      result.title,
+    )
 
     return NextResponse.json({
       ...result,
-      category: subcategory ?? subcatValues[0] ?? topLevel,
+      category,
       topLevel,
       condition,
       confidence: result.confidence,
