@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 
 interface UploadPhotoResponse {
@@ -50,24 +51,14 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.notFound()
     }
 
-    // Ensure bucket exists
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
-    if (bucketsError) {
-      return ApiResponseHelper.internalError()
-    }
-
-    const bucketExists = buckets?.some(b => b.name === 'find-photos')
-    if (!bucketExists) {
-      const { error: createError } = await supabase.storage.createBucket('find-photos', {
-        public: true,
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'],
-      })
-      if (createError) {
-        return ApiResponseHelper.internalError()
-      }
-    }
+    // Use service role client for storage operations (cookie client lacks storage admin perms)
+    const storageClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     const uploadedUrls: string[] = []
+    const uploadErrors: string[] = []
 
     // Upload each photo
     for (let i = 0; i < photoFiles.length; i++) {
@@ -76,7 +67,7 @@ export async function POST(request: NextRequest) {
       const filename = `${Date.now()}-${i}-${file.name}`
       const path = `${user.id}/${findId}/${filename}`
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await storageClient.storage
         .from('find-photos')
         .upload(path, file, {
           upsert: false,
@@ -84,12 +75,13 @@ export async function POST(request: NextRequest) {
         })
 
       if (uploadError) {
-        // Continue uploading remaining files, but track any errors
+        console.error('Photo upload error:', uploadError.message, path)
+        uploadErrors.push(`${file.name}: ${uploadError.message}`)
         continue
       }
 
       // Get public URL
-      const { data: publicData } = supabase.storage
+      const { data: publicData } = storageClient.storage
         .from('find-photos')
         .getPublicUrl(path)
 
@@ -97,14 +89,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (uploadedUrls.length === 0) {
-      return ApiResponseHelper.badRequest('Failed to upload any photos')
+      const detail = uploadErrors.length > 0 ? ` (${uploadErrors[0]})` : ''
+      return ApiResponseHelper.badRequest(`Failed to upload photos${detail}`)
     }
 
     return ApiResponseHelper.success({ urls: uploadedUrls })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('POST /api/finds/upload-photos error:', error)
-    }
-    return ApiResponseHelper.internalError()
+    console.error('POST /api/finds/upload-photos error:', error)
+    const msg = error instanceof Error ? error.message : 'Upload failed'
+    return ApiResponseHelper.internalError(msg)
   }
 }
