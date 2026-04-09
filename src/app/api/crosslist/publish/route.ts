@@ -7,6 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { createClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
+import { getPlatformCategoryId } from '@/data/marketplace-category-map'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension.
@@ -65,7 +66,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   // Verify ownership and fetch full find data (needed for job payload snapshot)
   const { data: find, error: findError } = await supabase
     .from('finds')
-    .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, status, platform_fields')
+    .select('id, name, description, category, brand, condition, asking_price_gbp, photos, sku, colour, size, status, platform_fields, shipping_weight_grams')
     .eq('id', findId)
     .eq('user_id', user.id)
     .single()
@@ -174,6 +175,30 @@ export const POST = withAuth(async (req: NextRequest, user) => {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
           )
+
+          // Resolve platform_category_id (same logic as old publish-queue GET)
+          let platformCategoryId: string | null = null
+          const pf = (find.platform_fields ?? {}) as Record<string, unknown>
+          const vintedMeta = ((pf.vinted ?? {}) as Record<string, unknown>).vintedMetadata as Record<string, unknown> | undefined
+          if (marketplace === 'vinted' && vintedMeta?.catalog_id) {
+            platformCategoryId = String(vintedMeta.catalog_id)
+          }
+          if (!platformCategoryId && find.category && ['vinted', 'depop', 'etsy', 'shopify'].includes(marketplace)) {
+            const mapped = getPlatformCategoryId(find.category, marketplace as 'vinted' | 'depop' | 'etsy' | 'shopify')
+            if (mapped) platformCategoryId = mapped
+          }
+
+          // Fetch Shopify store URL if needed
+          const jobSettings: Record<string, unknown> = {}
+          if (marketplace === 'shopify') {
+            const { data: conn } = await supabaseAdmin
+              .from('shopify_connections')
+              .select('store_domain')
+              .eq('user_id', user.id)
+              .single()
+            if (conn?.store_domain) jobSettings.shopifyShopUrl = conn.store_domain
+          }
+
           const jobResult = await createPublishJob(supabaseAdmin, {
             user_id: user.id,
             find_id: findId,
@@ -182,9 +207,11 @@ export const POST = withAuth(async (req: NextRequest, user) => {
             scheduled_for: (body as Record<string, unknown>).scheduled_for as string | undefined,
             stale_policy: ((body as Record<string, unknown>).stale_policy as 'run_if_late' | 'skip_if_late') || undefined,
             payload: {
-              find: find,
+              find: { ...find, shipping_weight_grams: find.shipping_weight_grams ?? 500 },
               listing_price: perPlatformPrice,
+              platform_category_id: platformCategoryId,
               fields: queueFields,
+              ...(Object.keys(jobSettings).length > 0 ? { settings: jobSettings } : {}),
             },
           })
           if (jobResult.error) {

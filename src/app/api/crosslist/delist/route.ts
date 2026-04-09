@@ -130,12 +130,24 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  // Fetch Shopify store URL if needed (extension needs it to navigate)
+  const delistPayload: Record<string, unknown> = { platform_listing_id: pmd.platform_listing_id }
+  if (marketplace === 'shopify') {
+    const { data: conn } = await supabaseAdmin
+      .from('shopify_connections')
+      .select('store_domain')
+      .eq('user_id', user.id)
+      .single()
+    if (conn?.store_domain) delistPayload.settings = { shopifyShopUrl: conn.store_domain }
+  }
+
   const jobResult = await createPublishJob(supabaseAdmin, {
     user_id: user.id,
     find_id: findId,
     platform: marketplace,
     action: 'delist',
-    payload: { platform_listing_id: pmd.platform_listing_id },
+    payload: delistPayload,
   })
   if (jobResult.error) {
     console.error('[DualWrite] Failed to create delist job for', marketplace, jobResult.error)
