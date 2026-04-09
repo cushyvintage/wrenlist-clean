@@ -704,7 +704,11 @@ type ExternalMessage = Record<string, unknown>;
           const vintedMeta = (vintedFields.vintedMetadata ?? {}) as Record<string, unknown>;
           const vintedPrimaryColor = typeof vintedFields.primaryColor === "number" ? vintedFields.primaryColor : null;
           const vintedSecondaryColor = typeof vintedFields.secondaryColor === "number" ? vintedFields.secondaryColor : null;
-          const vintedColorIds = [vintedPrimaryColor, vintedSecondaryColor].filter((id): id is number => id !== null && id > 0);
+          let vintedColorIds = [vintedPrimaryColor, vintedSecondaryColor].filter((id): id is number => id !== null && id > 0);
+          // Fallback: use color_ids from vintedMetadata (set during import)
+          if (vintedColorIds.length === 0 && Array.isArray(vintedMeta.color_ids)) {
+            vintedColorIds = (vintedMeta.color_ids as number[]).filter((id): id is number => typeof id === "number" && id > 0);
+          }
 
           // Extract shared form fields for cross-platform use
           const userTags = typeof sharedFields.tags === "string" && sharedFields.tags.trim() ? sharedFields.tags.trim() : null;
