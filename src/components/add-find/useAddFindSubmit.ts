@@ -64,6 +64,11 @@ function getVintedCatalogId(category: string): number | null {
     baby_toddler: 1193, // Kids
     // Pet supplies
     pet_supplies: 5196,
+    // Vehicles & Parts
+    vehicles_parts: 3512, // Hobby & DIY
+    // Other / Misc
+    other: 1934, // Home accessories
+    other_other: 1934,
   }
   // Try exact match, then try parent segments
   if (VINTED_LEAF_FALLBACKS[category]) return VINTED_LEAF_FALLBACKS[category]
