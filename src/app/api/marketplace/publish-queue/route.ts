@@ -139,10 +139,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Verify ownership
+  // Verify ownership and fetch context for error enrichment
   const { data: find, error: findError } = await supabaseAdmin
     .from('finds')
-    .select('id')
+    .select('id, name, category')
     .eq('id', findId)
     .eq('user_id', user.id)
     .single()
@@ -194,15 +194,15 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.internalError()
   }
 
-  const eventType = targetStatus === 'error' ? 'publish_error' : 'listed'
+  const eventType = targetStatus === 'error' ? 'publish_error' : targetStatus === 'draft' ? 'listed' : 'listed'
   logMarketplaceEvent(supabaseAdmin, user.id, {
     findId,
     marketplace,
-    eventType,
+    eventType: targetStatus === 'error' ? 'publish_error' : 'listed',
     source: 'extension',
     details: targetStatus === 'error'
-      ? { error_message: errorMessage }
-      : { platform_listing_id, platform_listing_url },
+      ? { error_message: errorMessage, find_name: find.name, find_category: find.category, retry_count: extraFields?.retry_count }
+      : { platform_listing_id, platform_listing_url, find_name: find.name },
   })
 
   return ApiResponseHelper.success({ message: `Status updated to ${targetStatus}` })

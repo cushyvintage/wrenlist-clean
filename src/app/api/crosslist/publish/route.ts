@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
-import { logMarketplaceEvent } from '@/lib/marketplace-events'
+import { logMarketplaceEvent, classifyError } from '@/lib/marketplace-events'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { createClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension.
@@ -85,6 +86,13 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   const baseUrl = `${protocol}://${host}`
 
   for (const marketplace of marketplaces) {
+    Sentry.addBreadcrumb({
+      category: 'marketplace',
+      message: `Publishing find to ${marketplace}`,
+      level: 'info',
+      data: { findId, marketplace, category: find.category, name: find.name },
+    })
+
     try {
       if (marketplace === 'ebay') {
         // eBay — direct API publish
@@ -103,6 +111,11 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         } else {
           const ebayError = data.error || data.data?.message || 'eBay publish failed'
           results.ebay = { ok: false, error: ebayError }
+          Sentry.captureMessage(`eBay publish failed: ${ebayError}`, {
+            level: 'warning',
+            tags: { marketplace: 'ebay', error_class: classifyError(ebayError) },
+            extra: { findId, findName: find.name, category: find.category },
+          })
           // Persist the error in PMD so user can see it on the find detail page
           await supabase.from('product_marketplace_data').upsert(
             {
