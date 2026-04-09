@@ -65,6 +65,11 @@ export default function InventoryPage() {
   const [bulkCrosslistResult, setBulkCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
 
+  type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
+  interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
+  const [bulkPlatformStatuses, setBulkPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
+  const API_PLATFORMS = new Set(['ebay'])
+
   /**
    * Debounce search input (300ms)
    */
@@ -376,33 +381,108 @@ export default function InventoryPage() {
     setBulkCrosslistResult(null)
 
     const findIds = Array.from(selectedItems)
-    let succeeded = 0
-    let failed = 0
-    const errors: string[] = []
+    const total = findIds.length
+    const targets = bulkCrosslistTargets
 
-    for (const findId of findIds) {
-      try {
-        const outcome = await crosslistFind(findId, bulkCrosslistTargets, recheckPlatforms)
-        if (outcome.ok) {
-          succeeded++
-        } else {
-          failed++
-          errors.push(`${findId.slice(0, 8)}: ${outcome.message}`)
-        }
-      } catch (err) {
-        failed++
-        errors.push(`${findId.slice(0, 8)}: ${err instanceof Error ? err.message : 'unknown error'}`)
-      }
+    // Init per-platform status
+    const init: Record<string, PlatformStatusEntry> = {}
+    for (const p of targets) init[p] = { status: 'checking', succeeded: 0, failed: 0, total }
+    setBulkPlatformStatuses(init)
+
+    // Pre-check sessions
+    const { valid, expired } = await recheckPlatforms(targets)
+    if (expired.length > 0) {
+      setBulkPlatformStatuses((prev) => {
+        const next = { ...prev }
+        for (const p of expired) next[p] = { ...prev[p]!, status: 'failed', error: 'session expired' }
+        return next
+      })
+    }
+    if (valid.length === 0) {
+      setBulkCrosslistResult({ ok: false, message: 'All sessions expired. Log back in on Platform Connect.' })
+      setBulkCrosslisting(false)
+      return
     }
 
-    const parts: string[] = []
-    if (succeeded > 0) parts.push(`${succeeded} item${succeeded !== 1 ? 's' : ''} queued`)
-    if (failed > 0) parts.push(`${failed} failed`)
-    setBulkCrosslistResult({ ok: failed === 0, message: parts.join(', ') + (errors.length > 0 ? ` — ${errors[0]}` : '') })
-    setShowBulkCrosslist(false)
-    setBulkCrosslistTargets([])
-    setSelectedItems(new Set())
-    setRefreshTrigger((n) => n + 1)
+    // Mark valid as waiting
+    setBulkPlatformStatuses((prev) => {
+      const next = { ...prev }
+      for (const p of valid) next[p] = { ...prev[p]!, status: 'waiting' }
+      return next
+    })
+
+    // Track tallies
+    const tallies = new Map<string, { succeeded: number; failed: number; lastError?: string }>()
+    for (const p of valid) tallies.set(p, { succeeded: 0, failed: 0 })
+
+    for (let i = 0; i < findIds.length; i++) {
+      // Mark publishing
+      setBulkPlatformStatuses((prev) => {
+        const next = { ...prev }
+        for (const p of valid) {
+          if (prev[p]?.status !== 'failed') {
+            const t = tallies.get(p)!
+            next[p] = { ...prev[p]!, status: 'publishing', succeeded: t.succeeded, failed: t.failed }
+          }
+        }
+        return next
+      })
+
+      try {
+        const res = await fetch('/api/crosslist/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ findId: findIds[i], marketplaces: valid }),
+        })
+        const data = await res.json()
+        const results: Record<string, { ok: boolean; error?: string }> = data.data?.results || {}
+
+        for (const p of valid) {
+          const t = tallies.get(p)!
+          const r = results[p]
+          if (r?.ok) t.succeeded++
+          else if (r) { t.failed++; t.lastError = r.error }
+          else t.succeeded++ // queued
+        }
+      } catch {
+        for (const p of valid) tallies.get(p)!.failed++
+      }
+
+      // Update statuses
+      const isLast = i === findIds.length - 1
+      setBulkPlatformStatuses((prev) => {
+        const next = { ...prev }
+        for (const p of valid) {
+          const t = tallies.get(p)!
+          if (isLast) {
+            if (t.failed > 0) {
+              next[p] = { status: 'failed', error: t.lastError || 'failed', succeeded: t.succeeded, failed: t.failed, total }
+            } else {
+              next[p] = { status: API_PLATFORMS.has(p) ? 'listed' : 'queued', succeeded: t.succeeded, failed: 0, total }
+            }
+          } else {
+            next[p] = { status: 'publishing', succeeded: t.succeeded, failed: t.failed, total }
+          }
+        }
+        return next
+      })
+    }
+
+    // Summary
+    const allOk = valid.every((p) => tallies.get(p)!.failed === 0)
+    if (allOk && expired.length === 0) {
+      setTimeout(() => {
+        setShowBulkCrosslist(false)
+        setBulkCrosslistTargets([])
+        setSelectedItems(new Set())
+        setBulkPlatformStatuses({})
+        setBulkCrosslistResult({ ok: true, message: `Queued for ${valid.map(formatPlatformName).join(', ')}` })
+        setRefreshTrigger((n) => n + 1)
+      }, 1500)
+    } else {
+      const failedPlatforms = valid.filter((p) => tallies.get(p)!.failed > 0)
+      setBulkCrosslistResult({ ok: false, message: [...failedPlatforms, ...expired].map(formatPlatformName).join(', ') + ' had issues' })
+    }
     setBulkCrosslisting(false)
   }
 
@@ -620,49 +700,86 @@ export default function InventoryPage() {
             {/* Bulk crosslist picker */}
             {showBulkCrosslist && (
               <div
-                className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-50 min-w-[220px]"
+                className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-50 min-w-[250px]"
                 style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)' }}
               >
                 <p className="text-xs uppercase tracking-wider font-medium mb-2" style={{ color: '#8A9E88' }}>
                   Publish {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} to
                 </p>
-                {allConnectedPlatforms.map(({ platform, username }) => (
-                  <label key={platform} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={bulkCrosslistTargets.includes(platform)}
-                      onChange={() => setBulkCrosslistTargets((prev) =>
-                        prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
-                      )}
-                      className="rounded"
-                    />
-                    <MarketplaceIcon platform={platform} size="sm" />
-                    <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
-                      {formatPlatformName(platform)}
-                      {username && <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>}
-                    </span>
-                  </label>
-                ))}
-                <p className="text-[11px] mt-2 leading-snug" style={{ color: '#92700C' }}>
-                  Platforms other than eBay require the Wrenlist Chrome extension
-                </p>
-                <div className="flex gap-2 mt-2 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
-                  <button
-                    onClick={handleBulkCrosslist}
-                    disabled={bulkCrosslistTargets.length === 0 || bulkCrosslisting}
-                    className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-40"
-                    style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
-                  >
-                    Publish now
-                  </button>
-                  <button
-                    onClick={() => { setShowBulkCrosslist(false); setBulkCrosslistTargets([]) }}
-                    className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
-                    style={{ borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', backgroundColor: 'transparent', color: '#3D5C3A' }}
-                  >
-                    Cancel
-                  </button>
-                </div>
+
+                {/* Show live per-platform status during publishing, checkboxes otherwise */}
+                {Object.keys(bulkPlatformStatuses).length > 0 ? (
+                  <div className="space-y-1.5 mb-3">
+                    {Object.entries(bulkPlatformStatuses).map(([platform, ps]) => {
+                      const statusColor = ps.status === 'listed' || ps.status === 'queued' ? '#27AE60'
+                        : ps.status === 'failed' ? '#C0392B' : '#8A9E88'
+                      const label = ps.status === 'checking' ? 'checking session...'
+                        : ps.status === 'waiting' ? 'waiting...'
+                        : ps.status === 'publishing' ? (ps.total > 1 ? `${ps.succeeded + ps.failed + 1}/${ps.total}...` : 'publishing...')
+                        : ps.status === 'listed' ? (ps.total > 1 ? `${ps.succeeded} listed` : 'listed')
+                        : ps.status === 'queued' ? (ps.total > 1 ? `${ps.succeeded} queued` : 'queued')
+                        : ps.error || 'failed'
+                      return (
+                        <div key={platform} className="flex items-center gap-2 py-1">
+                          <MarketplaceIcon platform={platform as Platform} size="sm" />
+                          <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>{formatPlatformName(platform)}</span>
+                          <span className="text-xs ml-auto flex items-center gap-1" style={{ color: statusColor }}>
+                            {(ps.status === 'checking' || ps.status === 'waiting' || ps.status === 'publishing') && (
+                              <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            )}
+                            {(ps.status === 'listed' || ps.status === 'queued') && <span>✓</span>}
+                            {ps.status === 'failed' && <span>✕</span>}
+                            {label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <>
+                    {allConnectedPlatforms.map(({ platform, username }) => (
+                      <label key={platform} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={bulkCrosslistTargets.includes(platform)}
+                          onChange={() => setBulkCrosslistTargets((prev) =>
+                            prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
+                          )}
+                          className="rounded"
+                        />
+                        <MarketplaceIcon platform={platform} size="sm" />
+                        <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                          {formatPlatformName(platform)}
+                          {username && <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>}
+                        </span>
+                      </label>
+                    ))}
+                    <p className="text-[11px] mt-2 leading-snug" style={{ color: '#92700C' }}>
+                      Platforms other than eBay require the Wrenlist Chrome extension
+                    </p>
+                  </>
+                )}
+
+                {/* Buttons — hide during publishing */}
+                {Object.keys(bulkPlatformStatuses).length === 0 && (
+                  <div className="flex gap-2 mt-2 pt-2" style={{ borderTopWidth: '1px', borderTopColor: 'rgba(61,92,58,.14)' }}>
+                    <button
+                      onClick={handleBulkCrosslist}
+                      disabled={bulkCrosslistTargets.length === 0 || bulkCrosslisting}
+                      className="flex-1 px-3 py-1.5 text-sm font-medium rounded transition-colors disabled:opacity-40"
+                      style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
+                    >
+                      Publish now
+                    </button>
+                    <button
+                      onClick={() => { setShowBulkCrosslist(false); setBulkCrosslistTargets([]); setBulkPlatformStatuses({}) }}
+                      className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+                      style={{ borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)', backgroundColor: 'transparent', color: '#3D5C3A' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
