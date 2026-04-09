@@ -156,13 +156,20 @@ export async function POST(request: NextRequest) {
     if (find.colour) aspects['Colour'] = find.colour
     if (find.size) aspects['Size'] = find.size
 
-    // Read any user-provided eBay-specific aspect values from platform_fields
+    // Read user-provided aspect values from platform_fields (ebay-specific + shared)
+    const sharedFields = (find.platform_fields as Record<string, unknown>)?.shared as
+      Record<string, unknown> | undefined
     if (ebayFields) {
       for (const [key, val] of Object.entries(ebayFields)) {
         if (val && typeof val === 'string' && !['acceptOffers', 'listingId', 'offerId', 'status', 'url', 'publishedAt'].includes(key)) {
           aspects[key] = val
         }
       }
+    }
+    // Also read common fields from shared (author, isbn, language set by form)
+    if (sharedFields) {
+      if (sharedFields.author && !aspects['Author']) aspects['Author'] = String(sharedFields.author)
+      if (sharedFields.isbn && !aspects['ISBN']) aspects['ISBN'] = String(sharedFields.isbn)
     }
 
     // Always-on category-based aspect inference.
