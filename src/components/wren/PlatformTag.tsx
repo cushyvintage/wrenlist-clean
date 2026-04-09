@@ -99,12 +99,21 @@ export function PlatformTag({
   const suffix = stateSuffix[state]
   const showLiveSuffix = state === 'live'
 
+  const isSpinning = state === 'queued' || state === 'delisting'
+
   const content = (
     <>
       <MarketplaceIcon platform={platform} size="sm" className="inline-block align-text-bottom" />
       {' '}{displayLabel}
       {showLiveSuffix && (collection ? ` · ${collection}` : ' · live')}
-      {suffix && ` · ${suffix}`}
+      {isSpinning && (
+        <>
+          {' · '}
+          <span className="inline-block w-3 h-3 border-[1.5px] border-current border-t-transparent rounded-full animate-spin align-text-bottom" />
+          {' '}{suffix}
+        </>
+      )}
+      {suffix && !isSpinning && ` · ${suffix}`}
     </>
   )
 

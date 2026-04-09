@@ -76,6 +76,8 @@ export default function ListingsPage() {
   const [sessionExpired, setSessionExpired] = useState<Platform[]>([])
   const [successToast, setSuccessToast] = useState<string | null>(null)
   const [failedTargets, setFailedTargets] = useState<Platform[]>([])
+  const [delistConfirm, setDelistConfirm] = useState<string | null>(null) // "findId:marketplace" key
+  const [delisting, setDelisting] = useState<string | null>(null)
 
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
   const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false)
@@ -215,6 +217,28 @@ export default function ListingsPage() {
   const toggleAllSelection = () => {
     if (selectedItems.size === filtered.length) setSelectedItems(new Set())
     else setSelectedItems(new Set(filtered.map((g) => g.find_id)))
+  }
+
+  const handleDelist = async (findId: string, marketplace: string) => {
+    const key = `${findId}:${marketplace}`
+    setDelisting(key)
+    try {
+      const res = await fetch('/api/crosslist/delist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findId, marketplace }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Delist failed')
+      }
+      loadListings(true)
+    } catch {
+      setError('Failed to delist')
+    } finally {
+      setDelisting(null)
+      setDelistConfirm(null)
+    }
   }
 
   const handleBulkCrosslist = async (retryPlatforms?: Platform[]) => {
@@ -979,17 +1003,49 @@ export default function ListingsPage() {
                   </div>
 
                   {/* Platform Tags — one per marketplace */}
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    {group.marketplaces.map((mp) => (
-                      <PlatformTag
-                        key={mp.id}
-                        platform={mp.marketplace}
-                        status={mp.status as MarketplaceDataStatus}
-                        errorMessage={mp.error_message}
-                        href={mp.platform_listing_url}
-                        collection={mp.fields?.collection_name}
-                      />
-                    ))}
+                  <div className="flex gap-2 mt-2 flex-wrap items-center">
+                    {group.marketplaces.map((mp) => {
+                      const delistKey = `${group.find_id}:${mp.marketplace}`
+                      const isConfirming = delistConfirm === delistKey
+                      const isDelisting = delisting === delistKey
+                      return (
+                        <span key={mp.id} className="inline-flex items-center gap-1">
+                          <PlatformTag
+                            platform={mp.marketplace}
+                            status={mp.status as MarketplaceDataStatus}
+                            errorMessage={mp.error_message}
+                            href={mp.platform_listing_url}
+                            collection={mp.fields?.collection_name}
+                          />
+                          {(mp.status === 'listed' || mp.status === 'draft') && !isConfirming && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDelistConfirm(delistKey) }}
+                              className="text-[10px] text-ink-lt hover:text-red-500 transition-colors"
+                              title="Delist"
+                            >
+                              ✕
+                            </button>
+                          )}
+                          {isConfirming && (
+                            <span className="inline-flex items-center gap-1 ml-0.5">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelist(group.find_id, mp.marketplace) }}
+                                disabled={isDelisting}
+                                className="text-[10px] px-1.5 py-0.5 rounded font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                              >
+                                {isDelisting ? '…' : 'Delist'}
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDelistConfirm(null) }}
+                                className="text-[10px] text-ink-lt hover:text-ink"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+                        </span>
+                      )
+                    })}
                   </div>
 
                   {/* Per-platform prices when they differ */}
