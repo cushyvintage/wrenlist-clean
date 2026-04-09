@@ -152,7 +152,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
               .filter((id): id is number => typeof id === 'number' && id > 0),
             brand_id: 1, // "No brand" default — overridden by mapper if brand is set
             brand_title: formData.brand || '',
-            size_id: null, // Non-clothing default — overridden by size picker's vintedSizeId
+            size_id: formData.platformFields.shared?.vintedSizeId
+              ? Number(formData.platformFields.shared.vintedSizeId)
+              : null,
             status_id: formData.condition === 'new_with_tags' ? 6
               : formData.condition === 'new_without_tags' ? 1
               : formData.condition === 'very_good' ? 2
