@@ -619,7 +619,7 @@ export default function ListingsPage() {
       {/* Bulk action bar */}
       {selectedItems.size > 0 && (
         <div
-          className="flex items-center justify-between p-4 rounded sticky bottom-0 z-10"
+          className="flex items-center justify-between p-4 rounded sticky bottom-0 z-10 overflow-visible"
           style={{ backgroundColor: '#D4E2D2', borderWidth: '1px', borderColor: '#3D5C3A' }}
         >
           <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
@@ -646,7 +646,7 @@ export default function ListingsPage() {
               {bulkDelisting ? 'Delisting...' : 'Delist'}
             </button>
             {showBulkDelist && (
-              <div className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-50 min-w-[240px]" style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(192,57,43,.22)' }}>
+              <div className="absolute bottom-full right-0 mb-2 p-3 rounded shadow-lg z-[100] min-w-[240px]" style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(192,57,43,.22)' }}>
                 <p className="text-xs font-medium mb-2" style={{ color: '#C0392B' }}>
                   Delist {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} from all platforms?
                 </p>
