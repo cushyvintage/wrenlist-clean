@@ -755,6 +755,7 @@ export default function ImportPage() {
   // --- Post-import completion view ---
   if (vintedImport.state.phase === 'done') {
     const { imported, skipped, errors } = vintedImport.state
+    const allSkipped = imported === 0 && skipped > 0 && errors === 0
     return (
       <div className="space-y-4">
         {/* Minimal header */}
@@ -775,15 +776,19 @@ export default function ImportPage() {
           </div>
           <div>
             <h2 className="text-lg font-medium text-ink">
-              {imported} find{imported !== 1 ? 's' : ''} imported
+              {allSkipped
+                ? 'All listings already in Wrenlist'
+                : `${imported} find${imported !== 1 ? 's' : ''} imported`}
             </h2>
             <div className="flex items-center justify-center gap-3 mt-1 text-sm text-ink-lt">
-              {skipped > 0 && <span>{skipped} already in Wren</span>}
+              {!allSkipped && skipped > 0 && <span>{skipped} already in Wren</span>}
               {errors > 0 && <span className="text-amber-600">{errors} error{errors !== 1 ? 's' : ''}</span>}
             </div>
           </div>
           <p className="text-sm text-ink-lt max-w-md mx-auto">
-            Your listings are now in Wrenlist. Add cost prices for accurate margin tracking.
+            {allSkipped
+              ? 'Nothing new to import — your inventory is up to date.'
+              : 'Your listings are now in Wrenlist. Add cost prices for accurate margin tracking.'}
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <a
