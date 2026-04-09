@@ -136,7 +136,7 @@ export default function InventoryItemHeader({
           </button>
         )}
         {/* Crosslist button — replaces individual per-platform buttons */}
-        {!isEditing && find.status !== 'sold' && availableForCrosslist.length > 0 && (
+        {!isEditing && find.status !== 'sold' && availableForCrosslist.length > 0 ? (
           <button
             onClick={onCrosslistClick}
             disabled={isCrosslisting}
@@ -152,7 +152,9 @@ export default function InventoryItemHeader({
           >
             {isCrosslisting ? '⏳ Publishing...' : '↗ Crosslist'}
           </button>
-        )}
+        ) : !isEditing && find.status !== 'sold' && availableForCrosslist.length === 0 && marketplaceData.length > 0 ? (
+          <span className="text-xs" style={{ color: '#8A9E88' }}>Listed on all platforms</span>
+        ) : null}
         {/* Pause Vinted button */}
         {!isEditing && find.status === 'listed' && vintedIsListed && (
           <button

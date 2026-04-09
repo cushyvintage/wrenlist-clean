@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
 import { PLAN_LIMITS } from '@/config/plans'
@@ -35,7 +35,7 @@ const getDaysListed = (find: Find): number => {
 
 const LIMIT = 50
 
-export default function InventoryPage() {
+function InventoryPageContent() {
   const router = useRouter()
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -64,6 +64,17 @@ export default function InventoryPage() {
   const [bulkCrosslisting, setBulkCrosslisting] = useState(false)
   const [bulkCrosslistResult, setBulkCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const { connected: allConnectedPlatforms, recheckPlatforms } = useConnectedPlatforms()
+  const searchParams = useSearchParams()
+  const [showPublishedBanner, setShowPublishedBanner] = useState(false)
+
+  // Show success banner when redirected from publish flow
+  useEffect(() => {
+    if (searchParams.get('published') !== 'true') return () => {}
+    setShowPublishedBanner(true)
+    window.history.replaceState(null, '', '/finds')
+    const timer = setTimeout(() => setShowPublishedBanner(false), 5000)
+    return () => clearTimeout(timer)
+  }, [searchParams])
 
   type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
   interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
@@ -503,6 +514,14 @@ export default function InventoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Published success banner */}
+      {showPublishedBanner && (
+        <div className="bg-sage/10 border border-sage/20 rounded-lg px-4 py-3 text-sm text-sage-dark flex items-center justify-between">
+          <span>Item published successfully</span>
+          <button onClick={() => setShowPublishedBanner(false)} className="text-sage-dark/60 hover:text-sage-dark text-lg leading-none">&times;</button>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="border-b border-sage/14 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -1210,5 +1229,13 @@ export default function InventoryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense>
+      <InventoryPageContent />
+    </Suspense>
   )
 }

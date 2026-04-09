@@ -9,6 +9,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { formatPlatformName, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
+import { formatCategory } from '@/lib/format-category'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'hidden' | 'delisted'
@@ -1052,12 +1053,15 @@ export default function ListingsPage() {
                 className="bg-white border border-sage/14 rounded-md p-3 sm:p-4 grid grid-cols-[auto_48px_1fr] sm:grid-cols-[auto_60px_1fr_auto] gap-3 sm:gap-4 items-start hover:bg-cream transition-colors"
               >
                 {/* Checkbox */}
-                <div className="flex items-center pt-4">
+                <div
+                  className="flex items-center py-4 px-2 cursor-pointer"
+                  onClick={() => toggleItemSelection(group.find_id)}
+                >
                   <input
                     type="checkbox"
                     checked={selectedItems.has(group.find_id)}
-                    onChange={() => toggleItemSelection(group.find_id)}
-                    className="cursor-pointer"
+                    readOnly
+                    className="pointer-events-none"
                   />
                 </div>
 
@@ -1080,7 +1084,7 @@ export default function ListingsPage() {
                     {group.find?.name}
                   </div>
                   <div className="text-xs text-ink-lt mt-1">
-                    {group.find?.category}
+                    {formatCategory(group.find?.category)}
                   </div>
 
                   {/* Platform Tags — one per marketplace */}
@@ -1101,7 +1105,7 @@ export default function ListingsPage() {
                           {(mp.status === 'listed' || mp.status === 'draft') && !isConfirming && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setDelistConfirm(delistKey) }}
-                              className="text-[10px] text-ink-lt hover:text-red-500 transition-colors"
+                              className="text-xs text-ink-lt hover:text-red-500 w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors"
                               title="Delist"
                             >
                               ✕
@@ -1173,7 +1177,7 @@ export default function ListingsPage() {
                         href={`/finds/${group.find_id}`}
                         className="px-2 py-1 text-xs bg-transparent border border-sage/22 text-ink-lt hover:bg-cream-md rounded transition-colors font-medium"
                       >
-                        edit
+                        view &rarr;
                       </Link>
                     )}
                   </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-const FEEDBACK_URL = 'https://forms.gle/REPLACE_WITH_REAL_FORM_ID'
+const FEEDBACK_URL = 'mailto:admin@wrenlist.com?subject=Wrenlist%20Beta%20Feedback'
 
 export function BetaBanner() {
   const [dismissed, setDismissed] = useState(false)

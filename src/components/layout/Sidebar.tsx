@@ -31,7 +31,7 @@ export function Sidebar({ children, className = '', userInfo }: SidebarProps) {
               Wrenlist
             </div>
             <div className="text-[9px] uppercase tracking-[.12em] mt-0.5" style={{ color: '#3D5C3A', fontWeight: 600 }}>
-              Resale
+              {userInfo?.plan || 'Beta'}
             </div>
           </div>
         </div>
