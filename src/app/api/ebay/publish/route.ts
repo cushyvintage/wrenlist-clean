@@ -248,6 +248,17 @@ export async function POST(request: NextRequest) {
       else aspects['Material'] = 'Mixed'
     }
 
+    // Item Length / Item Width / Item Height — required for home/garden, kitchen/dining
+    if (!aspects['Item Length'] && (category.startsWith('home_garden') || category.includes('kitchen') || category.includes('dining'))) {
+      aspects['Item Length'] = 'N/A'
+    }
+    if (!aspects['Item Width'] && (category.startsWith('home_garden') || category.includes('kitchen') || category.includes('dining'))) {
+      aspects['Item Width'] = 'N/A'
+    }
+    if (!aspects['Item Height'] && (category.startsWith('home_garden') || category.includes('kitchen') || category.includes('dining'))) {
+      aspects['Item Height'] = 'N/A'
+    }
+
     // Type — commonly required
     if (!aspects['Type']) {
       const lastSegment = category.split('_').pop() || ''
