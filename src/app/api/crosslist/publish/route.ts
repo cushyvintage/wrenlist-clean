@@ -185,5 +185,15 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     }
   }
 
+  // Update find status to 'listed' if any marketplace succeeded
+  const anySuccess = Object.values(results).some((r) => (r as { ok: boolean }).ok)
+  if (anySuccess) {
+    await supabase
+      .from('finds')
+      .update({ status: 'listed', updated_at: new Date().toISOString() })
+      .eq('id', findId)
+      .eq('user_id', user.id)
+  }
+
   return ApiResponseHelper.success({ results })
 })
