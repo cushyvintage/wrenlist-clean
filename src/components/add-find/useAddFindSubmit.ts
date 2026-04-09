@@ -14,23 +14,56 @@ function getVintedCatalogId(category: string): number | null {
   if (mapped) return Number(mapped)
 
   // Fallback: known working Vinted leaf IDs for common stock categories
-  // (from dom_stock_mapping in vinted-categories-summary.json)
+  // (from dom_stock_mapping + verified against Vinted UK API 2026-04-08)
   const VINTED_LEAF_FALLBACKS: Record<string, number> = {
-    // Books
+    // Books & Media
     books_media: 2997,
     books_media_books: 2997,
+    books_media_music: 2994,
+    books_media_movies: 2993,
+    books_media_video_games: 2995,
     // Home & Garden
     home_garden: 1934,
     home_garden_home_decor: 3822, // Sculptures & figurines
-    home_garden_kitchen_dining: 1920, // Dinnerware
+    home_garden_kitchen_dining: 1920, // Dinnerware (plates 1960, bowls 1959)
+    home_garden_furniture: 3154,
+    home_garden_bedding: 3816,
+    home_garden_bath: 3832,
+    home_garden_appliances: 3512,
     // Collectibles
     collectibles: 3823, // Decorative accessories
     collectibles_general: 3823,
     collectibles_general_collectibles: 3823,
-    // Toys
+    collectibles_militaria: 3823,
+    collectibles_coins: 3823,
+    collectibles_stamps: 3823,
+    // Clothing
+    clothing: 4, // Women's clothing (default)
+    clothing_womenswear: 4,
+    clothing_menswear: 2050,
+    // Jewellery & Accessories
+    craft_supplies: 1187, // Accessories
+    // Electronics
+    electronics: 2994,
+    electronics_portable_audio: 2994,
+    electronics_computers: 2994,
+    // Toys & Games
     toys_games: 1499,
     // Antiques
     antiques: 1934, // Home accessories
+    antiques_antique_decor: 1934,
+    antiques_antique_furniture: 3154,
+    // Art
+    art: 3847, // Paintings
+    art_paintings: 3847,
+    art_prints: 3849,
+    art_sculptures: 3822,
+    // Sports
+    sports_outdoors: 1499, // Use toys as fallback
+    // Baby
+    baby_toddler: 1193, // Kids
+    // Pet supplies
+    pet_supplies: 5196,
   }
   // Try exact match, then try parent segments
   if (VINTED_LEAF_FALLBACKS[category]) return VINTED_LEAF_FALLBACKS[category]
@@ -204,26 +237,20 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       setError('Loading field requirements — please try again'); return
     }
 
+    // Check marketplace-specific required fields — warn but don't block.
+    // Missing fields are auto-filled at publish time (e.g. eBay aspects).
+    // Colour is the only truly blocking field for Vinted.
     if (fieldConfig) {
-      const missing: string[] = []
-      for (const [key, config] of Object.entries(fieldConfig)) {
-        if (!config.required) continue
-        if (key === 'brand') {
-          if (!formData.brand.trim()) missing.push('Brand')
-          continue
-        }
-        if (key === 'colour') {
-          const hasVintedColour = formData.selectedPlatforms.includes('vinted') && formData.platformFields.vinted?.primaryColor
-          const hasSharedColour = formData.platformFields.shared?.colour && String(formData.platformFields.shared.colour).trim()
-          if (!hasVintedColour && !hasSharedColour) missing.push('Colour')
-          continue
-        }
-        const val = formData.platformFields.shared?.[key]
-        if (!val || (typeof val === 'string' && !val.trim())) {
-          missing.push(key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-        }
+      const hasColour = !!(
+        (formData.selectedPlatforms.includes('vinted') && formData.platformFields.vinted?.primaryColor) ||
+        (formData.platformFields.shared?.colour && String(formData.platformFields.shared.colour).trim())
+      )
+      // Only block on colour if Vinted is selected and colour is required
+      const colourRequired = fieldConfig['colour']?.required && formData.selectedPlatforms.includes('vinted')
+      if (colourRequired && !hasColour) {
+        setError('Colour is required for Vinted — please select a colour')
+        return
       }
-      if (missing.length > 0) { setError(`Required fields missing: ${missing.join(', ')}`); return }
     }
 
     setIsLoading(true)

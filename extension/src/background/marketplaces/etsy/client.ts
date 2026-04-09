@@ -416,7 +416,7 @@ export class EtsyClient {
 
                 // Poll for listing-editor links to appear (up to 10s)
                 const scrapeStart = Date.now();
-                while (Date.now() - scrapeStart < 10000) {
+                while (Date.now() - scrapeStart < 20000) {
                   await wait(2000);
                   try {
                     const scrapeResult = await chrome.scripting.executeScript({
