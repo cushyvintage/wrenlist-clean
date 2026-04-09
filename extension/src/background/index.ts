@@ -176,9 +176,13 @@ function resolveDepopSize(category: string | null, sizeText: string | null): [st
   }
 
   // Map common size labels to Depop variant IDs (consistent across menswear letter-based sets)
-  // Depop mapper uses size[0] as variantSetId and size[1] as variant name (for the variants map key)
-  const VALID_SIZES = ['ONE SIZE', '3XS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
-  if (VALID_SIZES.includes(size)) return [String(setId), size];
+  // Depop mapper uses size[0] as variantSetId (parseInt'd) and size[1] as variant ID (used as map key in variants object).
+  // Depop API requires variant IDs to be numeric, so we pass the numeric variant ID (not the label).
+  const LETTER_SIZE_MAP: Record<string, number> = {
+    'ONE SIZE': 1, '3XS': 12, 'XXS': 9, 'XS': 2, 'S': 3, 'M': 4, 'L': 5, 'XL': 6, 'XXL': 7, '3XL': 10, '4XL': 11, '5XL': 13,
+  };
+  const variantId = LETTER_SIZE_MAP[size];
+  if (variantId !== undefined) return [String(setId), String(variantId)];
 
   return undefined;
 }
