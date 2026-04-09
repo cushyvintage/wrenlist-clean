@@ -579,7 +579,11 @@ type ExternalMessage = Record<string, unknown>;
             color: find.colour ?? undefined,
             color2: secondaryColour ?? undefined,
             styleTags: depopStyleTags.length > 0 ? depopStyleTags : undefined,
-            size: vintedSizeId ? [String(vintedSizeId)] : find.size ? [find.size] : undefined,
+            // Size: Vinted uses numeric vintedSizeId, Depop needs variantSetId+name (skip if unknown),
+            // other platforms use the raw text size
+            size: mp === "vinted" && vintedSizeId ? [String(vintedSizeId)]
+              : mp === "depop" ? undefined // Don't send raw sizes to Depop — its API rejects invalid variant IDs
+              : find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
             quantity: 1,
             whenMade: userWhenMade,
