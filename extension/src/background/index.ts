@@ -145,6 +145,47 @@ const DEPOP_CATEGORY_MAP: Record<string, string[]> = {
   music_media: ["everything-else", "music", "vinyl"],
 };
 
+/**
+ * Resolve a Depop size from category + raw size text.
+ * Returns [variantSetId, sizeName] for the Depop API, or undefined if no mapping.
+ * Uses GB region size sets from depop-attributes-full.json.
+ */
+function resolveDepopSize(category: string | null, sizeText: string | null): [string, string] | undefined {
+  if (!sizeText || !category) return undefined;
+  const cat = category.toLowerCase();
+  const size = sizeText.trim().toUpperCase();
+
+  // Determine which size set to use based on category
+  let setId: number;
+  if (cat.includes('menswear') && (cat.includes('coat') || cat.includes('jacket') || cat.includes('outerwear'))) {
+    setId = 93; // mens-outerwear-sizes GB
+  } else if (cat.includes('menswear') && (cat.includes('bottom') || cat.includes('trouser') || cat.includes('jeans') || cat.includes('shorts'))) {
+    setId = 58; // mens-bottoms-sizes GB
+  } else if (cat.includes('menswear')) {
+    setId = 52; // mens-top-sizes GB
+  } else if (cat.includes('womenswear') && (cat.includes('dress'))) {
+    setId = 86; // wmns-dress-sizes GB
+  } else if (cat.includes('womenswear') && (cat.includes('coat') || cat.includes('jacket') || cat.includes('outerwear'))) {
+    setId = 36; // wmns-outerwear-sizes GB
+  } else if (cat.includes('womenswear') && (cat.includes('bottom') || cat.includes('trouser') || cat.includes('jeans') || cat.includes('skirt'))) {
+    setId = 20; // wmns-bottom-sizes GB
+  } else if (cat.includes('womenswear')) {
+    setId = 2; // wmns-tops-sizes GB
+  } else {
+    return undefined; // Non-clothing or can't determine
+  }
+
+  // Map common size labels to Depop variant IDs (consistent across menswear letter-based sets)
+  const LETTER_SIZE_MAP: Record<string, number> = {
+    'XXS': 9, 'XS': 2, 'S': 3, 'M': 4, 'L': 5, 'XL': 6, 'XXL': 7, '3XL': 10, '4XL': 11,
+    'ONE SIZE': 1,
+  };
+  const variantId = LETTER_SIZE_MAP[size];
+  if (variantId) return [String(setId), String(variantId)];
+
+  return undefined;
+}
+
 function mapCategoryToDepop(category?: string | null): string[] {
   if (!category) return ["everything-else", "home", "decor-home-accesories"];
   const cat = category.toLowerCase();
@@ -579,10 +620,10 @@ type ExternalMessage = Record<string, unknown>;
             color: find.colour ?? undefined,
             color2: secondaryColour ?? undefined,
             styleTags: depopStyleTags.length > 0 ? depopStyleTags : undefined,
-            // Size: Vinted uses numeric vintedSizeId, Depop needs variantSetId+name (skip if unknown),
+            // Size: Vinted uses numeric vintedSizeId, Depop needs [variantSetId, variantId],
             // other platforms use the raw text size
             size: mp === "vinted" && vintedSizeId ? [String(vintedSizeId)]
-              : mp === "depop" ? undefined // Don't send raw sizes to Depop — its API rejects invalid variant IDs
+              : mp === "depop" ? resolveDepopSize(find.category, find.size)
               : find.size ? [find.size] : undefined,
             sku: find.sku ?? undefined,
             quantity: 1,
@@ -658,6 +699,7 @@ type ExternalMessage = Record<string, unknown>;
             await remoteLog("info", "queue", `publishToMarketplace returned`, {
               success: result.success,
               message: result.message?.substring(0, 200),
+              ...(result.success ? {} : { internalErrors: (result as unknown as Record<string, unknown>).internalErrors?.toString().substring(0, 500) }),
             });
           } catch (publishError) {
             // publishToMarketplace threw (e.g. not logged in, CSRF missing) — treat as a failed attempt
