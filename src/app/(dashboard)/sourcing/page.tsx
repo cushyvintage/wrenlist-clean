@@ -157,10 +157,7 @@ export default function SourcingPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="flex items-start justify-between border-b border-sage/14 pb-6">
-        <div>
-          <h1 className="font-serif text-2xl italic text-ink mb-1">🛍 Sourcing trips</h1>
-        </div>
+      <div className="flex items-center justify-end border-b border-sage/14 pb-6">
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors"

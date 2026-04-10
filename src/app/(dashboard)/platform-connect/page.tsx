@@ -91,8 +91,7 @@ export default function PlatformConnectPage() {
   return (
     <div className="space-y-6">
       {/* Topbar */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <h1 className="font-serif text-2xl italic text-ink">platform connections</h1>
+      <div className="flex items-center justify-end border-b border-border pb-4">
         <a href="/settings" className="text-sm text-sage hover:text-sage-dk transition">
           ← back to settings
         </a>

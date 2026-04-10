@@ -126,7 +126,6 @@ export default function AnalyticsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="font-serif text-2xl italic text-ink">analytics</h1>
         <div className="text-center py-12">
           <p className="text-red-600 mb-4">{error}</p>
           <Button variant="primary" onClick={() => setRetryCount((c) => c + 1)}>
@@ -140,8 +139,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header with filters */}
-      <div className="flex items-center justify-between pb-4 border-b border-sage/14">
-        <h1 className="font-serif text-2xl italic text-ink">analytics</h1>
+      <div className="flex items-center justify-end pb-4 border-b border-sage/14">
         <div className="flex gap-2">
           {[
             { value: 'month' as const, label: 'this month' },

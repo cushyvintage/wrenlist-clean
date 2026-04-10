@@ -113,10 +113,6 @@ export default function SuppliersPage() {
   if (!loading && (suppliers?.length ?? 0) === 0) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="border-b border-sage/14 pb-6 flex items-center justify-between">
-          <h1 className="font-serif text-2xl italic text-ink">suppliers</h1>
-        </div>
-
         <div className="max-w-2xl mx-auto py-16 px-6 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#EDE8DE' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 10L5 3h14l2 7" stroke="#8A9E88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M3 10v10h18V10" stroke="#8A9E88" strokeWidth="1.5" /><path d="M9 20v-6h6v6" stroke="#8A9E88" strokeWidth="1.5" /></svg>
@@ -273,8 +269,7 @@ export default function SuppliersPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="border-b border-sage/14 pb-6 flex items-center justify-between">
-        <h1 className="font-serif text-2xl italic text-ink">suppliers</h1>
+      <div className="border-b border-sage/14 pb-6 flex items-center justify-end">
         <button
           onClick={() => setShowAddForm(true)}
           className="px-4 py-2 bg-sage text-cream rounded-sm font-medium text-sm hover:bg-sage-dk transition-colors flex items-center gap-2"

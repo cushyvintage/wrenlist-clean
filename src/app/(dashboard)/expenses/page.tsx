@@ -102,11 +102,6 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="border-b border-border pb-4">
-        <h1 className="font-serif text-2xl italic text-ink">expenses</h1>
-      </div>
-
       {/* Disclaimer */}
       <div className="bg-[rgba(61,92,58,0.08)] border border-[rgba(61,92,58,0.2)] rounded-lg p-4 text-sm text-[#3D5C3A]">
         <strong>Disclaimer:</strong> Wrenlist helps you track your business expenses — you are responsible for your own tax filings. Always consult an accountant for advice.

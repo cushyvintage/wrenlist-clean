@@ -176,10 +176,6 @@ export default function PriceResearchPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <h1 className="text-lg font-serif text-ink">price research</h1>
-      </div>
-
       <SearchForm
         searchTerm={searchTerm}
         onSearchTermChange={setSearchTerm}

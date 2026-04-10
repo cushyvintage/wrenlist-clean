@@ -679,7 +679,6 @@ export default function ImportPage() {
     const connectingPlatform = selectedPlatform ? formatPlatformName(selectedPlatform) : null
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-serif italic text-ink">import</h1>
         {connectingPlatform ? (
           <div className="bg-white border border-sage/14 rounded-md p-6 flex items-center gap-3">
             <div className="h-4 w-4 border-2 border-sage border-t-transparent rounded-full animate-spin" />
@@ -696,7 +695,6 @@ export default function ImportPage() {
   if (!selectedPlatform) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-serif italic text-ink">import</h1>
         <PlatformGrid connected={connectedPlatforms} loading={platformsLoading} onSelectPlatform={selectPlatform} />
       </div>
     )
@@ -713,7 +711,6 @@ export default function ImportPage() {
           <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
             ← back
           </button>
-          <h1 className="text-lg font-serif italic text-ink">import</h1>
         </div>
         <div className="bg-white border border-sage/14 rounded-md p-8 text-center">
           <p className="text-sm text-ink-lt mb-4">
@@ -738,7 +735,6 @@ export default function ImportPage() {
           <button onClick={goBack} className="text-sm text-ink-lt hover:text-ink transition">
             ← back
           </button>
-          <h1 className="text-lg font-serif italic text-ink">import</h1>
         </div>
         <div className="bg-white border border-sage/14 rounded-md p-8 text-center">
           <p className="text-sm font-medium text-ink mb-2">

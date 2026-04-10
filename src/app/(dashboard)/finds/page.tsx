@@ -570,8 +570,7 @@ function InventoryPageContent() {
       <div className="border-b border-sage/14 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h1 className="font-serif text-2xl italic text-ink">finds</h1>
-            <p className="text-[13px] mt-1 hidden sm:block" style={{ color: '#8A9E88' }}>
+            <p className="text-[13px] hidden sm:block" style={{ color: '#8A9E88' }}>
               Your items — everything you&apos;ve sourced, whether it&apos;s listed somewhere or still sitting in a box.
             </p>
           </div>

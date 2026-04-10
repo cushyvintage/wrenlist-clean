@@ -63,7 +63,6 @@ export default function OrdersPage() {
     <div className="flex flex-col gap-6">
       {/* Page Header */}
       <div className="border-b border-sage/14 pb-6">
-        <h1 className="font-serif text-2xl italic text-ink mb-4">orders</h1>
         <p className="text-sm text-ink-lt">
           Track sales across all platforms
         </p>

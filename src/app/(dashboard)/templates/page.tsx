@@ -170,7 +170,6 @@ export default function TemplatesPage() {
       {/* Header with Create button */}
       <div className="border-b border-sage/14 pb-6 flex items-start justify-between">
         <div>
-          <h1 className="font-serif text-2xl italic text-ink mb-2">templates</h1>
           <p className="text-sm text-ink-lt">Reuse listing fields across finds to speed up the add-find flow</p>
         </div>
         <button

@@ -510,8 +510,7 @@ export default function SoldHistoryPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h1 className="font-serif text-2xl italic text-ink">sold</h1>
-          <p className="text-xs text-ink-lt mt-1">Orders, fulfilment, and profit tracking</p>
+          <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button

@@ -54,8 +54,7 @@ export default function CustomersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
-          <h1 className="font-serif text-2xl italic text-ink">customers</h1>
-          <p className="text-xs text-ink-lt mt-1">Track buyers across your marketplaces</p>
+          <p className="text-xs text-ink-lt">Track buyers across your marketplaces</p>
         </div>
         <input
           type="text"
