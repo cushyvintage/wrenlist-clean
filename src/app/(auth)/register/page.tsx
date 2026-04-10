@@ -96,6 +96,11 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-8">
+          <img
+            src="/wrenlist-logo.png"
+            alt="Wrenlist"
+            className="w-16 h-16 mx-auto mb-3"
+          />
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
         </div>

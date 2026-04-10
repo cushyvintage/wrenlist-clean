@@ -9,8 +9,12 @@ export const metadata: Metadata = {
   },
   description: 'Track inventory, crosslist to Vinted, eBay, Etsy & Shopify, and grow your vintage resale business. Built for UK thrifters.',
   icons: {
-    icon: '/wrenlist-logo.png',
-    apple: '/wrenlist-logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-16.png', type: 'image/png', sizes: '16x16' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     title: 'Wrenlist — The Thrifter\'s Operating System',
