@@ -230,6 +230,9 @@ export function useAddFindForm() {
       const firstPhoto = formData.photoPreviews[0]
       if (!firstPhoto) return
 
+      // Collect up to 3 photos for multi-image identification
+      const additionalPreviews = formData.photoPreviews.slice(1, 3)
+
       let imageUrl = firstPhoto
       if (firstPhoto.startsWith('blob:') || firstPhoto.startsWith('data:')) {
         try {
@@ -268,7 +271,7 @@ export function useAddFindForm() {
         const response = await fetch('/api/ai/identify-from-photo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: [imageUrl] }),
+          body: JSON.stringify({ images: [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))] }),
           signal: abortController.signal,
         })
         if (cancelled) return

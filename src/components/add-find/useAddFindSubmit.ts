@@ -94,10 +94,24 @@ export function useAddFindSubmit(deps: SubmitDeps) {
   const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress } = deps
 
   const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
-    if (!formData.photos.length) return []
+    let photosToUpload = formData.photos.filter((f) => f.size > 0)
+
+    // Fallback: if File objects are missing but blob previews exist, re-fetch them
+    if (photosToUpload.length === 0 && formData.photoPreviews.length > 0) {
+      const blobPreviews = formData.photoPreviews.filter((p) => p.startsWith('blob:'))
+      photosToUpload = await Promise.all(
+        blobPreviews.map(async (url, i) => {
+          const res = await fetch(url)
+          const blob = await res.blob()
+          return new File([blob], `photo-${i}.jpg`, { type: blob.type || 'image/jpeg' })
+        })
+      )
+    }
+
+    if (!photosToUpload.length) return []
     const uploadFormData = new FormData()
     uploadFormData.append('find_id', findId)
-    formData.photos.forEach((photo) => uploadFormData.append('photos', photo))
+    photosToUpload.forEach((photo) => uploadFormData.append('photos', photo))
     const uploadResponse = await fetch('/api/finds/upload-photos', { method: 'POST', body: uploadFormData })
     if (!uploadResponse.ok) {
       const errorData = await uploadResponse.json()
