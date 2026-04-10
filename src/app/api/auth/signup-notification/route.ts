@@ -1,43 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { sendSignupEmails } from '@/lib/email/send-signup-emails'
 
 /**
  * POST /api/auth/signup-notification
  *
- * Fire-and-forget dispatch for welcome email + admin notification, called
- * from two places:
+ * Dispatches welcome + admin notification emails the first time a user
+ * signs up. Called from two places:
  *
  *   1. The register page client, right after supabase.auth.signUp()
  *      succeeds (before the user is redirected to /verify-email).
- *   2. The /auth/callback route, right after OAuth exchange succeeds
+ *   2. The /auth/callback route, right after an OAuth exchange succeeds
  *      (before redirecting to /onboarding or /dashboard).
  *
- * Body: { userId, email, fullName, signupMethod }
+ * Body: { userId, email, fullName?, signupMethod? }
+ *
+ * ### Dedup
+ *
+ * The /auth/callback route fires on EVERY OAuth login, not just the
+ * first one. Without persistent dedup, a returning Google user would
+ * trigger an admin email on every single login. We use the email_sends
+ * table as persistent per-user dedup: one `(userId, 'welcome')` row per
+ * user, ever. The INSERT is the dedup check — if it hits the UNIQUE
+ * constraint, we know this user has already been welcomed and we skip.
  *
  * ### Why a public endpoint?
  *
- * Email signups don't have a session until email verification completes,
- * so there's no cookie-based auth available at the call site. We could
- * use the service role key to look up user data from the DB, but that
- * adds another required env var and a round-trip. Instead this route
- * trusts the caller-supplied payload.
- *
- * ### Abuse surface
- *
- * An unauthenticated caller could POST arbitrary payloads. The blast
- * radius:
- *   - Admin notification email can be triggered for arbitrary data
- *   - Welcome email can be sent to arbitrary addresses
- *
- * Mitigated by:
- *   - In-process dedup (per-userId cooldown, 5 minutes). A replay from
- *     the same userId is a no-op until the cooldown expires.
- *   - Rate limiting via Vercel/middleware (not added here, but can be)
- *   - The admin email address is NOT taken from the payload; it's
- *     hardcoded via ADMIN_NOTIFICATION_EMAIL env var
- *
- * For beta with low signup volume this is acceptable. Worst case dom
- * gets a couple of extra "new user" pings in his inbox.
+ * Email signups don't have a cookie session until email verification,
+ * so there's no cookie-based auth at the call site. The endpoint trusts
+ * the caller-supplied payload for userId/email/name. The abuse surface
+ * is limited because:
+ *   - The admin email address is hardcoded via ADMIN_NOTIFICATION_EMAIL,
+ *     never taken from the payload
+ *   - The email_sends dedup means an attacker can only ever trigger ONE
+ *     admin ping per valid userId (first-touch wins)
+ *   - Welcome emails go to the supplied address, so the abuse is
+ *     "spam an arbitrary inbox once" — acceptable for beta
  */
 
 interface SignupNotificationBody {
@@ -47,30 +45,13 @@ interface SignupNotificationBody {
   signupMethod?: string
 }
 
-// Cold-start-scoped dedup. Persists for the lifetime of a single serverless
-// instance. Not perfect across instances, but catches the common case of a
-// client replay (browser back button, retry, stuck request).
-const recentSends = new Map<string, number>()
-const DEDUP_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+const TEMPLATE_SLUG = 'welcome'
 
-function shouldSkip(userId: string): boolean {
-  const last = recentSends.get(userId)
-  if (!last) return false
-  const age = Date.now() - last
-  return age < DEDUP_WINDOW_MS
-}
-
-function markSent(userId: string) {
-  recentSends.set(userId, Date.now())
-
-  // Lazy cleanup: drop entries older than 1 hour so the map doesn't grow
-  // unbounded on long-lived instances.
-  if (recentSends.size > 1000) {
-    const cutoff = Date.now() - 60 * 60 * 1000
-    for (const [key, timestamp] of recentSends.entries()) {
-      if (timestamp < cutoff) recentSends.delete(key)
-    }
-  }
+function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  return createClient(url, key, { auth: { persistSession: false } })
 }
 
 export async function POST(request: NextRequest) {
@@ -89,9 +70,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (shouldSkip(userId)) {
+    const admin = createAdminClient()
+    if (!admin) {
+      console.error(
+        '[signup-notification] Supabase service role not configured',
+      )
       return NextResponse.json(
-        { ok: true, skipped: true, reason: 'dedup_cooldown' },
+        { error: 'Server misconfigured' },
+        { status: 500 },
+      )
+    }
+
+    // Persistent dedup via email_sends. Insert first — if the row already
+    // exists (UNIQUE(user_id, template)), this user has already received
+    // the welcome flow and we exit without sending anything.
+    //
+    // We insert with resend_message_id: null and backfill on success.
+    // If the email send itself fails later, we roll the row back so a
+    // retry can re-send.
+    const { data: insertResult, error: insertErr } = await admin
+      .from('email_sends')
+      .insert({
+        user_id: userId,
+        template: TEMPLATE_SLUG,
+        resend_message_id: null,
+      })
+      .select('id')
+      .maybeSingle()
+
+    if (insertErr) {
+      // 23505 = unique_violation = already sent. This is the common case
+      // for every non-first-time login.
+      if (insertErr.code === '23505') {
+        return NextResponse.json(
+          { ok: true, skipped: true, reason: 'already_sent' },
+          { status: 200 },
+        )
+      }
+
+      console.error('[signup-notification] insert failed:', insertErr)
+      return NextResponse.json(
+        { error: 'Failed to record send' },
+        { status: 500 },
+      )
+    }
+
+    if (!insertResult) {
+      // Defensive: maybeSingle returned null but no error. Treat as already
+      // sent to avoid a double-send.
+      return NextResponse.json(
+        { ok: true, skipped: true, reason: 'already_sent' },
         { status: 200 },
       )
     }
@@ -103,11 +131,17 @@ export async function POST(request: NextRequest) {
       signupMethod: body?.signupMethod || 'email',
     })
 
-    // Only mark the userId as sent if the welcome actually went through.
-    // An admin-only failure shouldn't prevent a retry from sending the
-    // welcome; a welcome failure shouldn't prevent a retry either.
     if (results.welcome.ok) {
-      markSent(userId)
+      // Backfill the Resend message id for observability
+      await admin
+        .from('email_sends')
+        .update({ resend_message_id: results.welcome.detail })
+        .eq('id', insertResult.id)
+    } else {
+      // Send failed — roll back the dedup row so a future call can retry.
+      // The admin email might have gone through; that's a tolerable
+      // duplicate risk, better than never sending the welcome.
+      await admin.from('email_sends').delete().eq('id', insertResult.id)
     }
 
     return NextResponse.json({ ok: true, skipped: false, results })
