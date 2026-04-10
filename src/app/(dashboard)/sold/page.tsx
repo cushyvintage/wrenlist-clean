@@ -22,6 +22,8 @@ interface SoldItem {
   sourced_at: string | null
   sold_at: string | null
   photo: string | null
+  stashId?: string | null
+  stashName?: string | null
   marketplace?: string
   margin_percent?: number | null
   days_listed?: number
@@ -307,6 +309,7 @@ export default function SoldHistoryPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [showAllAction, setShowAllAction] = useState(false)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+  const [actionView, setActionView] = useState<'cards' | 'picklist'>('cards')
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -548,9 +551,30 @@ export default function SoldHistoryPage() {
         const PREVIEW_COUNT = 6
         const visibleActions = showAllAction ? actionItems : actionItems.slice(0, PREVIEW_COUNT)
         const hasMore = actionItems.length > PREVIEW_COUNT
+
+        // Group for pick list: stash name → items (alphabetic by stash, then by name)
+        const picklistGroups = (() => {
+          const groups = new Map<string, SoldItem[]>()
+          for (const item of actionItems) {
+            const key = item.stashName || '— No stash —'
+            if (!groups.has(key)) groups.set(key, [])
+            groups.get(key)!.push(item)
+          }
+          return [...groups.entries()]
+            .sort(([a], [b]) => {
+              if (a === '— No stash —') return 1
+              if (b === '— No stash —') return -1
+              return a.localeCompare(b)
+            })
+            .map(([name, items]) => ({
+              name,
+              items: items.sort((a, b) => a.name.localeCompare(b.name)),
+            }))
+        })()
+
         return (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
                   Needs action
@@ -559,32 +583,120 @@ export default function SoldHistoryPage() {
                   {actionItems.length}
                 </span>
               </div>
-              <button
-                onClick={handleBulkDelivered}
-                disabled={isBulkUpdating}
-                className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
-              >
-                {isBulkUpdating ? 'Updating...' : 'Mark all delivered'}
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 bg-cream rounded p-1">
+                  <button
+                    onClick={() => setActionView('cards')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                      actionView === 'cards' ? 'bg-sage text-white' : 'text-ink hover:bg-cream-dk'
+                    }`}
+                  >
+                    Cards
+                  </button>
+                  <button
+                    onClick={() => setActionView('picklist')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                      actionView === 'picklist' ? 'bg-sage text-white' : 'text-ink hover:bg-cream-dk'
+                    }`}
+                  >
+                    📦 Pick list
+                  </button>
+                </div>
+                {actionView === 'picklist' && (
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 text-xs font-medium rounded border border-sage/30 text-sage hover:bg-sage hover:text-white transition"
+                  >
+                    Print
+                  </button>
+                )}
+                <button
+                  onClick={handleBulkDelivered}
+                  disabled={isBulkUpdating}
+                  className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
+                >
+                  {isBulkUpdating ? 'Updating...' : 'Mark all delivered'}
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {visibleActions.map((item) => (
-                <OrderCard
-                  key={item.id}
-                  item={item}
-                  onUpdateStatus={handleUpdateShipment}
-                  onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
-                  formatDate={formatDate}
-                />
-              ))}
-            </div>
-            {hasMore && (
-              <button
-                onClick={() => setShowAllAction(!showAllAction)}
-                className="text-xs text-sage hover:text-sage-lt transition font-medium"
-              >
-                {showAllAction ? 'Show less' : `Show all ${actionItems.length} orders`}
-              </button>
+
+            {actionView === 'cards' ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {visibleActions.map((item) => (
+                    <OrderCard
+                      key={item.id}
+                      item={item}
+                      onUpdateStatus={handleUpdateShipment}
+                      onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
+                      formatDate={formatDate}
+                    />
+                  ))}
+                </div>
+                {hasMore && (
+                  <button
+                    onClick={() => setShowAllAction(!showAllAction)}
+                    className="text-xs text-sage hover:text-sage-lt transition font-medium"
+                  >
+                    {showAllAction ? 'Show less' : `Show all ${actionItems.length} orders`}
+                  </button>
+                )}
+              </>
+            ) : (
+              <Panel className="p-0 print:border-0 print:shadow-none">
+                <div className="p-4 border-b border-border print:border-b-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-ink">Pick list</div>
+                      <div className="text-[11px] text-ink-lt">
+                        {actionItems.length} items to pack · {picklistGroups.length} {picklistGroups.length === 1 ? 'stash' : 'stashes'}
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-ink-lt print:block hidden">
+                      {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+                <div className="divide-y divide-border">
+                  {picklistGroups.map((group) => (
+                    <div key={group.name} className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold text-sage">📦 {group.name}</span>
+                        <span className="text-[11px] text-ink-lt">
+                          {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
+                        </span>
+                      </div>
+                      <ul className="space-y-1">
+                        {group.items.map((item) => (
+                          <li key={item.id} className="flex items-start gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 print:appearance-none print:border print:border-ink print:w-3 print:h-3"
+                              aria-label={`Picked ${item.name}`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-ink truncate">{item.name}</div>
+                              <div className="text-[11px] text-ink-lt">
+                                {item.marketplace && item.marketplace !== 'unknown' && (
+                                  <span className="capitalize">{item.marketplace}</span>
+                                )}
+                                {item.buyer && <span> · {item.buyer}</span>}
+                                {item.trackingNumber && <span> · {item.trackingNumber}</span>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleUpdateShipment(item.id, 'shipped')}
+                              className="text-[11px] text-sage hover:text-sage-lt transition print:hidden"
+                            >
+                              Mark shipped
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
             )}
           </div>
         )

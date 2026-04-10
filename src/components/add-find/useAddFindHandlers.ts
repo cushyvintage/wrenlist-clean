@@ -45,7 +45,7 @@ export function useAddFindHandlers(deps: HandlerDeps) {
 
   const handleApplyTemplate = useCallback((template: ListingTemplate) => {
     const result = applyTemplate(template, formData)
-    setFormData(prev => ({ ...result.merged, sourcingTripId: prev.sourcingTripId }))
+    setFormData(prev => ({ ...result.merged, sourcingTripId: prev.sourcingTripId, stashId: prev.stashId }))
     setIncompleteRequiredFields(new Set(result.incompleteRequiredFields))
     setTemplateAppliedBanner(template.name)
     setTimeout(() => setTemplateAppliedBanner(null), 3000)

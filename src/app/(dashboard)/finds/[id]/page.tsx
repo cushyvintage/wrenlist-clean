@@ -42,6 +42,7 @@ interface FormData {
   sku: string
   costPrice: number | null
   internalNote: string
+  stashId: string | null
   platformPrices: Partial<Record<Platform, number | null>>
 }
 
@@ -68,6 +69,7 @@ export default function InventoryDetailPage() {
     sku: '',
     costPrice: null,
     internalNote: '',
+    stashId: null,
     platformPrices: { vinted: null, ebay: null, etsy: null, shopify: null },
   })
 
@@ -151,6 +153,7 @@ export default function InventoryDetailPage() {
           sku: data.sku || '',
           costPrice: data.cost_gbp,
           internalNote: '',
+          stashId: data.stash_id ?? null,
           platformPrices: { vinted: null, ebay: null, etsy: null, shopify: null },
         })
       } catch (err) {
@@ -257,7 +260,7 @@ export default function InventoryDetailPage() {
       photos: merged.photos, photoPreviews: merged.photoPreviews, selectedPlatforms: merged.selectedPlatforms,
       platformFields: merged.platformFields, shippingWeight: merged.shippingWeight,
       shippingDimensions: merged.shippingDimensions, sku: merged.sku, costPrice: merged.costPrice,
-      internalNote: merged.internalNote, platformPrices: merged.platformPrices,
+      internalNote: merged.internalNote, stashId: formData.stashId, platformPrices: merged.platformPrices,
     })
     setIncompleteFields(incompleteRequiredFields)
     setTemplateAppliedBanner(true)
@@ -371,6 +374,7 @@ export default function InventoryDetailPage() {
           shipping_width_cm: formData.shippingDimensions.width,
           shipping_height_cm: formData.shippingDimensions.height,
           platform_fields: formData.platformFields,
+          stash_id: formData.stashId,
         }),
       })
       if (!res.ok) await parseApiError(res, 'Failed to save')

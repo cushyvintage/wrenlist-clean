@@ -27,6 +27,7 @@ export interface FormData {
   costPrice: number | null
   internalNote: string
   sourcingTripId: string | null
+  stashId: string | null
   platformPrices: Partial<Record<Platform, number | null>>
 }
 
@@ -61,6 +62,7 @@ export function useAddFindForm() {
     costPrice: null,
     internalNote: '',
     sourcingTripId: null,
+    stashId: typeof window !== 'undefined' ? localStorage.getItem('wrenlist:stickyStashId') : null,
     platformPrices: { vinted: null, ebay: null, etsy: null, shopify: null },
   })
 
@@ -141,7 +143,7 @@ export function useAddFindForm() {
           setFormData(prev => {
             const result = applyTemplate(template, prev)
             incompleteFields = result.incompleteRequiredFields
-            return { ...result.merged, sourcingTripId: prev.sourcingTripId }
+            return { ...result.merged, sourcingTripId: prev.sourcingTripId, stashId: prev.stashId }
           })
           setIncompleteRequiredFields(new Set(incompleteFields))
           setTemplateAppliedBanner(template.name)

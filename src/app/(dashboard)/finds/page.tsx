@@ -60,6 +60,10 @@ function InventoryPageContent() {
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0 })
+  const [stashes, setStashes] = useState<Array<{ id: string; name: string; item_count: number }>>([])
+  const [stashFilter, setStashFilter] = useState<string>('all')
+  const [showBulkMoveStash, setShowBulkMoveStash] = useState(false)
+  const [bulkMovingStash, setBulkMovingStash] = useState(false)
   const [showBulkCrosslist, setShowBulkCrosslist] = useState(false)
   const [bulkCrosslistTargets, setBulkCrosslistTargets] = useState<Platform[]>([])
   const [bulkCrosslisting, setBulkCrosslisting] = useState(false)
@@ -128,6 +132,9 @@ function InventoryPageContent() {
         if (selectedStatus && selectedStatus !== 'all' && selectedStatus !== 'aging') {
           params.set('status', selectedStatus)
         }
+        if (stashFilter && stashFilter !== 'all') {
+          params.set('stash_id', stashFilter)
+        }
 
         // Fetch finds
         const findsRes = await fetch(`/api/finds?${params.toString()}`)
@@ -159,7 +166,41 @@ function InventoryPageContent() {
     }
 
     fetchData()
-  }, [selectedStatus, debouncedSearch, currentOffset, refreshTrigger])
+  }, [selectedStatus, debouncedSearch, currentOffset, refreshTrigger, stashFilter])
+
+  // Fetch user's stashes for filter dropdown + bulk move menu
+  useEffect(() => {
+    async function loadStashes() {
+      try {
+        const res = await fetch('/api/stashes')
+        if (!res.ok) return
+        const json = await res.json()
+        const data = unwrapApiResponse<Array<{ id: string; name: string; item_count: number }>>(json)
+        setStashes(data ?? [])
+      } catch { /* silent */ }
+    }
+    loadStashes()
+  }, [refreshTrigger])
+
+  const handleBulkMoveStash = async (targetStashId: string | null) => {
+    if (selectedItems.size === 0) return
+    try {
+      setBulkMovingStash(true)
+      const res = await fetch('/api/finds/bulk-move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findIds: Array.from(selectedItems), stashId: targetStashId }),
+      })
+      if (!res.ok) throw new Error('Move failed')
+      setShowBulkMoveStash(false)
+      setSelectedItems(new Set())
+      setRefreshTrigger((n) => n + 1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Move failed')
+    } finally {
+      setBulkMovingStash(false)
+    }
+  }
 
   // Filter finds by aging status (client-side for aging filter since it needs calculation)
   const filteredFinds = selectedStatus === 'aging'
@@ -623,6 +664,40 @@ function InventoryPageContent() {
             )
           })}
         </div>
+
+        {/* Stash filter */}
+        {stashes.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>Stash:</span>
+            <button
+              onClick={() => setStashFilter('all')}
+              className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${
+                stashFilter === 'all' ? 'bg-sage-pale border border-sage text-sage' : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setStashFilter('none')}
+              className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${
+                stashFilter === 'none' ? 'bg-sage-pale border border-sage text-sage' : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+              }`}
+            >
+              Unassigned
+            </button>
+            {stashes.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setStashFilter(s.id)}
+                className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${
+                  stashFilter === s.id ? 'bg-sage-pale border border-sage text-sage' : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+                }`}
+              >
+                {s.name} ({s.item_count})
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Plan limit error state */}
@@ -804,6 +879,55 @@ function InventoryPageContent() {
                 )}
               </div>
             )}
+
+            {/* Move to stash button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowBulkMoveStash(!showBulkMoveStash)}
+                disabled={bulkMovingStash}
+                className="px-4 py-2 text-sm font-medium rounded transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: '#F5F0E8',
+                  borderWidth: '1px',
+                  borderColor: '#3D5C3A',
+                  color: '#3D5C3A',
+                }}
+              >
+                {bulkMovingStash ? 'Moving...' : '📦 Move to stash'}
+              </button>
+              {showBulkMoveStash && (
+                <div
+                  className="absolute bottom-full right-0 mb-2 p-2 rounded shadow-lg z-50 min-w-[200px] max-h-64 overflow-y-auto"
+                  style={{ backgroundColor: '#F5F0E8', borderWidth: '1px', borderColor: 'rgba(61,92,58,.22)' }}
+                >
+                  <p className="text-[11px] uppercase tracking-wider font-medium mb-2 px-2" style={{ color: '#8A9E88' }}>
+                    Move {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} to
+                  </p>
+                  <button
+                    onClick={() => handleBulkMoveStash(null)}
+                    className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-cream-md transition-colors italic"
+                    style={{ color: '#8A9E88' }}
+                  >
+                    — Clear stash —
+                  </button>
+                  {stashes.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleBulkMoveStash(s.id)}
+                      className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-cream-md transition-colors"
+                      style={{ color: '#1E2E1C' }}
+                    >
+                      {s.name} <span className="text-xs" style={{ color: '#8A9E88' }}>({s.item_count})</span>
+                    </button>
+                  ))}
+                  {stashes.length === 0 && (
+                    <p className="text-xs px-2 py-1.5" style={{ color: '#8A9E88' }}>
+                      No stashes yet. Create one on the add-find form or <a href="/stashes" className="underline">manage stashes</a>.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Mark as sold button */}
             <button
@@ -1011,8 +1135,16 @@ function InventoryPageContent() {
                           <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
                             {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
                           </div>
-                          <div className="text-[11px]" style={{ color: '#6B7D6A' }}>
-                            {formatCategory(find.category)}
+                          <div className="text-[11px] flex items-center gap-2" style={{ color: '#6B7D6A' }}>
+                            <span>{formatCategory(find.category)}</span>
+                            {find.stash?.name && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]"
+                                style={{ backgroundColor: 'rgba(90,122,87,0.1)', color: '#5A7A57' }}
+                              >
+                                📦 {find.stash.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -45,6 +45,7 @@ const mockFind: Find = {
   shipping_width_cm: null,
   shipping_height_cm: null,
   sourcing_trip_id: null,
+  stash_id: null,
 }
 
 const mockListing: Partial<Listing> & { find?: Partial<Find> } = {

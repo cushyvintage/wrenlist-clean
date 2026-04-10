@@ -119,6 +119,7 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     sku: formData.sku || null,
     cost_gbp: formData.costPrice,
     sourcing_trip_id: formData.sourcingTripId,
+    stash_id: formData.stashId,
     shipping_weight_grams: formData.shippingWeight || 500,
     shipping_length_cm: formData.shippingDimensions.length,
     shipping_width_cm: formData.shippingDimensions.width,

@@ -19,12 +19,13 @@ export const GET = withAuth(async (req, user) => {
     const status = searchParams.get('status')
     const sourceType = searchParams.get('source_type')
     const search = searchParams.get('search')
+    const stashId = searchParams.get('stash_id')
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     let query = supabase
       .from('finds')
-      .select('*', { count: 'exact' })
+      .select('*, stash:stashes(id, name)', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -34,6 +35,14 @@ export const GET = withAuth(async (req, user) => {
 
     if (sourceType && sourceType !== 'all') {
       query = query.eq('source_type', sourceType)
+    }
+
+    if (stashId) {
+      if (stashId === 'none') {
+        query = query.is('stash_id', null)
+      } else {
+        query = query.eq('stash_id', stashId)
+      }
     }
 
     if (search) {

@@ -12,6 +12,7 @@ import MarketplaceFieldsSection from '@/components/add-find/MarketplaceFieldsSec
 import ShippingSection from '@/components/add-find/ShippingSection'
 import FormHeader from '@/components/add-find/FormHeader'
 import InternalDetailsSection from '@/components/add-find/InternalDetailsSection'
+import StashSection from '@/components/add-find/StashSection'
 import { useAddFindForm } from '@/components/add-find/useAddFindForm'
 import { useAddFindHandlers } from '@/components/add-find/useAddFindHandlers'
 import { useAddFindSubmit } from '@/components/add-find/useAddFindSubmit'
@@ -232,6 +233,11 @@ export default function AddFindPage() {
           shippingDimensions={form.formData.shippingDimensions}
           onWeightChange={(v) => handlers.handleInputChange('shippingWeight', v)}
           onDimensionChange={handlers.handleDimensionChange}
+        />
+
+        <StashSection
+          stashId={form.formData.stashId}
+          onChange={(id) => form.setFormData((prev) => ({ ...prev, stashId: id }))}
         />
 
         <InternalDetailsSection

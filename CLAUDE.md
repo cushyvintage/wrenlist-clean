@@ -119,12 +119,14 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `test_results` | Individual test case results per run | ON |
 | `daily_metrics` | Daily KPIs (not yet populated) | ON |
 | `monthly_metrics` | Monthly performance (not yet populated) | ON |
+| `stashes` | User-defined physical storage locations ("garage", "shelf 3") | ON |
 
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
 - **`product_marketplace_data.customer_id`** (uuid FK) links sold items to `customers` table
 - **`finds.platform_fields`** (jsonb) stores platform-specific form fields
 - **`finds.selected_marketplaces`** (text[]) stores which platforms a find targets
+- **`finds.stash_id`** (uuid FK → stashes, ON DELETE SET NULL) — physical storage location
 - All `user_id` FKs reference **`auth.users(id)`** — there is no `public.users` table
 - All tables have RLS enabled with `auth.uid()` policies
 - Supported platforms (DB CHECK + TypeScript): vinted, ebay, etsy, shopify, depop, poshmark, mercari, facebook, whatnot, grailed

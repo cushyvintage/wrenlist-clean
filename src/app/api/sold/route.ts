@@ -11,6 +11,8 @@ interface FindWithMarketplaceJoin {
   sourced_at: string | null
   sold_at: string | null
   photos: string[] | null
+  stash_id: string | null
+  stash: { id: string; name: string } | { id: string; name: string }[] | null
   product_marketplace_data: Array<{
     marketplace: string
     status: string
@@ -27,6 +29,8 @@ interface SoldItem {
   sourced_at: string | null
   sold_at: string | null
   photo: string | null
+  stashId?: string | null
+  stashName?: string | null
   marketplace?: string
   margin_percent?: number | null
   days_listed?: number
@@ -100,6 +104,8 @@ export const GET = withAuth(async (req, user) => {
         sourced_at,
         sold_at,
         photos,
+        stash_id,
+        stash:stashes(id, name),
         product_marketplace_data (
           marketplace,
           status,
@@ -155,6 +161,8 @@ export const GET = withAuth(async (req, user) => {
         sourced_at: find.sourced_at,
         sold_at: find.sold_at,
         photo: find.photos?.[0] || null,
+        stashId: find.stash_id,
+        stashName: Array.isArray(find.stash) ? find.stash[0]?.name || null : find.stash?.name || null,
         marketplace: soldPmd?.marketplace || 'unknown',
         margin_percent: marginPercent,
         days_listed: daysListed,

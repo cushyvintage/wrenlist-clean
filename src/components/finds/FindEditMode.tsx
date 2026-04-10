@@ -8,6 +8,7 @@ import { CATEGORY_MAP, getCategoryNode } from '@/data/marketplace-category-map'
 import type { FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useMemo } from 'react'
+import StashTypeahead from '@/components/stash/StashTypeahead'
 
 interface FormData {
   title: string
@@ -30,6 +31,7 @@ interface FormData {
   sku: string
   costPrice: number | null
   internalNote: string
+  stashId: string | null
   platformPrices: Partial<Record<Platform, number | null>>
 }
 
@@ -620,6 +622,19 @@ export function FindEditMode({
                 Margin: {margin}%
               </p>
             )}
+          </div>
+
+          {/* Stash */}
+          <div>
+            <label className="text-xs uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>
+              Stash
+            </label>
+            <div className="mt-1">
+              <StashTypeahead
+                value={formData.stashId}
+                onChange={(id) => onInputChange('stashId', id)}
+              />
+            </div>
           </div>
 
           {/* Internal note */}

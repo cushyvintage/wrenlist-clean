@@ -175,8 +175,27 @@ export interface Find {
   shipping_width_cm: number | null
   shipping_height_cm: number | null
   sourcing_trip_id: string | null
+  stash_id: string | null
+  stash?: Stash | null
   created_at: string
   updated_at: string
+}
+
+// ============================================================================
+// STASHES (physical storage locations)
+// ============================================================================
+
+export interface Stash {
+  id: string
+  user_id: string
+  name: string
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface StashWithCount extends Stash {
+  item_count: number
 }
 
 // Legacy alias for backwards compatibility
