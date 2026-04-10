@@ -17,12 +17,21 @@ interface AnalyticsSummary {
   total_finds: number
   listed_finds: number
   sold_finds: number
-  total_revenue_gbp: number
-  total_cost_gbp: number
-  gross_margin_pct: number
+  draft_finds: number
+  total_sales: number
+  cogs: number
+  gross_profit: number
+  profit_margin_pct: number
+  avg_profit_per_item: number
+  stock_cost: number
+  stock_listed_value: number
+  stock_count: number
   avg_days_to_sell: number
-  this_month_finds: number
-  this_month_revenue: number
+  sell_through_pct: number
+  this_month_sales: number
+  this_month_profit: number
+  this_month_items_sold: number
+  this_month_items_sourced: number
   this_month_expenses: number
   this_month_mileage_gbp: number
 }
@@ -77,15 +86,11 @@ export default function DashboardPage() {
   }, [])
 
   // Use summary data for metrics
-  const activeFinds = summary ? (summary.total_finds - summary.sold_finds) : 0
-  const monthlyRevenue = summary?.this_month_revenue || 0
-  const avgMargin = summary?.gross_margin_pct || 0
+  const activeFinds = summary?.stock_count ?? 0
+  const monthlyRevenue = summary?.this_month_sales || 0
+  const monthlyProfit = summary?.this_month_profit || 0
+  const avgMargin = summary?.profit_margin_pct || 0
   const avgDaysToSell = summary?.avg_days_to_sell || 0
-
-  // Current month metrics
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
   const recentFinds = finds.slice(0, 3)
   const findsList = isLoading ? 'skeleton' : finds.length === 0 ? 'empty' : 'loaded'
@@ -125,29 +130,29 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="Active finds"
+            label="Active stock"
             value={activeFinds}
-            delta={`${summary?.listed_finds || 0} listed`}
+            delta={`${summary?.listed_finds || 0} listed · ${summary?.draft_finds || 0} draft`}
             suffix=""
           />
           <StatCard
-            label="Monthly revenue"
+            label="This month sales"
             value={monthlyRevenue}
             prefix="£"
-            delta={`£${monthlyRevenue.toFixed(2)}`}
+            delta={`${summary?.this_month_items_sold || 0} sold · £${monthlyProfit.toFixed(0)} profit`}
             suffix=""
           />
           <StatCard
-            label="Avg margin"
+            label="Profit margin"
             value={avgMargin}
             suffix="%"
-            delta="from sold items"
+            delta={`£${(summary?.avg_profit_per_item || 0).toFixed(0)} avg per item`}
           />
           <StatCard
             label="Days to sell"
             value={avgDaysToSell}
             suffix=" days"
-            delta="average"
+            delta={`${summary?.sell_through_pct || 0}% sell-through`}
           />
         </div>
       )}
@@ -219,16 +224,25 @@ export default function DashboardPage() {
           <Panel title="This month">
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-ink-lt">Finds listed</span>
-                <span className="font-medium text-ink">{summary?.this_month_finds || 0}</span>
+                <span className="text-ink-lt">Items sourced</span>
+                <span className="font-medium text-ink">{summary?.this_month_items_sourced || 0}</span>
               </div>
               <div className="flex justify-between border-t border-sage/14 pt-3">
                 <span className="text-ink-lt">Items sold</span>
-                <span className="font-medium text-ink">{summary?.sold_finds || 0}</span>
+                <span className="font-medium text-ink">{summary?.this_month_items_sold || 0}</span>
               </div>
               <div className="flex justify-between border-t border-sage/14 pt-3">
-                <span className="text-ink-lt">Total revenue</span>
+                <span className="text-ink-lt">Sales</span>
                 <span className="font-mono font-medium text-ink">£{monthlyRevenue.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-sage/14 pt-3">
+                <span className="text-ink-lt">Profit</span>
+                <span
+                  className="font-mono font-medium"
+                  style={{ color: monthlyProfit >= 0 ? '#4A7A45' : '#dc2626' }}
+                >
+                  £{monthlyProfit.toFixed(2)}
+                </span>
               </div>
             </div>
           </Panel>
