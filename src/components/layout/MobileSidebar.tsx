@@ -49,7 +49,9 @@ export function MobileSidebar({ open, onClose, children, userInfo }: MobileSideb
           style={{ borderColor: 'rgba(255,255,255,.07)' }}
         >
           <div className="flex items-center gap-2.5">
-            <img src="/wrenlist-logo.png" alt="" width={28} height={28} className="rounded-sm" style={{ mixBlendMode: 'multiply' }} />
+            <div className="flex items-center justify-center w-9 h-9 rounded-full bg-cream/95 shrink-0">
+              <img src="/wrenlist-logo.png" alt="" width={26} height={26} />
+            </div>
             <div>
               <div className="font-serif text-base font-medium" style={{ color: '#C8DEC6' }}>
                 Wrenlist
