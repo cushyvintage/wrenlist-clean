@@ -21,21 +21,26 @@ export const GET = withAuth(async (_req, user) => {
     return ApiResponseHelper.internalError()
   }
 
-  // Get counts per stash (single grouped query)
-  const { data: counts, error: countErr } = await supabase
-    .from('finds')
-    .select('stash_id')
-    .eq('user_id', user.id)
-    .not('stash_id', 'is', null)
-
-  if (countErr) {
-    if (process.env.NODE_ENV !== 'production') console.error('count error:', countErr)
-    return ApiResponseHelper.internalError()
-  }
-
+  // Get counts per stash — paginate to bypass 1000-row REST cap
+  const PAGE_SIZE = 1000
   const countMap = new Map<string, number>()
-  for (const row of counts ?? []) {
-    if (row.stash_id) countMap.set(row.stash_id, (countMap.get(row.stash_id) ?? 0) + 1)
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page, error: countErr } = await supabase
+      .from('finds')
+      .select('stash_id')
+      .eq('user_id', user.id)
+      .not('stash_id', 'is', null)
+      .range(off, off + PAGE_SIZE - 1)
+
+    if (countErr) {
+      if (process.env.NODE_ENV !== 'production') console.error('count error:', countErr)
+      return ApiResponseHelper.internalError()
+    }
+    if (!page || page.length === 0) break
+    for (const row of page) {
+      if (row.stash_id) countMap.set(row.stash_id, (countMap.get(row.stash_id) ?? 0) + 1)
+    }
+    if (page.length < PAGE_SIZE) break
   }
 
   const withCounts: StashWithCount[] = (stashes as Stash[]).map((s) => ({

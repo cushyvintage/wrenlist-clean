@@ -5,15 +5,33 @@ import { withAuth } from '@/lib/with-auth'
 export const GET = withAuth(async (req, user) => {
   const supabase = await createSupabaseServerClient()
 
-  // Fetch all finds for this user
-  const { data: finds, error } = await supabase
-    .from('finds')
-    .select('*')
-    .eq('user_id', user.id)
+  // Fetch all finds for this user — paginate to bypass Supabase's 1000-row REST cap
+  const PAGE_SIZE = 1000
+  type FindRow = {
+    status: string | null
+    created_at: string | null
+    cost_gbp: number | null
+    sold_price_gbp: number | null
+    asking_price_gbp: number | null
+    category: string | null
+    source_name: string | null
+    platform_fields: Record<string, unknown> | null
+  }
+  const finds: FindRow[] = []
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page, error } = await supabase
+      .from('finds')
+      .select('*')
+      .eq('user_id', user.id)
+      .range(off, off + PAGE_SIZE - 1)
 
-  if (error) {
-    console.error('Error fetching finds:', error)
-    return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    if (error) {
+      console.error('Error fetching finds:', error)
+      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    }
+    if (!page || page.length === 0) break
+    finds.push(...(page as unknown as FindRow[]))
+    if (page.length < PAGE_SIZE) break
   }
 
   // 1. Aged stock alert: items listed 30+ days with no sale

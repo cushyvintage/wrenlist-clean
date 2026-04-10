@@ -64,10 +64,19 @@ export async function getExpenses(filters?: {
     query = query.lte('date', filters.to_date)
   }
 
-  const { data, error } = await query.order('date', { ascending: false }).limit(10000)
-
-  if (error) throw error
-  return (data || []) as Expense[]
+  // Paginate to bypass Supabase's 1000-row REST cap
+  const PAGE_SIZE = 1000
+  const expenses: Expense[] = []
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page, error } = await query
+      .order('date', { ascending: false })
+      .range(off, off + PAGE_SIZE - 1)
+    if (error) throw error
+    if (!page || page.length === 0) break
+    expenses.push(...(page as Expense[]))
+    if (page.length < PAGE_SIZE) break
+  }
+  return expenses
 }
 
 /**
@@ -136,15 +145,23 @@ export async function getExpenseSummary(fromDate: string, toDate: string) {
   const user = await getAuthUser()
   if (!user) throw new Error('Unauthorized')
 
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('category, amount_gbp, vat_amount_gbp')
-    .eq('user_id', user.id)
-    .gte('date', fromDate)
-    .lte('date', toDate)
-    .limit(10000)
+  // Paginate to bypass Supabase's 1000-row REST cap
+  const PAGE_SIZE = 1000
+  const data: Array<{ category: string | null; amount_gbp: number; vat_amount_gbp: number | null }> = []
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page, error } = await supabase
+      .from('expenses')
+      .select('category, amount_gbp, vat_amount_gbp')
+      .eq('user_id', user.id)
+      .gte('date', fromDate)
+      .lte('date', toDate)
+      .range(off, off + PAGE_SIZE - 1)
 
-  if (error) throw error
+    if (error) throw error
+    if (!page || page.length === 0) break
+    data.push(...(page as Array<{ category: string | null; amount_gbp: number; vat_amount_gbp: number | null }>))
+    if (page.length < PAGE_SIZE) break
+  }
 
   const summary = {
     total_amount: 0,
@@ -152,7 +169,7 @@ export async function getExpenseSummary(fromDate: string, toDate: string) {
     by_category: {} as Record<string, { count: number; total: number; vat: number }>,
   }
 
-  ;(data || []).forEach((expense) => {
+  data.forEach((expense) => {
     summary.total_amount += expense.amount_gbp
     if (expense.vat_amount_gbp) summary.total_vat += expense.vat_amount_gbp
 

@@ -19,34 +19,44 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     return ApiResponseHelper.badRequest('eBay not connected')
   }
 
-  // Get already-imported SKUs
-  const { data: importedFinds } = await supabase
-    .from('finds')
-    .select('sku')
-    .eq('user_id', user.id)
-    .not('sku', 'is', null)
+  // Get already-imported SKUs + find IDs — paginate to bypass 1000-row REST cap
+  const PAGE_SIZE = 1000
+  const userFindsAll: Array<{ id: string; sku: string | null }> = []
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page } = await supabase
+      .from('finds')
+      .select('id, sku')
+      .eq('user_id', user.id)
+      .range(off, off + PAGE_SIZE - 1)
+    if (!page || page.length === 0) break
+    userFindsAll.push(...page)
+    if (page.length < PAGE_SIZE) break
+  }
 
-  const importedSkus = new Set((importedFinds || []).map(f => f.sku).filter(Boolean))
+  const importedSkus = new Set(userFindsAll.map(f => f.sku).filter(Boolean))
+  const allUserFindIds = userFindsAll.map(f => f.id)
 
-  // Get already-imported eBay listing IDs (scoped to current user via finds)
-  const userFindIds = (importedFinds || []).map(f => (f as Record<string, string>).id).filter(Boolean)
-  // Re-query finds to get IDs (importedFinds only has sku)
-  const { data: userFindsAll } = await supabase
-    .from('finds')
-    .select('id')
-    .eq('user_id', user.id)
-
-  const allUserFindIds = (userFindsAll || []).map(f => f.id)
-
-  const { data: importedMarketplace } = await supabase
-    .from('product_marketplace_data')
-    .select('platform_listing_id')
-    .eq('marketplace', 'ebay')
-    .in('find_id', allUserFindIds.length > 0 ? allUserFindIds : ['00000000-0000-0000-0000-000000000000'])
-
-  const importedListingIds = new Set(
-    (importedMarketplace || []).map(m => m.platform_listing_id).filter(Boolean)
-  )
+  // Fetch already-imported eBay listing IDs in chunks (Supabase .in() + 1000-row cap)
+  const importedListingIds = new Set<string>()
+  if (allUserFindIds.length > 0) {
+    const CHUNK = 500
+    for (let i = 0; i < allUserFindIds.length; i += CHUNK) {
+      const idsChunk = allUserFindIds.slice(i, i + CHUNK)
+      for (let off = 0; ; off += PAGE_SIZE) {
+        const { data: page } = await supabase
+          .from('product_marketplace_data')
+          .select('platform_listing_id')
+          .eq('marketplace', 'ebay')
+          .in('find_id', idsChunk)
+          .range(off, off + PAGE_SIZE - 1)
+        if (!page || page.length === 0) break
+        for (const m of page) {
+          if (m.platform_listing_id) importedListingIds.add(m.platform_listing_id as string)
+        }
+        if (page.length < PAGE_SIZE) break
+      }
+    }
+  }
 
   const listings: Array<{
     sku: string
