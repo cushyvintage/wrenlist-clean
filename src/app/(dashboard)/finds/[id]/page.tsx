@@ -382,9 +382,24 @@ export default function InventoryDetailPage() {
       setFind(unwrapApiResponse<Find>(result))
       setIsEditing(false)
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 2500)
+      setTimeout(() => setSaveSuccess(false), 4000)
 
-      // If Vinted listing exists, update it via extension (non-blocking)
+      // Queue update jobs for all listed marketplaces (non-blocking)
+      // Extension drains these whenever it's active — works from mobile too
+      const listedPlatforms = marketplaceData
+        .filter((m) => m.status === 'listed')
+        .map((m) => m.marketplace)
+      if (listedPlatforms.length > 0) {
+        listedPlatforms.forEach((platform) => {
+          fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ find_id: id, platform, action: 'update' }),
+          }).catch(() => { /* non-fatal */ })
+        })
+      }
+
+      // If Vinted listing exists, also try live update via extension (non-blocking)
       const vintedData = find.platform_fields?.vinted as Record<string, unknown> | undefined
       const vintedListingId = vintedData?.listingId
       if (vintedListingId && typeof window !== 'undefined') {

@@ -136,7 +136,7 @@ export function FindNotificationBanners({
           <span className="font-medium">Changes saved.</span>
           {findStatus === 'listed' && (
             <span className="ml-1" style={{ color: '#4A5E48' }}>
-              Marketplace listings won&apos;t update automatically — relist or re-crosslist to push changes live.
+              Updates queued — your marketplace listings will sync when the extension is next active.
             </span>
           )}
         </div>
