@@ -1052,7 +1052,7 @@ export default function ListingsPage() {
             return (
               <div
                 key={group.find_id}
-                className="bg-white border border-sage/14 rounded-md p-3 sm:p-4 grid grid-cols-[auto_48px_1fr] sm:grid-cols-[auto_60px_1fr_auto] gap-3 sm:gap-4 items-start hover:bg-cream transition-colors"
+                className="bg-white border border-sage/14 rounded-md p-3 sm:p-4 grid grid-cols-[auto_48px_1fr_auto] sm:grid-cols-[auto_60px_1fr_auto] gap-3 sm:gap-4 items-start hover:bg-cream transition-colors"
               >
                 {/* Checkbox */}
                 <div
@@ -1150,8 +1150,8 @@ export default function ListingsPage() {
                 </div>
 
                 {/* Price + Meta (Right side) */}
-                <div className="col-span-full sm:col-span-1 flex sm:flex-col gap-2 sm:gap-1.5 items-start sm:items-end sm:text-right flex-wrap pl-0 sm:pl-0">
-                  <div className="font-serif font-medium text-ink text-xl">
+                <div className="flex flex-col gap-1 items-end text-right">
+                  <div className="font-serif font-medium text-ink text-base sm:text-xl">
                     {displayPrice != null ? `£${displayPrice.toFixed(2)}` : '—'}
                   </div>
 
@@ -1173,7 +1173,7 @@ export default function ListingsPage() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 mt-1 flex-wrap justify-end">
+                  <div className="flex gap-2 mt-1 justify-end">
                     {hasListed && (
                       <Link
                         href={`/finds/${group.find_id}`}
