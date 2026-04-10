@@ -118,6 +118,8 @@ export async function middleware(req: NextRequest) {
     const cachedUserId = req.cookies.get('wl_onboarded')?.value
     const cacheIsValid = cachedUserId && cachedUserId === session.user.id
 
+    console.log('[mw]', pathname, 'cacheValid=', cacheIsValid, 'cachedUserId=', cachedUserId, 'sessionUserId=', session.user.id)
+
     if (!cacheIsValid) {
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -131,11 +133,16 @@ export async function middleware(req: NextRequest) {
             },
           })
 
+          console.log('[mw] profile fetch', pathname, 'status=', profileRes.status)
+
           if (profileRes.ok) {
             const profiles = await profileRes.json()
+            console.log('[mw] profiles', pathname, 'rows=', profiles.length, 'first=', JSON.stringify(profiles[0]))
+
             if (profiles.length > 0) {
               const profile = profiles[0]
               if (profile.onboarding_completed === false) {
+                console.log('[mw] REDIRECT to /onboarding, onboarding_completed strictly false')
                 // Clear any stale cache cookie then redirect
                 const onboardingUrl = new URL('/onboarding', req.url)
                 const redirect = NextResponse.redirect(onboardingUrl)
@@ -143,6 +150,7 @@ export async function middleware(req: NextRequest) {
                 return redirect
               }
 
+              console.log('[mw] passing through, setting wl_onboarded cookie for', session.user.id)
               // onboarding_completed is true — set the cache cookie so we can
               // skip this whole branch on subsequent requests
               res.cookies.set('wl_onboarded', session.user.id, {
@@ -152,14 +160,15 @@ export async function middleware(req: NextRequest) {
                 path: '/',
                 maxAge: 60 * 60 * 24 * 30, // 30 days
               })
+            } else {
+              console.log('[mw] profiles empty — falling through without cookie')
             }
+          } else {
+            console.log('[mw] profile fetch NOT ok, body=', await profileRes.text())
           }
         }
       } catch (error) {
-        // Log error but don't block navigation on fetch failures
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Onboarding check error:', error)
-        }
+        console.error('[mw] onboarding check error:', error)
       }
     }
   }
