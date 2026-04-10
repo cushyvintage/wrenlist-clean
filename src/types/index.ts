@@ -11,6 +11,7 @@ export interface User {
   email: string
   createdAt: string
   full_name?: string | null
+  avatar_url?: string | null
 }
 
 export interface AuthState {
@@ -190,12 +191,25 @@ export interface Stash {
   user_id: string
   name: string
   note: string | null
+  capacity: number | null
+  archived_at: string | null
+  parent_stash_id: string | null
   created_at: string
   updated_at: string
 }
 
 export interface StashWithCount extends Stash {
   item_count: number
+}
+
+export interface StashActivity {
+  id: string
+  user_id: string
+  stash_id: string | null
+  find_id: string | null
+  action: 'added' | 'removed' | 'moved' | 'merged'
+  note: string | null
+  created_at: string
 }
 
 // Legacy alias for backwards compatibility

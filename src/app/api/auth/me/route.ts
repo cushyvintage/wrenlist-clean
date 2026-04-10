@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     // Fetch profile (plan, finds count, name)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, plan, finds_this_month')
+      .select('full_name, plan, finds_this_month, avatar_url')
       .eq('user_id', user.id)
       .single()
 
@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
         email: user.email,
         created_at: user.created_at,
         full_name,
+        avatar_url: profile?.avatar_url ?? null,
       },
       plan: {
         id: plan,

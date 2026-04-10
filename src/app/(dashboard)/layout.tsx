@@ -200,10 +200,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 style={{ backgroundColor: 'transparent' }}
               >
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium overflow-hidden"
                   style={{ backgroundColor: '#3D5C3A', color: '#F5F0E8' }}
                 >
-                  {(user?.full_name ?? user?.email ?? 'U').charAt(0).toUpperCase()}
+                  {user?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.avatar_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    (user?.full_name ?? user?.email ?? 'U').charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="hidden sm:flex flex-col items-start text-xs">
                   <span className="font-medium" style={{ color: '#1E2E1C' }}>

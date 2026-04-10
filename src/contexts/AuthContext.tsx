@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 email: data.user.email || '',
                 createdAt: data.user.created_at || new Date().toISOString(),
                 full_name: data.user.full_name || null,
+                avatar_url: data.user.avatar_url || null,
               },
               isLoading: false,
             }))
