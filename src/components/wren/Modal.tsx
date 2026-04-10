@@ -40,11 +40,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-md border border-sage/20 shadow-lg w-full max-w-md max-h-[90vh] flex flex-col"
+        className="bg-white rounded-md border border-sage/20 shadow-lg w-full max-w-md max-h-[90vh] flex flex-col modal-enter"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          animation: 'modalEnter 200ms ease-out',
-        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-sage/14">
@@ -61,19 +58,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
       </div>
-
-      <style>{`
-        @keyframes modalEnter {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      `}</style>
     </div>
   )
 }

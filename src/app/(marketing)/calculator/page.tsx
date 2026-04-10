@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 
 // UK marketplace fee structures (as of April 2026)
 // Sources: platform seller help pages
@@ -117,17 +118,17 @@ export default function CalculatorPage() {
       <div className="max-w-4xl mx-auto px-5 sm:px-8 lg:px-12 py-12">
         {/* HEADER */}
         <div className="text-center mb-10">
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">free tool</div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c] mb-2">
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">free tool</div>
+          <h1 className="hero-fade-2 font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c] mb-2">
             UK Marketplace <em className="italic">Fee Calculator</em>
           </h1>
-          <p className="text-sm font-normal text-[#6b7d6a] max-w-lg mx-auto">
+          <p className="hero-fade-3 text-sm font-normal text-[#6b7d6a] max-w-lg mx-auto">
             Enter your sale price and cost — see exactly what you&apos;d keep on Vinted, eBay, Etsy, Depop & Shopify.
           </p>
         </div>
 
         {/* INPUT SECTION */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <Reveal className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <div>
             <label className="block text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2">
               Sale price
@@ -179,7 +180,7 @@ export default function CalculatorPage() {
               />
             </div>
           </div>
-        </div>
+        </Reveal>
 
         {/* RESULTS */}
         {sale > 0 && (

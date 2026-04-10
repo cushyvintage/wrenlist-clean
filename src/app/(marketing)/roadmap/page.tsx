@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 
 interface RoadmapCardProps {
   title: string
@@ -74,17 +75,17 @@ export default function RoadmapPage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-6">
             <div>
-              <h1 className="font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
+              <h1 className="hero-fade-1 font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
                 What we&apos;re <em className="italic">building.</em>
               </h1>
-              <p className="text-sm font-normal text-[#6b7d6a]">See what&apos;s shipped, what&apos;s in progress, and what&apos;s coming next.</p>
+              <p className="hero-fade-2 text-sm font-normal text-[#6b7d6a]">See what&apos;s shipped, what&apos;s in progress, and what&apos;s coming next.</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* COLUMN HEADERS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-5 sm:px-10 py-7 max-w-5xl mx-auto">
+      <Reveal className="grid grid-cols-2 md:grid-cols-4 gap-4 px-5 sm:px-10 py-7 max-w-5xl mx-auto">
         <div className="text-xs font-medium uppercase text-purple-600 flex items-center gap-1">
           Under consideration <strong>{consideration.length}</strong>
         </div>
@@ -97,7 +98,7 @@ export default function RoadmapPage() {
         <div className="text-xs font-medium uppercase text-green-600 flex items-center gap-1">
           Released <strong>{released.length}</strong>
         </div>
-      </div>
+      </Reveal>
 
       {/* CONTENT */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 px-5 sm:px-10 py-8 max-w-5xl mx-auto">

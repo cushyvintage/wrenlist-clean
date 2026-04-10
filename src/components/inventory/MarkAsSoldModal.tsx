@@ -31,7 +31,7 @@ export default function MarkAsSoldModal({
   return (
     <div className="max-w-2xl mx-auto">
       <div
-        className="p-8 rounded"
+        className="p-8 rounded modal-enter"
         style={{
           backgroundColor: '#FFF9F3',
           borderWidth: '1px',

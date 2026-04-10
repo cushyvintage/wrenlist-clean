@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 
 export default function StoryPage() {
   return (
@@ -10,20 +11,20 @@ export default function StoryPage() {
       {/* HERO */}
       <div className="bg-[#1e2e1c] px-5 sm:px-10 py-16 sm:py-20">
         <div className="max-w-2xl mx-auto">
-          <div className="text-xs font-medium uppercase tracking-widest text-[#8a9e88] mb-5">our story</div>
-          <blockquote className="font-serif text-2xl sm:text-4xl font-normal text-[#f5f0e8] leading-tight mb-7">
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-widest text-[#8a9e88] mb-5">our story</div>
+          <blockquote className="hero-fade-2 font-serif text-2xl sm:text-4xl font-normal text-[#f5f0e8] leading-tight mb-7">
             &ldquo;I kept building spreadsheets to run my reselling business.
             <br />
             They kept breaking.
             <br />
             <em className="italic text-[#8a9e88]">So I built something that wouldn&apos;t.</em>&rdquo;
           </blockquote>
-          <p className="text-sm text-[#8a9e88]">Dom Cushnan — founder, Wrenlist</p>
+          <p className="hero-fade-3 text-sm text-[#8a9e88]">Dom Cushnan — founder, Wrenlist</p>
         </div>
       </div>
 
       {/* STORY BODY */}
-      <div className="max-w-2xl mx-auto px-5 sm:px-10 py-16">
+      <Reveal className="max-w-2xl mx-auto px-5 sm:px-10 py-16">
 
         {/* SECTION 1 */}
         <div className="mb-16">
@@ -129,7 +130,7 @@ export default function StoryPage() {
             <Link href="/pricing" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-normal text-[#6b7d6a] px-6 py-2.5 hover:bg-[#ede8de] hover:text-[#1e2e1c]">see pricing</Link>
           </div>
         </div>
-      </div>
+      </Reveal>
 
       <MarketingFooter />
     </div>

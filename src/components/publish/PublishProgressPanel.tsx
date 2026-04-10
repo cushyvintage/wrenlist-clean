@@ -162,7 +162,7 @@ export default function PublishProgressPanel({ progress, onClose, onRetry }: Pro
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+      <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 modal-enter">
         <h3 className="text-lg font-semibold text-sage-dark mb-4">
           {isComplete ? (hasErrors ? 'Published with errors' : 'Published successfully') : 'Publishing...'}
         </h3>

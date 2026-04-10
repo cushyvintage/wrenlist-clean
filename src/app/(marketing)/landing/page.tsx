@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -145,21 +146,21 @@ export default function LandingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
         <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
           {/* Beta badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3d5c3a]/10 border border-[#3d5c3a]/20 mb-5 w-fit">
+          <div className="hero-fade-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3d5c3a]/10 border border-[#3d5c3a]/20 mb-5 w-fit">
             <span className="w-2 h-2 rounded-full bg-[#3d5c3a] animate-pulse" />
             <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Open Beta — Free for 3 months</span>
           </div>
-          <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter&apos;s operating system</p>
-          <h1 className="mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
+          <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter&apos;s operating system</p>
+          <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
             Every find,<br />
             <em className="italic text-[#5a7a57]">accounted</em>
             <br />
             for.
           </h1>
-          <p className="mb-7 max-w-sm font-normal leading-relaxed text-[#6b7d6a]">
+          <p className="hero-fade-3 mb-7 max-w-sm font-normal leading-relaxed text-[#6b7d6a]">
             Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
           </p>
-          <div className="flex gap-4 items-center">
+          <div className="hero-fade-4 flex gap-4 items-center">
             <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
               Start your free beta
             </a>
@@ -169,7 +170,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
+        <div className="hero-fade-5 flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
           <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88]">your inventory at a glance</div>
 
           {/* Inventory Cards */}
@@ -228,12 +229,12 @@ export default function LandingPage() {
       {/* FEATURES GRID SECTION */}
       <section className="bg-[#f5f0e8] px-5 sm:px-8 lg:px-12 py-12">
         <div className="mx-auto max-w-4xl">
-          <div className="mb-12 text-center">
+          <Reveal className="mb-12 text-center">
             <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">everything included</div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c]">
               One product. <em className="italic">Every tool.</em>
             </h2>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border border-[rgba(61,92,58,0.12)] rounded-lg overflow-hidden">
             {features.map((feat, i) => {
@@ -259,7 +260,7 @@ export default function LandingPage() {
       </section>
 
       {/* TESTIMONIAL */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 border-b border-[rgba(61,92,58,0.12)] bg-[#d4e2d2] px-5 sm:px-8 lg:px-12 py-10 lg:py-12">
+      <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 border-b border-[rgba(61,92,58,0.12)] bg-[#d4e2d2] px-5 sm:px-8 lg:px-12 py-10 lg:py-12">
         <div>
           <p className="font-serif text-lg sm:text-xl font-normal leading-relaxed text-[#1e2e1c]">
             &ldquo;I used to track everything in a Notes app. Wrenlist made me realise how much money I was leaving at the bottom of the pile.&rdquo;
@@ -270,7 +271,7 @@ export default function LandingPage() {
           <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">68%</div>
           <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-2">avg user margin</div>
         </div>
-      </div>
+      </Reveal>
 
       <MarketingFooter />
     </div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus, Trash2, Edit2, Package, Archive, ChevronRight, GitMerge } from 'lucide-react'
 import { fetchApi } from '@/lib/api-utils'
 import { useApiCall } from '@/hooks/useApiCall'
+import { SkeletonRow } from '@/components/ui/Skeleton'
 import type { StashWithCount } from '@/types'
 
 type MergeState = { sources: Set<string>; target: string | null }
@@ -347,7 +348,11 @@ export default function StashesPage() {
       )}
 
       {isLoading ? (
-        <div className="text-sm text-sage-dim">Loading...</div>
+        <div className="bg-white rounded-lg border border-sage/14 p-3 space-y-0.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : !stashes || stashes.length === 0 ? (

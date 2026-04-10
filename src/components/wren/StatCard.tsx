@@ -24,6 +24,8 @@ interface StatCardProps {
   prefix?: string
   /** Optional suffix (e.g., "%") */
   suffix?: string
+  /** Extra className (e.g. `stat-card-stagger` for entrance animation) */
+  className?: string
 }
 
 export function StatCard({
@@ -32,9 +34,10 @@ export function StatCard({
   delta,
   prefix = '',
   suffix = '',
+  className = '',
 }: StatCardProps) {
   return (
-    <div className="bg-cream-md rounded-md p-5">
+    <div className={`bg-cream-md rounded-md p-5 ${className}`.trim()}>
       {/* Label: 10px uppercase sage-dim */}
       <div className="text-[10px] uppercase tracking-[.09em] text-sage-dim font-medium mb-2">
         {label}

@@ -20,7 +20,7 @@ export default function DeleteConfirmModal({
   return (
     <div className="max-w-2xl mx-auto">
       <div
-        className="p-8 rounded text-center"
+        className="p-8 rounded text-center modal-enter"
         style={{
           backgroundColor: '#FFF9F3',
           borderWidth: '1px',

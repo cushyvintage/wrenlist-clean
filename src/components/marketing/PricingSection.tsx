@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Reveal } from '@/components/motion'
 
 interface PricingCardProps {
   tier: string
@@ -14,7 +15,7 @@ interface PricingCardProps {
 }
 
 const PricingCard = ({ tier, price, annualMonthly, description, limit, features, featured = false, isAnnual = false }: PricingCardProps) => (
-  <div className={`rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]'}`}>
+  <div className={`plan-card${featured ? ' popular' : ''} rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]'}`}>
     {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium uppercase bg-[#d4e2d2] text-[#5a7a57] px-2 py-1 rounded">most popular</div>}
     <div className={`text-sm font-medium text-[#1e2e1c] mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
     <div className="flex items-baseline gap-1 mb-1">
@@ -100,9 +101,14 @@ export function PricingSection() {
 
       {/* PRICING CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pt-4">
-        {plans.map((plan, i) => (
-          <PricingCard key={i} {...plan} isAnnual={annual} />
-        ))}
+        {plans.map((plan, i) => {
+          const delay = ((i % 4) + 1) as 1 | 2 | 3 | 4
+          return (
+            <Reveal key={i} delay={delay}>
+              <PricingCard {...plan} isAnnual={annual} />
+            </Reveal>
+          )
+        })}
       </div>
     </>
   )

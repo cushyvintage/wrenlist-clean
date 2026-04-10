@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -16,17 +16,31 @@ const navItems = [
 export function MarketingNav() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 8)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]">
+    <nav
+      className={`topnav sticky top-0 z-50 border-b border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]${scrolled ? ' scrolled' : ''}`}
+    >
       <div className="flex items-center justify-between pl-5 sm:pl-10 pr-5 sm:pr-12 py-4">
-        <Link href="/landing" className="flex items-center gap-2.5">
+        <Link href="/landing" className="nav-logo flex items-center gap-2.5">
           <img
             src="/wrenlist-logo.png"
             alt="Wrenlist"
             width={36}
             height={36}
-            className="rounded-sm flex-shrink-0"
+            className="nav-logo-mark rounded-sm flex-shrink-0"
             style={{ mixBlendMode: 'multiply' }}
           />
           <div className="font-serif text-xl font-medium tracking-wider text-[#1e2e1c]">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
@@ -11,7 +11,10 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
+import { useCountUp } from '@/hooks/useCountUp'
 import type { Find } from '@/types'
+
+const COUNT_UP_SESSION_KEY = 'dashCountedUp'
 
 interface AnalyticsSummary {
   total_finds: number
@@ -39,6 +42,7 @@ interface AnalyticsSummary {
 interface WrenInsight {
   insight: string
   type: 'alert' | 'tip' | 'info'
+  cta?: { text: string; href: string }
 }
 
 export default function DashboardPage() {
@@ -92,6 +96,29 @@ export default function DashboardPage() {
   const avgMargin = summary?.profit_margin_pct || 0
   const avgDaysToSell = summary?.avg_days_to_sell || 0
 
+  // Count-up animation runs once per session across all 4 stat cards.
+  // The session gate is read ONCE at mount (useMemo) so all 4 cards stay in
+  // sync for this render tree. The first card passes sessionKey so it writes
+  // the gate on completion — the other three share `enabled` from the
+  // page-level memo and animate in the same wave.
+  const countUpEnabled = useMemo(() => {
+    if (isLoading) return false
+    if (typeof window === 'undefined') return false
+    try {
+      return !window.sessionStorage.getItem(COUNT_UP_SESSION_KEY)
+    } catch {
+      return false
+    }
+  }, [isLoading])
+
+  const animatedActiveFinds = useCountUp(activeFinds, {
+    enabled: countUpEnabled,
+    sessionKey: COUNT_UP_SESSION_KEY,
+  })
+  const animatedMonthlyRevenue = useCountUp(monthlyRevenue, { enabled: countUpEnabled })
+  const animatedAvgMargin = useCountUp(avgMargin, { enabled: countUpEnabled })
+  const animatedAvgDaysToSell = useCountUp(avgDaysToSell, { enabled: countUpEnabled })
+
   const recentFinds = finds.slice(0, 3)
   const findsList = isLoading ? 'skeleton' : finds.length === 0 ? 'empty' : 'loaded'
 
@@ -130,27 +157,29 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
+            className="stat-card-stagger"
             label="Active stock"
-            value={activeFinds}
+            value={Math.round(animatedActiveFinds)}
             delta={`${summary?.listed_finds || 0} listed · ${summary?.draft_finds || 0} draft`}
-            suffix=""
           />
           <StatCard
+            className="stat-card-stagger"
             label="This month sales"
-            value={monthlyRevenue}
+            value={Math.round(animatedMonthlyRevenue)}
             prefix="£"
             delta={`${summary?.this_month_items_sold || 0} sold · £${monthlyProfit.toFixed(0)} profit`}
-            suffix=""
           />
           <StatCard
+            className="stat-card-stagger"
             label="Profit margin"
-            value={avgMargin}
+            value={Math.round(animatedAvgMargin)}
             suffix="%"
             delta={`£${(summary?.avg_profit_per_item || 0).toFixed(0)} avg per item`}
           />
           <StatCard
+            className="stat-card-stagger"
             label="Days to sell"
-            value={avgDaysToSell}
+            value={Math.round(animatedAvgDaysToSell)}
             suffix=" days"
             delta={`${summary?.sell_through_pct || 0}% sell-through`}
           />
@@ -213,10 +242,14 @@ export default function DashboardPage() {
             <InsightCard
               text={insight.insight}
               type={insight.type}
-              link={{
-                text: insight.type === 'alert' ? 'adjust prices' : 'view finds →',
-                onClick: () => router.push(insight.type === 'alert' ? '/finds' : '/add-find'),
-              }}
+              link={
+                insight.cta
+                  ? {
+                      text: insight.cta.text,
+                      onClick: () => router.push(insight.cta!.href),
+                    }
+                  : undefined
+              }
             />
           )}
 

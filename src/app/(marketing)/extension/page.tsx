@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -110,14 +111,14 @@ export default function ExtensionPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Left — copy */}
           <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
-            <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[#8A9E88]">
+            <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#8A9E88]">
               Chrome extension
             </p>
-            <h1 className="mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[52px] font-normal leading-[1.06] text-[#1E2E1C]">
+            <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[52px] font-normal leading-[1.06] text-[#1E2E1C]">
               Your marketplace,<br />
               <em className="italic text-[#5A7A57]">connected.</em>
             </h1>
-            <p className="mb-7 max-w-sm font-light leading-relaxed text-[#6B7D6A]">
+            <p className="hero-fade-3 mb-7 max-w-sm font-light leading-relaxed text-[#6B7D6A]">
               Import finds from any marketplace with one click. Crosslist to Vinted, eBay, Etsy, Depop & Shopify. Auto-delist when something sells. All from your browser.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-start">
@@ -215,7 +216,7 @@ export default function ExtensionPage() {
 
       {/* SUPPORTED MARKETPLACES */}
       <section className="px-5 sm:px-8 lg:px-12 py-12 border-b border-[rgba(61,92,58,0.12)]">
-        <div className="mx-auto max-w-3xl">
+        <Reveal className="mx-auto max-w-3xl">
           <div className="text-center mb-8">
             <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#8A9E88]">Works with</div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1E2E1C]">
@@ -241,7 +242,7 @@ export default function ExtensionPage() {
           <p className="text-center text-xs font-light text-[#8A9E88] mt-4">
             Import from all 10. Crosslist publish to Vinted, eBay, Etsy, Depop & Shopify.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* FEATURES */}

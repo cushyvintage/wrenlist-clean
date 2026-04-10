@@ -1,5 +1,6 @@
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
+import { Reveal } from '@/components/motion'
 
 export default function AboutPage() {
   return (
@@ -9,8 +10,8 @@ export default function AboutPage() {
       {/* HEADER */}
       <div className="bg-white border-b border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-12">
         <div className="max-w-2xl mx-auto">
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">why wrenlist</div>
-          <h1 className="font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">why wrenlist</div>
+          <h1 className="hero-fade-2 font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
             Not just another<br />
             <em className="italic">crosslisting tool.</em>
           </h1>
@@ -18,7 +19,7 @@ export default function AboutPage() {
       </div>
 
       {/* CONTENT */}
-      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-[rgba(61,92,58,0.14)]">
+      <Reveal className="grid grid-cols-1 md:grid-cols-2 border-b border-[rgba(61,92,58,0.14)]">
         {/* LEFT: THE PROBLEM */}
         <div className="border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-10">
           <h2 className="font-serif text-2xl font-normal text-[#1e2e1c] mb-3.5">The problem with other tools</h2>
@@ -71,7 +72,7 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
-      </div>
+      </Reveal>
 
       {/* TESTIMONIAL */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 border-b border-[rgba(61,92,58,0.14)] bg-[#d4e2d2] px-5 sm:px-8 lg:px-12 py-10 lg:py-12">

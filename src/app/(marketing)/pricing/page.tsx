@@ -1,6 +1,7 @@
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { PricingSection } from '@/components/marketing/PricingSection'
+import { Reveal } from '@/components/motion'
 
 export default function PricingPage() {
   return (
@@ -10,18 +11,18 @@ export default function PricingPage() {
       {/* HEADER */}
       <div className="px-5 sm:px-8 lg:px-12 py-12 max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="text-xs font-medium uppercase tracking-wider text-sage-dim mb-2.5">simple, honest pricing</div>
-          <h1 className="font-serif text-3xl font-normal text-ink mb-2">
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-sage-dim mb-2.5">simple, honest pricing</div>
+          <h1 className="hero-fade-2 font-serif text-3xl font-normal text-ink mb-2">
             Built for thrifters.<br />
             <em className="italic">Priced fairly.</em>
           </h1>
-          <p className="text-sm font-normal text-ink-lt">Vinted, eBay, Etsy, Shopify & more on every paid plan. No add-ons.</p>
+          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Vinted, eBay, Etsy, Shopify & more on every paid plan. No add-ons.</p>
         </div>
 
         <PricingSection />
 
         {/* COMPARISON */}
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <div className="font-serif text-2xl italic text-ink mb-4">How Wrenlist compares</div>
           <p className="text-sm font-normal text-ink-lt mb-6 leading-relaxed">
             Vendoo and Crosslist are solid crosslisting tools. Wrenlist is the full operating system — sourcing, inventory, pricing, crosslisting, and analytics in one place.
@@ -56,7 +57,7 @@ export default function PricingPage() {
             </table>
           </div>
           <p className="text-xs text-sage-dim italic mt-4">Pricing comparisons based on publicly available information, April 2026.</p>
-        </div>
+        </Reveal>
       </div>
 
       <MarketingFooter />
