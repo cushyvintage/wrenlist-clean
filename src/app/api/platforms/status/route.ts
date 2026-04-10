@@ -13,27 +13,27 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
   const [ebayResult, vintedResult, shopifyResult, depopResult, etsyResult] = await Promise.all([
     supabase
       .from('ebay_tokens')
-      .select('ebay_user')
+      .select('ebay_user, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
       .from('vinted_connections')
-      .select('vinted_username')
+      .select('vinted_username, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
       .from('shopify_connections')
-      .select('shop_name, store_domain')
+      .select('shop_name, store_domain, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
       .from('depop_connections')
-      .select('depop_username')
+      .select('depop_username, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
       .from('etsy_connections')
-      .select('etsy_username')
+      .select('etsy_username, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -43,23 +43,28 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       ebay: {
         connected: !!ebayResult.data,
         username: ebayResult.data?.ebay_user ?? null,
+        lastSync: ebayResult.data?.updated_at ?? null,
       },
       vinted: {
         connected: !!vintedResult.data,
         username: vintedResult.data?.vinted_username ?? null,
+        lastSync: vintedResult.data?.updated_at ?? null,
       },
       shopify: {
         connected: !!shopifyResult.data,
         shopName: shopifyResult.data?.shop_name ?? null,
         storeDomain: shopifyResult.data?.store_domain ?? null,
+        lastSync: shopifyResult.data?.updated_at ?? null,
       },
       depop: {
         connected: !!depopResult.data,
         username: depopResult.data?.depop_username ?? null,
+        lastSync: depopResult.data?.updated_at ?? null,
       },
       etsy: {
         connected: !!etsyResult.data,
         username: etsyResult.data?.etsy_username ?? null,
+        lastSync: etsyResult.data?.updated_at ?? null,
       },
     },
   })

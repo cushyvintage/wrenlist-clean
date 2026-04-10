@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import { Button } from '@/components/wren/Button'
@@ -24,6 +24,7 @@ interface PlatformConnection {
   platform: string
   status: 'connected' | 'not_connected' | 'error'
   accountName?: string
+  lastSync?: string | null
 }
 
 interface ProfileResponse {
@@ -34,6 +35,7 @@ interface ProfileResponse {
   business_name?: string
   phone?: string
   address?: string
+  avatar_url?: string | null
 }
 
 interface AuthResponse {
@@ -71,7 +73,7 @@ export default function SettingsPage() {
         setAccountData({
           email: auth.user?.email || '',
           fullName: profile.full_name || '',
-          avatar: null,
+          avatar: profile.avatar_url || null,
         })
         setWorkspaceData({
           businessName: profile.business_name || '',
@@ -130,13 +132,19 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadPlatforms = async () => {
       try {
+        interface PlatformEntry {
+          connected: boolean
+          username?: string | null
+          shopName?: string | null
+          lastSync?: string | null
+        }
         interface PlatformStatus {
           platforms: {
-            vinted: { connected: boolean; username?: string | null }
-            ebay: { connected: boolean; username?: string | null }
-            shopify: { connected: boolean; shopName?: string | null }
-            depop: { connected: boolean; username?: string | null }
-            etsy: { connected: boolean; username?: string | null }
+            vinted: PlatformEntry
+            ebay: PlatformEntry
+            shopify: PlatformEntry
+            depop: PlatformEntry
+            etsy: PlatformEntry
           }
         }
         const data = await fetchApi<PlatformStatus>('/api/platforms/status')
@@ -147,26 +155,31 @@ export default function SettingsPage() {
             platform: 'Vinted',
             status: p.vinted.connected ? 'connected' : 'not_connected',
             accountName: p.vinted.username || undefined,
+            lastSync: p.vinted.lastSync,
           },
           {
             platform: 'eBay',
             status: p.ebay.connected ? 'connected' : 'not_connected',
             accountName: p.ebay.username || undefined,
+            lastSync: p.ebay.lastSync,
           },
           {
             platform: 'Depop',
             status: p.depop.connected ? 'connected' : 'not_connected',
             accountName: p.depop.username || undefined,
+            lastSync: p.depop.lastSync,
           },
           {
             platform: 'Shopify',
             status: p.shopify.connected ? 'connected' : 'not_connected',
             accountName: p.shopify.shopName || undefined,
+            lastSync: p.shopify.lastSync,
           },
           {
             platform: 'Etsy',
             status: p.etsy.connected ? 'connected' : 'not_connected',
             accountName: p.etsy.username || undefined,
+            lastSync: p.etsy.lastSync,
           },
         ])
       } catch (error) {
@@ -202,6 +215,63 @@ export default function SettingsPage() {
     } finally {
       setIsSavingWorkspace(false)
     }
+  }
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setAvatarError('Only JPEG, PNG, or WebP images allowed')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('Image must be under 2MB')
+      return
+    }
+
+    setAvatarError(null)
+    setIsUploadingAvatar(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/profiles/me/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Upload failed')
+      }
+      const body = (await res.json()) as { data: { avatar_url: string } }
+      setAccountData((prev) => ({ ...prev, avatar: body.data.avatar_url }))
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : 'Upload failed')
+    } finally {
+      setIsUploadingAvatar(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const formatLastSync = (dateString?: string | null) => {
+    if (!dateString) return '—'
+    const date = new Date(dateString)
+    const diffMinutes = Math.floor((Date.now() - date.getTime()) / 60000)
+    if (diffMinutes < 1) return 'Just now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    const diffHours = Math.floor(diffMinutes / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    return `${diffDays}d ago`
   }
 
   const handleDataExport = () => {
@@ -314,19 +384,38 @@ export default function SettingsPage() {
                 Avatar
               </label>
               <div className="flex gap-4 items-end">
-                <div className="w-16 h-16 bg-sage-pale rounded-md flex items-center justify-center text-2xl border border-sage/22">
-                  👤
+                <div className="w-16 h-16 bg-sage-pale rounded-md flex items-center justify-center text-2xl border border-sage/22 overflow-hidden">
+                  {accountData.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={accountData.avatar}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>👤</span>
+                  )}
                 </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled
-                  title="Coming soon"
-                  className="border-sage/22 bg-cream-md text-ink-lt"
+                  onClick={handleAvatarClick}
+                  disabled={isUploadingAvatar || isLoadingProfile}
+                  className="border-sage/22 bg-cream-md text-ink-lt hover:bg-cream"
                 >
-                  Upload photo
+                  {isUploadingAvatar ? 'Uploading…' : 'Upload photo'}
                 </Button>
               </div>
+              {avatarError && (
+                <p className="text-xs text-red mt-1">{avatarError}</p>
+              )}
             </div>
 
             {/* Save Changes */}
@@ -476,12 +565,20 @@ export default function SettingsPage() {
                         {platform.platform}
                       </h3>
                       {platform.status === 'connected' ? (
-                        <p className="text-xs text-ink-lt">
-                          Account:{' '}
-                          <span className="font-mono text-ink">
-                            {platform.accountName || '—'}
-                          </span>
-                        </p>
+                        <div className="space-y-1 text-xs text-ink-lt">
+                          <p>
+                            Account:{' '}
+                            <span className="font-mono text-ink">
+                              {platform.accountName || '—'}
+                            </span>
+                          </p>
+                          <p>
+                            Last sync:{' '}
+                            <span className="text-sage-dim">
+                              {formatLastSync(platform.lastSync)}
+                            </span>
+                          </p>
+                        </div>
                       ) : (
                         <p className="text-xs text-sage-dim">
                           Not connected

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('full_name, plan, stripe_customer_id, finds_this_month, business_name, phone, address')
+        .select('full_name, plan, stripe_customer_id, finds_this_month, business_name, phone, address, avatar_url')
         .eq('user_id', user.id)
         .single()
 
@@ -30,14 +30,15 @@ export async function PATCH(request: NextRequest) {
   return withAuth(request, async (req, user, supabase) => {
     try {
       const body = await request.json()
-      const { full_name, business_name, phone, address } = body
+      const { full_name, business_name, phone, address, avatar_url } = body
 
       // Build update object with only provided fields
-      const updates: Record<string, string> = {}
+      const updates: Record<string, string | null> = {}
       if (full_name !== undefined) updates.full_name = full_name
       if (business_name !== undefined) updates.business_name = business_name
       if (phone !== undefined) updates.phone = phone
       if (address !== undefined) updates.address = address
+      if (avatar_url !== undefined) updates.avatar_url = avatar_url
 
       const { data: profile, error } = await supabase
         .from('profiles')
