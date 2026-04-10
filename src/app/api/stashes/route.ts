@@ -5,42 +5,43 @@ import type { Stash, StashWithCount } from '@/types'
 
 /**
  * GET /api/stashes
- * Fetch all stashes for the authenticated user, with item counts.
+ * Fetch stashes for the authenticated user, with item counts.
+ * Query params:
+ *   includeArchived=1 — include archived stashes (default: excluded)
  */
-export const GET = withAuth(async (_req, user) => {
+export const GET = withAuth(async (req, user) => {
   const supabase = await createSupabaseServerClient()
+  const includeArchived = new URL(req.url).searchParams.get('includeArchived') === '1'
 
-  const { data: stashes, error } = await supabase
+  let query = supabase
     .from('stashes')
     .select('*')
     .eq('user_id', user.id)
     .order('name', { ascending: true })
+
+  if (!includeArchived) {
+    query = query.is('archived_at', null)
+  }
+
+  const { data: stashes, error } = await query
 
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.error('GET /api/stashes error:', error)
     return ApiResponseHelper.internalError()
   }
 
-  // Get counts per stash — paginate to bypass 1000-row REST cap
-  const PAGE_SIZE = 1000
-  const countMap = new Map<string, number>()
-  for (let off = 0; ; off += PAGE_SIZE) {
-    const { data: page, error: countErr } = await supabase
-      .from('finds')
-      .select('stash_id')
-      .eq('user_id', user.id)
-      .not('stash_id', 'is', null)
-      .range(off, off + PAGE_SIZE - 1)
+  // Counts via RPC — single aggregate query
+  const { data: counts, error: countErr } = await supabase
+    .rpc('get_stash_item_counts', { p_user_id: user.id })
 
-    if (countErr) {
-      if (process.env.NODE_ENV !== 'production') console.error('count error:', countErr)
-      return ApiResponseHelper.internalError()
-    }
-    if (!page || page.length === 0) break
-    for (const row of page) {
-      if (row.stash_id) countMap.set(row.stash_id, (countMap.get(row.stash_id) ?? 0) + 1)
-    }
-    if (page.length < PAGE_SIZE) break
+  if (countErr) {
+    if (process.env.NODE_ENV !== 'production') console.error('count RPC error:', countErr)
+    return ApiResponseHelper.internalError()
+  }
+
+  const countMap = new Map<string, number>()
+  for (const row of (counts ?? []) as Array<{ stash_id: string; item_count: number }>) {
+    countMap.set(row.stash_id, Number(row.item_count))
   }
 
   const withCounts: StashWithCount[] = (stashes as Stash[]).map((s) => ({
@@ -64,11 +65,34 @@ export const POST = withAuth(async (req, user) => {
 
   const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null
 
+  // Accept capacity as number or numeric string; reject 0 and non-positive values explicitly
+  let capacity: number | null = null
+  if (body.capacity !== undefined && body.capacity !== null && body.capacity !== '') {
+    const parsed = Number(body.capacity)
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return ApiResponseHelper.badRequest('capacity must be a positive integer')
+    }
+    capacity = parsed
+  }
+
+  const parentStashId = typeof body.parent_stash_id === 'string' ? body.parent_stash_id : null
+
   const supabase = await createSupabaseServerClient()
+
+  // If a parent is specified, verify ownership
+  if (parentStashId) {
+    const { data: parent, error: parentErr } = await supabase
+      .from('stashes')
+      .select('id')
+      .eq('id', parentStashId)
+      .eq('user_id', user.id)
+      .single()
+    if (parentErr || !parent) return ApiResponseHelper.badRequest('Parent stash not found')
+  }
 
   const { data, error } = await supabase
     .from('stashes')
-    .insert([{ user_id: user.id, name, note }])
+    .insert([{ user_id: user.id, name, note, capacity, parent_stash_id: parentStashId }])
     .select('*')
     .single()
 

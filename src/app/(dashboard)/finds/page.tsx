@@ -12,6 +12,7 @@ import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { crosslistFind, formatPlatformName } from '@/lib/crosslist'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import QuickMoveButton from '@/components/stash/QuickMoveButton'
 
 // Emoji mapping for categories
 const categoryEmojis: Record<string, string> = {
@@ -25,7 +26,7 @@ const categoryEmojis: Record<string, string> = {
   default: '📦',
 }
 
-type StatusFilter = 'all' | 'listed' | 'draft' | 'on_hold' | 'sold' | 'aging'
+type StatusFilter = 'all' | 'listed' | 'draft' | 'on_hold' | 'sold' | 'aging' | 'unpriced'
 
 // Helper function to calculate days listed
 const getDaysListed = (find: Find): number => {
@@ -59,7 +60,7 @@ function InventoryPageContent() {
   const [markSoldPrice, setMarkSoldPrice] = useState('')
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0 })
+  const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0, unpriced: 0 })
   const [stashes, setStashes] = useState<Array<{ id: string; name: string; item_count: number }>>([])
   const [stashFilter, setStashFilter] = useState<string>('all')
   const [showBulkMoveStash, setShowBulkMoveStash] = useState(false)
@@ -80,6 +81,21 @@ function InventoryPageContent() {
     const timer = setTimeout(() => setShowPublishedBanner(false), 5000)
     return () => clearTimeout(timer)
   }, [searchParams])
+
+  // Accept ?filter=unpriced|aging and ?status=listed|draft|... from deep links
+  // (e.g. the Wren Insight card on the dashboard). Runs once on mount.
+  useEffect(() => {
+    const filterParam = searchParams.get('filter')
+    const statusParam = searchParams.get('status')
+    const validFilters: StatusFilter[] = ['aging', 'unpriced']
+    const validStatuses: StatusFilter[] = ['all', 'listed', 'draft', 'on_hold', 'sold']
+    if (filterParam && (validFilters as string[]).includes(filterParam)) {
+      setSelectedStatus(filterParam as StatusFilter)
+    } else if (statusParam && (validStatuses as string[]).includes(statusParam)) {
+      setSelectedStatus(statusParam as StatusFilter)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   type PlatformPublishStatus = 'waiting' | 'checking' | 'publishing' | 'listed' | 'queued' | 'failed'
   interface PlatformStatusEntry { status: PlatformPublishStatus; error?: string; succeeded: number; failed: number; total: number }
@@ -129,8 +145,11 @@ function InventoryPageContent() {
         if (debouncedSearch) {
           params.set('search', debouncedSearch)
         }
-        if (selectedStatus && selectedStatus !== 'all' && selectedStatus !== 'aging') {
+        if (selectedStatus && selectedStatus !== 'all' && selectedStatus !== 'aging' && selectedStatus !== 'unpriced') {
           params.set('status', selectedStatus)
+        }
+        if (selectedStatus === 'unpriced') {
+          params.set('filter', 'unpriced')
         }
         if (stashFilter && stashFilter !== 'all') {
           params.set('stash_id', stashFilter)
@@ -153,6 +172,7 @@ function InventoryPageContent() {
             listed: c.listed ?? 0,
             on_hold: c.on_hold ?? 0,
             sold: c.sold ?? 0,
+            unpriced: c.unpriced ?? 0,
           })
         }
       } catch (err) {
@@ -202,13 +222,18 @@ function InventoryPageContent() {
     }
   }
 
-  // Filter finds by aging status (client-side for aging filter since it needs calculation)
-  const filteredFinds = selectedStatus === 'aging'
-    ? finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30)
-    : finds
+  // Aging filter is still client-side (needs date calculation).
+  // Unpriced is server-side via ?filter=unpriced — so when it's active the
+  // server already returns only unpriced items; filteredFinds is just finds.
+  const filteredFinds =
+    selectedStatus === 'aging'
+      ? finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30)
+      : finds
 
-  // Count aging items for badge
+  // Counts for badges — aging stays client-side (page-scoped), unpriced
+  // comes from the server so the pill reflects the real total.
   const agingCount = finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30).length
+  const unpricedCount = statusCounts.unpriced
 
   const toggleItemSelection = (id: string) => {
     const newSelected = new Set(selectedItems)
@@ -645,9 +670,14 @@ function InventoryPageContent() {
 
         {/* Filter pills with counts */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging'] as StatusFilter[]).map((s) => {
+          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging', 'unpriced'] as StatusFilter[]).map((s) => {
             const pillLabel = s === 'on_hold' ? 'on hold' : s
-            const pillCount = s === 'aging' ? agingCount : (statusCounts[s as keyof typeof statusCounts] ?? 0)
+            const pillCount =
+              s === 'aging'
+                ? agingCount
+                : s === 'unpriced'
+                ? unpricedCount
+                : (statusCounts[s as keyof typeof statusCounts] ?? 0)
             return (
               <button
                 key={s}
@@ -1136,14 +1166,12 @@ function InventoryPageContent() {
                           </div>
                           <div className="text-[11px] flex items-center gap-2" style={{ color: '#6B7D6A' }}>
                             <span>{formatCategory(find.category)}</span>
-                            {find.stash?.name && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]"
-                                style={{ backgroundColor: 'rgba(90,122,87,0.1)', color: '#5A7A57' }}
-                              >
-                                📦 {find.stash.name}
-                              </span>
-                            )}
+                            <QuickMoveButton
+                              findId={find.id}
+                              currentStashId={find.stash_id}
+                              currentStashName={find.stash?.name ?? null}
+                              onMoved={() => setRefreshTrigger((n) => n + 1)}
+                            />
                           </div>
                         </div>
                       </div>

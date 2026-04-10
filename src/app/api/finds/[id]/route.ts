@@ -72,10 +72,10 @@ export async function PUT(
       return ApiResponseHelper.badRequest(validation.error)
     }
 
-    // Ensure user owns this find
+    // Ensure user owns this find (and capture prior stash for activity log)
     const { data: existing, error: checkError } = await supabase
       .from('finds')
-      .select('id')
+      .select('id, stash_id')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
@@ -100,6 +100,22 @@ export async function PUT(
         console.error('Supabase error:', error)
       }
       return ApiResponseHelper.internalError()
+    }
+
+    // Stash activity log — only if stash_id actually changed
+    const priorStash = existing.stash_id as string | null
+    const newStash = (data as Find).stash_id
+    if ('stash_id' in validation.data && priorStash !== newStash) {
+      const action: 'added' | 'removed' | 'moved' =
+        newStash === null ? 'removed' : priorStash === null ? 'added' : 'moved'
+      const { logStashActivity } = await import('@/lib/stash-activity')
+      await logStashActivity(supabase, {
+        user_id: user.id,
+        stash_id: newStash ?? priorStash,
+        find_id: id,
+        action,
+        note: null,
+      })
     }
 
     return ApiResponseHelper.success(data as Find)

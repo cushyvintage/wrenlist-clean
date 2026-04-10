@@ -20,6 +20,10 @@ export const GET = withAuth(async (req, user) => {
     const sourceType = searchParams.get('source_type')
     const search = searchParams.get('search')
     const stashId = searchParams.get('stash_id')
+    // `filter` is a synthetic client-facing filter (e.g. 'unpriced') that
+    // doesn't map cleanly to a single `status` value. Keeps the wire
+    // protocol explicit so the finds page can deep-link from the dashboard.
+    const filter = searchParams.get('filter')
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
@@ -50,10 +54,23 @@ export const GET = withAuth(async (req, user) => {
       query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%,source_name.ilike.%${search}%`)
     }
 
-    // Run main query and status counts in parallel
-    const [mainResult, countsResult] = await Promise.all([
+    // Synthetic filter: "unpriced" = not sold, no asking_price_gbp set.
+    // (Deep PMD check is done in the insight API; here we approximate
+    // on the canonical `asking_price_gbp` column so the query stays fast.)
+    if (filter === 'unpriced') {
+      query = query.neq('status', 'sold').or('asking_price_gbp.is.null,asking_price_gbp.eq.0')
+    }
+
+    // Run main query, status counts, and unpriced count in parallel
+    const [mainResult, countsResult, unpricedResult] = await Promise.all([
       query.range(offset, offset + limit - 1),
       supabase.rpc('get_find_status_counts', { p_user_id: user.id }).single(),
+      supabase
+        .from('finds')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .neq('status', 'sold')
+        .or('asking_price_gbp.is.null,asking_price_gbp.eq.0'),
     ])
 
     if (mainResult.error) {
@@ -71,6 +88,7 @@ export const GET = withAuth(async (req, user) => {
       listed: rawCounts.listed || 0,
       on_hold: rawCounts.on_hold || 0,
       sold: rawCounts.sold || 0,
+      unpriced: unpricedResult.count || 0,
     }
 
     return ApiResponseHelper.success({
@@ -192,6 +210,18 @@ export const POST = withAuth(async (req, user) => {
         .from('profiles')
         .update({ finds_this_month: profile.finds_this_month + 1 })
         .eq('user_id', user.id)
+    }
+
+    // Log stash activity if find was created inside a stash
+    if (data && (data as Find).stash_id) {
+      const { logStashActivity } = await import('@/lib/stash-activity')
+      await logStashActivity(supabase, {
+        user_id: user.id,
+        stash_id: (data as Find).stash_id,
+        find_id: (data as Find).id,
+        action: 'added',
+        note: null,
+      })
     }
 
     return ApiResponseHelper.created(data as Find)
