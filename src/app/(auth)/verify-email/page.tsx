@@ -1,25 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getCurrentUser } from '@/services/auth.service'
 import { resendVerificationEmail } from '@/services/auth.service'
 
-export default function VerifyEmailPage() {
+function VerifyEmailInner() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const searchParams = useSearchParams()
+  // Email arrives via query param from the register flow (?email=...). Fall
+  // back to the current auth user if present (e.g. user hit this page
+  // directly after logging in to an unverified account).
+  const [email, setEmail] = useState(() => searchParams.get('email') || '')
   const [isResending, setIsResending] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!searchParams.get('email'))
 
   useEffect(() => {
-    // Get current user's email
+    if (email) return // already have it from query param
+
     const getEmail = async () => {
       try {
         const user = await getCurrentUser()
-        if (user?.email) {
-          setEmail(user.email)
-        }
+        if (user?.email) setEmail(user.email)
       } catch (err) {
         console.error('Failed to get user:', err)
       } finally {
@@ -28,6 +31,7 @@ export default function VerifyEmailPage() {
     }
 
     getEmail()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleResend = async () => {
@@ -139,5 +143,13 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailInner />
+    </Suspense>
   )
 }

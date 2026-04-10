@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -11,16 +11,14 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
  * Every action marks onboarding_completed BEFORE navigating, so the user can
  * leave this page (to connect a platform, add a find, etc.) without getting
  * bounced back here by the middleware on the next request.
+ *
+ * Page title is set via the route segment's layout metadata export.
  */
 export default function OnboardingPage() {
   const router = useRouter()
   const { user } = useAuthContext()
   const [isBusy, setIsBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    document.title = 'Welcome | Wrenlist'
-  }, [])
 
   const firstName = (user?.full_name || '').trim().split(/\s+/)[0] || null
 

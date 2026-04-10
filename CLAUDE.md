@@ -17,9 +17,9 @@
 - **Redirect URIs:** Both `api.wrenlist.com/auth/v1/callback` AND `tewtfroudyicwfubgcqi.supabase.co/auth/v1/callback` are registered
 - **Branding:** App name "Wrenlist", logo uploaded, privacy/terms URLs set
 
-### Missing Vercel Env Vars (TODO)
-- **`EBAY_WEBHOOK_VERIFICATION_TOKEN`** — Required for eBay webhook signature validation. Without it, incoming eBay events (ITEM_SOLD, account deletion) are rejected with 500. eBay publishing still works; only inbound webhooks are affected.
-- **`EBAY_TOKEN_ENCRYPTION_KEY`** — Required for encrypting stored eBay OAuth tokens at rest.
+### Optional eBay Env Vars (not required for beta)
+- **`EBAY_WEBHOOK_VERIFICATION_TOKEN`** — Only needed if an eBay webhook subscription is registered in the eBay dev console. Used by `/api/webhooks/ebay` to verify signatures on inbound `ITEM_SOLD` and account-deletion events. eBay publishing (outbound) works without it. If no webhook is registered, this can be omitted entirely.
+- **`EBAY_TOKEN_ENCRYPTION_KEY`** — Referenced by `encryptToken`/`decryptToken` helpers on `eBayClient`, but **no call sites currently use them**. Tokens are stored unencrypted in `ebay_tokens`. This is dead code until someone wires it up — setting the env var on its own does nothing.
 
 ## Dev Server
 - **Port:** 3004 (Next.js picks this if 3000 is busy)
