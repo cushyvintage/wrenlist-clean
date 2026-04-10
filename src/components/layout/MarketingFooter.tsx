@@ -22,6 +22,7 @@ export function MarketingFooter() {
           <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Resources</div>
           <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
             <Link href="/calculator" className="hover:text-[#f5f0e8] transition-colors">Fee calculator</Link>
+            <Link href="/tax-estimator" className="hover:text-[#f5f0e8] transition-colors">Tax estimator</Link>
             <Link href="/story" className="hover:text-[#f5f0e8] transition-colors">Our story</Link>
           </div>
         </div>
