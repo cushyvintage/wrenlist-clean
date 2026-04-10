@@ -10,6 +10,7 @@ const navItems = [
   { href: '/about', label: 'why wrenlist' },
   { href: '/extension', label: 'extension' },
   { href: '/calculator', label: 'fee calculator' },
+  { href: '/tax-estimator', label: 'tax estimator' },
   { href: '/roadmap', label: 'roadmap' },
 ]
 

@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
+import { ApiResponseHelper } from '@/lib/api-response'
+import { stampLatestInsightEvent } from '@/lib/insights/engine'
 
 /**
  * POST /api/insights/dismiss
  * Body: { insight_key: string, days?: number }
  *
  * Upserts a row in `dismissed_insights` muting the rule for `days` days
- * (default 7). Also stamps any recent `insight_events` row for that key
- * with `dismissed_at` so the history page reflects the action.
+ * (default 7). Also stamps any recent `insight_events` row for that key so
+ * the history page reflects the action.
  */
 export const POST = withAuth(async (req, user) => {
   try {
@@ -22,47 +23,30 @@ export const POST = withAuth(async (req, user) => {
       typeof body?.days === 'number' && body.days > 0 && body.days <= 90 ? body.days : 7
 
     if (!insightKey) {
-      return NextResponse.json({ error: 'insight_key required' }, { status: 400 })
+      return ApiResponseHelper.badRequest('insight_key required')
     }
 
     const supabase = await createSupabaseServerClient()
     const dismissedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
 
-    const { error: upsertErr } = await supabase.from('dismissed_insights').upsert(
-      {
-        user_id: user.id,
-        insight_key: insightKey,
-        dismissed_until: dismissedUntil,
-      },
-      { onConflict: 'user_id,insight_key' },
-    )
+    // Upsert the dismissal and stamp the most recent event row in parallel —
+    // they don't depend on each other.
+    const [{ error: upsertErr }] = await Promise.all([
+      supabase.from('dismissed_insights').upsert(
+        { user_id: user.id, insight_key: insightKey, dismissed_until: dismissedUntil },
+        { onConflict: 'user_id,insight_key' },
+      ),
+      stampLatestInsightEvent(supabase, user.id, insightKey, 'dismissed_at'),
+    ])
 
     if (upsertErr) {
       console.error('[api/insights/dismiss] upsert failed:', upsertErr)
-      return NextResponse.json({ error: 'Failed to dismiss' }, { status: 500 })
+      return ApiResponseHelper.internalError('Failed to dismiss')
     }
 
-    // Stamp the most recent shown event for this key so the history
-    // reflects the dismissal. Non-fatal if it fails.
-    const { data: recent } = await supabase
-      .from('insight_events')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('insight_key', insightKey)
-      .is('dismissed_at', null)
-      .order('shown_at', { ascending: false })
-      .limit(1)
-
-    if (recent && recent[0]) {
-      await supabase
-        .from('insight_events')
-        .update({ dismissed_at: new Date().toISOString() })
-        .eq('id', recent[0].id)
-    }
-
-    return NextResponse.json({ ok: true, dismissed_until: dismissedUntil })
+    return ApiResponseHelper.success({ dismissed_until: dismissedUntil })
   } catch (err) {
     console.error('[api/insights/dismiss] failed:', err)
-    return NextResponse.json({ error: 'Failed to dismiss' }, { status: 500 })
+    return ApiResponseHelper.internalError('Failed to dismiss')
   }
 })

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/services/supabase'
 
 function LoginInner() {
@@ -98,7 +99,7 @@ function LoginInner() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <Link href="/" className="block text-center mb-8 hover:opacity-80 transition-opacity">
           <img
             src="/wrenlist-logo.png"
             alt="Wrenlist"
@@ -106,7 +107,7 @@ function LoginInner() {
           />
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
-        </div>
+        </Link>
 
         {/* Login card */}
         <div className="bg-white border border-sage/14 rounded-lg p-8">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/services/supabase'
 
 export default function RegisterPage() {
@@ -112,7 +113,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <Link href="/" className="block text-center mb-8 hover:opacity-80 transition-opacity">
           <img
             src="/wrenlist-logo.png"
             alt="Wrenlist"
@@ -120,6 +121,7 @@ export default function RegisterPage() {
           />
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
+        </Link>
         </div>
 
         {/* Beta banner */}

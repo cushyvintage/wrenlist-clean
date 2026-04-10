@@ -71,7 +71,6 @@ export function InsightCard({ text, type = 'info', link, onDismiss }: InsightCar
 
   return (
     <div className={`${style.bg} rounded-md p-5 border ${style.border} relative transition-opacity ${dismissing ? 'opacity-40' : ''}`}>
-      {/* Dismiss button */}
       {onDismiss && (
         <button
           onClick={handleDismiss}
@@ -84,17 +83,14 @@ export function InsightCard({ text, type = 'info', link, onDismiss }: InsightCar
         </button>
       )}
 
-      {/* Eyebrow label */}
       <div className={`text-xs uppercase tracking-widest ${style.eyebrow} font-medium mb-2 pr-6`}>
         wren insight · beta
       </div>
 
-      {/* Italic insight text using Cormorant Garamond */}
       <div className={`font-serif text-sm ${style.text} italic mb-3 leading-relaxed`}>
         &ldquo;{text}&rdquo;
       </div>
 
-      {/* Optional action link */}
       {link && (
         <button
           onClick={link.onClick}

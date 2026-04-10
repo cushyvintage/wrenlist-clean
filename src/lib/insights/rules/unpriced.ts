@@ -14,6 +14,10 @@ import type { Insight, InsightRule } from '../types'
 export const unpricedRule: InsightRule = {
   id: 'unpriced',
   priority: 95,
+  // Explicit return type: this rule has two branches with different meta
+  // shapes, and without annotation TS infers a union where each branch has
+  // `undefined` fields — which fails the `Record<string, number | string>`
+  // index signature on Insight.meta.
   evaluate(ctx): Insight | null {
     const unpriced = ctx.finds.filter(
       (f) => f.status !== 'sold' && !(f.asking_price_gbp && f.asking_price_gbp > 0),

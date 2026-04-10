@@ -12,6 +12,14 @@
 
 export type InsightType = 'alert' | 'tip' | 'info'
 
+/**
+ * Non-rule placeholder keys emitted directly by the wren route when there's
+ * nothing else to show (empty inventory / no rule fired). Not dismissable.
+ */
+export const WELCOME_KEY = 'welcome'
+export const HEALTHY_KEY = 'healthy'
+export const PLACEHOLDER_KEYS: ReadonlySet<string> = new Set([WELCOME_KEY, HEALTHY_KEY])
+
 export interface Insight {
   /** Stable id — matches the rule filename. Used for dismissal + history. */
   key: string
@@ -22,8 +30,9 @@ export interface Insight {
   /** Optional structured metadata — surfaces in insight_events for analytics. */
   meta?: Record<string, number | string>
   /**
-   * Priority within its type bucket. Higher fires first.
-   * Engine sort: alert (by priority desc) → tip (by priority desc) → info.
+   * Priority within its type bucket. Higher fires first. Normally comes
+   * straight from the emitting rule, but multi-flavour rules (e.g. unpriced)
+   * emit different priorities per branch, so it lives on the insight itself.
    */
   priority: number
 }
@@ -46,19 +55,17 @@ export interface InsightContext {
 
 /**
  * Narrow projection of the `finds` row — only fields insights actually read.
- * Extend as new rules need new fields.
+ * Extend as new rules need new fields; also update the SELECT in
+ * `context.ts:loadFinds`.
  */
 export interface FindForInsights {
   id: string
   status: string | null
   created_at: string | null
-  updated_at: string | null
   cost_gbp: number | null
   sold_price_gbp: number | null
   asking_price_gbp: number | null
   category: string | null
-  source_name: string | null
-  photos: string[] | null
 }
 
 /**

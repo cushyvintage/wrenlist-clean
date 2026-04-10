@@ -13,6 +13,7 @@ import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { useCountUp } from '@/hooks/useCountUp'
 import type { Find } from '@/types'
+import { PLACEHOLDER_KEYS } from '@/lib/insights/types'
 
 const COUNT_UP_SESSION_KEY = 'dashCountedUp'
 
@@ -78,8 +79,9 @@ export default function DashboardPage() {
         }
 
         if (insightRes.ok) {
-          const insightData = (await insightRes.json()) as { insights?: WrenInsight[] }
-          setInsights(insightData.insights ?? [])
+          const json = await insightRes.json()
+          const response = unwrapApiResponse<{ insights: WrenInsight[] }>(json)
+          setInsights(response?.insights ?? [])
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -264,14 +266,17 @@ export default function DashboardPage() {
                 },
               }}
               onDismiss={
-                // Welcome and healthy placeholders aren't dismissable
-                insight.key === 'welcome' || insight.key === 'healthy'
+                PLACEHOLDER_KEYS.has(insight.key)
                   ? undefined
                   : async () => {
-                      // Optimistic removal with rollback on failure so the
-                      // UI can't drift from the DB state.
-                      const snapshot = insights
-                      setInsights((prev) => prev.filter((i) => i.key !== insight.key))
+                      // Optimistic removal by key — rollback on failure reinserts
+                      // the snapshot taken *inside* the updater so we capture the
+                      // freshest state, not a render-time closure.
+                      let snapshot: WrenInsight[] = []
+                      setInsights((prev) => {
+                        snapshot = prev
+                        return prev.filter((i) => i.key !== insight.key)
+                      })
                       try {
                         const res = await fetch('/api/insights/dismiss', {
                           method: 'POST',
