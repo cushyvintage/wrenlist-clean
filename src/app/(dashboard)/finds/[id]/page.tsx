@@ -631,6 +631,7 @@ export default function InventoryDetailPage() {
         <FindEditMode
           formData={formData}
           isSaving={isSaving}
+          availablePlatforms={allConnectedPlatforms.map((cp) => cp.platform)}
           templateAppliedBanner={templateAppliedBanner}
           incompleteFields={incompleteFields}
           showSaveAsTemplate={showSaveAsTemplate}

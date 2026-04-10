@@ -69,6 +69,7 @@ interface FindEditModeProps {
   incompleteFields: string[]
   showSaveAsTemplate: boolean
   margin: number | null
+  availablePlatforms?: Platform[]
   onInputChange: (field: keyof FormData, value: unknown) => void
   onPlatformToggle: (platform: Platform) => void
   onAddPhotos: (files: File[]) => void
@@ -92,6 +93,7 @@ export function FindEditMode({
   incompleteFields,
   showSaveAsTemplate,
   margin,
+  availablePlatforms = ['vinted', 'ebay', 'etsy', 'shopify'] as Platform[],
   onInputChange,
   onPlatformToggle,
   onAddPhotos,
@@ -180,7 +182,7 @@ export function FindEditMode({
           <p className="text-xs uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>
             List On
           </p>
-          {(['vinted', 'ebay'] as Platform[]).map((platform) => (
+          {availablePlatforms.map((platform) => (
             <label
               key={platform}
               className="flex items-center gap-2 cursor-pointer"
