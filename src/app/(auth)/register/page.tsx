@@ -58,7 +58,24 @@ export default function RegisterPage() {
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('User creation failed')
 
-      // Profile is created by DB trigger from auth metadata
+      // Profile is created by DB trigger from auth metadata.
+      // Fire welcome + admin notification emails. We intentionally do NOT
+      // await this before redirecting — email delivery latency should never
+      // make the user wait on the verify-email page.
+      fetch('/api/auth/signup-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: data.user.id,
+          email,
+          fullName: `${firstName} ${lastName}`.trim(),
+          signupMethod: 'email',
+        }),
+      }).catch((err) => {
+        // Log but don't block — emails failing is a background issue.
+        console.error('[register] signup-notification fetch failed:', err)
+      })
+
       router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create account'

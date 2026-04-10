@@ -59,6 +59,31 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(verifyUrl)
       }
 
+      // Fire welcome + admin notification emails. The route has its own
+      // in-process dedup (per-userId cooldown) so it's safe to call on
+      // every OAuth callback. Fire-and-forget — email latency must not
+      // block the redirect. We pull email/name from the authenticated
+      // user object we already have in hand.
+      const appUrlForEmail =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        `${request.nextUrl.protocol}//${request.nextUrl.host}`
+      const oauthFullName =
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.user_metadata?.name as string | undefined) ||
+        null
+      fetch(`${appUrlForEmail}/api/auth/signup-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          fullName: oauthFullName,
+          signupMethod: provider,
+        }),
+      }).catch((err) => {
+        console.error('[auth/callback] signup-notification failed:', err)
+      })
+
       // Email is verified (or user is OAuth) — check onboarding status
       const { data: profile } = await supabase
         .from('profiles')
