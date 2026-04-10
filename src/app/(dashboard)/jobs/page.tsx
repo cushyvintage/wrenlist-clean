@@ -76,6 +76,16 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
+/** Absolute timestamp (e.g. "9 Apr, 19:12"). */
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 /** Format scheduled_for as "7 Apr, 20:30" or "ASAP" if null. */
 function formatSchedule(iso: string | null): string {
   if (!iso) return 'ASAP'
@@ -267,7 +277,8 @@ export default function JobsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-ink-lt">
-                    {timeAgo(job.created_at)}
+                    <div>{timeAgo(job.created_at)}</div>
+                    <div className="text-[10px] text-ink-lt/70">{formatTimestamp(job.created_at)}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
