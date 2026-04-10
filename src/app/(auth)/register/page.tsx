@@ -51,7 +51,6 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: `${firstName} ${lastName}`,
-            plan: 'beta',
           },
         },
       })

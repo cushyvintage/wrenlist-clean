@@ -43,14 +43,23 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // Check if email is verified
-      if (!user.email_confirmed_at) {
-        // Not verified — show verify-email page
+      // OAuth providers (google, github, etc.) have already verified the user's
+      // email — Supabase sets `email_confirmed_at` at signup for them. But we
+      // don't rely on that alone: we also check `app_metadata.provider`. If the
+      // user came in via any non-email provider, we skip the verify-email
+      // redirect entirely. This prevents Google users from getting stuck on a
+      // "verify your email" page whose only action is "resend verification
+      // email" — a flow that does nothing for OAuth accounts.
+      const provider = (user.app_metadata?.provider as string | undefined) || 'email'
+      const isOAuthUser = provider !== 'email'
+
+      if (!isOAuthUser && !user.email_confirmed_at) {
+        // Email signup, not verified yet — show verify-email page
         const verifyUrl = new URL(`/verify-email?email=${encodeURIComponent(user.email || '')}`, request.url)
         return NextResponse.redirect(verifyUrl)
       }
 
-      // Email is verified — check onboarding status
+      // Email is verified (or user is OAuth) — check onboarding status
       const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_completed')
