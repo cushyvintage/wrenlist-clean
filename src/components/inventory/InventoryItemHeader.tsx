@@ -83,15 +83,15 @@ export default function InventoryItemHeader({
 
   return (
     <div
-      className="flex items-center justify-between pb-4"
+      className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between"
       style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
     >
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-medium" style={{ color: '#1E2E1C' }}>
+      <div className="min-w-0">
+        <h1 className="text-xl font-medium sm:text-2xl" style={{ color: '#1E2E1C' }}>
           {find.name}
         </h1>
       </div>
-      <div className="flex items-center gap-2 relative">
+      <div className="flex flex-wrap items-center gap-2 relative">
         <Badge status={find.status as 'draft' | 'listed' | 'on_hold' | 'sold'} />
         {!isEditing && (
           <button
