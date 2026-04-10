@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import type { PlanId } from '@/types'
+
+/**
+ * Stripe webhooks carry no cookies, so the cookie-based SSR client has no
+ * session and all writes are blocked by RLS. Use the service-role client
+ * instead — scoped by user_id / stripe_customer_id in each query.
+ */
+function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  )
+}
 
 /**
  * POST /api/billing/webhook
@@ -96,7 +109,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     }
 
     // Update user profile with new plan
-    const supabase = await createSupabaseServerClient()
+    const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -136,7 +149,7 @@ async function handleSubscriptionDeleted(subscription: any) {
     }
 
     // Find user by Stripe customer ID and downgrade to free
-    const supabase = await createSupabaseServerClient()
+    const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
       .update({

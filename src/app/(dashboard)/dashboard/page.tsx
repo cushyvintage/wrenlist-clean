@@ -40,9 +40,11 @@ interface AnalyticsSummary {
 }
 
 interface WrenInsight {
-  insight: string
+  key: string
+  text: string
   type: 'alert' | 'tip' | 'info'
-  cta?: { text: string; href: string }
+  cta: { text: string; href: string }
+  meta?: Record<string, number | string>
 }
 
 export default function DashboardPage() {
@@ -50,7 +52,7 @@ export default function DashboardPage() {
   const { user } = useAuthContext()
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [finds, setFinds] = useState<Find[]>([])
-  const [insight, setInsight] = useState<WrenInsight | null>(null)
+  const [insights, setInsights] = useState<WrenInsight[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { disconnected } = useConnectedPlatforms({ pollInterval: 60_000 })
 
@@ -76,8 +78,8 @@ export default function DashboardPage() {
         }
 
         if (insightRes.ok) {
-          const insightData = await insightRes.json()
-          setInsight(insightData)
+          const insightData = (await insightRes.json()) as { insights?: WrenInsight[] }
+          setInsights(insightData.insights ?? [])
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -237,21 +239,54 @@ export default function DashboardPage() {
 
         {/* Right: Insights & activity */}
         <div className="space-y-4">
-          {/* Wren insight */}
-          {insight && (
+          {/* Wren insights — up to 3, stacked */}
+          {insights.map((insight) => (
             <InsightCard
-              text={insight.insight}
+              key={insight.key}
+              text={insight.text}
               type={insight.type}
-              link={
-                insight.cta
-                  ? {
-                      text: insight.cta.text,
-                      onClick: () => router.push(insight.cta!.href),
+              link={{
+                text: insight.cta.text,
+                onClick: () => {
+                  // sendBeacon survives page teardown from router.push().
+                  // A plain fetch would often be aborted mid-flight, losing
+                  // the click event from our analytics.
+                  try {
+                    const body = new Blob(
+                      [JSON.stringify({ insight_key: insight.key })],
+                      { type: 'application/json' },
+                    )
+                    navigator.sendBeacon?.('/api/insights/clicked', body)
+                  } catch {
+                    /* best-effort; never block navigation */
+                  }
+                  router.push(insight.cta.href)
+                },
+              }}
+              onDismiss={
+                // Welcome and healthy placeholders aren't dismissable
+                insight.key === 'welcome' || insight.key === 'healthy'
+                  ? undefined
+                  : async () => {
+                      // Optimistic removal with rollback on failure so the
+                      // UI can't drift from the DB state.
+                      const snapshot = insights
+                      setInsights((prev) => prev.filter((i) => i.key !== insight.key))
+                      try {
+                        const res = await fetch('/api/insights/dismiss', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ insight_key: insight.key, days: 7 }),
+                        })
+                        if (!res.ok) throw new Error('Dismiss failed')
+                      } catch (err) {
+                        console.error('[dashboard] dismiss failed:', err)
+                        setInsights(snapshot)
+                      }
                     }
-                  : undefined
               }
             />
-          )}
+          ))}
 
           {/* Quick stats */}
           <Panel title="This month">

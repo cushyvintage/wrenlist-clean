@@ -1475,6 +1475,40 @@ type ExternalMessage = Record<string, unknown>;
           }
         })();
         return true;
+      case "get_marketplace_logins":
+        // Popup requests live login status across all cookie-based marketplaces.
+        // Server-side /api/auth/me only knows about OAuth connections (eBay, Shopify);
+        // everything else the extension has to check from cookies.
+        void (async () => {
+          try {
+            const marketplaces: SupportedMarketplace[] = [
+              "vinted",
+              "depop",
+              "etsy",
+              "poshmark",
+              "mercari",
+              "grailed",
+              "whatnot",
+              "facebook",
+            ];
+            const entries = await Promise.all(
+              marketplaces.map(async (mp) => {
+                try {
+                  const ok = await checkMarketplaceLogin(mp);
+                  return [mp, ok] as const;
+                } catch {
+                  return [mp, false] as const;
+                }
+              })
+            );
+            const results: Record<string, boolean> = {};
+            for (const [mp, ok] of entries) results[mp] = ok;
+            sendResponse({ success: true, results });
+          } catch (error) {
+            sendResponse({ success: false, error: String(error) });
+          }
+        })();
+        return true;
       case "bg_fetch":
         // Generic authenticated fetch for popup (uses queueFetch with cookie auth)
         void (async () => {

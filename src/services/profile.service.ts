@@ -102,14 +102,8 @@ export async function canAddFind(): Promise<boolean> {
   const profile = await getProfile()
   if (!profile) return false
 
-  const planLimits: Record<PlanId, number> = {
-    free: 5,
-    nester: 50,
-    forager: 500,
-    flock: 999999,
-  }
-
-  const limit = planLimits[profile.plan]
+  const { PLAN_LIMITS } = await import('@/config/plans')
+  const limit = PLAN_LIMITS[profile.plan]?.finds ?? Infinity
   return profile.finds_this_month < limit
 }
 

@@ -96,8 +96,24 @@ document.addEventListener('DOMContentLoaded', function () {
       strip.style.display = 'grid'
       document.getElementById('statFinds').textContent = data.stats.total_finds ?? '—'
       document.getElementById('statListings').textContent = data.stats.active_listings ?? '—'
+      // Server-side count (eBay, Shopify OAuth). Cookie-based marketplaces
+      // get merged in asynchronously by refreshCookieLogins().
       document.getElementById('statPlatforms').textContent = data.stats.connected_platforms ?? '—'
+      refreshCookieLogins(data.stats.connected_platforms ?? 0)
     }
+  }
+
+  // --- Ask background worker to check cookie-based marketplace logins,
+  //     then merge the count into the PLATFORMS stat.
+  function refreshCookieLogins(serverCount) {
+    chrome.runtime.sendMessage({ action: 'get_marketplace_logins' }, response => {
+      if (chrome.runtime.lastError || !response || !response.success) return
+      const results = response.results || {}
+      const loggedInCount = Object.values(results).filter(Boolean).length
+      const total = (serverCount || 0) + loggedInCount
+      const el = document.getElementById('statPlatforms')
+      if (el) el.textContent = String(total)
+    })
   }
 
   // --- Fetch via background worker (has cookie access) ---

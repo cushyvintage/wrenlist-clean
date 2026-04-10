@@ -55,14 +55,23 @@ export const GET = withAuth(async (req, user) => {
     }
 
     // Synthetic filter: "unpriced" = not sold, no asking_price_gbp set.
-    // (Deep PMD check is done in the insight API; here we approximate
-    // on the canonical `asking_price_gbp` column so the query stays fast.)
+    // asking_price_gbp is the canonical sell-target field — both the
+    // insights API and this query agree on it so the pill count and
+    // insight count can't drift.
     if (filter === 'unpriced') {
       query = query.neq('status', 'sold').or('asking_price_gbp.is.null,asking_price_gbp.eq.0')
     }
 
-    // Run main query, status counts, and unpriced count in parallel
-    const [mainResult, countsResult, unpricedResult] = await Promise.all([
+    // Synthetic filter: "aging" = listed for 30+ days with no sale.
+    // Matches the client-side getDaysListed() helper which uses updated_at.
+    if (filter === 'aging') {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      query = query.eq('status', 'listed').lte('updated_at', cutoff)
+    }
+
+    // Run main query, status counts, unpriced count, and aging count in parallel
+    const agingCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const [mainResult, countsResult, unpricedResult, agingResult] = await Promise.all([
       query.range(offset, offset + limit - 1),
       supabase.rpc('get_find_status_counts', { p_user_id: user.id }).single(),
       supabase
@@ -71,6 +80,12 @@ export const GET = withAuth(async (req, user) => {
         .eq('user_id', user.id)
         .neq('status', 'sold')
         .or('asking_price_gbp.is.null,asking_price_gbp.eq.0'),
+      supabase
+        .from('finds')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'listed')
+        .lte('updated_at', agingCutoff),
     ])
 
     if (mainResult.error) {
@@ -89,6 +104,7 @@ export const GET = withAuth(async (req, user) => {
       on_hold: rawCounts.on_hold || 0,
       sold: rawCounts.sold || 0,
       unpriced: unpricedResult.count || 0,
+      aging: agingResult.count || 0,
     }
 
     return ApiResponseHelper.success({
@@ -149,14 +165,8 @@ export const POST = withAuth(async (req, user) => {
       .single()
 
     if (profile && !skipLimitCheck) {
-      const planLimits: Record<string, number | null> = {
-        free: 10,
-        nester: 100,
-        forager: 500,
-        flock: null,
-      }
-
-      const limit = planLimits[profile.plan] ?? null
+      const { PLAN_LIMITS } = await import('@/config/plans')
+      const limit = PLAN_LIMITS[profile.plan as keyof typeof PLAN_LIMITS]?.finds ?? null
 
       if (limit !== null && profile.finds_this_month >= limit) {
         return ApiResponseHelper.error('Monthly find limit reached. Upgrade your plan to add more finds.', 402)

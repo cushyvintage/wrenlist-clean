@@ -1,128 +1,56 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
+import { loadContext } from '@/lib/insights/context'
+import { runRules } from '@/lib/insights/engine'
+import type { Insight } from '@/lib/insights/types'
 
-export const GET = withAuth(async (req, user) => {
-  const supabase = await createSupabaseServerClient()
+/**
+ * GET /api/insights/wren
+ *
+ * Returns up to 3 active insights for the authenticated user, sorted by
+ * urgency (alert > tip > info) then priority. Dismissed rules are filtered
+ * out. Side effect: logs the returned insights to `insight_events`.
+ *
+ * The actual rule logic lives in `src/lib/insights/rules/` — this route is
+ * a thin wrapper so we can swap transports (GraphQL, RSC) later without
+ * touching rules.
+ */
+export const GET = withAuth(async (_req, user) => {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const ctx = await loadContext(supabase, user.id)
 
-  // Fetch all finds for this user — paginate to bypass Supabase's 1000-row REST cap
-  const PAGE_SIZE = 1000
-  type FindRow = {
-    status: string | null
-    created_at: string | null
-    cost_gbp: number | null
-    sold_price_gbp: number | null
-    asking_price_gbp: number | null
-    category: string | null
-    source_name: string | null
-    platform_fields: Record<string, unknown> | null
-  }
-  const finds: FindRow[] = []
-  for (let off = 0; ; off += PAGE_SIZE) {
-    const { data: page, error } = await supabase
-      .from('finds')
-      .select('*')
-      .eq('user_id', user.id)
-      .range(off, off + PAGE_SIZE - 1)
-
-    if (error) {
-      console.error('Error fetching finds:', error)
-      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
-    }
-    if (!page || page.length === 0) break
-    finds.push(...(page as unknown as FindRow[]))
-    if (page.length < PAGE_SIZE) break
-  }
-
-  // 1. Aged stock alert: items listed 30+ days with no sale
-  const agedFinds = finds.filter((f) => {
-    if (f.status !== 'listed' || !f.created_at) return false
-    const daysListed = Math.floor(
-      (Date.now() - new Date(f.created_at).getTime()) / (1000 * 60 * 60 * 24)
-    )
-    return daysListed >= 30
-  })
-
-  if (agedFinds.length > 0) {
-    return NextResponse.json({
-      insight: `You have ${agedFinds.length} item${agedFinds.length === 1 ? '' : 's'} listed for 30+ days with no sale. Consider dropping the price by 10-15%.`,
-      type: 'alert',
-    })
-  }
-
-  // 2. Best category: find category with highest avg margin on sold items
-  const soldFinds = finds.filter((f) => f.status === 'sold' && f.cost_gbp && f.sold_price_gbp)
-
-  if (soldFinds.length > 0) {
-    const categoryMargins: Record<string, { total: number; count: number }> = {}
-
-    soldFinds.forEach((f) => {
-      if (!f.category || !f.cost_gbp || !f.sold_price_gbp) return
-
-      const category = f.category
-      const margin = ((f.sold_price_gbp - f.cost_gbp) / f.cost_gbp) * 100
-      if (!categoryMargins[category]) {
-        categoryMargins[category] = { total: 0, count: 0 }
+    // New-user guard stays at the transport edge so rules never need to
+    // special-case "user has zero finds".
+    if (ctx.totalFinds < 3) {
+      const welcome: Insight = {
+        key: 'welcome',
+        type: 'info',
+        priority: 0,
+        text: 'Add your first few finds and Wren will start spotting patterns — pricing gaps, aged stock, best categories.',
+        cta: { text: 'add a find →', href: '/add-find' },
       }
-      categoryMargins[category].total += margin
-      categoryMargins[category].count += 1
-    })
-
-    const bestCategory = Object.entries(categoryMargins).reduce((best, [cat, data]) => {
-      const avgMargin = data.total / data.count
-      return !best || avgMargin > best.avgMargin ? { cat, avgMargin } : best
-    }, null as { cat: string; avgMargin: number } | null)
-
-    if (bestCategory) {
-      const categoryName = bestCategory.cat
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ')
-      return NextResponse.json({
-        insight: `Your ${categoryName.toLowerCase()} items are selling at ${Math.round(bestCategory.avgMargin)}% margin — your best performer. Source more.`,
-        type: 'tip',
-      })
+      return NextResponse.json({ insights: [welcome] })
     }
+
+    const insights = await runRules(supabase, ctx, { limit: 3 })
+
+    // Default fallback when no rule fires — always show something.
+    if (insights.length === 0) {
+      const healthy: Insight = {
+        key: 'healthy',
+        type: 'info',
+        priority: 0,
+        text: "Inventory looks healthy — nothing urgent to flag. Keep sourcing and Wren will surface patterns as you sell.",
+        cta: { text: 'view all finds →', href: '/finds' },
+      }
+      return NextResponse.json({ insights: [healthy] })
+    }
+
+    return NextResponse.json({ insights })
+  } catch (err) {
+    console.error('[api/insights/wren] failed:', err)
+    return NextResponse.json({ error: 'Failed to load insights' }, { status: 500 })
   }
-
-  // 3. Low stock warning: fewer than 5 finds with status draft or listed
-  const activeFinds = finds.filter((f) => f.status === 'draft' || f.status === 'listed')
-
-  if (activeFinds.length < 5) {
-    return NextResponse.json({
-      insight: 'Your inventory is running low — time for a sourcing run.',
-      type: 'tip',
-    })
-  }
-
-  // 4. Crosslisting nudge: lots of Vinted items but nothing on eBay
-  const vintedFinds = finds.filter((f) => f.source_name === 'Vinted' && f.status === 'listed')
-  const ebayFinds = finds.filter((f) => {
-    const pf = f.platform_fields as Record<string, unknown> | null
-    return pf && pf['ebay']
-  })
-
-  if (vintedFinds.length >= 20 && ebayFinds.length === 0) {
-    const highValue = vintedFinds.filter((f) => (f.asking_price_gbp ?? 0) >= 20)
-    return NextResponse.json({
-      insight: `You have ${vintedFinds.length} items on Vinted but nothing on eBay. Crosslisting your ${highValue.length} items priced £20+ could significantly boost revenue — eBay reaches a different buyer base.`,
-      type: 'tip',
-    })
-  }
-
-  // 4b. Price research nudge: items missing asking_price_gbp
-  const unpriced = finds.filter((f) => !f.asking_price_gbp && f.status !== 'sold')
-
-  if (unpriced.length > 0) {
-    return NextResponse.json({
-      insight: `${unpriced.length} item${unpriced.length === 1 ? ' is' : 's are'} missing prices. Use Price Research to set competitive prices.`,
-      type: 'info',
-    })
-  }
-
-  // 5. Default insight
-  return NextResponse.json({
-    insight: 'Add more items and sell to unlock personalised insights.',
-    type: 'info',
-  })
 })

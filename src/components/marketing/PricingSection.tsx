@@ -2,22 +2,26 @@
 
 import { useState } from 'react'
 import { Reveal } from '@/components/motion'
+import { isFoundingFlockWindow } from '@/config/plans'
 
 interface PricingCardProps {
   tier: string
   price: string
+  postLaunchPrice?: string
   annualMonthly?: string
   description: string
   limit: string
   features: string[]
   featured?: boolean
   isAnnual?: boolean
+  founding?: boolean
 }
 
-const PricingCard = ({ tier, price, annualMonthly, description, limit, features, featured = false, isAnnual = false }: PricingCardProps) => (
-  <div className={`plan-card${featured ? ' popular' : ''} rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8]'}`}>
+const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description, limit, features, featured = false, isAnnual = false, founding = false }: PricingCardProps) => (
+  <div className={`plan-card${featured ? ' popular' : ''} rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8] relative'}`}>
     {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium uppercase bg-[#d4e2d2] text-[#5a7a57] px-2 py-1 rounded">most popular</div>}
-    <div className={`text-sm font-medium text-[#1e2e1c] mb-4 ${featured ? 'pt-4' : ''}`}>{tier}</div>
+    {founding && !featured && price !== '0' && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-[#e8dcc2] text-[#7a5a2a] px-2 py-1 rounded">founding</div>}
+    <div className={`text-sm font-medium text-[#1e2e1c] mb-4 ${featured || (founding && price !== '0') ? 'pt-4' : ''}`}>{tier}</div>
     <div className="flex items-baseline gap-1 mb-1">
       <span className="text-sm font-normal text-[#6b7d6a]">£</span>
       <span className="font-serif text-3xl font-medium text-[#1e2e1c]">{isAnnual && annualMonthly ? annualMonthly : price}</span>
@@ -25,6 +29,9 @@ const PricingCard = ({ tier, price, annualMonthly, description, limit, features,
     </div>
     {isAnnual && annualMonthly && price !== '0' && (
       <div className="text-xs text-[#8a9e88] mb-2">£{price} billed annually</div>
+    )}
+    {founding && postLaunchPrice && price !== '0' && !isAnnual && (
+      <div className="text-10px text-[#a08050] mb-2 whitespace-nowrap">Normally £{postLaunchPrice}/mo</div>
     )}
     <p className="text-sm font-normal text-[#6b7d6a] mb-6 h-10">{description}</p>
     <div className="mb-6">
@@ -48,13 +55,14 @@ const PricingCard = ({ tier, price, annualMonthly, description, limit, features,
 
 export function PricingSection() {
   const [annual, setAnnual] = useState(false)
+  const founding = isFoundingFlockWindow()
 
   const plans = [
     {
       tier: 'Free',
       price: '0',
       description: 'Try Wrenlist with no commitment.',
-      limit: '10',
+      limit: '25',
       featured: false,
       features: ['Inventory tracker', '1 marketplace', 'Basic analytics'],
     },
@@ -62,33 +70,65 @@ export function PricingSection() {
       tier: 'Nester',
       price: annual ? '134' : '14',
       annualMonthly: '11',
+      postLaunchPrice: '17',
       description: 'For casual thrifters listing regularly.',
       limit: '100',
       featured: false,
       features: ['Everything in Free', '3 marketplaces', 'Crosslisting', 'Auto-delist on sale', 'Sales tracking'],
     },
     {
+      tier: 'Flourish',
+      price: annual ? '182' : '19',
+      annualMonthly: '15',
+      postLaunchPrice: '24',
+      description: 'For growing resellers scaling past 100 finds.',
+      limit: '250',
+      featured: false,
+      features: ['Everything in Nester', '4 marketplaces', 'AI listing generator', 'Bulk actions'],
+    },
+    {
       tier: 'Forager',
-      price: annual ? '290' : '29',
-      annualMonthly: '24',
+      price: annual ? '278' : '29',
+      annualMonthly: '23',
+      postLaunchPrice: '34',
       description: 'For serious resellers building a real business.',
       limit: '500',
       featured: true,
-      features: ['Everything in Nester', 'All 5 marketplaces', 'AI listing generator', 'Bulk actions', 'Price suggestions', 'Unlimited BG removal', 'Full analytics'],
+      features: ['Everything in Flourish', 'All marketplaces', 'Price suggestions', 'Unlimited BG removal', 'Full analytics'],
+    },
+    {
+      tier: 'Soar',
+      price: annual ? '374' : '39',
+      annualMonthly: '31',
+      postLaunchPrice: '49',
+      description: 'Unlimited finds for solo power-sellers.',
+      limit: 'Unlimited',
+      featured: false,
+      features: ['Everything in Forager', 'Unlimited finds', 'Priority listing queue', 'Priority support'],
     },
     {
       tier: 'Flock',
-      price: annual ? '590' : '59',
-      annualMonthly: '49',
-      description: 'For high-volume sellers and small teams.',
+      price: annual ? '566' : '59',
+      annualMonthly: '47',
+      postLaunchPrice: '69',
+      description: 'For small teams and vintage shops.',
       limit: 'Unlimited',
       featured: false,
-      features: ['Everything in Forager', '3 team seats', 'Sourcing analytics', 'Priority support', 'API access', 'Custom Shopify storefront'],
+      features: ['Everything in Soar', '3 team seats', 'Shared inventory', 'API access', 'Custom Shopify storefront'],
     },
   ]
 
   return (
     <>
+      {/* FOUNDING FLOCK BANNER */}
+      {founding && (
+        <div className="mb-8 text-center">
+          <div className="inline-block rounded-full bg-[#e8dcc2] text-[#7a5a2a] px-4 py-2 text-xs font-medium">
+            Founding Flock — lock in today's prices for life. Offer ends 30 June 2026.
+          </div>
+        </div>
+      )}
+
       {/* BILLING TOGGLE */}
       <div className="flex justify-center items-center gap-4 mb-12">
         <button onClick={() => setAnnual(false)} className={`text-xs font-medium ${!annual ? 'text-ink' : 'text-ink-lt'}`}>Monthly</button>
@@ -100,12 +140,12 @@ export function PricingSection() {
       </div>
 
       {/* PRICING CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 pt-4 max-w-6xl mx-auto">
         {plans.map((plan, i) => {
           const delay = ((i % 4) + 1) as 1 | 2 | 3 | 4
           return (
             <Reveal key={i} delay={delay}>
-              <PricingCard {...plan} isAnnual={annual} />
+              <PricingCard {...plan} isAnnual={annual} founding={founding} />
             </Reveal>
           )
         })}

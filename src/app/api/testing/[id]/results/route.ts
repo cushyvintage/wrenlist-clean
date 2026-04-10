@@ -55,11 +55,12 @@ export const PATCH = withAuth(async (req: NextRequest, user, params) => {
   if (resultError) return ApiResponseHelper.error(resultError.message, 500)
   if (!result) return ApiResponseHelper.notFound('Test result not found')
 
-  // Recompute run counts
+  // Recompute run counts (defense-in-depth: scope to user as well as run)
   const { data: allResults } = await db
     .from('test_results')
     .select('status')
     .eq('run_id', runId)
+    .eq('user_id', user.id)
 
   if (allResults) {
     const counts = {

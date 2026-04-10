@@ -3,12 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import type { PlanId } from '@/types'
 import type { User, SupabaseClient } from '@supabase/supabase-js'
+import { PLAN_LIMITS as CONFIG_PLAN_LIMITS } from '@/config/plans'
 
+// Derive numeric limits from config (null -> effectively unlimited)
 const PLAN_LIMITS: Record<PlanId, number> = {
-  free: 5,
-  nester: 50,
-  forager: 500,
-  flock: 999999,
+  free:     CONFIG_PLAN_LIMITS.free.finds ?? 999999,
+  nester:   CONFIG_PLAN_LIMITS.nester.finds ?? 999999,
+  flourish: CONFIG_PLAN_LIMITS.flourish.finds ?? 999999,
+  forager:  CONFIG_PLAN_LIMITS.forager.finds ?? 999999,
+  soar:     CONFIG_PLAN_LIMITS.soar.finds ?? 999999,
+  flock:    CONFIG_PLAN_LIMITS.flock.finds ?? 999999,
 }
 
 /**
@@ -78,23 +82,35 @@ export async function GET(req: NextRequest) {
       user.user_metadata?.name ||
       null
 
-    // Fetch inventory + listing stats in parallel
-    const [findsResult, pmdResult] = await Promise.all([
+    // Fetch inventory + listing + connection stats in parallel.
+    // product_marketplace_data has no user_id column — it links via find_id → finds.user_id.
+    // connected_platforms counts DB-backed OAuth connections only (eBay, Shopify).
+    // Cookie-based marketplaces (Vinted, Depop, Etsy, etc.) have no server-side
+    // signal — the extension checks those at runtime.
+    const [findsResult, pmdListedResult, ebayConn, shopifyConn] = await Promise.all([
       supabase
         .from('finds')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id),
-      // Single query: get marketplace for listed items (need marketplace for unique count)
       supabase
         .from('product_marketplace_data')
-        .select('marketplace')
-        .eq('user_id', user.id)
-        .eq('status', 'listed'),
+        .select('id, finds!inner(user_id)', { count: 'exact', head: true })
+        .eq('status', 'listed')
+        .eq('finds.user_id', user.id),
+      supabase
+        .from('ebay_tokens')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+      supabase
+        .from('shopify_connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
     ])
 
-    const listedRows = pmdResult.data ?? []
-    const activeListings = listedRows.length
-    const connectedPlatforms = [...new Set(listedRows.map(r => r.marketplace))].length
+    const activeListings = pmdListedResult.count ?? 0
+    const connectedPlatforms =
+      (ebayConn.count && ebayConn.count > 0 ? 1 : 0) +
+      (shopifyConn.count && shopifyConn.count > 0 ? 1 : 0)
 
     return NextResponse.json({
       user: {

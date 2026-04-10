@@ -8,7 +8,7 @@ import { ApiResponseHelper } from '@/lib/api-response'
  *
  * Response includes:
  * - All profile fields (id, plan, finds_this_month, etc.)
- * - finds_limit: derived from plan (free: 10, nester: 100, forager: 500, flock: null)
+ * - finds_limit: derived from plan (see src/config/plans.ts PLAN_LIMITS)
  */
 export const GET = withAuth(async (_req, user) => {
   try {
@@ -27,17 +27,11 @@ export const GET = withAuth(async (_req, user) => {
       return ApiResponseHelper.notFound('Profile not found')
     }
 
-    // Add finds_limit based on plan
-    const planLimits: Record<string, number | null> = {
-      free: 10,
-      nester: 100,
-      forager: 500,
-      flock: null,
-    }
-
+    // Add finds_limit based on plan (single source of truth: src/config/plans.ts)
+    const { PLAN_LIMITS } = await import('@/config/plans')
     const enrichedData = {
       ...data,
-      finds_limit: planLimits[data.plan] ?? null,
+      finds_limit: PLAN_LIMITS[data.plan as keyof typeof PLAN_LIMITS]?.finds ?? null,
     }
 
     return ApiResponseHelper.success({ data: enrichedData })

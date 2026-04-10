@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -65,7 +64,6 @@ export default function InventoryItemHeader({
   onCrosslistConfirm,
   onCrosslistCancel,
 }: InventoryItemHeaderProps) {
-  const router = useRouter()
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledFor, setScheduledFor] = useState('')
   const [stalePolicy, setStalePolicy] = useState<'run_if_late' | 'skip_if_late'>('run_if_late')
@@ -89,12 +87,6 @@ export default function InventoryItemHeader({
       style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}
     >
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push('/finds')}
-          className="text-sm text-sage hover:text-sage-dk transition"
-        >
-          ← Back
-        </button>
         <h1 className="text-2xl font-medium" style={{ color: '#1E2E1C' }}>
           {find.name}
         </h1>

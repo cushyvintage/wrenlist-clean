@@ -160,10 +160,10 @@ export function FindEditMode({
       )}
 
       {/* Form grid */}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left: Marketplace selector */}
         <div
-          className="col-span-2 space-y-4 p-4 rounded sticky top-24 h-fit"
+          className="col-span-1 lg:col-span-2 space-y-4 p-4 rounded lg:sticky lg:top-24 h-fit"
           style={{
             backgroundColor: '#F5F0E8',
             borderWidth: '1px',
@@ -198,7 +198,7 @@ export function FindEditMode({
         </div>
 
         {/* Center: Form fields */}
-        <div className="col-span-7 space-y-6">
+        <div className="col-span-1 lg:col-span-7 space-y-6">
           {/* Photos */}
           <div>
             <label className="text-xs uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>
@@ -578,7 +578,7 @@ export function FindEditMode({
 
         {/* Right: Internal fields */}
         <div
-          className="col-span-3 space-y-4 p-4 rounded sticky top-24 h-fit"
+          className="col-span-1 lg:col-span-3 space-y-4 p-4 rounded lg:sticky lg:top-24 h-fit"
           style={{
             backgroundColor: '#F5F0E8',
             borderWidth: '1px',
@@ -656,7 +656,7 @@ export function FindEditMode({
 
         {/* Edit mode action bar */}
         <div
-          className="col-span-12 sticky bottom-0 flex items-center justify-between gap-2 p-4 rounded mt-6"
+          className="col-span-1 lg:col-span-12 sticky bottom-0 flex items-center justify-between gap-2 p-4 rounded mt-6"
           style={{
             backgroundColor: '#F5F0E8',
             borderWidth: '1px',

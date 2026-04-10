@@ -60,7 +60,7 @@ function InventoryPageContent() {
   const [markSoldPrice, setMarkSoldPrice] = useState('')
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0, unpriced: 0 })
+  const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0, unpriced: 0, aging: 0 })
   const [stashes, setStashes] = useState<Array<{ id: string; name: string; item_count: number }>>([])
   const [stashFilter, setStashFilter] = useState<string>('all')
   const [showBulkMoveStash, setShowBulkMoveStash] = useState(false)
@@ -148,8 +148,8 @@ function InventoryPageContent() {
         if (selectedStatus && selectedStatus !== 'all' && selectedStatus !== 'aging' && selectedStatus !== 'unpriced') {
           params.set('status', selectedStatus)
         }
-        if (selectedStatus === 'unpriced') {
-          params.set('filter', 'unpriced')
+        if (selectedStatus === 'unpriced' || selectedStatus === 'aging') {
+          params.set('filter', selectedStatus)
         }
         if (stashFilter && stashFilter !== 'all') {
           params.set('stash_id', stashFilter)
@@ -173,6 +173,7 @@ function InventoryPageContent() {
             on_hold: c.on_hold ?? 0,
             sold: c.sold ?? 0,
             unpriced: c.unpriced ?? 0,
+            aging: c.aging ?? 0,
           })
         }
       } catch (err) {
@@ -222,17 +223,14 @@ function InventoryPageContent() {
     }
   }
 
-  // Aging filter is still client-side (needs date calculation).
-  // Unpriced is server-side via ?filter=unpriced — so when it's active the
-  // server already returns only unpriced items; filteredFinds is just finds.
-  const filteredFinds =
-    selectedStatus === 'aging'
-      ? finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30)
-      : finds
+  // Aging and unpriced are both server-side filters now — when they're
+  // active the server already returns only matching items, so the view is
+  // just `finds`. No client-side filtering needed.
+  const filteredFinds = finds
 
-  // Counts for badges — aging stays client-side (page-scoped), unpriced
-  // comes from the server so the pill reflects the real total.
-  const agingCount = finds.filter((find) => find.status === 'listed' && getDaysListed(find) >= 30).length
+  // Counts come from parallel head:true queries on the finds API so every
+  // pill reflects the authoritative total, not the current page.
+  const agingCount = statusCounts.aging
   const unpricedCount = statusCounts.unpriced
 
   const toggleItemSelection = (id: string) => {

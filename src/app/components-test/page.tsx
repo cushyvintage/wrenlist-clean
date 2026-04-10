@@ -108,7 +108,7 @@ export default function ComponentsTest() {
             <h2 className="text-lg font-medium text-ink mb-3">4. InsightCard</h2>
             <InsightCard
               text="Your house clearance finds convert 40% faster than charity shop finds."
-              link={{ text: 'see full analysis →' }}
+              link={{ text: 'see full analysis →', onClick: () => {} }}
             />
           </div>
 

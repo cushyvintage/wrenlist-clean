@@ -40,9 +40,17 @@ export async function POST(request: NextRequest) {
         monthly: process.env.STRIPE_PRICE_NESTER_MONTHLY!,
         annual: process.env.STRIPE_PRICE_NESTER_ANNUAL!,
       },
+      flourish: {
+        monthly: process.env.STRIPE_PRICE_FLOURISH_MONTHLY!,
+        annual: process.env.STRIPE_PRICE_FLOURISH_ANNUAL!,
+      },
       forager: {
         monthly: process.env.STRIPE_PRICE_FORAGER_MONTHLY!,
         annual: process.env.STRIPE_PRICE_FORAGER_ANNUAL!,
+      },
+      soar: {
+        monthly: process.env.STRIPE_PRICE_SOAR_MONTHLY!,
+        annual: process.env.STRIPE_PRICE_SOAR_ANNUAL!,
       },
       flock: {
         monthly: process.env.STRIPE_PRICE_FLOCK_MONTHLY!,
