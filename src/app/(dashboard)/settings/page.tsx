@@ -24,7 +24,6 @@ interface PlatformConnection {
   platform: string
   status: 'connected' | 'not_connected' | 'error'
   accountName?: string
-  lastSync?: string
 }
 
 interface ProfileResponse {
@@ -59,7 +58,7 @@ export default function SettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Load profile data on mount
+  // Load profile + workspace data on mount (single fetch, populates both)
   useEffect(() => {
     const loadProfileData = async () => {
       try {
@@ -74,11 +73,17 @@ export default function SettingsPage() {
           fullName: profile.full_name || '',
           avatar: null,
         })
+        setWorkspaceData({
+          businessName: profile.business_name || '',
+          phone: profile.phone || '',
+          address: profile.address || '',
+        })
       } catch (error) {
         console.error('Failed to load profile:', error)
         // Keep defaults on error
       } finally {
         setIsLoadingProfile(false)
+        setIsLoadingWorkspace(false)
       }
     }
 
@@ -120,25 +125,6 @@ export default function SettingsPage() {
 
   const [platforms, setPlatforms] = useState<PlatformConnection[]>([])
   const [isLoadingPlatforms, setIsLoadingPlatforms] = useState(true)
-
-  // Load workspace data from profile
-  useEffect(() => {
-    const loadWorkspace = async () => {
-      try {
-        const profile = await fetchApi<ProfileResponse>('/api/profiles/me')
-        setWorkspaceData({
-          businessName: profile.business_name || '',
-          phone: profile.phone || '',
-          address: profile.address || '',
-        })
-      } catch (error) {
-        console.error('Failed to load workspace:', error)
-      } finally {
-        setIsLoadingWorkspace(false)
-      }
-    }
-    loadWorkspace()
-  }, [])
 
   // Load real platform connection statuses from single endpoint
   useEffect(() => {
@@ -218,20 +204,18 @@ export default function SettingsPage() {
     }
   }
 
-  const formatLastSync = (dateString?: string) => {
-    if (!dateString) return '—'
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
-    )
+  const handleDataExport = () => {
+    window.location.href =
+      'mailto:support@wrenlist.com?subject=GDPR%20Data%20Export%20Request&body=Please%20send%20me%20a%20copy%20of%20all%20data%20you%20hold%20for%20my%20account.'
+  }
 
-    if (diffMinutes < 1) return 'Just now'
-    if (diffMinutes < 60) return `${diffMinutes}m ago`
-    const diffHours = Math.floor(diffMinutes / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
-    const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
+  const handleDeleteAccount = () => {
+    const confirmed = confirm(
+      'Deleting your account is permanent and cannot be undone. All your finds, listings, and data will be erased.\n\nWe process deletion requests manually to prevent mistakes. Click OK to open a pre-filled email to support.'
+    )
+    if (!confirmed) return
+    window.location.href =
+      'mailto:support@wrenlist.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
   }
 
   return (
@@ -475,6 +459,10 @@ export default function SettingsPage() {
               </p>
             </div>
 
+            {isLoadingPlatforms && (
+              <p className="text-sm text-sage-dim">Loading connections…</p>
+            )}
+
             {/* Platform List */}
             <div className="space-y-4">
               {platforms.map((platform, idx) => (
@@ -488,20 +476,12 @@ export default function SettingsPage() {
                         {platform.platform}
                       </h3>
                       {platform.status === 'connected' ? (
-                        <div className="space-y-1 text-xs text-ink-lt">
-                          <p>
-                            Account:{' '}
-                            <span className="font-mono text-ink">
-                              {platform.accountName}
-                            </span>
-                          </p>
-                          <p>
-                            Last sync:{' '}
-                            <span className="text-sage-dim">
-                              {formatLastSync(platform.lastSync)}
-                            </span>
-                          </p>
-                        </div>
+                        <p className="text-xs text-ink-lt">
+                          Account:{' '}
+                          <span className="font-mono text-ink">
+                            {platform.accountName || '—'}
+                          </span>
+                        </p>
                       ) : (
                         <p className="text-xs text-sage-dim">
                           Not connected
@@ -510,26 +490,35 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      {platform.status === 'connected' ? (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="border-sage/22 bg-cream-md text-ink-lt hover:bg-cream"
-                          >
-                            Disconnect
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button variant="primary" size="sm">
-                          Connect
-                        </Button>
-                      )}
+                      <Button
+                        variant={platform.status === 'connected' ? 'ghost' : 'primary'}
+                        size="sm"
+                        onClick={() => router.push('/platform-connect')}
+                        className={
+                          platform.status === 'connected'
+                            ? 'border-sage/22 bg-cream-md text-ink-lt hover:bg-cream'
+                            : undefined
+                        }
+                      >
+                        {platform.status === 'connected' ? 'Manage' : 'Connect'}
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+
+            <p className="text-xs text-sage-dim">
+              Connecting, disconnecting, and syncing are all handled on the{' '}
+              <button
+                type="button"
+                onClick={() => router.push('/platform-connect')}
+                className="underline hover:text-sage"
+              >
+                platform connections page
+              </button>
+              .
+            </p>
           </div>
         )}
 
@@ -571,6 +560,7 @@ export default function SettingsPage() {
               </a>
               <Button
                 variant="ghost"
+                onClick={handleDataExport}
                 className="w-full justify-start bg-cream-md text-ink hover:bg-cream"
               >
                 Data Export (GDPR)
@@ -580,7 +570,7 @@ export default function SettingsPage() {
             {/* Danger Zone */}
             <div className="border-t border-sage/14 pt-6">
               <h3 className="font-medium text-red text-sm mb-4">Danger Zone</h3>
-              <Button variant="danger">
+              <Button variant="danger" onClick={handleDeleteAccount}>
                 Delete Account
               </Button>
               <p className="text-xs text-ink-lt mt-2">
