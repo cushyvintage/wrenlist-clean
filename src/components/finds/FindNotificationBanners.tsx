@@ -125,7 +125,7 @@ export function FindNotificationBanners({
       {/* Save success banner */}
       {saveSuccess && (
         <div
-          className="p-3 rounded text-sm font-medium"
+          className="p-3 rounded text-sm"
           style={{
             backgroundColor: 'rgba(61,92,58,.1)',
             borderWidth: '1px',
@@ -133,7 +133,12 @@ export function FindNotificationBanners({
             color: '#3D5C3A',
           }}
         >
-          Changes saved
+          <span className="font-medium">Changes saved.</span>
+          {findStatus === 'listed' && (
+            <span className="ml-1" style={{ color: '#4A5E48' }}>
+              Marketplace listings won&apos;t update automatically — relist or re-crosslist to push changes live.
+            </span>
+          )}
         </div>
       )}
 
