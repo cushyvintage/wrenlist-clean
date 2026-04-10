@@ -122,7 +122,6 @@ export default function RegisterPage() {
           <h1 className="font-serif text-3xl text-ink mb-2">Wrenlist</h1>
           <p className="text-ink-lt text-sm">The operating system for thrifters</p>
         </Link>
-        </div>
 
         {/* Beta banner */}
         <div className="mb-6 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-md text-center flex items-center justify-center gap-2">
