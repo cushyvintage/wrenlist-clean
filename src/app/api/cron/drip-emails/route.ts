@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/client'
 import { buildDripDay2FirstFindEmail } from '@/lib/email/templates/drip-day2-first-find'
+import { buildDripDay5ConnectPlatformEmail } from '@/lib/email/templates/drip-day5-connect-platform'
+import { buildDripDay14FeedbackEmail } from '@/lib/email/templates/drip-day14-feedback'
+import {
+  getOrCreateUnsubscribeToken,
+  buildUnsubscribeUrl,
+} from '@/lib/email/unsubscribe'
 
 /**
  * GET /api/cron/drip-emails
@@ -42,68 +48,146 @@ interface DripDefinition {
   /**
    * Returns users eligible for this template. Must NOT filter out users
    * who already received it — the caller dedupes via email_sends.
+   * Candidate queries SHOULD filter out users with profiles.unsubscribed_at
+   * set so we never send to opted-out users.
    */
   findCandidates: (admin: SupabaseClient) => Promise<DripCandidate[]>
-  build: (args: { firstName: string | null; appUrl: string }) => {
+  build: (args: {
+    firstName: string | null
+    appUrl: string
+    unsubscribeUrl: string | null
+  }) => {
     subject: string
     html: string
     text: string
   }
 }
 
+/**
+ * Shared: list user ids whose profiles are within a signup-age window AND
+ * who are still opted in. Returns the joined user_id/full_name. Email is
+ * fetched separately per candidate (see resolveEmails).
+ */
+async function findProfilesInSignupWindow(
+  admin: SupabaseClient,
+  minAgeHours: number,
+  maxAgeHours: number,
+): Promise<Array<{ user_id: string; full_name: string | null }>> {
+  const lowerBound = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000).toISOString()
+  const upperBound = new Date(Date.now() - minAgeHours * 60 * 60 * 1000).toISOString()
+
+  const { data } = await admin
+    .from('profiles')
+    .select('user_id, full_name, created_at, unsubscribed_at')
+    .gte('created_at', lowerBound)
+    .lt('created_at', upperBound)
+    .is('unsubscribed_at', null)
+
+  return (data || []).map((p: { user_id: string; full_name: string | null }) => ({
+    user_id: p.user_id,
+    full_name: p.full_name,
+  }))
+}
+
+async function resolveEmail(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await admin.auth.admin.getUserById(userId)
+  return data?.user?.email || null
+}
+
 const DRIP_TEMPLATES: DripDefinition[] = [
   {
     slug: 'drip_day2_first_find',
-    description: '48h after signup, if the user has no finds yet',
+    description:
+      '48–96h after signup, sent to users who still have zero finds.',
     findCandidates: async (admin) => {
-      // Users who signed up between 48 and 96 hours ago and have zero finds.
-      // The 96-hour upper bound prevents backfilling ancient inactive users
-      // the first time the cron runs in production.
-      const lowerBound = new Date(Date.now() - 96 * 60 * 60 * 1000).toISOString()
-      const upperBound = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-
-      // Fetch profiles + their email from auth.users via a left join.
-      // We can't join directly from profiles to auth.users via PostgREST
-      // (Supabase blocks that), so we do it in two queries.
-      const { data: profiles } = await admin
-        .from('profiles')
-        .select('user_id, full_name, created_at')
-        .gte('created_at', lowerBound)
-        .lt('created_at', upperBound)
-
-      if (!profiles || profiles.length === 0) return []
-
+      const profiles = await findProfilesInSignupWindow(admin, 48, 96)
       const candidates: DripCandidate[] = []
 
-      for (const profile of profiles as Array<{
-        user_id: string
-        full_name: string | null
-      }>) {
-        // Skip if they already have a find
+      for (const p of profiles) {
         const { count: findCount } = await admin
           .from('finds')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', profile.user_id)
+          .eq('user_id', p.user_id)
 
         if ((findCount ?? 0) > 0) continue
 
-        // Fetch the auth.users email
-        const { data: userResp } = await admin.auth.admin.getUserById(
-          profile.user_id,
-        )
-        const email = userResp?.user?.email
+        const email = await resolveEmail(admin, p.user_id)
         if (!email) continue
 
-        candidates.push({
-          user_id: profile.user_id,
-          email,
-          full_name: profile.full_name,
-        })
+        candidates.push({ user_id: p.user_id, email, full_name: p.full_name })
       }
 
       return candidates
     },
     build: buildDripDay2FirstFindEmail,
+  },
+
+  {
+    slug: 'drip_day5_connect_platform',
+    description:
+      '5–8 days after signup, sent to users with at least one find but no marketplace connected.',
+    findCandidates: async (admin) => {
+      const profiles = await findProfilesInSignupWindow(admin, 5 * 24, 8 * 24)
+      const candidates: DripCandidate[] = []
+
+      for (const p of profiles) {
+        // Must have at least one find
+        const { count: findCount } = await admin
+          .from('finds')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', p.user_id)
+
+        if ((findCount ?? 0) === 0) continue
+
+        // Must have no connected marketplace. We treat "connected" as
+        // "has at least one row in ebay_tokens OR shopify_connections".
+        // The Vinted / extension-based platforms have no server-side
+        // token storage, so we can't check them here — that's fine,
+        // this template is still useful for API-based platforms.
+        const [{ count: ebayCount }, { count: shopifyCount }] = await Promise.all([
+          admin
+            .from('ebay_tokens')
+            .select('user_id', { count: 'exact', head: true })
+            .eq('user_id', p.user_id),
+          admin
+            .from('shopify_connections')
+            .select('user_id', { count: 'exact', head: true })
+            .eq('user_id', p.user_id),
+        ])
+
+        if ((ebayCount ?? 0) > 0 || (shopifyCount ?? 0) > 0) continue
+
+        const email = await resolveEmail(admin, p.user_id)
+        if (!email) continue
+
+        candidates.push({ user_id: p.user_id, email, full_name: p.full_name })
+      }
+
+      return candidates
+    },
+    build: buildDripDay5ConnectPlatformEmail,
+  },
+
+  {
+    slug: 'drip_day14_feedback',
+    description:
+      '14–18 days after signup, sent to everyone still opted in. Pure feedback ask, no CTA.',
+    findCandidates: async (admin) => {
+      const profiles = await findProfilesInSignupWindow(admin, 14 * 24, 18 * 24)
+      const candidates: DripCandidate[] = []
+
+      for (const p of profiles) {
+        const email = await resolveEmail(admin, p.user_id)
+        if (!email) continue
+        candidates.push({ user_id: p.user_id, email, full_name: p.full_name })
+      }
+
+      return candidates
+    },
+    build: buildDripDay14FeedbackEmail,
   },
 ]
 
@@ -181,10 +265,18 @@ export async function GET(request: NextRequest) {
           continue
         }
 
+        // Generate/lookup the user's unsubscribe token so the template
+        // can embed a working unsubscribe link. If the token helper
+        // fails for any reason we still send without the link — a
+        // missing unsub link is better than a missed drip.
+        const unsubToken = await getOrCreateUnsubscribeToken(candidate.user_id)
+        const unsubscribeUrl = unsubToken ? buildUnsubscribeUrl(unsubToken) : null
+
         // Build + send
         const tpl = template.build({
           firstName: getFirstName(candidate.full_name),
           appUrl: APP_URL,
+          unsubscribeUrl,
         })
 
         const sendResult = await sendEmail({

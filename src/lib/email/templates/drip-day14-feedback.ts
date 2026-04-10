@@ -1,17 +1,16 @@
 /**
- * Drip email #1 — sent 48 hours after signup to users who haven't added
- * their first find yet. Intentionally low-pressure, signed personally by
- * Dom, and with a single clear CTA.
+ * Drip email #3 — sent 14-18 days after signup to anyone who's still
+ * around (regardless of whether they've added a find or connected a
+ * platform). Pure feedback ask, no CTA, signed personally.
  *
- * Template slug: "drip_day2_first_find"
+ * Template slug: "drip_day14_feedback"
  */
-export function buildDripDay2FirstFindEmail(args: {
+export function buildDripDay14FeedbackEmail(args: {
   firstName: string | null
   appUrl: string
   unsubscribeUrl: string | null
 }): { subject: string; html: string; text: string } {
   const greeting = args.firstName ? `Hi ${args.firstName},` : 'Hi there,'
-  const addFindUrl = `${args.appUrl}/add-find`
   const unsubFragmentHtml = args.unsubscribeUrl
     ? ` &nbsp;·&nbsp; <a href="${args.unsubscribeUrl}" style="color:#9a9a9a;text-decoration:underline;">Unsubscribe</a>`
     : ''
@@ -20,8 +19,8 @@ export function buildDripDay2FirstFindEmail(args: {
     : ''
 
   const subject = args.firstName
-    ? `${args.firstName}, ready for your first Wrenlist find?`
-    : 'Ready for your first Wrenlist find?'
+    ? `Quick question for you, ${args.firstName}`
+    : 'Quick question for you'
 
   const html = /* html */ `<!DOCTYPE html>
 <html>
@@ -39,27 +38,19 @@ export function buildDripDay2FirstFindEmail(args: {
             <td style="padding:40px;">
               <h2 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">${greeting}</h2>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#4a4a4a;">
-                Noticed you signed up a couple of days ago but haven't added a find yet. That's totally fine — no pressure, beta's on for three months.
+                You've had Wrenlist for a couple of weeks now. I wanted to check in — not to sell you on anything, I just want to know what's working and what isn't.
               </p>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#4a4a4a;">
-                But in case you're stuck: the fastest way to get a feel for Wrenlist is to grab one thing off your shelf, snap a photo, and let the AI fill in the rest. Title, description, category, suggested price — it takes about 30 seconds.
+                <strong>One question:</strong> if you had to describe Wrenlist to another reseller in one sentence, what would you say? And if it's "I haven't really used it yet", that's fine too — tell me why.
               </p>
-
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
-                <tr>
-                  <td align="center" style="background-color:#5a7a4a;border-radius:6px;">
-                    <a href="${addFindUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:500;color:#ffffff;text-decoration:none;">
-                      Add your first find →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#7a7a7a;">
-                If something's blocking you or not clicking, hit reply and tell me — I want to fix it.
+              <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#4a4a4a;">
+                Just hit reply. Every beta user's answer shapes what I build next.
               </p>
-              <p style="margin:0;font-size:14px;line-height:1.6;color:#7a7a7a;">
-                — Dom
+              <p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:#4a4a4a;">
+                Thanks for being here,
+              </p>
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#4a4a4a;">
+                Dom
               </p>
             </td>
           </tr>
@@ -79,15 +70,14 @@ export function buildDripDay2FirstFindEmail(args: {
 
   const text = `${greeting}
 
-Noticed you signed up a couple of days ago but haven't added a find yet. That's totally fine — no pressure, beta's on for three months.
+You've had Wrenlist for a couple of weeks now. I wanted to check in — not to sell you on anything, I just want to know what's working and what isn't.
 
-But in case you're stuck: the fastest way to get a feel for Wrenlist is to grab one thing off your shelf, snap a photo, and let the AI fill in the rest. Title, description, category, suggested price — it takes about 30 seconds.
+One question: if you had to describe Wrenlist to another reseller in one sentence, what would you say? And if it's "I haven't really used it yet", that's fine too — tell me why.
 
-Add your first find: ${addFindUrl}
+Just hit reply. Every beta user's answer shapes what I build next.
 
-If something's blocking you or not clicking, hit reply and tell me — I want to fix it.
-
-— Dom${unsubFragmentText}
+Thanks for being here,
+Dom${unsubFragmentText}
 `
 
   return { subject, html, text }

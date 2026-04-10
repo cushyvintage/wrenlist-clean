@@ -1,17 +1,16 @@
 /**
- * Drip email #1 — sent 48 hours after signup to users who haven't added
- * their first find yet. Intentionally low-pressure, signed personally by
- * Dom, and with a single clear CTA.
+ * Drip email #2 — sent 5-7 days after signup to users who have added
+ * at least one find but still haven't connected a marketplace.
  *
- * Template slug: "drip_day2_first_find"
+ * Template slug: "drip_day5_connect_platform"
  */
-export function buildDripDay2FirstFindEmail(args: {
+export function buildDripDay5ConnectPlatformEmail(args: {
   firstName: string | null
   appUrl: string
   unsubscribeUrl: string | null
 }): { subject: string; html: string; text: string } {
   const greeting = args.firstName ? `Hi ${args.firstName},` : 'Hi there,'
-  const addFindUrl = `${args.appUrl}/add-find`
+  const connectUrl = `${args.appUrl}/platform-connect`
   const unsubFragmentHtml = args.unsubscribeUrl
     ? ` &nbsp;·&nbsp; <a href="${args.unsubscribeUrl}" style="color:#9a9a9a;text-decoration:underline;">Unsubscribe</a>`
     : ''
@@ -19,9 +18,7 @@ export function buildDripDay2FirstFindEmail(args: {
     ? `\n\nUnsubscribe from follow-ups: ${args.unsubscribeUrl}`
     : ''
 
-  const subject = args.firstName
-    ? `${args.firstName}, ready for your first Wrenlist find?`
-    : 'Ready for your first Wrenlist find?'
+  const subject = 'One step away from your first sale'
 
   const html = /* html */ `<!DOCTYPE html>
 <html>
@@ -39,24 +36,24 @@ export function buildDripDay2FirstFindEmail(args: {
             <td style="padding:40px;">
               <h2 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">${greeting}</h2>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#4a4a4a;">
-                Noticed you signed up a couple of days ago but haven't added a find yet. That's totally fine — no pressure, beta's on for three months.
+                Good work adding your finds — they're sitting in Wrenlist right now, catalogued and ready.
               </p>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#4a4a4a;">
-                But in case you're stuck: the fastest way to get a feel for Wrenlist is to grab one thing off your shelf, snap a photo, and let the AI fill in the rest. Title, description, category, suggested price — it takes about 30 seconds.
+                Next step: connect a marketplace. Wrenlist publishes to Vinted, eBay, Etsy, and more straight from your inventory, so once a platform's linked, going from "listed" to "sold" happens without you touching the marketplace UI.
               </p>
 
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
                 <tr>
                   <td align="center" style="background-color:#5a7a4a;border-radius:6px;">
-                    <a href="${addFindUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:500;color:#ffffff;text-decoration:none;">
-                      Add your first find →
+                    <a href="${connectUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:500;color:#ffffff;text-decoration:none;">
+                      Connect a marketplace →
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#7a7a7a;">
-                If something's blocking you or not clicking, hit reply and tell me — I want to fix it.
+                Vinted connects automatically via the Wrenlist Chrome extension — no API keys, no setup. eBay takes about two minutes via OAuth. The rest work the same way.
               </p>
               <p style="margin:0;font-size:14px;line-height:1.6;color:#7a7a7a;">
                 — Dom
@@ -79,13 +76,13 @@ export function buildDripDay2FirstFindEmail(args: {
 
   const text = `${greeting}
 
-Noticed you signed up a couple of days ago but haven't added a find yet. That's totally fine — no pressure, beta's on for three months.
+Good work adding your finds — they're sitting in Wrenlist right now, catalogued and ready.
 
-But in case you're stuck: the fastest way to get a feel for Wrenlist is to grab one thing off your shelf, snap a photo, and let the AI fill in the rest. Title, description, category, suggested price — it takes about 30 seconds.
+Next step: connect a marketplace. Wrenlist publishes to Vinted, eBay, Etsy, and more straight from your inventory, so once a platform's linked, going from "listed" to "sold" happens without you touching the marketplace UI.
 
-Add your first find: ${addFindUrl}
+Connect a marketplace: ${connectUrl}
 
-If something's blocking you or not clicking, hit reply and tell me — I want to fix it.
+Vinted connects automatically via the Wrenlist Chrome extension — no API keys, no setup. eBay takes about two minutes via OAuth. The rest work the same way.
 
 — Dom${unsubFragmentText}
 `
