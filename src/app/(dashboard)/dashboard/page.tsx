@@ -194,7 +194,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Recent inventory */}
         <div className="lg:col-span-2">
-          <Panel title="Recent inventory" action={{ text: 'View all →', onClick: () => router.push('/finds') }}>
+          <Panel title="Recent finds" action={{ text: 'View all →', onClick: () => router.push('/finds') }}>
             {findsList === 'empty' ? (
               <div className="py-8 text-center">
                 <p className="text-ink-lt mb-4">No items in your inventory yet</p>

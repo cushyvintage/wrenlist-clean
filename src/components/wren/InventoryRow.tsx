@@ -69,8 +69,8 @@ export function InventoryRow({ find, onClick }: InventoryRowProps) {
           </div>
 
           {/* Details */}
-          <div>
-            <div className="font-medium text-ink text-sm">{find.name}</div>
+          <div className="min-w-0">
+            <div className="font-medium text-ink text-sm truncate max-w-[140px] sm:max-w-none">{find.name}</div>
             <div className="text-xs text-ink-lt">
               {formatCategory(find.category)}
               {find.source_name && ` · ${find.source_name}`}
