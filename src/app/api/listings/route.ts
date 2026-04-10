@@ -65,79 +65,80 @@ export const GET = withAuth(async (req, user) => {
     const limit = parseInt(searchParams.get('limit') || '5000', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
-    // 1. Query product_marketplace_data joined with finds
-    let query = supabase
-      .from('product_marketplace_data')
-      .select(`
-        id,
-        find_id,
-        marketplace,
-        platform_listing_id,
-        platform_listing_url,
-        listing_price,
-        status,
-        fields,
-        error_message,
-        created_at,
-        updated_at,
-        finds!inner (
+    // 1. Query product_marketplace_data joined with finds — paginate to bypass
+    // Supabase's default 1000-row REST cap.
+    const PAGE_SIZE = 1000
+    type MarketplaceListingRow = MarketplaceListing
+    const marketplaceListings: MarketplaceListingRow[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      let query = supabase
+        .from('product_marketplace_data')
+        .select(`
           id,
-          user_id,
-          name,
-          photos,
-          cost_gbp,
-          asking_price_gbp,
-          category,
-          brand,
-          condition,
-          description
-        )
-      `)
-      .eq('finds.user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10000)
-
-    if (marketplace && marketplace !== 'all') {
-      query = query.eq('marketplace', marketplace)
-    }
-
-    if (status && status !== 'all') {
-      query = query.eq('status', status)
-    }
-
-    const { data: marketplaceListings, error: marketplaceError } = await query
-
-    if (marketplaceError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', marketplaceError)
+          find_id,
+          marketplace,
+          platform_listing_id,
+          platform_listing_url,
+          listing_price,
+          status,
+          fields,
+          error_message,
+          created_at,
+          updated_at,
+          finds!inner (
+            id,
+            user_id,
+            name,
+            photos,
+            cost_gbp,
+            asking_price_gbp,
+            category,
+            brand,
+            condition,
+            description
+          )
+        `)
+        .eq('finds.user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
+      if (marketplace && marketplace !== 'all') query = query.eq('marketplace', marketplace)
+      if (status && status !== 'all') query = query.eq('status', status)
+      const { data: page, error: pageErr } = await query
+      if (pageErr) {
+        if (process.env.NODE_ENV !== 'production') console.error('Supabase error:', pageErr)
+        return ApiResponseHelper.internalError(pageErr.message)
       }
-      return ApiResponseHelper.internalError(marketplaceError.message)
+      if (!page || page.length === 0) break
+      marketplaceListings.push(...(page as unknown as MarketplaceListingRow[]))
+      if (page.length < PAGE_SIZE) break
     }
 
-    // 2. Query finds with status in ('listed', 'sold')
-    const { data: allFinds, error: findsError } = await supabase
-      .from('finds')
-      .select(
-        'id, user_id, name, photos, cost_gbp, asking_price_gbp, category, brand, condition, description, status, platform_fields, created_at, updated_at'
-      )
-      .eq('user_id', user.id)
-      .in('status', ['listed', 'sold'])
-      .order('created_at', { ascending: false })
-      .limit(10000)
-
-    if (findsError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', findsError)
+    // 2. Query finds with status in ('listed', 'sold') — also paginated
+    type FindRow = { id: string; user_id: string; name: string; photos: string[] | null; cost_gbp: number | null; asking_price_gbp: number | null; category: string | null; brand: string | null; condition: string | null; description: string | null; status: string; platform_fields: Record<string, unknown> | null; created_at: string; updated_at: string }
+    const allFinds: FindRow[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error: pageErr } = await supabase
+        .from('finds')
+        .select('id, user_id, name, photos, cost_gbp, asking_price_gbp, category, brand, condition, description, status, platform_fields, created_at, updated_at')
+        .eq('user_id', user.id)
+        .in('status', ['listed', 'sold'])
+        .order('created_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
+      if (pageErr) {
+        if (process.env.NODE_ENV !== 'production') console.error('Supabase error:', pageErr)
+        return ApiResponseHelper.internalError(pageErr.message)
       }
-      return ApiResponseHelper.internalError(findsError.message)
+      if (!page || page.length === 0) break
+      allFinds.push(...(page as FindRow[]))
+      if (page.length < PAGE_SIZE) break
     }
 
     // Get find IDs already in product_marketplace_data to avoid duplicates
-    const typedMarketplaceListings = (marketplaceListings || []) as MarketplaceListing[]
+    const typedMarketplaceListings = marketplaceListings
     const findIdsInMarketplaceData = new Set(typedMarketplaceListings.map((item) => item.find_id))
 
     // Filter out finds already in product_marketplace_data
-    const typedFinds = (allFinds || []) as ListingFindJoin[]
+    const typedFinds = allFinds as unknown as ListingFindJoin[]
     const finds = typedFinds.filter((find) => !findIdsInMarketplaceData.has(find.id))
 
     // 3. Map finds to ListingWithFind shape

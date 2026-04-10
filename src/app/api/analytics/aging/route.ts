@@ -23,17 +23,23 @@ export const GET = withAuth(async (_req, user) => {
     const supabase = await createSupabaseServerClient()
     const userId = user.id
 
-    // Fetch all listed finds
-    const { data: finds, error: findsError } = await supabase
-      .from('finds')
-      .select('name, category, cost_gbp, asking_price_gbp, sourced_at, created_at')
-      .eq('user_id', userId)
-      .eq('status', 'listed')
-      .limit(10000)
-
-    if (findsError) {
-      console.error('Error fetching finds:', findsError)
-      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    // Fetch all listed finds — paginate to bypass Supabase's 1000-row REST cap
+    const PAGE_SIZE = 1000
+    const finds: Array<{ name: string; category: string | null; cost_gbp: number | null; asking_price_gbp: number | null; sourced_at: string | null; created_at: string }> = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error: pageErr } = await supabase
+        .from('finds')
+        .select('name, category, cost_gbp, asking_price_gbp, sourced_at, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'listed')
+        .range(off, off + PAGE_SIZE - 1)
+      if (pageErr) {
+        console.error('Error fetching finds page:', pageErr)
+        return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+      }
+      if (!page || page.length === 0) break
+      finds.push(...page)
+      if (page.length < PAGE_SIZE) break
     }
 
     if (!finds || finds.length === 0) {

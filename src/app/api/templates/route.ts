@@ -11,18 +11,26 @@ export const GET = withAuth(async (_req, user) => {
   try {
     const supabase = await createSupabaseServerClient()
 
-    const { data, error } = await supabase
-      .from('listing_templates')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(10000)
+    // Paginate to bypass Supabase's 1000-row REST cap
+    const PAGE_SIZE = 1000
+    const templates: Array<Record<string, unknown>> = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from('listing_templates')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
 
-    if (error) {
-      return ApiResponseHelper.internalError(error.message)
+      if (error) {
+        return ApiResponseHelper.internalError(error.message)
+      }
+      if (!page || page.length === 0) break
+      templates.push(...page)
+      if (page.length < PAGE_SIZE) break
     }
 
-    return ApiResponseHelper.success(data || [])
+    return ApiResponseHelper.success(templates)
   } catch (error) {
     return ApiResponseHelper.internalError()
   }

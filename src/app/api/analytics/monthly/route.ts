@@ -16,16 +16,22 @@ export const GET = withAuth(async (_req, user) => {
     const supabase = await createSupabaseServerClient()
     const userId = user.id
 
-    // Fetch sold items with dates
-    const { data: finds, error } = await supabase
-      .from('finds')
-      .select('cost_gbp, sold_price_gbp, sold_at, sourced_at, created_at, status')
-      .eq('user_id', userId)
-      .limit(10000)
-
-    if (error) {
-      console.error('Error fetching finds:', error)
-      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    // Fetch all finds (paginated to bypass Supabase's 1000-row REST cap)
+    const PAGE_SIZE = 1000
+    const finds: Array<{ cost_gbp: number | null; sold_price_gbp: number | null; sold_at: string | null; sourced_at: string | null; created_at: string; status: string | null }> = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from('finds')
+        .select('cost_gbp, sold_price_gbp, sold_at, sourced_at, created_at, status')
+        .eq('user_id', userId)
+        .range(off, off + PAGE_SIZE - 1)
+      if (error) {
+        console.error('Error fetching finds page:', error)
+        return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+      }
+      if (!page || page.length === 0) break
+      finds.push(...page)
+      if (page.length < PAGE_SIZE) break
     }
 
     // Build last 6 months

@@ -55,18 +55,24 @@ export const GET = withAuth(async (req: NextRequest, user) => {
       periodStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
     }
 
-    // Fetch all finds for this user
-    let query = supabase
-      .from('finds')
-      .select('status, cost_gbp, asking_price_gbp, sold_price_gbp, sold_at, sourced_at, created_at')
-      .eq('user_id', userId)
-      .limit(10000)
-
-    const { data: finds, error: findsError } = await query
-
-    if (findsError) {
-      console.error('Error fetching finds:', findsError)
-      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    // Fetch all finds for this user — paginate in chunks of 1000 to bypass
+    // Supabase's default REST row cap. Without this, analytics silently truncate
+    // at 1000 items and stats like "Items sourced" plateau at that number.
+    const PAGE_SIZE = 1000
+    const finds: Array<{ status: string | null; cost_gbp: number | null; asking_price_gbp: number | null; sold_price_gbp: number | null; sold_at: string | null; sourced_at: string | null; created_at: string }> = []
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data: page, error: pageErr } = await supabase
+        .from('finds')
+        .select('status, cost_gbp, asking_price_gbp, sold_price_gbp, sold_at, sourced_at, created_at')
+        .eq('user_id', userId)
+        .range(offset, offset + PAGE_SIZE - 1)
+      if (pageErr) {
+        console.error('Error fetching finds page:', pageErr)
+        return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+      }
+      if (!page || page.length === 0) break
+      finds.push(...page)
+      if (page.length < PAGE_SIZE) break
     }
 
     // Filter by period if needed (filter in JS since we need both sold_at and sourced_at)

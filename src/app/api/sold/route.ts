@@ -91,50 +91,56 @@ export const GET = withAuth(async (req, user) => {
     // For last_tax_year, also set an end date
     const endDate = timeframe === 'last_tax_year' ? currentTaxYearStart : null
 
-    // Fetch sold finds with marketplace data including sale metadata
-    let query = supabase
-      .from('finds')
-      .select(
-        `
-        id,
-        name,
-        category,
-        cost_gbp,
-        sold_price_gbp,
-        sourced_at,
-        sold_at,
-        photos,
-        stash_id,
-        stash:stashes(id, name),
-        product_marketplace_data (
-          marketplace,
-          status,
-          fields
+    // Fetch sold finds with marketplace data — paginate to bypass 1000-row REST cap
+    const PAGE_SIZE = 1000
+    const finds: FindWithMarketplaceJoin[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      let query = supabase
+        .from('finds')
+        .select(
+          `
+          id,
+          name,
+          category,
+          cost_gbp,
+          sold_price_gbp,
+          sourced_at,
+          sold_at,
+          photos,
+          stash_id,
+          stash:stashes(id, name),
+          product_marketplace_data (
+            marketplace,
+            status,
+            fields
+          )
+          `
         )
-        `
-      )
-      .eq('user_id', user.id)
-      .eq('status', 'sold')
-      .gte('sold_at', startDate.toISOString())
-      .order('sold_at', { ascending: false })
-      .limit(10000)
+        .eq('user_id', user.id)
+        .eq('status', 'sold')
+        .gte('sold_at', startDate.toISOString())
+        .order('sold_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
 
-    // Apply end date for last_tax_year filter
-    if (endDate) {
-      query = query.lt('sold_at', endDate.toISOString())
-    }
-
-    const { data: finds, error: findsError } = await query
-
-    if (findsError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', findsError)
+      if (endDate) {
+        query = query.lt('sold_at', endDate.toISOString())
       }
-      return ApiResponseHelper.internalError()
+
+      const { data: page, error: findsError } = await query
+
+      if (findsError) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Supabase error:', findsError)
+        }
+        return ApiResponseHelper.internalError()
+      }
+      if (!page || page.length === 0) break
+      finds.push(...(page as unknown as FindWithMarketplaceJoin[]))
+      if (page.length < PAGE_SIZE) break
     }
 
     // Transform data with calculated fields
-    const items: SoldItem[] = ((finds || []) as FindWithMarketplaceJoin[]).map((find) => {
+    const items: SoldItem[] = finds.map((find) => {
       const marginPercent =
         find.cost_gbp != null && find.sold_price_gbp
           ? Math.round(((find.sold_price_gbp - find.cost_gbp) / find.sold_price_gbp) * 100)

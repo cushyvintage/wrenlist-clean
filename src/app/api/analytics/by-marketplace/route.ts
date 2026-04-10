@@ -14,16 +14,27 @@ export const GET = withAuth(async (_req, user) => {
     const supabase = await createSupabaseServerClient()
     const userId = user.id
 
-    // Fetch all marketplace data for this user
-    const { data: marketplaceData, error: mpError } = await supabase
-      .from('product_marketplace_data')
-      .select('*, finds!inner(id, user_id, status, sold_price_gbp)')
-      .eq('finds.user_id', userId)
-      .limit(10000)
-
-    if (mpError) {
-      console.error('Error fetching marketplace data:', mpError)
-      return NextResponse.json({ error: 'Failed to fetch marketplace data' }, { status: 500 })
+    // Fetch all marketplace data for this user — paginate to bypass 1000 REST cap
+    const PAGE_SIZE = 1000
+    interface MarketplaceDataJoin {
+      marketplace: string
+      status: string
+      finds: { id: string; user_id: string; status: string; sold_price_gbp: number | null }
+    }
+    const marketplaceData: MarketplaceDataJoin[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error: mpError } = await supabase
+        .from('product_marketplace_data')
+        .select('*, finds!inner(id, user_id, status, sold_price_gbp)')
+        .eq('finds.user_id', userId)
+        .range(off, off + PAGE_SIZE - 1)
+      if (mpError) {
+        console.error('Error fetching marketplace data page:', mpError)
+        return NextResponse.json({ error: 'Failed to fetch marketplace data' }, { status: 500 })
+      }
+      if (!page || page.length === 0) break
+      marketplaceData.push(...(page as unknown as MarketplaceDataJoin[]))
+      if (page.length < PAGE_SIZE) break
     }
 
     // Group by marketplace and calculate metrics
@@ -36,14 +47,8 @@ export const GET = withAuth(async (_req, user) => {
       }
     >()
 
-    interface MarketplaceDataJoin {
-      marketplace: string
-      status: string
-      finds: { id: string; user_id: string; status: string; sold_price_gbp: number | null }
-    }
-
     if (marketplaceData && Array.isArray(marketplaceData)) {
-      (marketplaceData as MarketplaceDataJoin[]).forEach((item) => {
+      marketplaceData.forEach((item) => {
         const market = item.marketplace
         const existing = marketplaceMap.get(market) || { listed: 0, sold: 0, revenue: 0 }
 

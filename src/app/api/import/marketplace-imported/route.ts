@@ -17,17 +17,25 @@ export const GET = withAuth(async (req: NextRequest, _user) => {
 
   const supabase = await createSupabaseServerClient()
 
-  const { data, error } = await supabase
-    .from('product_marketplace_data')
-    .select('platform_listing_id')
-    .eq('marketplace', marketplace)
-    .limit(10000)
+  // Paginate to bypass Supabase's 1000-row REST cap
+  const PAGE_SIZE = 1000
+  const rows: Array<{ platform_listing_id: string | null }> = []
+  for (let off = 0; ; off += PAGE_SIZE) {
+    const { data: page, error } = await supabase
+      .from('product_marketplace_data')
+      .select('platform_listing_id')
+      .eq('marketplace', marketplace)
+      .range(off, off + PAGE_SIZE - 1)
 
-  if (error) {
-    return ApiResponseHelper.internalError(`Failed to fetch imported ${marketplace} listings`)
+    if (error) {
+      return ApiResponseHelper.internalError(`Failed to fetch imported ${marketplace} listings`)
+    }
+    if (!page || page.length === 0) break
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
   }
 
-  const importedIds = (data || [])
+  const importedIds = rows
     .map(row => row.platform_listing_id)
     .filter(Boolean)
 

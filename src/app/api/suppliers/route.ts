@@ -11,21 +11,29 @@ export const GET = withAuth(async (_req, user) => {
   try {
     const supabase = await createSupabaseServerClient()
 
-    const { data, error } = await supabase
-      .from('suppliers')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10000)
+    // Paginate to bypass Supabase's 1000-row REST cap
+    const PAGE_SIZE = 1000
+    const suppliers: Supplier[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
 
-    if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', error)
+      if (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Supabase error:', error)
+        }
+        return ApiResponseHelper.internalError()
       }
-      return ApiResponseHelper.internalError()
+      if (!page || page.length === 0) break
+      suppliers.push(...(page as Supplier[]))
+      if (page.length < PAGE_SIZE) break
     }
 
-    return ApiResponseHelper.success(data as Supplier[])
+    return ApiResponseHelper.success(suppliers)
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/suppliers error:', error)

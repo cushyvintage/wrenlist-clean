@@ -15,16 +15,23 @@ export const GET = withAuth(async (_req, user) => {
     const supabase = await createSupabaseServerClient()
     const userId = user.id
 
-    // Fetch all finds for this user
-    const { data: finds, error: findsError } = await supabase
-      .from('finds')
-      .select('*')
-      .eq('user_id', userId)
-      .limit(10000)
-
-    if (findsError) {
-      console.error('Error fetching finds:', findsError)
-      return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+    // Fetch all finds for this user — paginate to bypass Supabase 1000 REST cap
+    const PAGE_SIZE = 1000
+    type FindRow = { category: string | null; status: string | null; sold_price_gbp: number | null; sourced_at: string | null; sold_at: string | null }
+    const finds: FindRow[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error: findsError } = await supabase
+        .from('finds')
+        .select('*')
+        .eq('user_id', userId)
+        .range(off, off + PAGE_SIZE - 1)
+      if (findsError) {
+        console.error('Error fetching finds page:', findsError)
+        return NextResponse.json({ error: 'Failed to fetch finds' }, { status: 500 })
+      }
+      if (!page || page.length === 0) break
+      finds.push(...(page as unknown as FindRow[]))
+      if (page.length < PAGE_SIZE) break
     }
 
     // Group by category and calculate metrics

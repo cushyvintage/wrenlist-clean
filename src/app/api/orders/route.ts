@@ -36,36 +36,43 @@ export const GET = withAuth(async (req, user) => {
   try {
     const supabase = await createSupabaseServerClient()
 
-    // Fetch finds with status='sold', join with marketplace data
-    const { data: finds, error: findsError } = await supabase
-      .from('finds')
-      .select(
-        `
-        id,
-        name,
-        sold_price_gbp,
-        cost_gbp,
-        sold_at,
-        product_marketplace_data(
-          marketplace,
-          platform_listing_url
+    // Fetch finds with status='sold', join with marketplace data — paginate to bypass 1000-row REST cap
+    const PAGE_SIZE = 1000
+    const finds: FindWithMarketplaceJoin[] = []
+    for (let off = 0; ; off += PAGE_SIZE) {
+      const { data: page, error: findsError } = await supabase
+        .from('finds')
+        .select(
+          `
+          id,
+          name,
+          sold_price_gbp,
+          cost_gbp,
+          sold_at,
+          product_marketplace_data(
+            marketplace,
+            platform_listing_url
+          )
+          `
         )
-        `
-      )
-      .eq('user_id', user.id)
-      .eq('status', 'sold')
-      .order('sold_at', { ascending: false })
-      .limit(10000)
+        .eq('user_id', user.id)
+        .eq('status', 'sold')
+        .order('sold_at', { ascending: false })
+        .range(off, off + PAGE_SIZE - 1)
 
-    if (findsError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Supabase error:', findsError)
+      if (findsError) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Supabase error:', findsError)
+        }
+        return ApiResponseHelper.internalError()
       }
-      return ApiResponseHelper.internalError()
+      if (!page || page.length === 0) break
+      finds.push(...(page as unknown as FindWithMarketplaceJoin[]))
+      if (page.length < PAGE_SIZE) break
     }
 
     // Transform data and calculate margins
-    const orders: Order[] = ((finds || []) as FindWithMarketplaceJoin[]).flatMap((find) => {
+    const orders: Order[] = finds.flatMap((find) => {
       const marketplaceDataArray = find.product_marketplace_data || []
 
       // If no marketplace data, create a generic order entry
