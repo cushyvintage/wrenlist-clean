@@ -33,6 +33,7 @@ export function buildWelcomeEmail(args: {
           <!-- Header -->
           <tr>
             <td style="padding:32px 40px 24px 40px;text-align:center;border-bottom:1px solid #eae6d8;">
+              <img src="https://wrenlist.com/wrenlist-logo.png" alt="Wrenlist" width="48" height="48" style="display:block;margin:0 auto 10px auto;border-radius:8px;" />
               <h1 style="margin:0;font-family:Georgia,serif;font-size:28px;font-weight:normal;color:#2a2a2a;">Wrenlist</h1>
               <p style="margin:4px 0 0 0;font-size:13px;color:#7a7a7a;">The operating system for thrifters</p>
             </td>

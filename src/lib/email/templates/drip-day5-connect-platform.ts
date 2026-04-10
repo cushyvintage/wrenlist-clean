@@ -32,6 +32,13 @@ export function buildDripDay5ConnectPlatformEmail(args: {
     <tr>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border:1px solid #d4d9c9;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:28px 40px 20px 40px;text-align:center;border-bottom:1px solid #eae6d8;">
+              <img src="https://wrenlist.com/wrenlist-logo.png" alt="Wrenlist" width="48" height="48" style="display:block;margin:0 auto 10px auto;border-radius:8px;" />
+              <h1 style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">Wrenlist</h1>
+            </td>
+          </tr>
           <tr>
             <td style="padding:40px;">
               <h2 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">${greeting}</h2>
