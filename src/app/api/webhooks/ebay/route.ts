@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { createPublishJob } from '@/lib/publish-jobs'
 import crypto from 'crypto'
+
+/**
+ * eBay webhooks carry no cookies, so the cookie-based SSR client has no
+ * session and all writes are blocked by RLS. Use the service-role client
+ * instead — scoped by find ownership (verified via findId → finds.user_id)
+ * inside each handler.
+ */
+function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  )
+}
 
 /**
  * eBay Webhook Handler
@@ -192,7 +206,7 @@ export async function POST(request: NextRequest) {
  */
 async function handleItemSold(ebayListingId: string) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = createAdminClient()
 
     // Find the product_marketplace_data record for this eBay listing
     const { data: marketplaceData, error: mpError } = await supabase
