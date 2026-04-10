@@ -46,7 +46,7 @@ const CONDITIONS: { value: FindCondition; label: string }[] = [
 
 const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP)
   .sort()
-  .map((key) => ({ value: key, label: key.charAt(0).toUpperCase() + key.slice(1) }))
+  .map((key) => ({ value: key, label: key.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }))
 
 const inputStyle = {
   borderWidth: '1px',
@@ -267,12 +267,7 @@ export function FindEditMode({
             >
               <option value="">Select category</option>
               {CANONICAL_CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                  {categoryInfo && categoryInfo.length > 0
-                    ? ` (${categoryInfo.join(', ')})`
-                    : ''}
-                </option>
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
           </div>
