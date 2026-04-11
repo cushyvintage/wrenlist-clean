@@ -1519,6 +1519,12 @@ type ExternalMessage = Record<string, unknown>;
               return;
             }
             const data = await res.json();
+            // /api/auth/me now returns 200 with { user: null } when
+            // unauthenticated; treat that as a failure for the popup.
+            if (!data?.user) {
+              sendResponse({ success: false, status: 401 });
+              return;
+            }
             sendResponse({ success: true, data });
           } catch (error) {
             sendResponse({ success: false, error: String(error) });

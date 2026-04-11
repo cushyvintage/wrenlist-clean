@@ -56,7 +56,10 @@ export async function GET(req: NextRequest) {
     }
 
     if (!user) {
-      return NextResponse.json({ user: null }, { status: 401 })
+      // Return 200 with null user (not 401) so unauthenticated marketing
+      // pages don't log console errors. Callers should check `data.user`
+      // rather than HTTP status to distinguish authenticated vs not.
+      return NextResponse.json({ user: null, authenticated: false })
     }
 
     // Use service-role client when auth came from Bearer token
