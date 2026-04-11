@@ -179,6 +179,10 @@ export const config = {
     // - favicon.ico (favicon file)
     // - auth/callback (OAuth callback — must reach route handler directly)
     // - robots.txt, sitemap.xml, manifest.json (SEO/PWA — must be publicly crawlable)
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|auth/callback).*)',
+    // - Any path containing a dot (static assets in /public: logos, images, fonts, etc.)
+    //   Without this, the denylist model below redirects unauthenticated requests for
+    //   /wrenlist-logo.png to /login, which breaks the nav logo AND email logos (email
+    //   clients fetch images unauthenticated).
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|auth/callback|.*\\..*).*)',
   ],
 }
