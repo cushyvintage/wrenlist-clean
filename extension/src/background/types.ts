@@ -148,7 +148,7 @@ export interface Product {
 
   // Source marketplace metadata (for cross-listing)
   vintedMetadata?: VintedImportMetadata;
-  // Future: mercariMetadata, poshmarkMetadata, depopMetadata
+  // Future: depopMetadata, etsyMetadata
 
   [key: string]: unknown;
 }

@@ -67,13 +67,11 @@ user initiated.
 
 ### Host permissions (per marketplace)
 Each marketplace host (`*.vinted.*`, `*.ebay.*`, `www.etsy.com`,
-`admin.shopify.com/store/*`, `*.myshopify.com/admin/*`, `*.depop.com`)
-is needed so the extension can make authenticated requests to that
-marketplace's internal API on behalf of the signed-in user to list,
-update, or delist their own inventory. `app.wrenlist.com` is the
-user's own Wrenlist dashboard; `grailed-media.s3.amazonaws.com` is
-Grailed's public image CDN, used only to fetch listing photos during
-Grailed imports.
+`admin.shopify.com/store/*`, `*.myshopify.com/admin/*`, `*.depop.com`,
+`*.facebook.com`) is needed so the extension can make authenticated
+requests to that marketplace's internal API on behalf of the signed-in
+user to list, update, or delist their own inventory. `*.wrenlist.com`
+is the user's own Wrenlist dashboard.
 
 ---
 

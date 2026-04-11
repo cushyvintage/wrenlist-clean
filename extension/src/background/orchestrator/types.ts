@@ -1,12 +1,8 @@
 export type SupportedMarketplace =
-  | "grailed"
-  | "poshmark"
   | "depop"
-  | "mercari"
   | "vinted"
   | "facebook"
   | "shopify"
-  | "whatnot"
   | "etsy";
 
 export interface ListingActionResult {

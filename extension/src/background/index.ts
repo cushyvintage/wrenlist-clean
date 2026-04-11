@@ -357,12 +357,8 @@ type ExternalMessage = Record<string, unknown>;
 
     const marketplaces: SupportedMarketplace[] = [
       "vinted",
-      "poshmark",
       "depop",
-      "mercari",
-      "grailed",
       "facebook",
-      "whatnot",
       "etsy",
     ];
 
@@ -1541,10 +1537,6 @@ type ExternalMessage = Record<string, unknown>;
               "vinted",
               "depop",
               "etsy",
-              "poshmark",
-              "mercari",
-              "grailed",
-              "whatnot",
               "facebook",
             ];
             const entries = await Promise.all(

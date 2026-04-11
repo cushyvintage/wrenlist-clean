@@ -2,12 +2,8 @@ import type { Product } from "../types.js";
 import { createDepopServices } from "../marketplaces/depop/index.js";
 import { createEtsyServices } from "../marketplaces/etsy/index.js";
 import { createFacebookServices } from "../marketplaces/facebook/index.js";
-import { createGrailedServices } from "../marketplaces/grailed/index.js";
-import { createMercariServices } from "../marketplaces/mercari/index.js";
-import { createPoshmarkServices } from "../marketplaces/poshmark/index.js";
 import { createShopifyServices } from "../marketplaces/shopify/index.js";
 import { createVintedServices } from "../marketplaces/vinted/index.js";
-import { createWhatnotServices } from "../marketplaces/whatnot/index.js";
 import type {
   ListingActionResult,
   PublishOptions,
@@ -29,22 +25,14 @@ export async function publishToMarketplace(
   try {
     const tld = resolveTld(marketplace, options);
     switch (marketplace) {
-      case "grailed":
-        return publishViaGrailed(product, tld);
-      case "poshmark":
-        return publishViaPoshmark(product, tld);
       case "depop":
         return publishViaDepop(product, tld);
-      case "mercari":
-        return publishViaMercari(product);
       case "vinted":
         return publishViaVinted(product, tld);
       case "facebook":
         return publishViaFacebook(product, tld);
       case "shopify":
         return publishViaShopify(product, options);
-      case "whatnot":
-        return publishViaWhatnot(product, tld);
       case "etsy":
         return publishViaEtsy(product, options);
       default:
@@ -63,22 +51,14 @@ export async function delistFromMarketplace(
   try {
     const tld = resolveTld(marketplace, options);
     switch (marketplace) {
-      case "grailed":
-        return delistViaGrailed(marketplaceId, tld);
-      case "poshmark":
-        return delistViaPoshmark(marketplaceId, tld);
       case "depop":
         return delistViaDepop(marketplaceId, tld);
-      case "mercari":
-        return delistViaMercari(marketplaceId);
       case "vinted":
         return delistViaVinted(marketplaceId, tld);
       case "facebook":
         return delistViaFacebook(marketplaceId, tld);
       case "shopify":
         return delistViaShopify(marketplaceId, options);
-      case "whatnot":
-        return delistViaWhatnot(marketplaceId, tld);
       case "etsy":
         return delistViaEtsy(marketplaceId);
       default:
@@ -101,32 +81,9 @@ async function withAuthRetry(
   return result;
 }
 
-async function publishViaGrailed(product: Product, tld: string) {
-  const services = createGrailedServices({ tld });
-  return withAuthRetry("grailed", async () => {
-    const payload = await services.mapProduct(product);
-    return services.client.postListing(payload);
-  });
-}
-
-async function publishViaPoshmark(product: Product, tld: string) {
-  const services = createPoshmarkServices({ tld });
-  return withAuthRetry("poshmark", async () => {
-    return services.client.postListing(product);
-  });
-}
-
 async function publishViaDepop(product: Product, tld: string) {
   const services = createDepopServices({ tld });
   return withAuthRetry("depop", async () => {
-    const payload = await services.mapProduct(product);
-    return services.client.postListing(payload);
-  });
-}
-
-async function publishViaMercari(product: Product) {
-  const services = createMercariServices();
-  return withAuthRetry("mercari", async () => {
     const payload = await services.mapProduct(product);
     return services.client.postListing(payload);
   });
@@ -210,32 +167,9 @@ async function publishViaShopify(
   return result;
 }
 
-async function publishViaWhatnot(product: Product, tld: string) {
-  const services = createWhatnotServices(tld);
-  return withAuthRetry("whatnot", async () => {
-    const payload = await services.mapProduct(product);
-    return services.client.postListing(payload);
-  });
-}
-
-async function delistViaGrailed(id: string, tld: string) {
-  const services = createGrailedServices({ tld });
-  return withAuthRetry("grailed", () => services.client.delistListing(id));
-}
-
-async function delistViaPoshmark(id: string, tld: string) {
-  const services = createPoshmarkServices({ tld });
-  return withAuthRetry("poshmark", () => services.client.delistListing(id));
-}
-
 async function delistViaDepop(id: string, tld: string) {
   const services = createDepopServices({ tld });
   return withAuthRetry("depop", () => services.client.delistListing(id));
-}
-
-async function delistViaMercari(id: string) {
-  const services = createMercariServices();
-  return withAuthRetry("mercari", () => services.client.delistListing(id));
 }
 
 async function delistViaVinted(id: string, tld: string) {
@@ -277,11 +211,6 @@ async function delistViaShopify(
   return services.client.delistListing(id);
 }
 
-async function delistViaWhatnot(id: string, tld: string) {
-  const services = createWhatnotServices(tld);
-  return withAuthRetry("whatnot", () => services.client.delistListing(id));
-}
-
 async function publishViaEtsy(product: Product, options: PublishOptions = {}) {
   const services = createEtsyServices();
   return services.client.publishProduct(product, {
@@ -293,4 +222,3 @@ async function delistViaEtsy(id: string) {
   const services = createEtsyServices();
   return services.client.delistProduct(id);
 }
-

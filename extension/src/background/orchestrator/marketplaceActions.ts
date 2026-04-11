@@ -4,12 +4,8 @@ import type {
 } from "../types.js";
 import { createDepopServices } from "../marketplaces/depop/index.js";
 import { createFacebookServices } from "../marketplaces/facebook/index.js";
-import { createGrailedServices } from "../marketplaces/grailed/index.js";
-import { createMercariServices } from "../marketplaces/mercari/index.js";
-import { createPoshmarkServices } from "../marketplaces/poshmark/index.js";
 import { createShopifyServices } from "../marketplaces/shopify/index.js";
 import { createVintedServices } from "../marketplaces/vinted/index.js";
-import { createWhatnotServices } from "../marketplaces/whatnot/index.js";
 import { createEtsyServices } from "../marketplaces/etsy/index.js";
 import type {
   ListingActionResult,
@@ -41,20 +37,10 @@ export async function checkMarketplaceLogin(
 ): Promise<boolean> {
   try {
     switch (marketplace) {
-      case "grailed":
-        return createGrailedServices({
-          tld: resolveTld(marketplace, options),
-        }).client.checkLogin();
-      case "poshmark":
-        return createPoshmarkServices({
-          tld: resolveTld(marketplace, options),
-        }).client.checkLogin();
       case "depop":
         return createDepopServices({
           tld: resolveTld(marketplace, options),
         }).client.checkLogin();
-      case "mercari":
-        return createMercariServices().client.checkLogin();
       case "vinted":
         return createVintedServices({
           tld: resolveTld(marketplace, options),
@@ -70,10 +56,6 @@ export async function checkMarketplaceLogin(
         }
         return createShopifyServices(shopUrl).client.checkLogin();
       }
-      case "whatnot":
-        return createWhatnotServices(
-          resolveTld(marketplace, options),
-        ).client.checkLogin();
       case "etsy":
         return createEtsyServices().client.checkLogin();
       default:
@@ -93,22 +75,14 @@ export async function updateMarketplaceListing(
   try {
     const tld = resolveTld(marketplace, options);
     switch (marketplace) {
-      case "grailed":
-        return updateGrailedListing(product, tld);
-      case "poshmark":
-        return createPoshmarkServices({ tld }).client.updateListing(product);
       case "depop":
         return updateDepopListing(product, tld);
-      case "mercari":
-        return updateMercariListing(product);
       case "vinted":
         return updateVintedListing(product, tld);
       case "facebook":
         return createFacebookServices(tld).client.updateListing(product);
       case "shopify":
         return updateShopifyListing(product, options);
-      case "whatnot":
-        return updateWhatnotListing(product, tld);
       case "etsy":
         return updateEtsyListing(product);
       default:
@@ -129,26 +103,8 @@ export async function fetchMarketplaceListings({
   const tld = resolveTld(marketplace, options);
   const normalizedUsername = normalizeUsername(username);
   switch (marketplace) {
-    case "grailed":
-      return createGrailedServices({ tld }).client.getListings(
-        page,
-        perPage,
-        normalizedUsername,
-      );
-    case "poshmark":
-      return createPoshmarkServices({ tld }).client.getListings(
-        page,
-        perPage,
-        normalizedUsername,
-      );
     case "depop":
       return createDepopServices({ tld }).client.getListings(page, perPage);
-    case "mercari":
-      return createMercariServices().client.getListings(
-        page,
-        perPage,
-        normalizedUsername,
-      );
     case "vinted": {
       const status = options.status ?? 'all';
       return createVintedServices({ tld }).client.getListings(
@@ -175,12 +131,6 @@ export async function fetchMarketplaceListings({
         perPage,
       );
     }
-    case "whatnot":
-      return createWhatnotServices(tld).client.getListings(
-        page,
-        perPage,
-        normalizedUsername,
-      );
     case "etsy":
       return createEtsyServices().client.getListings(page, perPage);
     default:
@@ -195,14 +145,8 @@ export async function fetchMarketplaceListing({
 }: ListingRequest): Promise<Product | null> {
   const tld = resolveTld(marketplace, options);
   switch (marketplace) {
-    case "grailed":
-      return createGrailedServices({ tld }).client.getListing(id);
-    case "poshmark":
-      return createPoshmarkServices({ tld }).client.getListing(id);
     case "depop":
       return createDepopServices({ tld }).client.getListing(id);
-    case "mercari":
-      return createMercariServices().client.getListing(id);
     case "vinted":
       return createVintedServices({ tld }).client.getListing(id);
     case "facebook":
@@ -214,24 +158,11 @@ export async function fetchMarketplaceListing({
       }
       return createShopifyServices(shopUrl).client.getListing(id);
     }
-    case "whatnot":
-      return createWhatnotServices(tld).client.getListing(id);
     case "etsy":
       return createEtsyServices().client.getListing(id);
     default:
       throw new Error(`${marketplace} is not supported`);
   }
-}
-
-async function updateGrailedListing(product: Product, tld: string) {
-  const listingId = product.marketplaceId ?? product.marketPlaceId;
-  if (!listingId) {
-    throw new Error("Missing Grailed listing id.");
-  }
-
-  const services = createGrailedServices({ tld });
-  const payload = await services.mapProduct(product);
-  return services.client.updateListing(listingId, payload);
 }
 
 async function updateDepopListing(product: Product, tld: string) {
@@ -242,17 +173,6 @@ async function updateDepopListing(product: Product, tld: string) {
   const services = createDepopServices({ tld });
   const payload = await services.mapProduct(product);
   return services.client.updateListing(product.marketplaceUrl, payload);
-}
-
-async function updateMercariListing(product: Product) {
-  const listingId = product.marketplaceId ?? product.marketPlaceId;
-  if (!listingId) {
-    throw new Error("Missing Mercari listing id.");
-  }
-
-  const services = createMercariServices();
-  const payload = await services.mapProduct(product);
-  return services.client.updateListing(listingId, payload);
 }
 
 async function updateVintedListing(product: Product, tld: string) {
@@ -299,12 +219,6 @@ async function updateShopifyListing(
   return services.client.updateListing(payload);
 }
 
-async function updateWhatnotListing(product: Product, tld: string) {
-  const services = createWhatnotServices(tld);
-  const payload = await services.mapProductForUpdate(product);
-  return services.client.updateListing(payload);
-}
-
 async function updateEtsyListing(product: Product) {
   const listingId = product.marketplaceId ?? product.marketPlaceId;
   if (!listingId) {
@@ -323,4 +237,3 @@ function normalizeUsername(
   }
   return String(value);
 }
-

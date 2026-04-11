@@ -31,7 +31,15 @@ First public beta. Submitted to the Chrome Web Store.
 ### Permissions (store submission)
 - Narrowed Shopify host patterns to `admin.shopify.com/store/*` and
   `*.myshopify.com/admin/*`
-- Removed the wildcard `*.amazonaws.com` host permission; only the single
-  image CDN actually used (`grailed-media.s3.amazonaws.com`) remains
+- Removed the wildcard `*.amazonaws.com` host permissions entirely
 - Removed the wildcard `*.vercel.app` entry from `externally_connectable`;
   only `*.wrenlist.com` remains
+
+### Marketplaces
+- Support list aligned with
+  [app.wrenlist.com/platform-connect](https://app.wrenlist.com/platform-connect):
+  Vinted (UK), eBay (UK + IE, via OAuth, no extension needed), Etsy,
+  Depop, Facebook Marketplace, and Shopify
+- Removed Poshmark, Mercari, Grailed, and Whatnot clients — none are
+  marketed by Wrenlist and shipping them would have made reviewer
+  permission justifications harder to defend

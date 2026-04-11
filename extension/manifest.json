@@ -63,8 +63,7 @@
     "*://*.vinted.de/*",
     "*://*.vinted.es/*",
     "*://*.vinted.it/*",
-    "*://*.wrenlist.com/*",
-    "https://grailed-media.s3.amazonaws.com/*"
+    "*://*.wrenlist.com/*"
   ],
   "icons": {
     "16": "icons/icon16.png",
