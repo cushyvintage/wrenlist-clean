@@ -38,7 +38,7 @@ export function buildDripDay2FirstFindEmail(args: {
           <!-- Header -->
           <tr>
             <td style="padding:28px 40px 20px 40px;text-align:center;border-bottom:1px solid #eae6d8;">
-              <img src="https://wrenlist.com/wrenlist-logo.png" alt="Wrenlist" width="48" height="48" style="display:block;margin:0 auto 10px auto;border-radius:8px;" />
+              <img src="https://app.wrenlist.com/wrenlist-logo-512.png" width="56" height="56" alt="Wrenlist" style="display:block;margin:0 auto 12px auto;border:0;">
               <h1 style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">Wrenlist</h1>
             </td>
           </tr>

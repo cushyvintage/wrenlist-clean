@@ -35,6 +35,11 @@ export function buildAdminNewUserEmail(args: {
       <td align="center">
         <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #d4d9c9;border-radius:8px;padding:32px;">
           <tr>
+            <td style="text-align:center;padding-bottom:20px;">
+              <img src="https://app.wrenlist.com/wrenlist-logo-512.png" width="40" height="40" alt="Wrenlist" style="display:inline-block;border:0;">
+            </td>
+          </tr>
+          <tr>
             <td>
               <p style="margin:0 0 8px 0;font-size:13px;color:#7a7a7a;text-transform:uppercase;letter-spacing:1px;">New signup</p>
               <h1 style="margin:0 0 24px 0;font-family:Georgia,serif;font-size:22px;font-weight:normal;color:#2a2a2a;">
