@@ -38,4 +38,12 @@ extension/dist/
 # Misc
 .eslintcache
 .vercel
+
+# Research/reverse-engineering scratch space — never commit third-party bundles
+research/
+
 .env*.local
+wrenlist-ext-v*/
+extension/store-assets/screenshots/*.png
+!extension/store-assets/screenshots/originals/
+!extension/store-assets/screenshots/1280x800/

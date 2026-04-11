@@ -24,7 +24,7 @@ export default function PrivacyPage() {
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">What personal data we collect</h2>
             <p><strong className="text-[#1e2e1c]">Account Registration:</strong> Name, email address, password (hashed), authentication method (Google Sign-In or email).</p>
             <p className="mt-2"><strong className="text-[#1e2e1c]">Usage Data:</strong> Your inventory items, listing details, photos, pricing, platform connections, and sales history.</p>
-            <p className="mt-2"><strong className="text-[#1e2e1c]">Marketplace Credentials:</strong> When you connect marketplace accounts (eBay, Vinted, Etsy, Shopify, Depop), we store OAuth tokens securely. We do not store marketplace passwords.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">Marketplace Credentials:</strong> When you connect marketplace accounts (eBay, Vinted, Etsy, Shopify, Depop, Facebook Marketplace), we store OAuth tokens securely where an OAuth flow exists (eBay, Shopify). For marketplaces without a public OAuth flow (Vinted, Depop, Facebook Marketplace), the Wrenlist browser extension reads only your existing logged-in session cookie for that site, on your own device. We do not store marketplace passwords.</p>
             <p className="mt-2"><strong className="text-[#1e2e1c]">Technical Data:</strong> IP address, browser type, device information, access logs (for security purposes only).</p>
           </section>
 
@@ -48,7 +48,17 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Marketplace connections</h2>
-            <p>When you connect marketplace accounts (eBay, Vinted, Etsy, Shopify, Depop), we store your OAuth access tokens encrypted at rest (AES-256-CBC). Refresh tokens are stored securely. We only access the permissions you explicitly grant during OAuth authorisation. We do not store your marketplace username or password.</p>
+            <p>When you connect marketplace accounts (eBay, Vinted, Etsy, Shopify, Depop, Facebook Marketplace), we store your OAuth access tokens encrypted at rest (AES-256-CBC). Refresh tokens are stored securely. We only access the permissions you explicitly grant during OAuth authorisation. We do not store your marketplace username or password.</p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Wrenlist browser extension</h2>
+            <p>Wrenlist publishes an optional Chrome browser extension — <em>Wrenlist — Marketplace Sync</em> — which acts as the automation layer for marketplaces that do not offer a public OAuth flow. Installing the extension is optional; you can use Wrenlist without it, but publish, update, and delist on Vinted, Depop, Etsy, Shopify and Facebook Marketplace require it.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">What the extension reads.</strong> Only on marketplace domains you have connected in Wrenlist (<code>*.vinted.*</code>, <code>*.ebay.*</code>, <code>www.etsy.com</code>, <code>admin.shopify.com</code>, <code>*.myshopify.com</code>, <code>*.depop.com</code>, <code>*.facebook.com</code>, <code>upload.facebook.com</code>) and on your own Wrenlist dashboard (<code>*.wrenlist.com</code>). The extension reads the session cookie of marketplaces that require it (Vinted, Depop, Facebook Marketplace) so it can make authenticated requests on your behalf. It never reads, stores, or transmits cookies, messages, profile data, news feed, or any other data outside the marketplace API calls required to publish, update, or delist your own listings.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">What the extension sends where.</strong> Your listing data goes to the marketplace APIs you are already signed into. Publish/delist job status is reported back to your own Wrenlist dashboard at <code>app.wrenlist.com</code>. No listing or session data is sent to any third party.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">What the extension stores locally.</strong> Your Wrenlist bearer token (so it can talk to your Wrenlist dashboard), your extension preferences, and a short-lived diagnostic log for troubleshooting. No marketplace credentials are stored.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">Remote code.</strong> The extension does not fetch or execute any remote JavaScript. All logic ships inside the published bundle on the Chrome Web Store.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">Data we do not do.</strong> We do not sell, rent, or share any data the extension reads with third parties. We do not use the extension for advertising, profiling, or creditworthiness decisions. We do not use it to collect data unrelated to publishing and delisting your own listings.</p>
           </section>
 
           <section>
