@@ -1,4 +1,3 @@
-import crypto from 'crypto'
 import { fetch as undiciFetch, Headers as UndiciHeaders } from 'undici'
 import { config } from './config'
 import { encryptEbayToken, maybeDecryptEbayToken } from './ebay-token-crypto'
@@ -66,8 +65,6 @@ const EBAY_OAUTH_SCOPES = [
   'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
   'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly',
 ]
-
-const TOKEN_ENCRYPTION_KEY_ENV = 'EBAY_TOKEN_ENCRYPTION_KEY'
 
 /**
  * eBayClient - Handles OAuth2 authentication and API operations with eBay
@@ -193,55 +190,6 @@ export class eBayClient {
     } catch (error) {
       throw error
     }
-  }
-
-  /**
-   * Encrypt token for database storage
-   */
-  static encryptToken(token: string): string {
-    const key = process.env[TOKEN_ENCRYPTION_KEY_ENV]
-    if (!key) {
-      throw new Error(`${TOKEN_ENCRYPTION_KEY_ENV} not set`)
-    }
-
-    const iv = crypto.randomBytes(16)
-    const cipher = crypto.createCipheriv(
-      'aes-256-cbc',
-      Buffer.from(key, 'base64'),
-      iv
-    )
-
-    let encrypted = cipher.update(token, 'utf8', 'hex')
-    encrypted += cipher.final('hex')
-
-    return iv.toString('hex') + ':' + encrypted
-  }
-
-  /**
-   * Decrypt token from database storage
-   */
-  static decryptToken(encryptedToken: string): string {
-    const key = process.env[TOKEN_ENCRYPTION_KEY_ENV]
-    if (!key) {
-      throw new Error(`${TOKEN_ENCRYPTION_KEY_ENV} not set`)
-    }
-
-    const parts = encryptedToken.split(':')
-    if (parts.length < 2 || !parts[0] || !parts[1]) {
-      throw new Error('Invalid encrypted token format')
-    }
-    const [ivHex, encrypted] = parts as [string, string]
-    const iv = Buffer.from(ivHex, 'hex')
-    const decipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      Buffer.from(key, 'base64'),
-      iv
-    )
-
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-
-    return decrypted
   }
 
   /**
