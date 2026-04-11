@@ -20,6 +20,37 @@ const DELETE_REASONS = [
 
 type SettingsTab = 'account' | 'workspace' | 'integrations' | 'ai' | 'billing' | 'legal'
 
+/** Center-crop to square + downscale to maxSize, output JPEG at given quality. */
+async function resizeImageToJpeg(file: File, maxSize: number, quality: number): Promise<File> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to read image'))
+    reader.readAsDataURL(file)
+  })
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = () => reject(new Error('Failed to decode image'))
+    el.src = dataUrl
+  })
+  const side = Math.min(img.naturalWidth, img.naturalHeight)
+  const sx = (img.naturalWidth - side) / 2
+  const sy = (img.naturalHeight - side) / 2
+  const target = Math.min(maxSize, side)
+  const canvas = document.createElement('canvas')
+  canvas.width = target
+  canvas.height = target
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context unavailable')
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, target, target)
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', quality),
+  )
+  if (!blob) throw new Error('Image encoding failed')
+  return new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+}
+
 interface AccountData {
   email: string
   fullName: string
@@ -255,8 +286,9 @@ export default function SettingsPage() {
       setAvatarError('Only JPEG, PNG, or WebP images allowed')
       return
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setAvatarError('Image must be under 2MB')
+    // Guard against absurdly large originals (phone RAW/HEIC converts can be ~50MB)
+    if (file.size > 20 * 1024 * 1024) {
+      setAvatarError('Image must be under 20MB')
       return
     }
 
@@ -264,8 +296,9 @@ export default function SettingsPage() {
     setIsUploadingAvatar(true)
 
     try {
+      const uploadFile = await resizeImageToJpeg(file, 512, 0.85)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', uploadFile)
       const res = await fetch('/api/profiles/me/avatar', {
         method: 'POST',
         body: formData,
