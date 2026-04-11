@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
+import { trackEvent } from '@/lib/plausible'
 
 // UK marketplace fee structures (as of April 2026)
 // Sources: platform seller help pages
@@ -110,6 +111,13 @@ export default function CalculatorPage() {
   const results = calculateFees(sale, cost, post)
 
   const bestPlatform = results.reduce((best, r) => r.netProfit > (best?.netProfit ?? -Infinity) ? r : best, results[0] as FeeBreakdown | undefined)
+
+  // Track fee calculator usage when calculation runs
+  useEffect(() => {
+    if (sale > 0) {
+      trackEvent('FeeCalculatorUsed')
+    }
+  }, [sale])
 
   return (
     <div className="min-h-screen bg-[#f5f0e8]">
@@ -297,6 +305,7 @@ export default function CalculatorPage() {
           </p>
           <a
             href="/register"
+            onClick={() => trackEvent('CTAClicked', { source: 'fee-calculator' })}
             className="inline-block bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-8 py-3 hover:bg-[#2c4428]"
           >
             Start free — no card needed

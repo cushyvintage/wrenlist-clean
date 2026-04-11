@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Reveal } from '@/components/motion'
 import { isFoundingFlockWindow } from '@/config/plans'
+import { trackEvent } from '@/lib/plausible'
 
 interface PricingCardProps {
   tier: string
@@ -17,7 +18,12 @@ interface PricingCardProps {
   founding?: boolean
 }
 
-const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description, limit, features, featured = false, isAnnual = false, founding = false }: PricingCardProps) => (
+const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description, limit, features, featured = false, isAnnual = false, founding = false }: PricingCardProps) => {
+  const handleCtaClick = () => {
+    trackEvent('PricingCTAClicked', { tier })
+  }
+
+  return (
   <div className={`plan-card${featured ? ' popular' : ''} rounded-lg border p-6 flex flex-col ${featured ? 'border-[#5a7a57] bg-[#5a7a57]/5 relative' : 'border-[rgba(61,92,58,0.14)] bg-[#f5f0e8] relative'}`}>
     {featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium uppercase bg-[#d4e2d2] text-[#5a7a57] px-2 py-1 rounded">most popular</div>}
     {founding && !featured && price !== '0' && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-[#e8dcc2] text-[#7a5a2a] px-2 py-1 rounded">founding</div>}
@@ -38,7 +44,7 @@ const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description,
       <div className="text-2xl font-serif font-medium text-ink">{limit}</div>
       <div className="text-10px font-semibold uppercase text-sage-dim">finds / month</div>
     </div>
-    <a href="/register" className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Get started</a>
+    <a href="/register" onClick={handleCtaClick} className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Get started</a>
     <div className="border-t border-[rgba(61,92,58,0.14)] pt-6 mb-4">
       <div className="text-10px font-semibold uppercase text-sage-dim mb-4">includes</div>
       <div className="space-y-3">
@@ -51,7 +57,8 @@ const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description,
       </div>
     </div>
   </div>
-)
+  )
+}
 
 export function PricingSection() {
   const [annual, setAnnual] = useState(false)

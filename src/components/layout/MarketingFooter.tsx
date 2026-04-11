@@ -52,8 +52,9 @@ export function MarketingFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-opacity-10 border-white pt-6 text-center text-xs font-normal text-[#7a9a78]">
-        &copy; {new Date().getFullYear()} Wrenlist. Built by thrifters, for thrifters.
+      <div className="border-t border-opacity-10 border-white pt-6 text-center text-xs font-normal text-[#7a9a78] space-y-1">
+        <div>&copy; {new Date().getFullYear()} Wrenlist. Built by thrifters, for thrifters.</div>
+        <div>Operated by Dominic Cushnan (sole trader) &middot; Registered with the UK ICO</div>
       </div>
     </footer>
   )

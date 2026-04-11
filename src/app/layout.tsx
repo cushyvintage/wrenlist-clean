@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Toaster } from 'sonner'
@@ -51,6 +52,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <noscript>
           <style>{`.reveal { opacity: 1 !important; transform: none !important; }`}</style>
         </noscript>
+        {/* Plausible Analytics */}
+        <Script
+          async
+          src="https://plausible.io/js/pa-CVcYM1RRnyvfvrGNR6hmP.js"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="plausible-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+              plausible.init()
+            `,
+          }}
+        />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>

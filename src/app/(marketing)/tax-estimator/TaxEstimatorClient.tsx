@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
+import { trackEvent } from '@/lib/plausible'
 
 /**
  * UK Reseller Tax Calculator
@@ -152,6 +153,17 @@ export default function TaxEstimatorClient() {
   }), [salary, grossSales, cogs, postage, platformFees, otherExpenses, mileage])
 
   const showResults = (parseFloat(grossSales) || 0) > 0
+
+  // Track tax estimator usage when results are shown
+  useEffect(() => {
+    if (showResults) {
+      trackEvent('TaxEstimatorUsed')
+      trackEvent('TaxEstimatorResult', {
+        over_threshold: result.overTradingAllowance,
+        over_allowance: result.overThreshold,
+      })
+    }
+  }, [showResults, result.overTradingAllowance, result.overThreshold])
 
   // Headline verdict
   let headline: { title: string; body: string; tone: 'ok' | 'warn' | 'alert' }

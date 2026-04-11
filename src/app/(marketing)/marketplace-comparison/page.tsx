@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
+import { ComparisonCTA } from '@/components/marketing/ComparisonCTA'
 
 const SITE_URL = 'https://wrenlist.com'
 const PAGE_URL = `${SITE_URL}/marketplace-comparison`
@@ -296,12 +297,7 @@ export default function MarketplaceComparisonPage() {
               <p className="text-[#c4d4c2] mb-8 text-lg">
                 Use Wrenlist to manage all your listings from one place — automatic posting, inventory sync, and data across every platform.
               </p>
-              <Link
-                href="/register"
-                className="inline-block bg-[#f5f0e8] text-[#3d5c3a] rounded font-medium px-8 py-3 hover:bg-[#ede8de] transition-colors"
-              >
-                Start Selling Free
-              </Link>
+              <ComparisonCTA />
             </div>
           </Reveal>
         </section>

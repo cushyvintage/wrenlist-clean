@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/services/supabase'
+import { trackEvent } from '@/lib/plausible'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -70,6 +71,9 @@ export default function RegisterPage() {
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('User creation failed')
 
+      // Track signup event
+      trackEvent('Signup', { method: 'email' })
+
       // Profile is created by DB trigger from auth metadata.
       // Fire welcome + admin notification emails. We intentionally do NOT
       // await this before redirecting — email delivery latency should never
@@ -114,6 +118,9 @@ export default function RegisterPage() {
         },
       })
       if (error) throw error
+
+      // Track Google signup event
+      trackEvent('Signup', { method: 'google' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign up with Google')
       setIsLoading(false)

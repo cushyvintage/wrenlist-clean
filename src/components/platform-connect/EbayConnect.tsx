@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from 'lucide-react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { trackEvent } from '@/lib/plausible'
 
 interface EbayPolicy {
   id: string
@@ -55,6 +56,11 @@ export function EbayConnect({
   onChangePoliciesClick,
   onSalesDetectionToggle,
 }: EbayConnectProps) {
+  const handleConnectEbay = () => {
+    trackEvent('PlatformConnected', { platform: 'ebay' })
+    ebay.connectEbay()
+  }
+
   const isTokenExpiringWithin7Days = (): boolean => {
     if (!ebay.expiresAt) return false
     const expiresAt = new Date(ebay.expiresAt)
@@ -99,7 +105,7 @@ export function EbayConnect({
         </div>
 
         <button
-          onClick={ebay.connectEbay}
+          onClick={handleConnectEbay}
           disabled={ebay.isLoading}
           className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50 mb-4"
         >
@@ -148,7 +154,7 @@ export function EbayConnect({
               <div className="text-xs text-amber-700 mt-1">Reconnect to avoid interruptions.</div>
             </div>
             <button
-              onClick={ebay.connectEbay}
+              onClick={handleConnectEbay}
               disabled={ebay.isLoading}
               className="text-xs text-amber underline underline-offset-2 hover:text-amber-900 transition disabled:opacity-50 flex-shrink-0"
             >
@@ -184,7 +190,7 @@ export function EbayConnect({
             Change policies
           </button>
           <button
-            onClick={ebay.connectEbay}
+            onClick={handleConnectEbay}
             disabled={ebay.isLoading}
             className="flex-1 px-4 py-2 text-sm font-medium text-ink border border-border rounded hover:bg-cream transition disabled:opacity-50"
           >

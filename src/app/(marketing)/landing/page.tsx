@@ -1,7 +1,10 @@
+'use client'
+
 import Link from 'next/link'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
+import { trackEvent } from '@/lib/plausible'
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -161,7 +164,7 @@ export default function LandingPage() {
             Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
           </p>
           <div className="hero-fade-4 flex gap-4 items-center">
-            <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
+            <a href="/register" onClick={() => trackEvent('CTAClicked', { source: 'landing' })} className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
               Start your free beta
             </a>
             <Link href="/pricing" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
