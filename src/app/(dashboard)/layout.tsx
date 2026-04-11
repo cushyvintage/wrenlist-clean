@@ -227,14 +227,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     (user?.full_name ?? user?.email ?? 'U').charAt(0).toUpperCase()
                   )}
                 </div>
-                <div className="hidden sm:flex flex-col items-start text-xs">
-                  <span className="font-medium" style={{ color: '#1E2E1C' }}>
-                    {user?.full_name || user?.email?.split('@')[0] || 'User'}
-                  </span>
-                  <span className="text-xs" style={{ color: '#6B7D6A' }}>
-                    {user?.email}
-                  </span>
-                </div>
+                <span
+                  className="hidden sm:inline text-sm font-medium"
+                  style={{ color: '#1E2E1C' }}
+                >
+                  {user?.full_name || user?.email?.split('@')[0] || 'User'}
+                </span>
               </button>
 
               {/* User menu dropdown */}
