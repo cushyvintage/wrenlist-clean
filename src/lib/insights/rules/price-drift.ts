@@ -54,7 +54,7 @@ export const priceDriftRule: InsightRule = {
       type: 'tip',
       priority: 65,
       text: `${drifting.length} listed items have been sitting 14+ days without a price change${pricedPart}. A small adjustment often restarts interest.`,
-      cta: { text: `review listings (${drifting.length}) →`, href: '/finds?filter=aging' },
+      cta: { text: `review listings (${drifting.length}) →`, href: '/finds?filter=drift' },
       meta: { count: drifting.length, totalAsking: Math.round(totalAsking) },
     }
   },

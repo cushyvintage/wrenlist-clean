@@ -69,6 +69,25 @@ export const GET = withAuth(async (req, user) => {
       query = query.eq('status', 'listed').lte('updated_at', cutoff)
     }
 
+    // Synthetic filter: "drift" = listed 14+ days AND no price_changes row
+    // in the last 10 days. Mirrors the price-drift insight rule exactly so
+    // the deep-link count matches the insight count.
+    if (filter === 'drift') {
+      const driftCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+      const noChangeSince = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: recentChangeRows } = await supabase
+        .from('price_changes')
+        .select('find_id')
+        .eq('user_id', user.id)
+        .gte('changed_at', noChangeSince)
+      const excludeIds = Array.from(new Set((recentChangeRows ?? []).map((r) => r.find_id)))
+      query = query.eq('status', 'listed').lte('created_at', driftCutoff)
+      if (excludeIds.length > 0) {
+        // PostgREST `not.in` requires parenthesised value list
+        query = query.not('id', 'in', `(${excludeIds.join(',')})`)
+      }
+    }
+
     // Run main query, status counts, unpriced count, and aging count in parallel
     const agingCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const [mainResult, countsResult, unpricedResult, agingResult] = await Promise.all([

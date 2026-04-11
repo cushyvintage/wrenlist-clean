@@ -1,7 +1,11 @@
 import { Condition } from "./enums.js";
 
 // Wrenlist extension API utilities
-export const EXTENSION_VERSION = "1.4.0";
+// Single source of truth for version is manifest.json — read it at runtime
+// so we never have to remember to bump two files. See extension/VERSIONING.md.
+export const EXTENSION_VERSION: string =
+  (typeof chrome !== "undefined" && chrome.runtime?.getManifest?.().version) ||
+  "0.0.0";
 const DEFAULT_WRENLIST_BASE_URL = "https://app.wrenlist.com";
 
 async function getWrenlistBaseUrl(): Promise<string> {

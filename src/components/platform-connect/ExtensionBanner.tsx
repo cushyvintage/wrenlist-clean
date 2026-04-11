@@ -14,6 +14,8 @@
 interface ExtensionBannerProps {
   extensionDetected: boolean | null
   extensionVersion: string | null
+  /** True when detected but version < MIN_EXTENSION_VERSION — show upgrade nudge */
+  isOutdated?: boolean
   isMobileOrNonChrome: boolean
   heartbeatLastSeenAt: string | null
 }
@@ -21,11 +23,21 @@ interface ExtensionBannerProps {
 export function ExtensionBanner({
   extensionDetected,
   extensionVersion,
+  isOutdated = false,
   isMobileOrNonChrome,
   heartbeatLastSeenAt,
 }: ExtensionBannerProps) {
+  // Outdated takes precedence over "connected" — users need to act.
+  const showOutdated = extensionDetected === true && isOutdated
+  const borderClass = showOutdated
+    ? 'bg-amber-50 border-amber/30'
+    : extensionDetected
+      ? 'bg-sage-pale border-sage'
+      : extensionDetected === null
+        ? 'bg-cream border-border'
+        : 'bg-amber-50 border-amber/30'
   return (
-    <div className={`flex items-center gap-4 p-4 rounded border ${extensionDetected ? 'bg-sage-pale border-sage' : extensionDetected === null ? 'bg-cream border-border' : 'bg-amber-50 border-amber/30'}`}>
+    <div className={`flex items-center gap-4 p-4 rounded border ${borderClass}`}>
       <div className="flex-shrink-0">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Wrenlist Extension">
           <rect width="24" height="24" rx="6" fill="#5E7D5E" />
@@ -40,6 +52,11 @@ export function ExtensionBanner({
               <div className="w-1 h-1 rounded-full bg-ink-lt animate-pulse"></div>
               checking…
             </div>
+          ) : showOutdated ? (
+            <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 uppercase tracking-wide">
+              <div className="w-1 h-1 rounded-full bg-amber-700"></div>
+              update required
+            </div>
           ) : extensionDetected ? (
             <div className="flex items-center gap-1 text-xs font-semibold text-sage uppercase tracking-wide">
               <div className="w-1 h-1 rounded-full bg-sage"></div>
@@ -53,9 +70,11 @@ export function ExtensionBanner({
           )}
         </div>
         <div className="text-xs text-ink-lt">
-          {extensionDetected && isMobileOrNonChrome && heartbeatLastSeenAt
-            ? `Last seen ${new Date(heartbeatLastSeenAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
-            : `Chrome desktop${extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting`
+          {showOutdated
+            ? `v${extensionVersion} is out of date — restart Chrome to auto-update, or reinstall from the Web Store`
+            : extensionDetected && isMobileOrNonChrome && heartbeatLastSeenAt
+              ? `Last seen ${new Date(heartbeatLastSeenAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
+              : `Chrome desktop${extensionVersion ? ` · v${extensionVersion}` : ''} · Required for Vinted and Shopify crosslisting`
           }
         </div>
       </div>

@@ -41,51 +41,38 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
-  // Define public routes that don't require authentication
+  // Denylist model: everything is protected EXCEPT these public route prefixes.
+  // Any new page under (dashboard) is automatically gated without a middleware update.
   const publicRoutes = [
+    '/',
     '/login',
     '/register',
     '/forgot-password',
     '/reset-password',
     '/verify-email',
-    '/',
     '/landing',
     '/pricing',
     '/about',
     '/blog',
     '/story',
     '/roadmap',
+    '/privacy',
+    '/terms',
+    '/calculator',
+    '/extension',
+    '/glossary',
+    '/marketplace-comparison',
+    '/tax-estimator',
+    '/auth',
   ]
 
-  // Protected dashboard routes (require authentication)
-  const dashboardRoutes = [
-    '/onboarding',
-    '/dashboard',
-    '/finds',
-    '/add-find',
-    '/listings',
-    '/expenses',
-    '/mileage',
-    '/tax',
-    '/analytics',
-    '/orders',
-    '/platform-connect',
-    '/ai-listing',
-    '/price-research',
-    '/suppliers',
-    '/finds',
-    '/settings',
-    '/billing',
-    '/sourcing',
-    '/import',
-    '/packaging',
-    '/sku',
-  ]
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  )
 
-  // If user is not authenticated and trying to access protected routes
-  const isProtectedRoute = dashboardRoutes.some((route) => pathname === route || pathname.startsWith(route + '/'))
-  if (!session && isProtectedRoute) {
+  if (!session && !isPublicRoute) {
     const loginUrl = new URL('/login', req.url)
+    loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
 

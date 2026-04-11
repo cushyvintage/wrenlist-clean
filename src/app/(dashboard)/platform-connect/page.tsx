@@ -107,6 +107,7 @@ export default function PlatformConnectPage() {
       <ExtensionBanner
         extensionDetected={extensionDetected}
         extensionVersion={extensionVersion}
+        isOutdated={extensionInfo.isOutdated}
         isMobileOrNonChrome={isMobileOrNonChrome}
         heartbeatLastSeenAt={heartbeat.lastSeenAt}
       />

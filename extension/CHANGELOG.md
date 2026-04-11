@@ -1,6 +1,28 @@
 # Changelog
 
-All notable changes to the Wrenlist Skylark extension will be documented in this file.
+All notable changes to the Wrenlist extension will be documented in this file.
+Versioning follows the rules in [VERSIONING.md](./VERSIONING.md).
+
+## [0.9.0] - 2026-04-11
+
+First build submitted to the Chrome Web Store under the Wrenlist brand.
+Version reset from `1.4.0` (inherited from the Crosslist fork) — see
+VERSIONING.md for rationale. `0.9.x` is the beta series; `1.0.0` ships once
+we're confident in the public flows.
+
+### Changed
+- Full rebrand: Crosslist → Wrenlist (manifest name, description, popup title,
+  content script match for `*.wrenlist.com`, all user-facing copy)
+- `EXTENSION_VERSION` in `src/background/shared/api.ts` now reads from
+  `chrome.runtime.getManifest().version` at runtime. Only one place to bump:
+  `manifest.json`.
+- Web app gained `MIN_EXTENSION_VERSION` gating: old extensions are detected
+  as "update required" and the platform-connect banner nudges the user to
+  restart Chrome for the auto-update.
+
+### Fixed
+- Stale bundle referencing Crosslist strings — forces a clean rebuild before
+  reload. See `docs/extension/VERSIONING.md` ("Release workflow").
 
 ## [1.1.0] - 2024-11-18
 

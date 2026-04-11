@@ -4,11 +4,25 @@ import { useEffect, useState } from 'react'
 
 export const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
 
+/**
+ * Minimum extension version the web app will accept.
+ *
+ * Bump this whenever we ship a backend/API change the old extension can't
+ * handle (new message shape, new queue endpoint, new storage schema, etc.).
+ * When `detected === true` but `isOutdated === true`, consumers should show
+ * an "update your extension" banner and block publish/delist actions.
+ *
+ * Keep this in sync with extension/VERSIONING.md.
+ */
+export const MIN_EXTENSION_VERSION = '0.9.0'
+
 interface ExtensionInfo {
   /** Whether the extension is installed and responding */
   detected: boolean | null
-  /** Extension version string (e.g. "3.7.8") or null if not detected */
+  /** Extension version string (e.g. "0.9.0") or null if not detected */
   version: string | null
+  /** True if detected but version < MIN_EXTENSION_VERSION */
+  isOutdated: boolean
   /** Whether the check is still in progress */
   loading: boolean
 }
@@ -63,5 +77,24 @@ export function useExtensionInfo(): ExtensionInfo {
     check()
   }, [])
 
-  return { detected, version, loading }
+  const isOutdated =
+    detected === true && version !== null && compareVersions(version, MIN_EXTENSION_VERSION) < 0
+
+  return { detected, version, isOutdated, loading }
+}
+
+/**
+ * Compare two dot-separated version strings. Returns negative if a<b,
+ * 0 if equal, positive if a>b. Treats missing segments as 0.
+ * Example: compareVersions('0.9.0', '0.10.0') === -1
+ */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = b.split('.').map((n) => parseInt(n, 10) || 0)
+  const len = Math.max(pa.length, pb.length)
+  for (let i = 0; i < len; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0)
+    if (diff !== 0) return diff
+  }
+  return 0
 }
