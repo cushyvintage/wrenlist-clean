@@ -38,8 +38,13 @@ export function VintedConnect({
   onDisconnect,
 }: VintedConnectProps) {
   const accountTypeLabel = vintedIsBusiness ? 'Pro' : 'Personal'
-  if (!vintedConnected && !extensionDetected) {
-    // State A: Not connected (no extension)
+  // State A renders whenever Vinted isn't actually connected. Previously we
+  // also fell through to State B when the extension was detected but Vinted
+  // itself wasn't logged in, which falsely showed "Connected" + a Personal
+  // chip driven purely by the `useState(false)` default rather than real
+  // detection. Gate strictly on vintedConnected.
+  if (!vintedConnected) {
+    // State A: Not connected
     return (
       <div>
         <div className="flex items-center gap-4 mb-6">
@@ -89,16 +94,22 @@ export function VintedConnect({
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="font-medium text-sm text-ink flex items-center gap-1.5">Vinted — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
-            <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
-                vintedIsBusiness
-                  ? 'bg-sage/15 text-sage-dk border border-sage/30'
-                  : 'bg-cream-md text-ink-lt border border-border'
-              }`}
-              title={vintedIsBusiness ? 'Vinted Pro (business) account — invoices are issued for sales' : 'Personal Vinted account'}
-            >
-              {accountTypeLabel}
-            </span>
+            {vintedLoading ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-cream-md text-ink-lt border border-border">
+                …
+              </span>
+            ) : (
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
+                  vintedIsBusiness
+                    ? 'bg-sage/15 text-sage-dk border border-sage/30'
+                    : 'bg-cream-md text-ink-lt border border-border'
+                }`}
+                title={vintedIsBusiness ? 'Vinted Pro (business) account — invoices are issued for sales' : 'Personal Vinted account'}
+              >
+                {accountTypeLabel}
+              </span>
+            )}
           </div>
           <div className="text-xs text-ink-lt">Account: {vintedUsername}</div>
         </div>
