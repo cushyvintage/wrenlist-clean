@@ -3,6 +3,17 @@
 All notable changes to the Wrenlist extension will be documented in this file.
 Versioning follows the rules in [VERSIONING.md](./VERSIONING.md).
 
+## [0.9.2] - 2026-04-11
+
+### Changed
+- **Extension icons replaced with the Wrenlist wren illustration** from
+  `public/wrenlist-logo.png`, center-cropped to 700×700 before resize so
+  the bird fills ~60% of the 16×16 toolbar icon (previously ~25% — the
+  inherited Crosslist crop had the subject too small to recognise at
+  small sizes). Generated via macOS `sips` from the source PNG. All four
+  sizes (16/32/48/128) are now RGBA with a transparent alpha channel —
+  the previous 128×128 was RGB-only.
+
 ## [0.9.1] - 2026-04-11
 
 ### Changed
