@@ -3,6 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { config } from '@/lib/config'
 import { eBayClient } from '@/lib/ebay-client'
+import { encryptEbayToken, maybeDecryptEbayToken } from '@/lib/ebay-token-crypto'
 
 /**
  * GET /api/ebay/status
@@ -47,16 +48,21 @@ export async function GET(request: NextRequest) {
           redirectUrl: process.env.EBAY_REDIRECT_URI!,
         })
 
+        // Decrypt tokens (handles both encrypted + legacy plaintext rows)
+        let accessToken = maybeDecryptEbayToken(tokens.access_token, tokens.token_encrypted)
+        const refreshTokenPlain = maybeDecryptEbayToken(tokens.refresh_token, tokens.token_encrypted)
+
         // Refresh access token first — stored token is likely expired (2hr lifetime)
-        let accessToken = tokens.access_token
-        if (tokens.refresh_token && new Date(tokens.expires_at) <= new Date()) {
+        if (refreshTokenPlain && new Date(tokens.expires_at) <= new Date()) {
           try {
-            const newTokens = await client.refreshAccessToken(tokens.refresh_token)
+            const newTokens = await client.refreshAccessToken(refreshTokenPlain)
             accessToken = newTokens.accessToken
             await supabase
               .from('ebay_tokens')
               .update({
-                access_token: newTokens.accessToken,
+                access_token: encryptEbayToken(newTokens.accessToken),
+                refresh_token: encryptEbayToken(newTokens.refreshToken || refreshTokenPlain),
+                token_encrypted: true,
                 expires_at: newTokens.expiresAt.toISOString(),
               })
               .eq('user_id', user.id)
@@ -68,7 +74,7 @@ export async function GET(request: NextRequest) {
 
         client.setTokens({
           accessToken,
-          refreshToken: tokens.refresh_token,
+          refreshToken: refreshTokenPlain,
           expiresAt: new Date(Date.now() + 7200000), // treat as valid after refresh
         })
         ebayUsername = await client.fetchUsername()

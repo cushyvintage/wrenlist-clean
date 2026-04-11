@@ -18,8 +18,8 @@
 - **Branding:** App name "Wrenlist", logo uploaded, privacy/terms URLs set
 
 ### Env var notes
-- **`SUPABASE_SERVICE_ROLE_KEY`** — Key is registered in Vercel (Production, Preview) but stored as an empty string. **This blocks any feature that needs service-role access**, including `/api/cron/drip-emails` (queries candidates across all users). Paste the real key from the Supabase dashboard before relying on cron-driven emails.
-- **`EBAY_TOKEN_ENCRYPTION_KEY`** — Referenced by `encryptToken`/`decryptToken` helpers on `eBayClient`, but **no call sites currently use them**. Tokens are stored unencrypted in `ebay_tokens`. Setting the env var on its own does nothing until someone wires it up.
+- **`SUPABASE_SERVICE_ROLE_KEY`** — Set in Vercel (Production + Preview) as of 2026-04-10. Used by service-role features including `/api/cron/drip-emails`.
+- **`EBAY_TOKEN_ENCRYPTION_KEY`** — Set in Vercel (Production + Preview) as of 2026-04-11. AES-256-CBC key (base64, 32 bytes). `src/lib/ebay-token-crypto.ts` provides `encryptEbayToken` / `decryptEbayToken` / `maybeDecryptEbayToken`. All `ebay_tokens` writes encrypt access_token + refresh_token and set `token_encrypted=true`. Reads use `maybeDecryptEbayToken` so legacy plaintext rows keep working until their next natural refresh (~2hr), at which point they're upgraded automatically. No backfill needed.
 - **`EBAY_WEBHOOK_VERIFICATION_TOKEN`** — Already set in Vercel. Used by `/api/webhooks/ebay` to verify signatures on inbound `ITEM_SOLD` and account-deletion events. Only matters once an eBay webhook subscription is registered in the eBay dev console.
 
 ## Dev Server

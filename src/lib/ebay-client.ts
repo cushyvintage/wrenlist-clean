@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { fetch as undiciFetch, Headers as UndiciHeaders } from 'undici'
 import { config } from './config'
+import { encryptEbayToken, maybeDecryptEbayToken } from './ebay-token-crypto'
 
 // Types
 interface eBayConfig {
@@ -669,19 +670,24 @@ export async function getEbayClientForUser(
 
   const client = new eBayClient(ebayConfig)
 
+  // Decrypt tokens (handles both encrypted + legacy plaintext rows)
+  const accessTokenPlain = maybeDecryptEbayToken(tokens.access_token, tokens.token_encrypted)
+  const refreshTokenPlain = maybeDecryptEbayToken(tokens.refresh_token, tokens.token_encrypted)
+
   // Load tokens and refresh if needed
-  if (tokens.refresh_token) {
+  if (refreshTokenPlain) {
     // If token expires within next 2 hours, refresh it (conservative)
     if (new Date(tokens.expires_at) <= new Date(Date.now() + 7200000)) {
       try {
-        const newTokens = await client.refreshAccessToken(tokens.refresh_token)
+        const newTokens = await client.refreshAccessToken(refreshTokenPlain)
 
-        // Update database with new token
+        // Update database with new token (encrypted)
         await supabaseClient
           .from('ebay_tokens')
           .update({
-            access_token: newTokens.accessToken,
-            refresh_token: newTokens.refreshToken,
+            access_token: encryptEbayToken(newTokens.accessToken),
+            refresh_token: encryptEbayToken(newTokens.refreshToken || refreshTokenPlain),
+            token_encrypted: true,
             expires_at: newTokens.expiresAt.toISOString(),
             updated_at: new Date().toISOString(),
           })
@@ -694,16 +700,16 @@ export async function getEbayClientForUser(
         // Log refresh error but don't throw — use existing token (might still work)
         console.error('eBay token refresh failed:', error instanceof Error ? error.message : 'Unknown error')
         client.setTokens({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
+          accessToken: accessTokenPlain,
+          refreshToken: refreshTokenPlain,
           expiresAt: new Date(tokens.expires_at),
         })
       }
     } else {
       // Use existing tokens
       client.setTokens({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: accessTokenPlain,
+        refreshToken: refreshTokenPlain,
         expiresAt: new Date(tokens.expires_at),
       })
     }

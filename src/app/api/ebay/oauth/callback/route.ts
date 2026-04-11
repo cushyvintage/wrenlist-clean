@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { eBayClient } from '@/lib/ebay-client'
+import { encryptEbayToken } from '@/lib/ebay-token-crypto'
 import { config } from '@/lib/config'
 
 /**
@@ -91,14 +92,15 @@ export async function GET(request: NextRequest) {
     // Fetch eBay username
     const ebayUsername = await client.fetchUsername()
 
-    // Upsert tokens — insert or update
+    // Upsert tokens — insert or update (encrypt before storing)
     const { error: upsertError } = await supabase
       .from('ebay_tokens')
       .upsert({
         user_id: stateRecord.user_id,
         marketplace_id: marketplace,
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
+        access_token: encryptEbayToken(tokens.accessToken),
+        refresh_token: encryptEbayToken(tokens.refreshToken),
+        token_encrypted: true,
         expires_at: tokens.expiresAt.toISOString(),
         scope: tokens.scope?.join(' ') || 'sell.inventory sell.account',
         ebay_user: ebayUsername,
