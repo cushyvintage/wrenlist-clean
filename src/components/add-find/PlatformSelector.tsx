@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Platform } from '@/types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { PLAN_LIMITS, getPlan, type PlanId } from '@/config/plans'
 
 const PLATFORM_LABELS: Record<string, string> = {
   vinted: 'Vinted',
@@ -26,29 +27,53 @@ export default function PlatformSelector({
 }: PlatformSelectorProps) {
   const [connectedPlatforms, setConnectedPlatforms] = useState<Platform[]>([])
   const [loading, setLoading] = useState(true)
+  const [planId, setPlanId] = useState<PlanId>('free')
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/platforms/status')
-        if (!res.ok) return
-        const json = await res.json()
-        const platforms = json.data?.platforms ?? json.platforms ?? {}
-        const connected: Platform[] = []
-        for (const [key, value] of Object.entries(platforms)) {
-          if ((value as { connected: boolean }).connected) {
-            connected.push(key as Platform)
+        const [statusRes, profileRes] = await Promise.all([
+          fetch('/api/platforms/status'),
+          fetch('/api/profiles/me'),
+        ])
+
+        if (statusRes.ok) {
+          const json = await statusRes.json()
+          const platforms = json.data?.platforms ?? json.platforms ?? {}
+          const connected: Platform[] = []
+          for (const [key, value] of Object.entries(platforms)) {
+            if ((value as { connected: boolean }).connected) {
+              connected.push(key as Platform)
+            }
           }
+          setConnectedPlatforms(connected)
         }
-        setConnectedPlatforms(connected)
+
+        if (profileRes.ok) {
+          const json = await profileRes.json()
+          const plan = (json?.data?.plan ?? json?.plan ?? 'free') as PlanId
+          if (plan in PLAN_LIMITS) setPlanId(plan)
+        }
       } catch {
-        // Fallback — assume nothing connected
+        // Fallback — assume nothing connected, free plan
       } finally {
         setLoading(false)
       }
     }
     fetchStatus()
   }, [])
+
+  const marketplaceLimit = PLAN_LIMITS[planId]?.marketplaces ?? null
+  const atLimit =
+    marketplaceLimit !== null && selectedPlatforms.length >= marketplaceLimit
+  const planName = getPlan(planId).name
+
+  const handleToggle = (platform: Platform) => {
+    const isSelected = selectedPlatforms.includes(platform)
+    // Block adding a new platform when at the cap; always allow removal.
+    if (!isSelected && atLimit) return
+    onPlatformToggle(platform)
+  }
 
   if (loading) {
     return variant === 'chips' ? (
@@ -86,31 +111,47 @@ export default function PlatformSelector({
 
   if (variant === 'chips') {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        {connectedPlatforms.map((platform) => {
-          const selected = selectedPlatforms.includes(platform)
-          return (
-            <button
-              key={platform}
-              type="button"
-              onClick={() => onPlatformToggle(platform)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors ${
-                selected
-                  ? 'border-sage bg-sage/10 text-sage font-medium'
-                  : 'border-sage/20 text-sage-dim hover:border-sage/40'
-              }`}
-            >
-              <MarketplaceIcon platform={platform} size="sm" />
-              {PLATFORM_LABELS[platform] ?? platform}
-            </button>
-          )
-        })}
-        <Link
-          href="/platform-connect"
-          className="text-xs text-ink/30 hover:text-sage transition-colors"
-        >
-          +
-        </Link>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {connectedPlatforms.map((platform) => {
+            const selected = selectedPlatforms.includes(platform)
+            const locked = !selected && atLimit
+            return (
+              <button
+                key={platform}
+                type="button"
+                onClick={() => handleToggle(platform)}
+                disabled={locked}
+                title={locked ? `${planName} plan allows ${marketplaceLimit} marketplace${marketplaceLimit === 1 ? '' : 's'}. Upgrade for more.` : undefined}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors ${
+                  selected
+                    ? 'border-sage bg-sage/10 text-sage font-medium'
+                    : locked
+                    ? 'border-sage/10 text-sage-dim/40 cursor-not-allowed'
+                    : 'border-sage/20 text-sage-dim hover:border-sage/40'
+                }`}
+              >
+                <MarketplaceIcon platform={platform} size="sm" />
+                {PLATFORM_LABELS[platform] ?? platform}
+                {locked && <span aria-hidden>🔒</span>}
+              </button>
+            )
+          })}
+          <Link
+            href="/platform-connect"
+            className="text-xs text-ink/30 hover:text-sage transition-colors"
+          >
+            +
+          </Link>
+        </div>
+        {atLimit && marketplaceLimit !== null && (
+          <div className="text-[11px] text-sage-dim">
+            {planName} plan: {marketplaceLimit} marketplace{marketplaceLimit === 1 ? '' : 's'} per listing.{' '}
+            <Link href="/billing" className="underline text-sage hover:text-sage-dk">
+              Upgrade for more →
+            </Link>
+          </div>
+        )}
       </div>
     )
   }
@@ -119,24 +160,39 @@ export default function PlatformSelector({
     <div>
       <h2 className="text-sm font-semibold text-ink mb-4">Where to list</h2>
       <div className="space-y-3">
-        {connectedPlatforms.map((platform) => (
-          <label
-            key={platform}
-            className="flex items-center gap-3 group cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              checked={selectedPlatforms.includes(platform)}
-              onChange={() => onPlatformToggle(platform)}
-              className="w-4 h-4 border border-sage/30 rounded cursor-pointer"
-            />
-            <MarketplaceIcon platform={platform} size="sm" />
-            <span className="text-sm text-ink group-hover:text-sage transition-colors">
-              {PLATFORM_LABELS[platform] ?? platform}
-            </span>
-          </label>
-        ))}
+        {connectedPlatforms.map((platform) => {
+          const selected = selectedPlatforms.includes(platform)
+          const locked = !selected && atLimit
+          return (
+            <label
+              key={platform}
+              className={`flex items-center gap-3 group ${locked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              title={locked ? `${planName} plan allows ${marketplaceLimit} marketplace${marketplaceLimit === 1 ? '' : 's'}. Upgrade for more.` : undefined}
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                disabled={locked}
+                onChange={() => handleToggle(platform)}
+                className="w-4 h-4 border border-sage/30 rounded cursor-pointer disabled:cursor-not-allowed"
+              />
+              <MarketplaceIcon platform={platform} size="sm" />
+              <span className="text-sm text-ink group-hover:text-sage transition-colors">
+                {PLATFORM_LABELS[platform] ?? platform}
+              </span>
+              {locked && <span className="text-[10px] text-sage-dim ml-auto">🔒</span>}
+            </label>
+          )
+        })}
       </div>
+      {atLimit && marketplaceLimit !== null && (
+        <div className="mt-3 text-[11px] text-sage-dim">
+          {planName} plan: {marketplaceLimit} marketplace{marketplaceLimit === 1 ? '' : 's'} per listing.{' '}
+          <Link href="/billing" className="underline text-sage hover:text-sage-dk">
+            Upgrade for more →
+          </Link>
+        </div>
+      )}
       <Link
         href="/platform-connect"
         className="block mt-4 text-xs text-ink/40 hover:text-sage transition-colors"

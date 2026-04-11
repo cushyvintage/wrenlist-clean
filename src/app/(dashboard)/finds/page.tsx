@@ -7,6 +7,7 @@ import { Badge } from '@/components/wren/Badge'
 import { PLAN_LIMITS } from '@/config/plans'
 import type { Find, Profile, PlanId, Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { showError } from '@/lib/toast-error'
 import { formatCategory } from '@/lib/format-category'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
@@ -177,8 +178,8 @@ function InventoryPageContent() {
           })
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'An error occurred'
-        setError(message)
+        showError(err, 'Could not load finds. Please try again.')
+        setError('Could not load finds. Please try again.')
         setFinds([])
         setTotalCount(0)
       } finally {
@@ -1055,9 +1056,26 @@ function InventoryPageContent() {
       )}
 
 
-      {/* Loading state */}
+      {/* Loading state — mobile skeleton */}
       {isLoading && (
-        <Panel className="overflow-x-auto">
+        <div className="md:hidden space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded bg-[#FDFBF5] border" style={{ borderColor: 'rgba(61,92,58,.14)' }}>
+              <div className="w-4 h-4 rounded bg-sage/10 animate-pulse mt-1" />
+              <div className="w-14 h-14 rounded bg-sage/10 animate-pulse flex-shrink-0" />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="h-3.5 rounded bg-sage/10 animate-pulse w-3/4" />
+                <div className="h-2.5 rounded bg-sage/10 animate-pulse w-1/2" />
+                <div className="h-4 rounded-full bg-sage/10 animate-pulse w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Loading state — desktop table skeleton */}
+      {isLoading && (
+        <Panel className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm min-w-max">
             <thead className="text-sage-dim">
               <tr className="border-b border-sage/14">
@@ -1095,10 +1113,78 @@ function InventoryPageContent() {
         </Panel>
       )}
 
-      {/* Inventory table */}
+      {/* Mobile card list (below md) */}
+      {!isLoading && filteredFinds.length > 0 && (
+        <div className="md:hidden space-y-2">
+          {filteredFinds.map((find) => {
+            const margin = calculateMargin(find.cost_gbp, find.asking_price_gbp)
+            const daysListed = getDaysListed(find)
+            const isAged30 = find.status === 'listed' && daysListed >= 30
+            const isAged60 = find.status === 'listed' && daysListed >= 60
+            const displayName = find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'
+            return (
+              <div
+                key={find.id}
+                onClick={() => router.push(`/finds/${find.id}`)}
+                className="flex items-start gap-3 p-3 rounded bg-[#FDFBF5] border cursor-pointer active:bg-[#F5F0E8] transition-colors"
+                style={{ borderColor: 'rgba(61,92,58,.14)' }}
+              >
+                <div onClick={(e) => e.stopPropagation()} className="pt-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.has(find.id)}
+                    onChange={() => toggleItemSelection(find.id)}
+                    className="cursor-pointer w-4 h-4"
+                  />
+                </div>
+                {find.photos && find.photos.length > 0 ? (
+                  <img
+                    src={find.photos[0]}
+                    alt={displayName}
+                    className="w-14 h-14 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-sage/10 flex items-center justify-center text-2xl flex-shrink-0">
+                    {getEmoji(find.category)}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-medium text-[14px] truncate" style={{ color: '#1E2E1C' }}>
+                      {displayName}
+                    </div>
+                    <div className="font-mono text-[13px] flex-shrink-0" style={{ color: '#1E2E1C' }}>
+                      {find.asking_price_gbp ? `£${find.asking_price_gbp}` : '—'}
+                    </div>
+                  </div>
+                  <div className="text-[11px] mt-0.5 truncate" style={{ color: '#6B7D6A' }}>
+                    {formatCategory(find.category)} · £{find.cost_gbp}
+                    {margin !== null ? ` · ${margin}%` : ''}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    <Badge status={(find.status ?? 'draft') as 'listed' | 'draft' | 'on_hold' | 'sold'} />
+                    {isAged60 && (
+                      <span className="inline-block px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-red-100 text-red-700">
+                        60d+
+                      </span>
+                    )}
+                    {isAged30 && !isAged60 && (
+                      <span className="inline-block px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-amber-100 text-amber-700">
+                        30d+
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Inventory table (md and up) */}
       {!isLoading && (
         <>
-          <Panel className="overflow-x-auto">
+          <Panel className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm min-w-max">
               <thead style={{ color: '#8A9E88' }}>
                 <tr style={{ borderBottomWidth: '1px', borderBottomColor: 'rgba(61,92,58,.14)' }}>

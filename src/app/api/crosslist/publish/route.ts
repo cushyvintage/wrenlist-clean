@@ -8,6 +8,7 @@ import { createPublishJob } from '@/lib/publish-jobs'
 import { createClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
 import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { PLAN_LIMITS, getPlan, type PlanId } from '@/config/plans'
 import type { Platform } from '@/types'
 
 // eBay publishes via API; Shopify and others queue for extension.
@@ -62,6 +63,25 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const supabase = await createSupabaseServerClient()
+
+  // Enforce plan marketplace limit. De-duped because a publish request
+  // may list the same marketplace twice (the limit counts distinct platforms).
+  const { data: planProfile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('user_id', user.id)
+    .single()
+
+  const planId = (planProfile?.plan ?? 'free') as PlanId
+  const marketplaceLimit = PLAN_LIMITS[planId]?.marketplaces ?? null
+  const distinctMarketplaces = Array.from(new Set(marketplaces))
+  if (marketplaceLimit !== null && distinctMarketplaces.length > marketplaceLimit) {
+    const planName = getPlan(planId).name
+    return ApiResponseHelper.error(
+      `${planName} plan allows ${marketplaceLimit} marketplace${marketplaceLimit === 1 ? '' : 's'} per listing. Upgrade to publish to more.`,
+      402
+    )
+  }
 
   // Verify ownership and fetch full find data (needed for job payload snapshot)
   const { data: find, error: findError } = await supabase

@@ -5,6 +5,7 @@ import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.share
 import { FieldConfig } from '@/types'
 import type { FormData } from './useAddFindForm'
 import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { showError } from '@/lib/toast-error'
 import type { PublishProgress, MarketplaceStatus } from '@/components/publish/PublishProgressPanel'
 
 /** Resolve Vinted catalog ID — prefer category map, fall back to known working leaf IDs */
@@ -241,7 +242,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       setUploadProgress(100)
       router.push(`/finds`)
     } catch (err) {
-      setError((err as Error).message || 'An error occurred')
+      const message = (err as Error).message || 'Could not save draft. Please try again.'
+      setError(message)
+      showError(err, 'Could not save draft. Please try again.')
     } finally {
       setIsLoading(false)
       setUploadProgress(0)
@@ -371,7 +374,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       // Don't redirect — progress panel polls and user clicks "View in Finds"
     } catch (err) {
       setPublishProgress(null) // Close progress panel on fatal error
-      setError((err as Error).message || 'An error occurred')
+      const message = (err as Error).message || 'Could not publish. Please try again.'
+      setError(message)
+      showError(err, 'Could not publish. Please try again.')
     } finally {
       setIsLoading(false)
       setUploadProgress(0)

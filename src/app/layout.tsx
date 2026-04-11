@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: {
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
   )

@@ -107,9 +107,9 @@ export default function SettingsPage() {
       setSaveSuccessful(true)
       setTimeout(() => setSaveSuccessful(false), 3000)
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to save changes'
-      setSaveError(message)
+      const { showError } = await import('@/lib/toast-error')
+      showError(error, 'Failed to save changes')
+      setSaveError('Failed to save changes')
     } finally {
       setIsSaving(false)
     }
@@ -210,8 +210,9 @@ export default function SettingsPage() {
       setWorkspaceSaveSuccess(true)
       setTimeout(() => setWorkspaceSaveSuccess(false), 3000)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save changes'
-      setWorkspaceSaveError(message)
+      const { showError } = await import('@/lib/toast-error')
+      showError(error, 'Failed to save changes')
+      setWorkspaceSaveError('Failed to save changes')
     } finally {
       setIsSavingWorkspace(false)
     }
