@@ -22,9 +22,10 @@ export async function loadContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<InsightContext> {
-  const [finds, listedMarketplacesByFind] = await Promise.all([
+  const [finds, listedMarketplacesByFind, lastPriceChangeByFind] = await Promise.all([
     loadFinds(supabase, userId),
     loadListedMarketplaces(supabase, userId),
+    loadLastPriceChanges(supabase, userId),
   ])
 
   return {
@@ -32,6 +33,7 @@ export async function loadContext(
     now: Date.now(),
     finds,
     listedMarketplacesByFind,
+    lastPriceChangeByFind,
     totalFinds: finds.length,
   }
 }
@@ -85,6 +87,39 @@ async function loadListedMarketplaces(
     const set = map.get(row.find_id) ?? new Set<string>()
     set.add(row.marketplace)
     map.set(row.find_id, set)
+  }
+  return map
+}
+
+/**
+ * Map of find_id → timestamp (ms) of the most recent `price_changes` row.
+ * Scoped to the last 30 days because the drift rule only cares about
+ * recency — older rows are irrelevant and dragging them through the
+ * network is waste. Non-fatal on error.
+ */
+async function loadLastPriceChanges(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>()
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from('price_changes')
+    .select('find_id,changed_at')
+    .eq('user_id', userId)
+    .gte('changed_at', since)
+    .order('changed_at', { ascending: false })
+
+  if (error) {
+    console.error('[insights] loadLastPriceChanges failed (non-fatal):', error)
+    return map
+  }
+
+  // Rows come newest-first; the first row per find_id is the latest.
+  for (const row of data ?? []) {
+    if (map.has(row.find_id)) continue
+    map.set(row.find_id, new Date(row.changed_at).getTime())
   }
   return map
 }

@@ -13,6 +13,7 @@ import { agedStockRule } from './aged-stock'
 import { unpricedRule } from './unpriced'
 import { missingPhotosRule } from './missing-photos'
 import { taxDeadlineRule } from './tax-deadline'
+import { priceDriftRule } from './price-drift'
 import { sourcingRoiRule } from './sourcing-roi'
 import { bestCategoryRule } from './best-category'
 import { slowCategoriesRule } from './slow-categories'
@@ -26,6 +27,7 @@ export const ALL_RULES: InsightRule[] = [
   unpricedRule,
   missingPhotosRule,
   taxDeadlineRule,
+  priceDriftRule,
   sourcingRoiRule,
   bestCategoryRule,
   slowCategoriesRule,

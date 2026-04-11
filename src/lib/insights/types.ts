@@ -49,6 +49,12 @@ export interface InsightContext {
   finds: FindForInsights[]
   /** Map of find_id → set of marketplaces where status = 'listed'. */
   listedMarketplacesByFind: Map<string, Set<string>>
+  /**
+   * Map of find_id → timestamp (ms) of most recent `price_changes` row.
+   * Absence means "no recorded price change" — used by the price-drift
+   * rule to distinguish "never touched" from "recently dropped".
+   */
+  lastPriceChangeByFind: Map<string, number>
   /** Count of finds the user has (pre-pagination). Used by new-user guard. */
   totalFinds: number
 }
