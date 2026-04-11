@@ -6,12 +6,19 @@ import { AppTopbar } from '@/components/layout/AppTopbar'
 import { BetaBanner } from '@/components/layout/BetaBanner'
 import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { NavIcons } from '@/components/layout/NavIcons'
+import { isAdmin } from '@/lib/admin'
 
 // IDs that support nested routes (e.g. /finds/123 highlights Finds)
-const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect']
+const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect', 'admin-category-config', 'admin-import']
+
+const ADMIN_NAV_ITEMS = [
+  { id: 'admin-category-config', label: 'Category Config', icon: NavIcons.admin, path: '/admin/category-config', section: 'ADMIN', pageTitle: 'Admin — Category Config' },
+  { id: 'admin-import', label: 'Legacy Import', icon: NavIcons.import, path: '/admin/import', section: 'ADMIN', pageTitle: 'Admin — Legacy Import' },
+  { id: 'testing', label: 'E2E Testing', icon: NavIcons.testing, path: '/testing', section: 'ADMIN', pageTitle: 'Admin — E2E Testing' },
+]
 
 const NAV_ITEMS = [
   // WORKSPACE
@@ -52,7 +59,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
 
-  const navItems = NAV_ITEMS
+  const navItems = useMemo(
+    () => (isAdmin(user?.email) ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS),
+    [user?.email]
+  )
 
   const currentPage = navItems.find((item) => activeNav === item.id)
   const pageTitle = currentPage?.pageTitle
@@ -108,7 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* Group nav items by section */}
-        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS'].map((section) => (
+        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS', 'ADMIN'].map((section) => (
           <div key={section}>
             {navItems.some((item) => item.section === section) && (
               <>
@@ -129,7 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={() => handleNavClick(item.id, item.path)}
                     />
                   ))}
-                {section !== 'SETTINGS' && (
+                {section !== 'ADMIN' && (
                   <div
                     className="h-px mx-3 my-1"
                     style={{ backgroundColor: 'rgba(255,255,255,.06)' }}
@@ -150,7 +160,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           plan: 'Beta',
         }}
       >
-        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS'].map((section) => (
+        {['WORKSPACE', 'INSIGHTS', 'OPERATIONS', 'SETTINGS', 'ADMIN'].map((section) => (
           <div key={section}>
             {navItems.some((item) => item.section === section) && (
               <>
@@ -171,7 +181,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={() => handleNavClick(item.id, item.path)}
                     />
                   ))}
-                {section !== 'SETTINGS' && (
+                {section !== 'ADMIN' && (
                   <div
                     className="h-px mx-3 my-1"
                     style={{ backgroundColor: 'rgba(255,255,255,.06)' }}

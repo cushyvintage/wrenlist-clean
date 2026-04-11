@@ -1,10 +1,7 @@
 import { NextRequest } from 'next/server'
-import { withAuth } from '@/lib/with-auth'
+import { withAdminAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { createClient } from '@supabase/supabase-js'
-
-// Hardcoded admin user ID — only this user can access the error dashboard
-const ADMIN_USER_ID = 'fda20546-82af-4818-8fdc-bbc85c3f87c8'
 
 /**
  * GET /api/admin/errors
@@ -16,10 +13,7 @@ const ADMIN_USER_ID = 'fda20546-82af-4818-8fdc-bbc85c3f87c8'
  * - Recent extension log errors (last 50)
  * - Recent publish failures from product_marketplace_data
  */
-export const GET = withAuth(async (_req: NextRequest, user) => {
-  if (user.id !== ADMIN_USER_ID) {
-    return ApiResponseHelper.forbidden()
-  }
+export const GET = withAdminAuth(async (_req: NextRequest, _user) => {
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

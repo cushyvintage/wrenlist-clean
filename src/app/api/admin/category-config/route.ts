@@ -1,12 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/with-auth'
+import { NextResponse } from 'next/server'
+import { withAdminAuth } from '@/lib/with-auth'
 
-export const GET = withAuth(async (req, user) => {
-  const adminUserId = process.env.ADMIN_USER_ID
-  if (!adminUserId || user.id !== adminUserId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
-
+export const GET = withAdminAuth(async (_req, _user) => {
   try {
     const { createSupabaseServerClient } = await import('@/lib/supabase-server')
     const supabase = await createSupabaseServerClient()

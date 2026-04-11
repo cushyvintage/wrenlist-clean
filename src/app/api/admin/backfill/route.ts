@@ -1,19 +1,16 @@
 import { NextRequest } from 'next/server'
-import { withAuth } from '@/lib/with-auth'
+import { withAdminAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { createClient } from '@supabase/supabase-js'
 import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
 import { findColourByVintedId } from '@/data/unified-colours'
-
-const ADMIN_USER_ID = 'fda20546-82af-4818-8fdc-bbc85c3f87c8'
 
 /**
  * POST /api/admin/backfill
  * Backfill leaf categories + colours for old Vinted imports that have
  * catalogId/color_ids in vintedMetadata but top-level category and null colour.
  */
-export const POST = withAuth(async (_req: NextRequest, user) => {
-  if (user.id !== ADMIN_USER_ID) return ApiResponseHelper.forbidden()
+export const POST = withAdminAuth(async (_req: NextRequest, user) => {
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

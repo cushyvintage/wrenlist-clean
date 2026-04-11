@@ -1,13 +1,44 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdmin } from '@/lib/admin'
 
 const APP_SUBDOMAIN = process.env.NEXT_PUBLIC_APP_HOSTNAME || 'app.wrenlist.com'
 const MARKETING_DOMAIN = process.env.NEXT_PUBLIC_MARKETING_HOSTNAME || 'wrenlist.com'
 
+// Denylist model: everything is protected EXCEPT these public route prefixes.
+// Any new page under (dashboard) is automatically gated without a middleware update.
+const PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+  '/landing',
+  '/pricing',
+  '/about',
+  '/blog',
+  '/story',
+  '/roadmap',
+  '/privacy',
+  '/terms',
+  '/calculator',
+  '/extension',
+  '/glossary',
+  '/marketplace-comparison',
+  '/tax-estimator',
+  '/auth',
+] as const
+
+const AUTH_PAGE_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password'] as const
+
+function matchesPrefix(pathname: string, route: string): boolean {
+  return pathname === route || pathname.startsWith(route + '/')
+}
+
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || ''
   const pathname = req.nextUrl.pathname
-  const isAppSubdomain = hostname === APP_SUBDOMAIN
   const isMarketingDomain = hostname === MARKETING_DOMAIN || hostname === `www.${MARKETING_DOMAIN}`
 
   let res = NextResponse.next({ request: { headers: req.headers } })
@@ -31,53 +62,38 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Refresh session if expired
+  // Refresh session if expired.
+  // If session fetch errors, we fall through with session=null — the denylist
+  // check below will then fail closed for protected routes (redirect to /login)
+  // and still allow public routes through.
   let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null
   try {
     const { data } = await supabase.auth.getSession()
     session = data.session
   } catch {
-    // If session fetch fails, allow request through (fail open)
-    return res
+    session = null
   }
 
-  // Denylist model: everything is protected EXCEPT these public route prefixes.
-  // Any new page under (dashboard) is automatically gated without a middleware update.
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
-    '/verify-email',
-    '/landing',
-    '/pricing',
-    '/about',
-    '/blog',
-    '/story',
-    '/roadmap',
-    '/privacy',
-    '/terms',
-    '/calculator',
-    '/extension',
-    '/glossary',
-    '/marketplace-comparison',
-    '/tax-estimator',
-    '/auth',
-  ]
-
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + '/')
-  )
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => matchesPrefix(pathname, route))
 
   if (!session && !isPublicRoute) {
     const loginUrl = new URL('/login', req.url)
-    loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
+  // Admin-only routes: /admin/*, /testing — redirect non-admins to /dashboard.
+  // Client-side gates on these pages exist too, but server-side enforcement
+  // prevents the page shell from rendering at all.
+  if (
+    session &&
+    (pathname.startsWith('/admin') || pathname === '/testing' || pathname.startsWith('/testing/')) &&
+    !isAdmin(session.user.email)
+  ) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
   // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (session && ['/login', '/register', '/forgot-password', '/reset-password'].some((route) => pathname.startsWith(route))) {
+  if (session && AUTH_PAGE_PREFIXES.some((route) => matchesPrefix(pathname, route))) {
     const dashUrl = new URL('/dashboard', req.url)
     // If on marketing domain, redirect to app subdomain
     if (isMarketingDomain) {
@@ -87,21 +103,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(dashUrl)
   }
 
-  // If user is authenticated and NOT on onboarding page, check if they've completed onboarding
-  // Skip check for onboarding page itself, API routes, and static assets
+  // If user is authenticated and NOT on onboarding/public pages, check onboarding status.
   //
   // Caching: once a user completes onboarding we set a cookie `wl_onboarded=<userId>`.
   // On subsequent requests, if the cookie is present AND matches the current session
   // user id, we skip the Supabase fetch entirely. This turns an extra network round-trip
   // on every page load into a zero-cost cookie read after the first hit.
-  if (
-    session &&
-    !pathname.startsWith('/onboarding') &&
-    !pathname.startsWith('/api') &&
-    !pathname.startsWith('/_next') &&
-    !pathname.startsWith('/auth') &&
-    pathname !== '/favicon.ico'
-  ) {
+  if (session && !pathname.startsWith('/onboarding') && !isPublicRoute) {
     const cachedUserId = req.cookies.get('wl_onboarded')?.value
     const cacheIsValid = cachedUserId && cachedUserId === session.user.id
 
@@ -170,6 +178,7 @@ export const config = {
     // - _next/image (image optimization files)
     // - favicon.ico (favicon file)
     // - auth/callback (OAuth callback — must reach route handler directly)
-    '/((?!api|_next/static|_next/image|favicon.ico|auth/callback).*)',
+    // - robots.txt, sitemap.xml, manifest.json (SEO/PWA — must be publicly crawlable)
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|auth/callback).*)',
   ],
 }

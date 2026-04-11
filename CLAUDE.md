@@ -98,29 +98,79 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 
 | Table | Purpose | RLS |
 |---|---|---|
+**Core inventory**
+| Table | Purpose | RLS |
+|---|---|---|
 | `profiles` | User accounts, plans, Stripe billing | ON |
+| `users` | Legacy mirror of auth.users (reference only — use auth.users FKs) | ON |
 | `finds` | Inventory items (the core entity) | ON |
 | `product_marketplace_data` | Per-marketplace listing state (1 row per find per platform) | ON |
-| `marketplace_category_config` | Category/field mappings per platform | ON |
+| `customers` | Buyer CRM — one row per buyer per marketplace | ON |
+| `stashes` | User-defined physical storage locations ("garage", "shelf 3") | ON |
+| `stash_activity` | Audit log of stash mutations | ON |
+| `scan_history` | Barcode/ISBN scan log | ON |
+
+**Finance & tax**
+| Table | Purpose | RLS |
+|---|---|---|
 | `expenses` | Business expenses | ON |
+| `expense_categories` | Expense category lookup (read-only reference) | ON (read-only) |
 | `mileage` | HMRC mileage tracking | ON |
+| `hmrc_mileage_rates` | HMRC reference rates (public read) | ON (read-only) |
 | `sourcing_trips` | Sourcing trip records | ON |
 | `suppliers` | Supplier contacts | ON |
+
+**Marketplace configuration**
+| Table | Purpose | RLS |
+|---|---|---|
+| `marketplace_category_config` | Category/field mappings per platform (shared config) | ON |
 | `listing_templates` | Reusable listing templates | ON |
-| `ebay_tokens` | eBay OAuth tokens | ON |
-| `ebay_seller_config` | eBay seller policies | ON |
-| `ebay_oauth_states` | eBay OAuth flow states | ON |
-| `ebay_sync_log` | eBay sync audit trail | ON |
-| `ebay_webhooks_audit` | eBay webhook audit trail | ON |
-| `shopify_connections` | Shopify store connections | ON |
 | `price_research_history` | Price research lookups with results for QA | ON |
-| `expense_categories` | Expense category lookup (DB-driven) | ON (read-only) |
-| `customers` | Buyer CRM — one row per buyer per marketplace | ON |
+
+**Platform connections (per marketplace)**
+| Table | Purpose | RLS |
+|---|---|---|
+| `ebay_tokens` | eBay OAuth tokens (AES-256-CBC encrypted at rest) | ON |
+| `ebay_seller_config` | eBay seller policies | ON |
+| `ebay_oauth_states` | eBay OAuth flow state | ON |
+| `ebay_sync_log` | eBay sync audit trail | ON |
+| `ebay_webhooks_audit` | eBay webhook audit trail (user-read-only; service-role writes) | ON |
+| `vinted_connections` | Vinted session cookies | ON |
+| `depop_connections` | Depop connection state | ON |
+| `etsy_connections` | Etsy connection state | ON |
+| `shopify_connections` | Shopify store connections | ON |
+
+**Publish/delist pipeline**
+| Table | Purpose | RLS |
+|---|---|---|
+| `publish_jobs` | Unified publish/delist job queue (replaces PMD status-driven flow) | ON |
+| `marketplace_events` | Event log of all marketplace interactions (error tracking) | ON (user read, service-role write) |
+
+**Extension**
+| Table | Purpose | RLS |
+|---|---|---|
+| `extension_heartbeats` | Extension last-seen timestamps | ON (user read, service-role write) |
+| `extension_logs` | Extension debug logs (Chrome MV3 service worker) | ON (user read, service-role write) |
+
+**Insights & email**
+| Table | Purpose | RLS |
+|---|---|---|
+| `insight_events` | Insight rule firings (price drift, velocity, etc.) | ON |
+| `dismissed_insights` | User-dismissed insight IDs | ON |
+| `price_changes` | Price-change audit log (Phase 3 insights) | ON |
+| `email_sends` | Transactional email send log (prevents duplicate drip sends) | ON |
+
+**Metrics (not yet populated)**
+| Table | Purpose | RLS |
+|---|---|---|
+| `daily_metrics` | Daily KPIs | ON |
+| `monthly_metrics` | Monthly performance | ON |
+
+**Internal testing**
+| Table | Purpose | RLS |
+|---|---|---|
 | `test_runs` | Internal E2E test run tracking | ON |
 | `test_results` | Individual test case results per run | ON |
-| `daily_metrics` | Daily KPIs (not yet populated) | ON |
-| `monthly_metrics` | Monthly performance (not yet populated) | ON |
-| `stashes` | User-defined physical storage locations ("garage", "shelf 3") | ON |
 
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
@@ -128,7 +178,9 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 - **`finds.platform_fields`** (jsonb) stores platform-specific form fields
 - **`finds.selected_marketplaces`** (text[]) stores which platforms a find targets
 - **`finds.stash_id`** (uuid FK → stashes, ON DELETE SET NULL) — physical storage location
-- All `user_id` FKs reference **`auth.users(id)`** — there is no `public.users` table
+- All `user_id` FKs reference **`auth.users(id)`** — the `public.users` table is a legacy mirror; do not write to it
 - All tables have RLS enabled with `auth.uid()` policies
+- Service-role-only policies must be scoped `TO service_role` (not `TO public`) — see migration `20260411000002_rls_prelaunch_hardening` for the fix
 - Supported platforms (DB CHECK + TypeScript): vinted, ebay, etsy, shopify, depop, poshmark, mercari, facebook, whatnot, grailed
 - **Archived schema docs in `.archive/`** are historical — do NOT use them for development
+- **Before adding a new table:** add it to this list AND `DATABASE_SCHEMA_REFERENCE.md`. If a reviewing agent spots an unlisted table, schema drift has happened and needs resolving before merge.

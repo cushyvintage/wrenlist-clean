@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getServerUser } from './supabase-server'
 import { ApiResponseHelper } from './api-response'
+import { isAdmin } from './admin'
 import type { User } from '@supabase/supabase-js'
 
 /**
@@ -60,4 +61,18 @@ export function withAuth(handler: AuthedHandler) {
       return ApiResponseHelper.error(message, 500)
     }
   }
+}
+
+/**
+ * HOF wrapper for admin-only API routes.
+ * Requires authentication AND membership in ADMIN_EMAILS (see src/lib/admin.ts).
+ * Returns 401 if not authenticated, 403 if authenticated but not admin.
+ */
+export function withAdminAuth(handler: AuthedHandler) {
+  return withAuth(async (req, user, params) => {
+    if (!isAdmin(user.email)) {
+      return ApiResponseHelper.forbidden()
+    }
+    return handler(req, user, params)
+  })
 }

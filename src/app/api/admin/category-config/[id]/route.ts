@@ -1,12 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/with-auth'
+import { NextResponse } from 'next/server'
+import { withAdminAuth } from '@/lib/with-auth'
 
-export const PATCH = withAuth(async (req, user, params) => {
-  const adminUserId = process.env.ADMIN_USER_ID
-  if (!adminUserId || user.id !== adminUserId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
-
+export const PATCH = withAdminAuth(async (req, _user, params) => {
   try {
     const id = params?.id
     if (!id) {
