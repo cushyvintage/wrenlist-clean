@@ -8,6 +8,8 @@ interface FindNotificationBannersProps {
   saveSuccess: boolean
   photoError: string | null
   extensionDetected: boolean | null
+  /** True when the extension is installed but below MIN_EXTENSION_VERSION */
+  extensionOutdated?: boolean
   findStatus: string | undefined
   onDismissVinted: () => void
   onDismissEbay: () => void
@@ -23,12 +25,17 @@ export function FindNotificationBanners({
   saveSuccess,
   photoError,
   extensionDetected,
+  extensionOutdated = false,
   findStatus,
   onDismissVinted,
   onDismissEbay,
   onDismissCrosslist,
   onDismissPhotoError,
 }: FindNotificationBannersProps) {
+  // Show the warning banner both when the extension is missing AND when it's
+  // installed but too old to trust. Outdated gets its own copy.
+  const showExtensionWarning =
+    (extensionDetected === false || extensionOutdated) && findStatus !== 'sold'
   return (
     <>
       {/* Vinted list result */}
@@ -66,8 +73,8 @@ export function FindNotificationBanners({
         </div>
       )}
 
-      {/* Extension not detected warning */}
-      {extensionDetected === false && findStatus !== 'sold' && (
+      {/* Extension missing or outdated warning */}
+      {showExtensionWarning && (
         <div
           className="p-3 rounded text-sm flex items-center justify-between"
           style={{
@@ -78,14 +85,16 @@ export function FindNotificationBanners({
           }}
         >
           <span>
-            Wrenlist extension not detected — crosslisting requires the Chrome extension.{' '}
+            {extensionOutdated
+              ? 'Wrenlist extension is out of date — restart Chrome to auto-update, or '
+              : 'Wrenlist extension not detected — crosslisting requires the Chrome extension. '}
             <a
               href="https://chromewebstore.google.com/detail/wrenlist/nblnainobllgbjkdkpeodjpopkgnpfgb"
               target="_blank"
               rel="noopener noreferrer"
               className="underline font-medium"
             >
-              Install extension
+              {extensionOutdated ? 'reinstall from the Web Store' : 'Install extension'}
             </a>
           </span>
         </div>

@@ -41,6 +41,59 @@ type ListingActionResult = {
   captchaUrl?: string;
 };
 
+/**
+ * Token refresh skipped because the hidden-tab cooldown window is still open.
+ * Transient — next alarm cycle will succeed. Callers should treat this as
+ * "retry later" and NOT surface it as a hard failure.
+ */
+export class VintedCooldownError extends Error {
+  readonly kind = "cooldown" as const;
+  constructor(public readonly secondsRemaining: number) {
+    super(`Vinted token refresh on cooldown, ${secondsRemaining}s remaining`);
+    this.name = "VintedCooldownError";
+  }
+}
+
+/**
+ * Hidden-tab refresh landed on a Vinted login/signup page, meaning the user
+ * is logged out of Vinted in Chrome. NOT self-recoverable — requires the
+ * user to visit vinted.co.uk and sign back in.
+ */
+export class VintedLoggedOutError extends Error {
+  readonly kind = "logged_out" as const;
+  constructor() {
+    super(
+      "Vinted session expired — open vinted.co.uk in Chrome and sign back in",
+    );
+    this.name = "VintedLoggedOutError";
+  }
+}
+
+/**
+ * Both direct fetch AND a fresh hidden-tab refresh failed to return a CSRF
+ * token. Usually Cloudflare bot-challenge the extension can't clear.
+ * User intervention required (pass challenge manually, or wait it out).
+ */
+export class VintedTokenFetchError extends Error {
+  readonly kind = "token_fetch_failed" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "VintedTokenFetchError";
+  }
+}
+
+/**
+ * Soft wrapper — upstream callers catch this to mean "skip this cycle
+ * silently, retry on the next alarm". Not logged as an error.
+ */
+export class VintedRetryLaterError extends Error {
+  readonly kind = "retry_later" as const;
+  constructor(public readonly reason: string) {
+    super(`Vinted: ${reason}`);
+    this.name = "VintedRetryLaterError";
+  }
+}
+
 export class VintedClient {
   private baseUrl: string;
   private apiUrl: string;
@@ -462,17 +515,23 @@ export class VintedClient {
   }
 
   private async refreshTokens(): Promise<string> {
-    // Check cooldown to prevent tab spam
+    // Check cooldown to prevent tab spam. If we're inside the cooldown
+    // window, throw a distinct error so the caller can treat it as a soft
+    // "retry later" rather than a hard "both paths failed" error.
     const timeSinceLastTab = Date.now() - VintedClient.lastTabRefresh;
     if (timeSinceLastTab < VintedClient.TAB_REFRESH_COOLDOWN_MS) {
-      console.log("[Vinted] Tab refresh on cooldown, skipping. Time remaining:", 
-        Math.round((VintedClient.TAB_REFRESH_COOLDOWN_MS - timeSinceLastTab) / 1000), "seconds");
-      return ""; // Return empty to trigger fallback to direct fetch
+      const secondsRemaining = Math.round(
+        (VintedClient.TAB_REFRESH_COOLDOWN_MS - timeSinceLastTab) / 1000,
+      );
+      console.log(
+        `[Vinted] Tab refresh on cooldown, ${secondsRemaining}s remaining`,
+      );
+      throw new VintedCooldownError(secondsRemaining);
     }
-    
+
     VintedClient.lastTabRefresh = Date.now();
     console.log("[Vinted] Opening background tab for token refresh...");
-    
+
     return new Promise(async (resolve, reject) => {
       const tab = await chrome.tabs.create({
         url: this.baseUrl,
@@ -515,13 +574,16 @@ export class VintedClient {
             });
             html = result?.[0]?.result ?? "";
             
-            // Check if we're on a login page
+            // Check if we're on a login page — user is logged out of Vinted.
+            // This is NOT self-recoverable; reject with a distinct error so
+            // the caller can surface it to the user (not a "retry later" soft
+            // skip — nothing will change until they sign back in).
             if (html && (html.includes("signup") || html.includes("login") || html.includes("session-refresh"))) {
               completed = true;
               await chrome.tabs.remove(tab.id!).catch(() => {}); // Handle tab already closed
               chrome.tabs.onUpdated.removeListener(listener);
               clearTimeout(timeout);
-              resolve(""); // Return empty to indicate login needed
+              reject(new VintedLoggedOutError());
               return;
             }
           } catch (error) {
@@ -630,15 +692,37 @@ export class VintedClient {
       // Check if direct fetch returned a valid CSRF token
       let match = html ? html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/) : null;
       if (!match || match.length < 2) {
-        // Fallback: open hidden tab (handles Cloudflare challenges)
+        // Fallback: open hidden tab (handles Cloudflare challenges).
+        // refreshTokens() can throw three distinct errors — propagate them
+        // as-is so the outer caller can branch on error type:
+        //   VintedCooldownError   → transient, retry next cycle
+        //   VintedLoggedOutError  → user action required
+        //   any other throw       → wrap as VintedTokenFetchError
         console.log("[Vinted] Direct fetch didn't return CSRF, trying tab refresh...");
-        html = await this.refreshTokens();
+        try {
+          html = await this.refreshTokens();
+        } catch (err) {
+          if (
+            err instanceof VintedCooldownError ||
+            err instanceof VintedLoggedOutError
+          ) {
+            throw err;
+          }
+          throw new VintedTokenFetchError(
+            `Vinted token fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
         if (!html) {
-          throw new Error("Failed to fetch Vinted tokens via both direct fetch and tab refresh");
+          // Tab refresh hit the 40s timeout or another transient issue.
+          throw new VintedTokenFetchError(
+            "Vinted tab refresh returned no HTML (timeout or Cloudflare challenge)",
+          );
         }
         match = html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/);
         if (!match || match.length < 2) {
-          throw new Error("CSRF token not found in HTML response");
+          throw new VintedTokenFetchError(
+            "CSRF token not found in Vinted HTML response (Cloudflare challenge or page structure changed)",
+          );
         }
       }
       this.csrfToken = match[1];

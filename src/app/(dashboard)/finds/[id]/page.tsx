@@ -596,6 +596,7 @@ export default function InventoryDetailPage() {
         availableForCrosslist={availableForCrosslist}
         platformUsernames={new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp.username]))}
         extensionDetected={extensionInfo.detected}
+        extensionOutdated={extensionInfo.isOutdated}
         extensionOnline={heartbeat.online}
         marketplaceData={marketplaceData}
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
@@ -619,6 +620,7 @@ export default function InventoryDetailPage() {
         saveSuccess={saveSuccess}
         photoError={photoError}
         extensionDetected={extensionInfo.detected}
+        extensionOutdated={extensionInfo.isOutdated}
         findStatus={find.status}
         onDismissVinted={() => marketplaceActions.setVintedListResult(null)}
         onDismissEbay={() => marketplaceActions.setEbayListResult(null)}

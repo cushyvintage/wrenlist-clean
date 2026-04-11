@@ -87,11 +87,20 @@ From a clean working tree on `main`:
    installs "you're out of date" — see next section.
 5. **Rebuild the bundle.** Do not reuse an old `extension/dist/`. Stale
    bundles are how the Crosslist→Wrenlist rename initially shipped half-done.
+   From the project root:
    ```
-   cd extension
-   rm -rf dist
-   npm run build     # whatever build script compiles src/ → dist/
+   npm run build:extension     # clean rebuild (rm -rf dist && tsc)
    ```
+   During active development, keep `npm run watch:extension` running in a
+   terminal tab so every save recompiles automatically. You still have to
+   reload the extension in `chrome://extensions` after a save — Chrome can't
+   hot-reload extension service workers.
+   **Watch for this symptom:** the popup shows the new version but the web
+   app's `ExtensionBanner` still shows the OLD version. That means the popup
+   is reading from `manifest.json` (correct) but the background service
+   worker is running stale compiled `dist/background/shared/api.js` (wrong).
+   Always `rm -rf dist` before `npx tsc` — never trust incremental builds
+   around a version bump.
 6. **Load the unpacked extension locally** (chrome://extensions → Load
    unpacked → select `extension/`) and smoke-test: sign in, ping from the
    web app, run one publish + one delist on a non-production listing.

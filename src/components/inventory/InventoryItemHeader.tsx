@@ -25,6 +25,8 @@ interface InventoryItemHeaderProps {
   availableForCrosslist?: Platform[]
   platformUsernames?: Map<Platform, string | undefined>
   extensionDetected?: boolean | null
+  /** True when installed but below MIN_EXTENSION_VERSION */
+  extensionOutdated?: boolean
   extensionOnline?: boolean | null
   marketplaceData?: MarketplaceDataItem[]
   onMarkAsSoldClick: () => void
@@ -50,6 +52,7 @@ export default function InventoryItemHeader({
   availableForCrosslist = [],
   platformUsernames,
   extensionDetected,
+  extensionOutdated = false,
   extensionOnline,
   marketplaceData = [],
   onMarkAsSoldClick,
@@ -221,7 +224,12 @@ export default function InventoryItemHeader({
                 <span className="font-medium">Extension required</span> — Install the Wrenlist Chrome extension to publish to Vinted, Etsy, Depop, Shopify, and Facebook. eBay works without it.
               </div>
             )}
-            {extensionOnline === false && extensionDetected !== false && (
+            {extensionOutdated && extensionDetected !== false && (
+              <div className="mt-2 px-2.5 py-2 rounded text-xs" style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}>
+                <span className="font-medium">Update required</span> — The Wrenlist extension is out of date. Restart Chrome to auto-update. eBay publishing still works.
+              </div>
+            )}
+            {extensionOnline === false && extensionDetected !== false && !extensionOutdated && (
               <div className="mt-2 px-2.5 py-2 rounded text-xs" style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}>
                 <span className="font-medium">Extension offline</span> — listings will publish when Chrome is running
               </div>
@@ -292,7 +300,7 @@ export default function InventoryItemHeader({
               >
                 {showSchedule && scheduledFor
                   ? 'Schedule'
-                  : extensionDetected === false && crosslistTargets.every((p) => p === 'ebay')
+                  : (extensionDetected === false || extensionOutdated) && crosslistTargets.every((p) => p === 'ebay')
                     ? 'Publish now (eBay only)'
                     : 'Publish now'}
               </button>

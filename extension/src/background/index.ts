@@ -13,7 +13,12 @@ import {
 import type { ListingActionResult, SupportedMarketplace } from "./orchestrator/types.js";
 import { normalizeError } from "./orchestrator/utils.js";
 import { createVintedServices } from "./marketplaces/vinted/index.js";
-import type { VintedClient } from "./marketplaces/vinted/client.js";
+import {
+  VintedCooldownError,
+  VintedLoggedOutError,
+  VintedTokenFetchError,
+  type VintedClient,
+} from "./marketplaces/vinted/client.js";
 import { Condition } from "./shared/enums.js";
 import { ShopifyClient } from "./marketplaces/shopify/client.js";
 import { ShopifyMapper } from "./marketplaces/shopify/mapper.js";
@@ -514,7 +519,52 @@ type ExternalMessage = Record<string, unknown>;
         console.error("[VintedSalesSync] API error:", syncRes.status, await syncRes.text());
       }
     } catch (e) {
+      // Three distinct failure modes — each gets its own log level and
+      // message so beta testers and future-us can tell at a glance whether
+      // this needs human attention or will self-heal.
+      //
+      // All three use remoteLog() so they land in chrome.storage.local
+      // (the reliable debug store — Vercel serverless logs are lossy and
+      // non-deterministic across instances, so the `/api/extension/logs`
+      // endpoint is best-effort only).
+      if (e instanceof VintedCooldownError) {
+        // Transient. Next alarm cycle (~5 min) will retry cleanly.
+        console.info(
+          `[VintedSalesSync] Skipping this cycle — token refresh on cooldown, ${e.secondsRemaining}s remaining`,
+        );
+        await remoteLog(
+          "info",
+          "vinted-sync",
+          "Skipped: token refresh on cooldown — retry next cycle",
+          { secondsRemaining: e.secondsRemaining },
+        );
+        return;
+      }
+      if (e instanceof VintedLoggedOutError) {
+        // Requires user action. Log loudly so it shows up in diagnostics.
+        console.warn("[VintedSalesSync] User logged out of Vinted:", e.message);
+        await remoteLog(
+          "warn",
+          "vinted-sync",
+          "User logged out of Vinted — sales sync paused until they sign back in at vinted.co.uk",
+        );
+        return;
+      }
+      if (e instanceof VintedTokenFetchError) {
+        // Likely Cloudflare challenge or page structure change. Not
+        // self-recoverable without user or dev intervention.
+        console.error("[VintedSalesSync] Token fetch failed:", e.message);
+        await remoteLog("error", "vinted-sync", `Token fetch failed: ${e.message}`);
+        return;
+      }
+      // Unknown error — log loudly, include the raw error for triage.
       console.error("[VintedSalesSync] Failed:", e);
+      await remoteLog(
+        "error",
+        "vinted-sync",
+        `Unexpected failure: ${e instanceof Error ? e.message : String(e)}`,
+        { stack: e instanceof Error ? e.stack : undefined },
+      );
     }
   }
 

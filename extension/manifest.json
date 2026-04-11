@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wrenlist \u2014 Marketplace Sync",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "List your vintage & resale items on Vinted, eBay, Etsy and Shopify. The extension for UK thrifters. Requires a Wrenlist account at wrenlist.com",
   "background": {
     "service_worker": "dist/background/index.js",

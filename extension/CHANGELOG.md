@@ -3,6 +3,28 @@
 All notable changes to the Wrenlist extension will be documented in this file.
 Versioning follows the rules in [VERSIONING.md](./VERSIONING.md).
 
+## [0.9.1] - 2026-04-11
+
+### Changed
+- **VintedSalesSync error handling overhaul.** Previously, any failure in
+  the token-refresh path threw the same misleading error:
+  `"Failed to fetch Vinted tokens via both direct fetch and tab refresh"`.
+  That message was a lie for the most common case (hidden-tab cooldown
+  short-circuit), and hid the genuinely important case (user logged out of
+  Vinted).
+
+  Three new distinct error types now flow through `VintedClient.setTokens`:
+  - `VintedCooldownError` — transient, self-heals on next alarm cycle.
+    Logged at `info` level as "Skipping this cycle — retry next cycle".
+  - `VintedLoggedOutError` — hidden tab landed on Vinted's login page.
+    Requires user action. Logged at `warn` level with actionable copy.
+  - `VintedTokenFetchError` — both paths genuinely failed (Cloudflare
+    challenge, page structure change). Logged at `error` level.
+
+  All three write to `chrome.storage.local._debugLogs` via `remoteLog()`
+  so diagnostics survive — the `/api/extension/logs` Vercel endpoint is
+  best-effort only (serverless instances are lossy).
+
 ## [0.9.0] - 2026-04-11
 
 First build submitted to the Chrome Web Store under the Wrenlist brand.

@@ -79,11 +79,13 @@ export function ExtensionBanner({
         </div>
       </div>
       <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0 hidden sm:block">
-        {isMobileOrNonChrome
-          ? extensionDetected
-            ? 'Manage from Chrome on your desktop'
-            : 'Install in Chrome on your desktop'
-          : 'Open extension from your browser toolbar'
+        {showOutdated
+          ? 'Restart Chrome to update'
+          : isMobileOrNonChrome
+            ? extensionDetected
+              ? 'Manage from Chrome on your desktop'
+              : 'Install in Chrome on your desktop'
+            : 'Open extension from your browser toolbar'
         }
       </span>
     </div>

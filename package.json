@@ -16,8 +16,10 @@
     "test:report": "playwright show-report",
     "test:supabase": "ts-node scripts/test-supabase-connection.ts",
     "test:ebay-crypto": "tsx scripts/test-ebay-token-crypto.ts",
+    "test:version-compare": "tsx scripts/test-version-compare.ts",
     "clean": "npm run format && npm run lint && npm run type-check",
-    "build:extension": "tsc -p extension/tsconfig.json"
+    "build:extension": "rm -rf extension/dist && tsc -p extension/tsconfig.json",
+    "watch:extension": "rm -rf extension/dist && tsc -p extension/tsconfig.json --watch --preserveWatchOutput"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

@@ -9,6 +9,7 @@ import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { usePlatformConnections } from '@/hooks/usePlatformConnections'
 import { ExtensionBanner } from '@/components/platform-connect/ExtensionBanner'
+import { DebugLogsButton } from '@/components/platform-connect/DebugLogsButton'
 import { EbayConnect } from '@/components/platform-connect/EbayConnect'
 import { VintedConnect } from '@/components/platform-connect/VintedConnect'
 import { EtsyConnect } from '@/components/platform-connect/EtsyConnect'
@@ -111,6 +112,14 @@ export default function PlatformConnectPage() {
         isMobileOrNonChrome={isMobileOrNonChrome}
         heartbeatLastSeenAt={heartbeat.lastSeenAt}
       />
+
+      {/* Debug logs exporter — fetches _debugLogs from extension and offers
+          a JSON download. Hidden on mobile where the extension can't run. */}
+      {!isMobileOrNonChrome && (
+        <div className="px-1">
+          <DebugLogsButton extensionDetected={extensionDetected} />
+        </div>
+      )}
 
       {/* eBay */}
       <Panel>

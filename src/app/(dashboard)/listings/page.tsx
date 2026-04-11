@@ -809,9 +809,11 @@ export default function ListingsPage() {
                         <Link href="/platform-connect" className="text-sm font-medium text-sage hover:text-sage-dk underline">
                           Connect marketplaces →
                         </Link>
-                        {extensionInfo.detected === false && (
+                        {(extensionInfo.detected === false || extensionInfo.isOutdated) && (
                           <p className="text-xs mt-2" style={{ color: '#8A9E88' }}>
-                            Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
+                            {extensionInfo.isOutdated
+                              ? 'Update the Wrenlist extension — restart Chrome to auto-update'
+                              : 'Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop'}
                           </p>
                         )}
                       </div>
@@ -885,10 +887,12 @@ export default function ListingsPage() {
                             </span>
                           </div>
                         ))}
-                        {/* Extension not installed hint */}
-                        {extensionInfo.detected === false && (
+                        {/* Extension not installed / out of date hint */}
+                        {(extensionInfo.detected === false || extensionInfo.isOutdated) && (
                           <p className="text-xs mt-1" style={{ color: '#8A9E88' }}>
-                            Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop
+                            {extensionInfo.isOutdated
+                              ? 'Update the Wrenlist extension — restart Chrome to auto-update'
+                              : 'Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop'}
                           </p>
                         )}
                       </>
