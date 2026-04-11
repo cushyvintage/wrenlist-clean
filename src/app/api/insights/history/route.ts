@@ -23,23 +23,30 @@ export const GET = withAuth(async (req, user) => {
 
     const supabase = await createSupabaseServerClient()
     // No count:'exact' — it does a full COUNT(*) on every request and the
-    // UI currently doesn't surface total pages. If we add pagination later
-    // we'll switch to count:'estimated' or add a separate count endpoint.
+    // UI currently doesn't surface total pages. We fetch `limit + 1` rows
+    // so we can set `hasMore` correctly without a second count query: if
+    // the extra row came back, there's more; otherwise this is the last
+    // page. Prevents the off-by-one where `fetched.length === limit`
+    // falsely implies more rows when the total is exactly a multiple.
     const { data, error } = await supabase
       .from('insight_events')
       .select('id,insight_key,insight_text,type,meta,shown_at,clicked_at,dismissed_at')
       .eq('user_id', user.id)
       .order('shown_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+      .range(offset, offset + limit)
 
     if (error) {
       console.error('[api/insights/history] query failed:', error)
       return ApiResponseHelper.internalError('Failed to load history')
     }
 
+    const rows = data ?? []
+    const hasMore = rows.length > limit
+    const events = hasMore ? rows.slice(0, limit) : rows
+
     return ApiResponseHelper.success({
-      events: data ?? [],
-      pagination: { limit, offset, hasMore: (data ?? []).length === limit },
+      events,
+      pagination: { limit, offset, hasMore },
     })
   } catch (err) {
     console.error('[api/insights/history] failed:', err)
