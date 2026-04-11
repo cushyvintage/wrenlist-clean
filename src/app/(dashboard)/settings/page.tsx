@@ -4,7 +4,19 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import { Button } from '@/components/wren/Button'
+import { Modal } from '@/components/wren/Modal'
+import { supabase } from '@/services/supabase'
 import AIAutoFillSettings from '@/components/settings/AIAutoFillSettings'
+
+type DeleteStep = 'confirm' | 'feedback' | 'processing' | 'done'
+
+const DELETE_REASONS = [
+  'Too expensive',
+  'Not enough features',
+  'Found a better tool',
+  'Just testing it out',
+  'Other',
+] as const
 
 type SettingsTab = 'account' | 'workspace' | 'integrations' | 'ai' | 'billing' | 'legal'
 
@@ -59,6 +71,15 @@ export default function SettingsPage() {
   const [saveSuccessful, setSaveSuccessful] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Delete-account modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>('confirm')
+  const [deleteReason, setDeleteReason] = useState<string>(DELETE_REASONS[0])
+  const [deleteFeedback, setDeleteFeedback] = useState('')
+  const [deleteAlternative, setDeleteAlternative] = useState('')
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Load profile + workspace data on mount (single fetch, populates both)
   useEffect(() => {
@@ -281,12 +302,61 @@ export default function SettingsPage() {
   }
 
   const handleDeleteAccount = () => {
-    const confirmed = confirm(
-      'Deleting your account is permanent and cannot be undone. All your finds, listings, and data will be erased.\n\nWe process deletion requests manually to prevent mistakes. Click OK to open a pre-filled email to support.'
-    )
-    if (!confirmed) return
-    window.location.href =
-      'mailto:support@wrenlist.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20account%20and%20all%20associated%20data.'
+    // Reset modal state fresh each time and open
+    setDeleteStep('confirm')
+    setDeleteReason(DELETE_REASONS[0])
+    setDeleteFeedback('')
+    setDeleteAlternative('')
+    setDeleteConfirmText('')
+    setDeleteError(null)
+    setDeleteModalOpen(true)
+  }
+
+  const closeDeleteModal = () => {
+    // Don't let the user close the modal mid-delete
+    if (deleteStep === 'processing') return
+    setDeleteModalOpen(false)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm.')
+      return
+    }
+
+    setDeleteError(null)
+    setDeleteStep('processing')
+
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: deleteReason,
+          feedback: deleteFeedback.trim() || null,
+          alternativeTool: deleteAlternative.trim() || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        throw new Error(payload?.error || 'Failed to delete account')
+      }
+
+      setDeleteStep('done')
+
+      // Sign out the now-orphaned session, then redirect.
+      // Small delay so the user sees the "deleted" confirmation message.
+      setTimeout(async () => {
+        try {
+          await supabase.auth.signOut()
+        } catch {}
+        window.location.href = '/goodbye'
+      }, 1500)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account')
+      setDeleteStep('feedback')
+    }
   }
 
   return (
@@ -679,6 +749,163 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete account modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={closeDeleteModal}
+        title={
+          deleteStep === 'confirm'
+            ? 'Delete your account?'
+            : deleteStep === 'feedback'
+              ? 'Before you go…'
+              : deleteStep === 'processing'
+                ? 'Deleting your account'
+                : 'Account deleted'
+        }
+      >
+        {deleteStep === 'confirm' && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink leading-relaxed">
+              This will permanently remove everything tied to your Wrenlist account:
+            </p>
+            <ul className="text-sm text-ink-lt space-y-1 list-disc list-inside">
+              <li>All your finds, listings and photos</li>
+              <li>Expenses, mileage and sourcing trips</li>
+              <li>Marketplace connections (eBay, Vinted, Etsy, Depop, Shopify)</li>
+              <li>Any active subscription will be cancelled immediately</li>
+            </ul>
+            <p className="text-sm text-ink leading-relaxed">
+              This cannot be undone. <strong>Are you sure you want to continue?</strong>
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button variant="ghost" onClick={closeDeleteModal} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => setDeleteStep('feedback')}
+                className="flex-1"
+              >
+                Yes, continue
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {deleteStep === 'feedback' && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink-lt leading-relaxed">
+              Before you go — if you have a minute, I&apos;d really like to know why. This
+              goes straight to me (Dom, the founder).
+            </p>
+
+            {deleteError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {deleteError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-ink-lt mb-2 uppercase tracking-wide">
+                Reason for leaving
+              </label>
+              <select
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full px-3 py-2 bg-cream-md border border-sage/20 rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-sage"
+              >
+                {DELETE_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-ink-lt mb-2 uppercase tracking-wide">
+                Anything I could have done better?
+              </label>
+              <textarea
+                value={deleteFeedback}
+                onChange={(e) => setDeleteFeedback(e.target.value)}
+                placeholder="Pricing, missing features, a bug, something the onboarding didn't make clear…"
+                rows={4}
+                maxLength={2000}
+                className="w-full px-3 py-2 bg-cream-md border border-sage/20 rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-sage resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-ink-lt mb-2 uppercase tracking-wide">
+                What are you using instead? <span className="text-ink-lt/60 normal-case">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={deleteAlternative}
+                onChange={(e) => setDeleteAlternative(e.target.value)}
+                placeholder="e.g. List Perfectly, Vendoo, or nothing"
+                maxLength={200}
+                className="w-full px-3 py-2 bg-cream-md border border-sage/20 rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-sage"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-sage/14">
+              <label className="block text-xs font-medium text-red mb-2 uppercase tracking-wide">
+                Type DELETE to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                autoCapitalize="characters"
+                className="w-full px-3 py-2 bg-cream-md border border-red/30 rounded text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="ghost" onClick={closeDeleteModal} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                className="flex-1"
+              >
+                Delete my account
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {deleteStep === 'processing' && (
+          <div className="py-8 text-center">
+            <div className="inline-block w-8 h-8 border-2 border-sage border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm text-ink-lt">Deleting your account…</p>
+          </div>
+        )}
+
+        {deleteStep === 'done' && (
+          <div className="py-8 text-center">
+            <div className="w-12 h-12 bg-sage-pale rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M5 12l5 5 9-9"
+                  stroke="var(--sage)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <p className="text-sm text-ink mb-1">Your account has been deleted.</p>
+            <p className="text-xs text-ink-lt">Redirecting…</p>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
