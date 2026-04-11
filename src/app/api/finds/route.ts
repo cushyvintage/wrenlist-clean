@@ -72,6 +72,13 @@ export const GET = withAuth(async (req, user) => {
     // Synthetic filter: "drift" = listed 14+ days AND no price_changes row
     // in the last 10 days. Mirrors the price-drift insight rule exactly so
     // the deep-link count matches the insight count.
+    //
+    // Two-query approach because PostgREST doesn't expose NOT EXISTS. The
+    // excludeIds list goes into the URL via .not('id','in',...) — cap it
+    // at 1000 to stay well under PostgREST's 8KB URL limit. At that ceiling
+    // we silently miss some drift exclusions (a fresh price drop gets
+    // counted as drifting) which is better than a 414 error. Replace with
+    // an RPC / SQL view when a user hits this limit in practice.
     if (filter === 'drift') {
       const driftCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
       const noChangeSince = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
@@ -80,10 +87,10 @@ export const GET = withAuth(async (req, user) => {
         .select('find_id')
         .eq('user_id', user.id)
         .gte('changed_at', noChangeSince)
+        .limit(1000)
       const excludeIds = Array.from(new Set((recentChangeRows ?? []).map((r) => r.find_id)))
       query = query.eq('status', 'listed').lte('created_at', driftCutoff)
       if (excludeIds.length > 0) {
-        // PostgREST `not.in` requires parenthesised value list
         query = query.not('id', 'in', `(${excludeIds.join(',')})`)
       }
     }

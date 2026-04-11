@@ -36,6 +36,19 @@ export const MARKETPLACE_FEES: Record<string, MarketplaceFeeSpec> = {
   // Facebook Marketplace local: no fee.
   facebook: { pct: 0, flat: 0 },
 
+  // Poshmark: flat $2.95 under $15, 20% above. Using 20% as the
+  // directional proxy (UK Poshmark is US-aligned).
+  poshmark: { pct: 0.2, flat: 0 },
+
+  // Mercari: 10% selling fee + ~2.9% + 50c payment processing.
+  mercari: { pct: 0.129, flat: 0.5 },
+
+  // Whatnot: 8% selling fee + ~2.9% + 30c payment processing.
+  whatnot: { pct: 0.109, flat: 0.3 },
+
+  // Grailed: 9% + ~3.5% + 30c payment processing.
+  grailed: { pct: 0.125, flat: 0.3 },
+
   // Default / unknown
   other: { pct: 0.05, flat: 0 },
 }

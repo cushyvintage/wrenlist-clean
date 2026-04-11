@@ -183,6 +183,6 @@ async function loadLastPriceResearchAt(
     console.error('[insights] loadLastPriceResearchAt failed (non-fatal):', error)
     return null
   }
-  if (!data || data.length === 0) return null
-  return new Date(data[0]!.created_at).getTime()
+  const created = data?.[0]?.created_at
+  return created ? new Date(created).getTime() : null
 }

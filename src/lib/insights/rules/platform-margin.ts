@@ -21,7 +21,7 @@ export const platformMarginRule: InsightRule = {
   id: 'platform-margin',
   priority: 50,
   evaluate(ctx) {
-    type Agg = { marketplace: string; totalNet: number; totalGross: number; count: number }
+    type Agg = { marketplace: string; totalNet: number; count: number }
     const byMarketplace: Record<string, Agg> = {}
 
     for (const f of ctx.finds) {
@@ -33,11 +33,9 @@ export const platformMarginRule: InsightRule = {
       const bucket = byMarketplace[sold.marketplace] ?? {
         marketplace: sold.marketplace,
         totalNet: 0,
-        totalGross: f.sold_price_gbp,
         count: 0,
       }
       bucket.totalNet += net
-      bucket.totalGross += f.sold_price_gbp
       bucket.count += 1
       byMarketplace[sold.marketplace] = bucket
     }

@@ -18,6 +18,14 @@ export interface RunRulesOptions {
   limit?: number
   /** Pre-loaded dismissed keys (so the route can fetch in parallel with context). */
   dismissedKeys?: Set<string>
+  /**
+   * When false, skip the `insight_events` fire-and-forget log. Set this
+   * from server-side callers (cron digest, previews) where the user
+   * hasn't actually "seen" the insight in the UI — otherwise the
+   * /insights history page would show events the user never looked at.
+   * Defaults to true (the dashboard API is the primary caller).
+   */
+  logEvents?: boolean
 }
 
 export async function runRules(
@@ -26,6 +34,7 @@ export async function runRules(
   options: RunRulesOptions = {},
 ): Promise<Insight[]> {
   const limit = options.limit ?? 3
+  const logEvents = options.logEvents ?? true
   const dismissedKeys = options.dismissedKeys ?? (await loadDismissedKeys(supabase, ctx.userId))
 
   const raw = ALL_RULES.map((rule) => rule.evaluate(ctx)).filter(isInsight)
@@ -38,7 +47,7 @@ export async function runRules(
 
   const top = allowed.slice(0, limit)
 
-  if (top.length > 0) {
+  if (top.length > 0 && logEvents) {
     // Fire-and-forget — analytics failures never block the user response.
     void logShownInsights(supabase, ctx.userId, top).catch((err) => {
       console.error('[insights] logShownInsights failed:', err)

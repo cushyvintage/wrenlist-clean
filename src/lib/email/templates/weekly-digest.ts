@@ -23,6 +23,15 @@ interface DigestWeekStats {
   profit: number
 }
 
+// Inline-style palette per insight type. Email clients require hex
+// colours, not Tailwind classes, so this lives separately from
+// InsightCard's Tailwind styles.
+const INSIGHT_EMAIL_PALETTE = {
+  alert: { bg: '#fef3e2', border: '#facc66', label: '#b45309' },
+  tip: { bg: '#eef5ec', border: '#a7c7a4', label: '#3d5c3a' },
+  info: { bg: '#f5f1e8', border: '#d4d9c9', label: '#7a7a7a' },
+} as const
+
 export function buildWeeklyDigestEmail(args: {
   firstName: string | null
   appUrl: string
@@ -44,12 +53,7 @@ export function buildWeeklyDigestEmail(args: {
 
   const insightCardsHtml = args.insights
     .map((insight) => {
-      const colors = {
-        alert: { bg: '#fef3e2', border: '#facc66', label: '#b45309' },
-        tip: { bg: '#eef5ec', border: '#a7c7a4', label: '#3d5c3a' },
-        info: { bg: '#f5f1e8', border: '#d4d9c9', label: '#7a7a7a' },
-      }
-      const c = colors[insight.type]
+      const c = INSIGHT_EMAIL_PALETTE[insight.type]
       const ctaUrl = insight.cta.href.startsWith('http')
         ? insight.cta.href
         : `${args.appUrl}${insight.cta.href}`

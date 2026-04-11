@@ -86,13 +86,32 @@ async function loadCandidates(admin: SupabaseClient): Promise<Candidate[]> {
   return candidates
 }
 
-async function computeWeekStats(
+interface WeekActivitySnapshot {
+  itemsAdded: number
+  itemsSold: number
+  revenue: number
+  profit: number
+  listedCount: number
+}
+
+/**
+ * Lightweight week snapshot — three parallel `head:true` count queries
+ * for added/sold/listed and one small row-read for revenue/profit. Used
+ * BEFORE loadContext so we can skip dead accounts without pulling every
+ * find into memory.
+ *
+ * The revenue/profit still row-reads `sold_price_gbp, cost_gbp` because
+ * PostgREST doesn't expose aggregate functions. Supabase RPC would be
+ * the clean fix — flagged for a follow-up migration. For today (weekly
+ * sales per user are typically ≤50 rows), the payload is negligible.
+ */
+async function loadWeekSnapshot(
   admin: SupabaseClient,
   userId: string,
-): Promise<{ itemsSold: number; itemsAdded: number; revenue: number; profit: number }> {
+): Promise<WeekActivitySnapshot> {
   const since = new Date(Date.now() - WEEK_MS).toISOString()
 
-  const [addedResult, soldResult] = await Promise.all([
+  const [addedResult, soldRowsResult, listedResult] = await Promise.all([
     admin
       .from('finds')
       .select('id', { count: 'exact', head: true })
@@ -104,9 +123,14 @@ async function computeWeekStats(
       .eq('user_id', userId)
       .eq('status', 'sold')
       .gte('sold_at', since),
+    admin
+      .from('finds')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'listed'),
   ])
 
-  const soldRows = (soldResult.data ?? []) as Array<{
+  const soldRows = (soldRowsResult.data ?? []) as Array<{
     cost_gbp: number | null
     sold_price_gbp: number | null
   }>
@@ -121,6 +145,7 @@ async function computeWeekStats(
     itemsSold: soldRows.length,
     revenue,
     profit,
+    listedCount: listedResult.count ?? 0,
   }
 }
 
@@ -193,24 +218,33 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        const [weekStats, ctx] = await Promise.all([
-          computeWeekStats(admin, candidate.user_id),
-          loadContext(admin, candidate.user_id),
-        ])
-
-        // Skip users with truly dead accounts — no adds, no sales, no stock.
-        // A digest with "0 0 £0 £0" and no insights isn't worth an inbox slot.
+        // Cheap gate first — three small count queries. If the user has
+        // no activity AND no live stock, skip without pulling loadContext's
+        // ~5 heavy queries.
+        const snapshot = await loadWeekSnapshot(admin, candidate.user_id)
         if (
-          weekStats.itemsAdded === 0 &&
-          weekStats.itemsSold === 0 &&
-          ctx.finds.filter((f) => f.status === 'listed').length === 0
+          snapshot.itemsAdded === 0 &&
+          snapshot.itemsSold === 0 &&
+          snapshot.listedCount === 0
         ) {
           await admin.from('email_sends').delete().eq('id', insertResult.id)
           stats.skipped++
           continue
         }
 
-        const insights = await runRules(admin, ctx, { limit: 3 })
+        const ctx = await loadContext(admin, candidate.user_id)
+
+        // logEvents:false — this is a background cron, not a UI surface.
+        // Logging these runs would pollute /insights history with events
+        // the user never actually saw.
+        const insights = await runRules(admin, ctx, { limit: 3, logEvents: false })
+
+        const weekStats = {
+          itemsAdded: snapshot.itemsAdded,
+          itemsSold: snapshot.itemsSold,
+          revenue: snapshot.revenue,
+          profit: snapshot.profit,
+        }
 
         const unsubToken = await getOrCreateUnsubscribeToken(candidate.user_id)
         const unsubscribeUrl = unsubToken ? buildUnsubscribeUrl(unsubToken) : null
