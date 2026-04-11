@@ -16,11 +16,15 @@ import { taxDeadlineRule } from './tax-deadline'
 import { priceDriftRule } from './price-drift'
 import { sourcingRoiRule } from './sourcing-roi'
 import { bestCategoryRule } from './best-category'
+import { platformMarginRule } from './platform-margin'
 import { slowCategoriesRule } from './slow-categories'
+import { sourcingTrendRule } from './sourcing-trend'
 import { crosslistNudgeRule } from './crosslist-nudge'
 import { costConcentrationRule } from './cost-concentration'
 import { lowStockRule } from './low-stock'
 import { listingStreakRule } from './listing-streak'
+import { priceResearchActivityRule } from './price-research-activity'
+import { bestDayToListRule } from './best-day-to-list'
 
 export const ALL_RULES: InsightRule[] = [
   agedStockRule,
@@ -30,9 +34,13 @@ export const ALL_RULES: InsightRule[] = [
   priceDriftRule,
   sourcingRoiRule,
   bestCategoryRule,
+  platformMarginRule,
   slowCategoriesRule,
+  sourcingTrendRule,
   crosslistNudgeRule,
   costConcentrationRule,
   lowStockRule,
   listingStreakRule,
+  priceResearchActivityRule,
+  bestDayToListRule,
 ]

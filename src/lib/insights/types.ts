@@ -55,6 +55,18 @@ export interface InsightContext {
    * rule to distinguish "never touched" from "recently dropped".
    */
   lastPriceChangeByFind: Map<string, number>
+  /**
+   * Map of find_id → the marketplace + listing_price of its sold PMD row.
+   * Used by platform-margin to compare realised margins per channel.
+   * A find can only sell once, so a single entry per find is sufficient.
+   */
+  soldListingByFind: Map<string, { marketplace: string; listing_price: number | null }>
+  /**
+   * Timestamp (ms) of the most recent row in `price_research_history` for
+   * this user, or null if they've never used it. Used by the
+   * price-research-activity rule.
+   */
+  lastPriceResearchAt: number | null
   /** Count of finds the user has (pre-pagination). Used by new-user guard. */
   totalFinds: number
 }

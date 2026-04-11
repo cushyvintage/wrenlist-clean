@@ -22,10 +22,18 @@ export async function loadContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<InsightContext> {
-  const [finds, listedMarketplacesByFind, lastPriceChangeByFind] = await Promise.all([
+  const [
+    finds,
+    listedMarketplacesByFind,
+    lastPriceChangeByFind,
+    soldListingByFind,
+    lastPriceResearchAt,
+  ] = await Promise.all([
     loadFinds(supabase, userId),
     loadListedMarketplaces(supabase, userId),
     loadLastPriceChanges(supabase, userId),
+    loadSoldListings(supabase, userId),
+    loadLastPriceResearchAt(supabase, userId),
   ])
 
   return {
@@ -34,6 +42,8 @@ export async function loadContext(
     finds,
     listedMarketplacesByFind,
     lastPriceChangeByFind,
+    soldListingByFind,
+    lastPriceResearchAt,
     totalFinds: finds.length,
   }
 }
@@ -122,4 +132,57 @@ async function loadLastPriceChanges(
     map.set(row.find_id, new Date(row.changed_at).getTime())
   }
   return map
+}
+
+/**
+ * Map of find_id → the marketplace + listing_price of its sold PMD row.
+ * Used by platform-margin to compare realised margins per channel. Non-fatal.
+ */
+async function loadSoldListings(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Map<string, { marketplace: string; listing_price: number | null }>> {
+  const map = new Map<string, { marketplace: string; listing_price: number | null }>()
+
+  const { data, error } = await supabase
+    .from('product_marketplace_data')
+    .select('find_id,marketplace,listing_price')
+    .eq('user_id', userId)
+    .eq('status', 'sold')
+
+  if (error) {
+    console.error('[insights] loadSoldListings failed (non-fatal):', error)
+    return map
+  }
+
+  for (const row of data ?? []) {
+    // A find should only have one sold PMD row (unique constraint on
+    // find_id,marketplace) but be defensive: first-write-wins.
+    if (map.has(row.find_id)) continue
+    map.set(row.find_id, { marketplace: row.marketplace, listing_price: row.listing_price })
+  }
+  return map
+}
+
+/**
+ * Timestamp (ms) of the most recent `price_research_history` row for this
+ * user, or null if they've never used Price Research. Single scalar query.
+ */
+async function loadLastPriceResearchAt(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('price_research_history')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  if (error) {
+    console.error('[insights] loadLastPriceResearchAt failed (non-fatal):', error)
+    return null
+  }
+  if (!data || data.length === 0) return null
+  return new Date(data[0]!.created_at).getTime()
 }
