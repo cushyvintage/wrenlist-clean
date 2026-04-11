@@ -61,7 +61,7 @@ select the `extension/` folder.
 ```
 extension/
 ├── manifest.json         # MV3 manifest, narrowed permissions
-├── marketplaceRules.json # DNR rules for CSRF/referer/UA headers
+├── headerRewrites.json   # DNR rules for CSRF/referer/UA headers
 ├── popup.html + popup.js # Toolbar popup UI
 ├── options.html + options.js
 ├── content-scripts/

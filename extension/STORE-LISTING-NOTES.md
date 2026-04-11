@@ -38,7 +38,7 @@ popup.
 Used to set the small number of CSRF / Referer / User-Agent headers that
 each marketplace's internal API requires when the extension makes
 requests on the user's behalf. The full rule set is in
-`marketplaceRules.json` and is limited to specific marketplace API paths.
+`headerRewrites.json` and is limited to specific marketplace API paths.
 No request is blocked, redirected, or modified outside the declared
 marketplace hosts.
 

@@ -38,7 +38,7 @@
       {
         "enabled": true,
         "id": "rules",
-        "path": "marketplaceRules.json"
+        "path": "headerRewrites.json"
       }
     ]
   },
