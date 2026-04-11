@@ -54,9 +54,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-12">
-            <div className="w-8 h-8 bg-sage rounded flex items-center justify-center text-white font-serif font-bold">
-              🌿
-            </div>
+            <img src="/wrenlist-logo.png" alt="Wrenlist" className="w-8 h-8" />
             <div className="font-serif text-2xl text-ink">
               WREN<em className="italic">list</em>
             </div>
