@@ -11,7 +11,7 @@ const OG_IMAGE = `${SITE_URL}/api/og/marketplace-comparison`
 export const metadata: Metadata = {
   title: 'Vinted vs eBay vs Etsy vs Depop vs Shopify — UK Reseller Marketplace Comparison',
   description:
-    'Complete 2025/26 guide comparing Vinted, eBay, Etsy, Depop & Shopify for UK vintage resellers. Fees, audiences, listing effort, and why multi-platform is your best strategy.',
+    'Complete 2025/26 guide comparing Vinted (free for sellers), eBay, Etsy, Depop & Shopify for UK vintage resellers. Fees, audiences, listing effort, and why multi-platform is your best strategy.',
   keywords: [
     'vinted vs ebay',
     'best reselling platform uk',
@@ -114,7 +114,7 @@ export default function MarketplaceComparisonPage() {
                 <tbody>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Vinted</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">5–12%</td>
+                    <td className="px-4 py-3 text-[#6b7d6a]">Free for sellers (buyers pay protection fee)</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">Clothing, shoes, bags</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">1–2 days</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">Very easy</td>
@@ -135,7 +135,7 @@ export default function MarketplaceComparisonPage() {
                   </tr>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Depop</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">10–20%</td>
+                    <td className="px-4 py-3 text-[#6b7d6a]">No seller commission + ~2.9% + 30p payment processing</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">Fashion, Gen Z audience</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">1–2 days</td>
                     <td className="px-4 py-3 text-[#6b7d6a]">Very easy</td>
@@ -171,7 +171,7 @@ export default function MarketplaceComparisonPage() {
                 </p>
                 <div className="space-y-2 text-sm text-[#6b7d6a]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> Instant notifications, high sell-through rate, automatic postage labels, simple listing (photo + text), buyer pool trusts the platform</p>
-                  <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> 5–12% commission (higher if you offer free shipping), limited to clothing/accessories/shoes, algorithm favours frequent listers</p>
+                  <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> No seller fees — buyers pay a buyer protection fee instead. Limited to clothing, accessories, shoes and homeware. Algorithm favours frequent listers, pricing tends to race to the bottom.</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Clothing, designer pieces, fast turnover, new sellers (lowest friction entry)</p>
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function MarketplaceComparisonPage() {
                 </p>
                 <div className="space-y-2 text-sm text-[#6b7d6a]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> Very young buyer base (high impulse purchase), social discovery (followers, likes), Depop's in-app messaging, automatic shipping labels, high engagement culture</p>
-                  <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> 10–20% fees (highest of app-based platforms), requires constant engagement (posting, responding, updating), algorithm favours active sellers, can feel saturated (many small sellers)</p>
+                  <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> No platform commission (removed 2023) but payment processing fee applies (~2.9% + 30p). Requires constant engagement, algorithm favours active sellers, can feel saturated with small sellers.</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Fashion, streetwear, thrifted brands, sellers who like social selling and community</p>
                 </div>
               </div>
