@@ -46,10 +46,20 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
+      // emailRedirectTo: after the user clicks the verification link,
+      // send them straight to /onboarding. Without this, Supabase uses
+      // the Site URL default (https://app.wrenlist.com/) which — now
+      // that the middleware treats '/' as public — drops them on the
+      // marketing landing page with no obvious next step.
+      const appOrigin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://app.wrenlist.com'
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${appOrigin}/onboarding`,
           data: {
             full_name: `${firstName} ${lastName}`,
           },
