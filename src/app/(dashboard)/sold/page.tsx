@@ -12,6 +12,7 @@ import { fetchApi } from '@/lib/api-utils'
 import type { Platform } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { ShippingLabelModal } from '@/components/sold/ShippingLabelModal'
+import { useConfirm } from '@/components/wren/ConfirmProvider'
 
 interface SoldItem {
   id: string
@@ -302,6 +303,7 @@ async function syncSalesInChunks(sales: unknown[]): Promise<{ synced: number; cr
 
 export default function SoldHistoryPage() {
   const router = useRouter()
+  const confirm = useConfirm()
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'tax_year' | 'last_tax_year' | 'all'>('month')
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -369,7 +371,12 @@ export default function SoldHistoryPage() {
 
   const handleBulkDelivered = useCallback(async () => {
     if (isBulkUpdating || actionItems.length === 0) return
-    if (!confirm(`Mark all ${actionItems.length} orders as delivered?`)) return
+    const ok = await confirm({
+      title: 'Mark all as delivered?',
+      message: `This will mark all ${actionItems.length} outstanding orders as delivered.`,
+      confirmLabel: 'Mark delivered',
+    })
+    if (!ok) return
 
     setIsBulkUpdating(true)
     try {
@@ -387,7 +394,7 @@ export default function SoldHistoryPage() {
     } finally {
       setIsBulkUpdating(false)
     }
-  }, [isBulkUpdating, actionItems, loadSoldItems])
+  }, [isBulkUpdating, actionItems, loadSoldItems, confirm])
 
   /* ── Vinted sync handlers (unchanged) ────────────────────── */
 

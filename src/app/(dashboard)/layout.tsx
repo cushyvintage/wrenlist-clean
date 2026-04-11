@@ -1,5 +1,6 @@
 'use client'
 
+import { ConfirmProvider } from '@/components/wren/ConfirmProvider'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { AppTopbar } from '@/components/layout/AppTopbar'
@@ -109,6 +110,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <ConfirmProvider>
     <div className="min-h-screen" style={{ backgroundColor: '#F5F0E8' }}>
       {/* Sidebar */}
       <Sidebar
@@ -282,5 +284,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    </ConfirmProvider>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import type { Find } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
+import { useConfirm } from '@/components/wren/ConfirmProvider'
 
 const VINTED_EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
 
@@ -26,6 +27,7 @@ interface EbayConnectionState {
 }
 
 export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPolicies: boolean) {
+  const confirm = useConfirm()
   const [vintedConnected, setVintedConnected] = useState(false)
   const [vintedUsername, setVintedUsername] = useState<string | null>(null)
   const [vintedIsBusiness, setVintedIsBusiness] = useState(false)
@@ -358,7 +360,13 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   }
 
   const handleShopifyDisconnect = async (): Promise<void> => {
-    if (!confirm('Disconnect Shopify? You can reconnect anytime.')) return
+    const ok = await confirm({
+      title: 'Disconnect Shopify?',
+      message: 'You can reconnect anytime.',
+      confirmLabel: 'Disconnect',
+      tone: 'danger',
+    })
+    if (!ok) return
     setShopifyLoading(true)
     try {
       const response = await fetch('/api/shopify/connect', { method: 'DELETE' })
@@ -409,7 +417,13 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   }
 
   const handleVintedDisconnect = async (): Promise<void> => {
-    if (!confirm('Disconnect Vinted? You can reconnect anytime by logging in via the extension.')) return
+    const ok = await confirm({
+      title: 'Disconnect Vinted?',
+      message: 'You can reconnect anytime by logging in via the extension.',
+      confirmLabel: 'Disconnect',
+      tone: 'danger',
+    })
+    if (!ok) return
     setVintedLoading(true)
     try {
       const response = await fetch('/api/vinted/connect', { method: 'DELETE' })

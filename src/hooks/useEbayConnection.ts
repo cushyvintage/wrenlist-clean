@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useConfirm } from '@/components/wren/ConfirmProvider'
 
 export interface EbayConnectionStatus {
   connected: boolean
@@ -28,6 +29,7 @@ export function useEbayConnection(): UseEbayConnectionReturn {
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const confirm = useConfirm()
 
   // Fetch connection status from API
   const refreshStatus = useCallback(async () => {
@@ -77,9 +79,13 @@ export function useEbayConnection(): UseEbayConnectionReturn {
 
   // Disconnect eBay account
   const disconnectEbay = useCallback(async () => {
-    if (!confirm('Are you sure? This will disconnect your eBay account and delete all stored policies.')) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Disconnect eBay?',
+      message: 'This will disconnect your eBay account and delete all stored policies.',
+      confirmLabel: 'Disconnect',
+      tone: 'danger',
+    })
+    if (!ok) return
 
     setIsLoading(true)
     setError(null)
@@ -105,7 +111,7 @@ export function useEbayConnection(): UseEbayConnectionReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [confirm])
 
   return {
     connected,
