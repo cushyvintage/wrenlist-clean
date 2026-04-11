@@ -75,6 +75,41 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
       if (response.loggedIn && response.username) {
         setVintedConnected(true)
+
+        // Best-effort: ask the extension to fetch the authenticated Vinted user
+        // detail so we can tell the server whether this is a Pro/business
+        // account. The extension has vinted.co.uk cookies; we don't.
+        let isBusiness: boolean | null = null
+        const tld = response.tld || 'co.uk'
+        const numericId = response.userId && /^\d+$/.test(String(response.userId))
+          ? String(response.userId)
+          : null
+        if (numericId) {
+          try {
+            const apiResp = await new Promise<{ success?: boolean; results?: { user?: { business?: boolean } } }>((resolve) => {
+              const timeout = setTimeout(() => resolve({ success: false }), 8000)
+              chrome.runtime.sendMessage(
+                VINTED_EXTENSION_ID,
+                {
+                  action: 'fetch_vinted_api',
+                  url: `https://www.vinted.${tld}/api/v2/users/${numericId}`,
+                  method: 'GET',
+                },
+                (r) => {
+                  clearTimeout(timeout)
+                  if (chrome.runtime.lastError) resolve({ success: false })
+                  else resolve(r || { success: false })
+                },
+              )
+            })
+            if (apiResp.success && typeof apiResp.results?.user?.business === 'boolean') {
+              isBusiness = apiResp.results.user.business
+            }
+          } catch {
+            // Non-fatal — leave isBusiness null, server will preserve existing value.
+          }
+        }
+
         try {
           const connectRes = await fetch('/api/vinted/connect', {
             method: 'POST',
@@ -82,7 +117,8 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
             body: JSON.stringify({
               vintedUsername: response.username,
               vintedUserId: response.userId || response.username,
-              tld: response.tld || 'co.uk',
+              tld,
+              isBusiness,
             }),
           })
           if (connectRes.ok) {

@@ -36,24 +36,32 @@ export const GET = withAuth(async (req, user) => {
 
 /**
  * POST /api/vinted/connect
- * Save Vinted connection (called by extension after user logs in)
+ * Save Vinted connection (called by extension after user logs in).
+ *
+ * Body: { vintedUserId, vintedUsername, tld?, isBusiness? }
+ *
+ * Note on business detection: the Vinted user detail API (`/api/v2/users/:id`)
+ * returns a `business` flag that indicates Pro/business sellers. That endpoint
+ * requires an authenticated Vinted session cookie, which lives in the
+ * extension — not on our server. The extension therefore fetches it via
+ * `fetch_vinted_api` and forwards the resolved boolean as `isBusiness` in this
+ * POST body. When `isBusiness` is absent/null we preserve the existing value.
  */
 export const POST = withAuth(async (req, user) => {
   const body = await req.json()
   let { vintedUserId, vintedUsername } = body
+  const incomingIsBusiness: boolean | null =
+    typeof body.isBusiness === 'boolean' ? body.isBusiness : null
 
   if (!vintedUserId || !vintedUsername) {
     return ApiResponseHelper.badRequest('Missing vintedUserId or vintedUsername')
   }
 
   const supabase = await createSupabaseServerClient()
-  const tld = body.tld || 'co.uk'
 
-  // If incoming username is numeric, try to resolve to login via Vinted API.
-  // We *also* opportunistically pull the business flag here for the numeric case.
-  let isBusiness: boolean | null = null
-  let businessAccountType: string | null = null
-
+  // If incoming username is numeric, try to preserve a previously resolved
+  // display name from the DB (the extension sometimes sends the numeric id
+  // before bootstrap resolves the login).
   if (/^\d+$/.test(vintedUsername)) {
     const { data: existing } = await supabase
       .from('vinted_connections')
@@ -62,58 +70,20 @@ export const POST = withAuth(async (req, user) => {
       .single()
     if (existing?.vinted_username && !/^\d+$/.test(existing.vinted_username)) {
       vintedUsername = existing.vinted_username
-    } else {
-      try {
-        const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${vintedUsername}`, {
-          headers: { 'Accept': 'application/json' },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data?.user?.login) {
-            vintedUsername = data.user.login
-          }
-          if (typeof data?.user?.business === 'boolean') {
-            isBusiness = data.user.business
-            businessAccountType = data.user.business ? 'pro' : null
-          }
-        }
-      } catch {
-        // Keep numeric ID as fallback
-      }
     }
   }
 
-  // Always try to fetch the business flag by numeric id when we have one.
-  // The numeric id is the most reliable lookup; `vintedUserId` is the id
-  // reported by the extension cookie.
-  if (isBusiness === null && vintedUserId && /^\d+$/.test(String(vintedUserId))) {
-    try {
-      const res = await fetch(`https://www.vinted.${tld}/api/v2/users/${vintedUserId}`, {
-        headers: { 'Accept': 'application/json' },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (typeof data?.user?.business === 'boolean') {
-          isBusiness = data.user.business
-          businessAccountType = data.user.business ? 'pro' : null
-        }
-      }
-    } catch {
-      // Non-fatal — leave is_business null and we'll preserve existing value on upsert.
-    }
-  }
-
-  // Build upsert payload. Only overwrite business fields when we successfully
-  // resolved them — otherwise keep any previously stored value.
+  // Build upsert payload. Only overwrite business fields when the extension
+  // resolved them for us — otherwise keep any previously stored value.
   const payload: Record<string, unknown> = {
     user_id: user.id,
     vinted_user_id: vintedUserId,
     vinted_username: vintedUsername,
     updated_at: new Date().toISOString(),
   }
-  if (isBusiness !== null) {
-    payload.is_business = isBusiness
-    payload.business_account_type = businessAccountType
+  if (incomingIsBusiness !== null) {
+    payload.is_business = incomingIsBusiness
+    payload.business_account_type = incomingIsBusiness ? 'pro' : null
   }
 
   const { data: connection, error } = await supabase
