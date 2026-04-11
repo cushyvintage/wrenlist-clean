@@ -42,30 +42,6 @@
       waitTime: 2000
     },
     {
-      site: 'poshmark',
-      regex: /.*:\/\/poshmark\.(com|ca|com\.au).*/,
-      productIdRegex: /https:\/\/poshmark\..+?\/listing\/[A-Za-z0-9\-]+-([A-Za-z0-9\-]+).*\/?$/,
-      targetSelector: 'div[class="listing__info-details"]',
-      buttonStyle: { margin: "20px 10px 20px 0", float: "none", insertIndex: -1 },
-      waitTime: 0
-    },
-    {
-      site: 'mercari',
-      regex: /.*:\/\/www\.mercari\.com.*/,
-      productIdRegex: /https:\/\/www\.mercari\.com\/us\/item\/(.*?)\//,
-      targetSelector: 'div[data-testid="ItemInfo"]',
-      buttonStyle: { margin: "20px 0 20px 0", float: "left", insertIndex: -1 },
-      waitTime: 0
-    },
-    {
-      site: 'grailed',
-      regex: /.*:\/\/www\.grailed\.com.*/,
-      productIdRegex: /https:\/\/www\.grailed\.com\/listings\/([0-9]+)-[\/a-z0-9\-]+\/?/,
-      targetSelector: 'div[class*="Sidebar_actions"]',
-      buttonStyle: { margin: "20px 10px 20px 10px", float: "none", insertIndex: 0 },
-      waitTime: 0
-    },
-    {
       site: 'facebook',
       regex: /.*:\/\/www\.facebook\.com.*/,
       productIdRegex: /https:\/\/.*\.facebook\.com\/marketplace\/(?:np\/)*item\/([0-9]+)*/,
@@ -340,140 +316,6 @@
     return null;
   }
 
-  // Extract Poshmark product data
-  function extractPoshmarkProductData() {
-    // Try window.__INITIAL_STATE__ or window.__APOLLO_STATE__
-    if (window.__INITIAL_STATE__) {
-      const state = window.__INITIAL_STATE__;
-      if (state.listing || state.product) {
-        const listing = state.listing || state.product;
-        return {
-          title: listing.title,
-          description: listing.description,
-          price: listing.price,
-          images: listing.cover_shot ? [listing.cover_shot] : (listing.pictures || []),
-          brand: listing.brand,
-          size: listing.size,
-          condition: listing.condition
-        };
-      }
-    }
-    
-    // Extract from DOM
-    const titleEl = document.querySelector('[data-testid="listing-title"]') ||
-                    document.querySelector('h1[class*="title"]');
-    const priceEl = document.querySelector('[data-testid="listing-price"]') ||
-                    document.querySelector('[class*="price"]');
-    const descEl = document.querySelector('[data-testid="listing-description"]') ||
-                   document.querySelector('[class*="description"]');
-    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
-      .map(img => img.src || img.getAttribute('data-src'))
-      .filter(Boolean);
-    
-    if (titleEl) {
-      return {
-        title: titleEl.textContent?.trim(),
-        description: descEl?.textContent?.trim() || '',
-        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
-        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
-      };
-    }
-    
-    return null;
-  }
-
-  // Extract Mercari product data
-  function extractMercariProductData() {
-    // Mercari uses React state, try to find data in script tags
-    const scripts = Array.from(document.querySelectorAll('script'));
-    for (const script of scripts) {
-      if (script.textContent && script.textContent.includes('item')) {
-        try {
-          const match = script.textContent.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/);
-          if (match) {
-            const state = JSON.parse(match[1]);
-            if (state.item) {
-              return {
-                title: state.item.name,
-                description: state.item.description,
-                price: state.item.price / 100, // Mercari prices in cents
-                images: state.item.photos?.map(p => p.imageUrl) || [],
-                brand: state.item.brand?.brandName,
-                condition: state.item.itemCondition
-              };
-            }
-          }
-        } catch (e) {}
-      }
-    }
-    
-    // Extract from DOM
-    const titleEl = document.querySelector('[data-testid="item-name"]') ||
-                    document.querySelector('h1');
-    const priceEl = document.querySelector('[data-testid="item-price"]') ||
-                    document.querySelector('[class*="price"]');
-    const descEl = document.querySelector('[data-testid="item-description"]') ||
-                   document.querySelector('[class*="description"]');
-    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
-      .map(img => img.src || img.getAttribute('data-src'))
-      .filter(Boolean);
-    
-    if (titleEl) {
-      return {
-        title: titleEl.textContent?.trim(),
-        description: descEl?.textContent?.trim() || '',
-        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
-        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
-      };
-    }
-    
-    return null;
-  }
-
-  // Extract Grailed product data
-  function extractGrailedProductData() {
-    // Grailed uses GraphQL, try to find data in window.__APOLLO_STATE__
-    if (window.__APOLLO_STATE__) {
-      const state = window.__APOLLO_STATE__;
-      for (const key in state) {
-        if (key.includes('Listing') && state[key].title) {
-          const listing = state[key];
-          return {
-            title: listing.title,
-            description: listing.description,
-            price: listing.price,
-            images: listing.photos || [],
-            brand: listing.brand?.name,
-            size: listing.size,
-            condition: listing.condition
-          };
-        }
-      }
-    }
-    
-    // Extract from DOM
-    const titleEl = document.querySelector('[data-cy="listing-title"]') ||
-                    document.querySelector('h1');
-    const priceEl = document.querySelector('[data-cy="listing-price"]') ||
-                    document.querySelector('[class*="price"]');
-    const descEl = document.querySelector('[data-cy="listing-description"]') ||
-                   document.querySelector('[class*="description"]');
-    const images = Array.from(document.querySelectorAll('[class*="photo"] img, [class*="image"] img'))
-      .map(img => img.src || img.getAttribute('data-src'))
-      .filter(Boolean);
-    
-    if (titleEl) {
-      return {
-        title: titleEl.textContent?.trim(),
-        description: descEl?.textContent?.trim() || '',
-        price: priceEl ? parseFloat(priceEl.textContent.replace(/[^0-9.]/g, '')) : null,
-        image: images.length > 0 ? (images.length === 1 ? images[0] : images) : null
-      };
-    }
-    
-    return null;
-  }
-
   // Extract Facebook Marketplace product data
   function extractFacebookProductData() {
     // Facebook uses React, try to find data in script tags or meta tags
@@ -668,7 +510,7 @@
       e.preventDefault();
       e.stopPropagation();
       
-      console.log('Wrenlist Skylark: Import button clicked', { marketplace: marketplace.site, productId });
+      console.log('Wrenlist: Import button clicked', { marketplace: marketplace.site, productId });
       
       // Set loading state
       const originalText = button.innerText;
@@ -691,15 +533,6 @@
           case 'depop':
             productData = extractDepopProductData();
             break;
-          case 'poshmark':
-            productData = extractPoshmarkProductData();
-            break;
-          case 'mercari':
-            productData = extractMercariProductData();
-            break;
-          case 'grailed':
-            productData = extractGrailedProductData();
-            break;
           case 'facebook':
             productData = extractFacebookProductData();
             break;
@@ -711,10 +544,10 @@
             productData = extractGenericProductData();
         }
         if (productData) {
-          console.log('Wrenlist Skylark: Extracted product data from page', productData);
+          console.log('Wrenlist: Extracted product data from page', productData);
         }
       } catch (error) {
-        console.error('Wrenlist Skylark: Error extracting product data', error);
+        console.error('Wrenlist: Error extracting product data', error);
         // Reset button state on extraction error
         button.innerText = originalText;
         button.style.backgroundColor = originalBg;
@@ -737,7 +570,7 @@
         button.style.cursor = 'pointer';
         
         if (chrome.runtime.lastError) {
-          console.error('Wrenlist Skylark: Error sending message:', chrome.runtime.lastError);
+          console.error('Wrenlist: Error sending message:', chrome.runtime.lastError);
           button.innerText = originalText;
           button.style.backgroundColor = originalBg;
           alert('Error: Could not communicate with Wrenlist extension. Please refresh the page and try again.');
@@ -745,7 +578,7 @@
         }
         
         if (response && response.success) {
-          console.log('Wrenlist Skylark: Import successful', response);
+          console.log('Wrenlist: Import successful', response);
           // Show success message
           button.innerText = '✓ Imported!';
           button.style.backgroundColor = '#10b981'; // green
@@ -798,7 +631,7 @@
             }, 3000);
           }
         } else if (response && !response.success) {
-          console.error('Wrenlist Skylark: Import failed', response);
+          console.error('Wrenlist: Import failed', response);
           button.innerText = '✗ Failed - Click to retry';
           button.style.backgroundColor = '#ef4444'; // red
           button.style.color = 'white';
@@ -880,7 +713,7 @@
       } else {
         const settings = await chrome.storage.sync.get(['enabledMarketplaces']);
         const enabledMarketplaces = settings.enabledMarketplaces ||
-          ['vinted', 'ebay', 'depop', 'poshmark', 'mercari', 'grailed', 'facebook', 'etsy'];
+          ['vinted', 'ebay', 'etsy', 'depop', 'facebook'];
 
         if (!enabledMarketplaces.includes(marketplace.site)) {
           return; // Marketplace disabled in settings
@@ -897,7 +730,7 @@
 
     const productId = extractProductId(location.href, marketplace);
     if (!productId) {
-      console.log('Wrenlist Skylark: Could not extract product ID from URL');
+      console.log('Wrenlist: Could not extract product ID from URL');
       return;
     }
 
@@ -909,7 +742,7 @@
     // Wait for target element to appear
     const targetElements = await awaitNodes(marketplace.targetSelector, 20);
     if (!targetElements || targetElements.length === 0) {
-      console.log('Wrenlist Skylark: Target element not found:', marketplace.targetSelector);
+      console.log('Wrenlist: Target element not found:', marketplace.targetSelector);
       return;
     }
 
@@ -1047,9 +880,6 @@
             case 'vinted': productData = extractVintedProductData(); break;
             case 'ebay': productData = extractEbayProductData(); break;
             case 'depop': productData = extractDepopProductData(); break;
-            case 'poshmark': productData = extractPoshmarkProductData(); break;
-            case 'mercari': productData = extractMercariProductData(); break;
-            case 'grailed': productData = extractGrailedProductData(); break;
             case 'facebook': productData = extractFacebookProductData(); break;
             case 'etsy': productData = extractEtsyProductData(); break;
           }
@@ -1197,7 +1027,7 @@
 
   // Main execution
   function init() {
-    console.log('Wrenlist Skylark: Content script loaded');
+    console.log('Wrenlist: Content script loaded');
     
     // Initial injection
     injectButton();
@@ -1213,7 +1043,7 @@
           const oldValue = mutation.oldValue;
           const newValue = mutation.target.textContent;
           if (oldValue !== newValue) {
-            console.log('Wrenlist Skylark: DOM change detected, reinjecting button');
+            console.log('Wrenlist: DOM change detected, reinjecting button');
             injectButton();
           }
         });
@@ -1233,7 +1063,7 @@
       const currentUrl = location.href;
       if (currentUrl !== lastUrl) {
         lastUrl = currentUrl;
-        console.log('Wrenlist Skylark: URL changed, reinjecting button');
+        console.log('Wrenlist: URL changed, reinjecting button');
         setTimeout(injectButton, 1000);
       }
     }, 1000);
@@ -1269,13 +1099,14 @@
       marker.style.top = '-9999px';
       document.body.appendChild(marker);
       
-      // Also set window property for detection
-      window.wrenlistSkylarkExtension = {
-        version: '1.1.0',
+      // Also set window property for detection. Version is read from the
+      // manifest at runtime so we never have to bump two files.
+      window.wrenlistExtension = {
+        version: (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.().version) || '0.0.0',
         available: true
       };
       
-      console.log('Wrenlist Skylark: Extension marker injected');
+      console.log('Wrenlist: Extension marker injected');
     }
   }
 
@@ -1289,7 +1120,7 @@
       
       // Handle Vinted status sync
       if (type === 'SYNC_VINTED_STATUS') {
-        console.log('Wrenlist Skylark: Forwarding SYNC_VINTED_STATUS to background', data?.products?.length || 0, 'products');
+        console.log('Wrenlist: Forwarding SYNC_VINTED_STATUS to background', data?.products?.length || 0, 'products');
         
         try {
           chrome.runtime.sendMessage({
@@ -1297,7 +1128,7 @@
             data: data
           }, (response) => {
             if (chrome.runtime.lastError) {
-              console.error('Wrenlist Skylark: Sync error:', chrome.runtime.lastError.message);
+              console.error('Wrenlist: Sync error:', chrome.runtime.lastError.message);
               window.postMessage({
                 type: 'VINTED_SYNC_RESPONSE',
                 success: false,
@@ -1308,14 +1139,14 @@
               return;
             }
             
-            console.log('Wrenlist Skylark: Sync response received', response);
+            console.log('Wrenlist: Sync response received', response);
             window.postMessage({
               type: 'VINTED_SYNC_RESPONSE',
               ...response
             }, '*');
           });
         } catch (error) {
-          console.error('Wrenlist Skylark: Failed to send sync message:', error);
+          console.error('Wrenlist: Failed to send sync message:', error);
           window.postMessage({
             type: 'VINTED_SYNC_RESPONSE',
             success: false,
@@ -1327,14 +1158,14 @@
       
     // Handle marketplace status check (CHECK_ALL_MARKETPLACES)
     if (type === 'CHECK_ALL_MARKETPLACES') {
-      console.log('Wrenlist Skylark: Checking all marketplace statuses');
+      console.log('Wrenlist: Checking all marketplace statuses');
 
       // Check all active marketplaces in parallel
       const ALL_ACTIVE_MARKETPLACES = ['vinted', 'etsy', 'facebook'];
 
       try {
         if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
-          console.warn('Wrenlist Skylark: chrome.runtime unavailable, skipping marketplace check');
+          console.warn('Wrenlist: chrome.runtime unavailable, skipping marketplace check');
           return;
         }
         Promise.all(ALL_ACTIVE_MARKETPLACES.map(function(mp) {
@@ -1349,7 +1180,7 @@
                 }
                 if (chrome.runtime.lastError) {
                   var errorMsg = chrome.runtime.lastError.message;
-                  console.warn('Wrenlist Skylark: Check ' + mp + ' error:', errorMsg);
+                  console.warn('Wrenlist: Check ' + mp + ' error:', errorMsg);
 
                   // Detect extension context invalidated
                   if (errorMsg && errorMsg.includes('Extension context invalidated')) {
@@ -1383,7 +1214,7 @@
             };
           });
 
-          console.log('Wrenlist Skylark: All marketplace statuses:', marketplaces);
+          console.log('Wrenlist: All marketplace statuses:', marketplaces);
 
           if (hasReloadError) {
             console.warn('⚠️ Extension was reloaded. Please refresh this page to reconnect.');
@@ -1402,7 +1233,7 @@
         });
       } catch (error) {
         var errorMsg = error && error.message ? error.message : String(error);
-        console.error('Wrenlist Skylark: Failed to check marketplace statuses:', error);
+        console.error('Wrenlist: Failed to check marketplace statuses:', error);
 
         window.postMessage({
           type: 'ALL_MARKETPLACES_RESPONSE',
@@ -1416,7 +1247,7 @@
     // Handle single marketplace check (CHECK_MARKETPLACE)
     if (type === 'CHECK_MARKETPLACE') {
       const marketplace = data?.marketplace || event.data.marketplace;
-      console.log('Wrenlist Skylark: Checking marketplace status:', marketplace);
+      console.log('Wrenlist: Checking marketplace status:', marketplace);
       
       chrome.runtime.sendMessage(
         chrome.runtime.id,
@@ -1426,7 +1257,7 @@
         },
         (response) => {
           if (chrome.runtime.lastError) {
-            console.error('Wrenlist Skylark: Check marketplace error:', chrome.runtime.lastError.message);
+            console.error('Wrenlist: Check marketplace error:', chrome.runtime.lastError.message);
             window.postMessage({
               type: 'MARKETPLACE_CHECK_RESPONSE',
               marketplace: marketplace,
@@ -1435,7 +1266,7 @@
             return;
           }
           
-          console.log('Wrenlist Skylark: Marketplace check response:', response);
+          console.log('Wrenlist: Marketplace check response:', response);
           
           const status = {
             connected: response?.success === true && response?.loggedIn === true,
@@ -1454,7 +1285,7 @@
       // Handle delist product
       if (type === 'DELIST_PRODUCT') {
         const { marketplace, listingId, productId, productTitle, requestId } = event.data;
-        console.log('Wrenlist Skylark: Forwarding delist command to background', {
+        console.log('Wrenlist: Forwarding delist command to background', {
           marketplace,
           listingId,
           productId
@@ -1471,7 +1302,7 @@
             (response) => {
               if (chrome.runtime.lastError) {
                 const errorMsg = chrome.runtime.lastError.message;
-                console.error('Wrenlist Skylark: Delist error:', errorMsg);
+                console.error('Wrenlist: Delist error:', errorMsg);
                 
                 // Detect extension context invalidated error
                 if (errorMsg.includes('Extension context invalidated')) {
@@ -1499,7 +1330,7 @@
                 return;
               }
               
-              console.log('Wrenlist Skylark: Delist response:', response);
+              console.log('Wrenlist: Delist response:', response);
               
               // Forward the response back to the web page
               window.postMessage({
@@ -1514,7 +1345,7 @@
             }
           );
         } catch (error) {
-          console.error('Wrenlist Skylark: Failed to send delist message:', error);
+          console.error('Wrenlist: Failed to send delist message:', error);
           window.postMessage({
             type: 'DELIST_PRODUCT_RESPONSE',
             marketplace: marketplace,
@@ -1529,7 +1360,7 @@
       
       // Handle publish to marketplace
       if (type === 'PUBLISH_TO_MARKETPLACE' || type === 'POST_LISTING_TO_MARKETPLACE') {
-        console.log('Wrenlist Skylark: Forwarding publish command to background');
+        console.log('Wrenlist: Forwarding publish command to background');
         
         // Extract internalProductId if provided
         const internalProductId = data.product?.internalProductId;
@@ -1540,7 +1371,7 @@
             ...data
           }, (response) => {
             if (chrome.runtime.lastError) {
-              console.error('Wrenlist Skylark: Publish error:', chrome.runtime.lastError.message);
+              console.error('Wrenlist: Publish error:', chrome.runtime.lastError.message);
               window.postMessage({
                 type: 'PUBLISH_RESPONSE',
                 success: false,
@@ -1585,7 +1416,7 @@
 // Listen for messages from background script (MUST be at top level, outside IIFE)
 // Version: 2025-01-09-23:00 (Cache-bust)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Wrenlist Skylark [v2]: Content script received message:', request.type || request.action);
+  console.log('Wrenlist [v2]: Content script received message:', request.type || request.action);
   
   // Handle request to send a message on Vinted via API
   if (request.type === 'SEND_VINTED_MESSAGE') {

@@ -1,17 +1,18 @@
 /**
- * Wrenlist Skylark - Options Page Script
+ * Wrenlist — Options Page Script
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Marketplaces where the extension injects an "Import to Wrenlist" button
+  // on product pages. Must match extension/content-scripts/content.js and the
+  // platforms listed on app.wrenlist.com/platform-connect. Shopify is output-
+  // only (your own store, not a source of imports), so it's not in this list.
   const marketplaces = [
     { id: 'vinted', name: 'Vinted', enabled: true },
     { id: 'ebay', name: 'eBay', enabled: true },
+    { id: 'etsy', name: 'Etsy', enabled: true },
     { id: 'depop', name: 'Depop', enabled: true },
-    { id: 'poshmark', name: 'Poshmark', enabled: true },
-    { id: 'mercari', name: 'Mercari', enabled: true },
-    { id: 'grailed', name: 'Grailed', enabled: true },
-    { id: 'facebook', name: 'Facebook Marketplace', enabled: true },
-    { id: 'etsy', name: 'Etsy', enabled: true }
+    { id: 'facebook', name: 'Facebook Marketplace', enabled: true }
   ];
   
   // Load saved settings
