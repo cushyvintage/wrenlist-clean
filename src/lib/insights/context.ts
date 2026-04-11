@@ -40,13 +40,15 @@ async function loadFinds(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<FindForInsights[]> {
-  // Columns limited to what the current rules actually read. Dropping
-  // photos/updated_at/source_name cuts the payload by ~70% for heavy users.
+  // Columns limited to what rules in src/lib/insights/rules/ actually
+  // read. Adding a field here means extending FindForInsights too.
   const finds: FindForInsights[] = []
   for (let off = 0; ; off += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('finds')
-      .select('id,status,created_at,cost_gbp,sold_price_gbp,asking_price_gbp,category')
+      .select(
+        'id,status,created_at,sold_at,cost_gbp,sold_price_gbp,asking_price_gbp,category,source_name,photos',
+      )
       .eq('user_id', userId)
       .range(off, off + PAGE_SIZE - 1)
 

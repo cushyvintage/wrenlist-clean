@@ -62,10 +62,13 @@ export interface FindForInsights {
   id: string
   status: string | null
   created_at: string | null
+  sold_at: string | null
   cost_gbp: number | null
   sold_price_gbp: number | null
   asking_price_gbp: number | null
   category: string | null
+  source_name: string | null
+  photos: string[] | null
 }
 
 /**
