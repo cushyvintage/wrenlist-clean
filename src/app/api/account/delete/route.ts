@@ -146,9 +146,12 @@ export async function POST(request: NextRequest) {
         subject: adminTpl.subject,
         html: adminTpl.html,
         text: adminTpl.text,
+        // Resend tag values must match /^[a-zA-Z0-9_-]+$/ — spaces and
+        // punctuation in the raw reason ("Just testing it out") cause the
+        // entire send to 400. Normalise before sending.
         tags: [
           { name: 'category', value: 'admin_user_left' },
-          { name: 'reason', value: reason.slice(0, 40) },
+          { name: 'reason', value: reason.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 50) },
         ],
       }),
     ])
