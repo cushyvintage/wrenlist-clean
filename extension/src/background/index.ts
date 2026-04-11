@@ -3369,14 +3369,36 @@ async function handleFetchVintedApi(message: ExternalMessage) {
     throw new Error("Only GET requests are allowed");
   }
 
+  // Bootstrap the Vinted client so we can attach the authenticated
+  // X-Csrf-Token + X-Anon-Id headers. Without these Vinted now 401s even
+  // endpoints like /api/v2/users/{id} that used to be publicly readable.
+  let csrfToken = "";
+  let anonId = "";
+  try {
+    const tldMatch = url.match(/^https:\/\/www\.vinted\.([^/]+)/);
+    const detectedTld = tldMatch?.[1] ?? "co.uk";
+    const { client } = createVintedServices({ tld: detectedTld });
+    await client.bootstrap();
+    csrfToken = client.getCsrfToken();
+    anonId = client.getAnonId();
+  } catch (bootstrapError) {
+    // Non-fatal — fall back to unauthenticated request. It will likely 401
+    // but we return the error to the caller intact so they can diagnose.
+    console.warn("[Vinted] fetch_vinted_api bootstrap failed:", bootstrapError);
+  }
+
+  const headers: Record<string, string> = {
+    Accept: "application/json, text/plain, */*",
+    "Content-Type": "application/json",
+  };
+  if (csrfToken) headers["X-Csrf-Token"] = csrfToken;
+  if (anonId) headers["X-Anon-Id"] = anonId;
+
   try {
     const response = await fetch(url, {
       method: "GET",
       credentials: "include",
-      headers: {
-        Accept: "application/json, text/plain, */*",
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     if (!response.ok) {

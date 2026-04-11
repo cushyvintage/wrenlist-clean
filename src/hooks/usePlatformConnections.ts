@@ -79,11 +79,16 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         // Best-effort: ask the extension to fetch the authenticated Vinted user
         // detail so we can tell the server whether this is a Pro/business
         // account. The extension has vinted.co.uk cookies; we don't.
+        //
+        // The Vinted extension's get_vinted_session response returns the
+        // numeric id under the `username` field when it couldn't resolve the
+        // login name (which is the common case since Vinted's public user
+        // API now 401s without auth headers). So the numeric id candidate is
+        // whichever of (userId, username) actually looks numeric.
         let isBusiness: boolean | null = null
         const tld = response.tld || 'co.uk'
-        const numericId = response.userId && /^\d+$/.test(String(response.userId))
-          ? String(response.userId)
-          : null
+        const rawId = String(response.userId ?? response.username ?? '')
+        const numericId = /^\d+$/.test(rawId) ? rawId : null
         if (numericId) {
           try {
             const apiResp = await new Promise<{ success?: boolean; results?: { user?: { business?: boolean } } }>((resolve) => {
