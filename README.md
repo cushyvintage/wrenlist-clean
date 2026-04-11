@@ -91,7 +91,7 @@ Vercel auto-deploys from main branch. No manual steps needed.
 
 - **[CLAUDE.md](CLAUDE.md)** — Dev guide, patterns, gotchas
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design, data flows
-- **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)** — Table definitions
+- **[DATABASE_SCHEMA_REFERENCE.md](DATABASE_SCHEMA_REFERENCE.md)** — Table definitions
 - **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — UI patterns, Tailwind
 - **[PRD.md](PRD.md)** — Product roadmap
 - **[API.md](API.md)** — API endpoints
