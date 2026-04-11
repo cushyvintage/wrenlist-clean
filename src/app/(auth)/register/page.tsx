@@ -46,11 +46,12 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      // emailRedirectTo: after the user clicks the verification link,
-      // send them straight to /onboarding. Without this, Supabase uses
-      // the Site URL default (https://app.wrenlist.com/) which — now
-      // that the middleware treats '/' as public — drops them on the
-      // marketing landing page with no obvious next step.
+      // emailRedirectTo: route the confirm-email link through
+      // /auth/callback so the PKCE code exchange happens server-side.
+      // The callback handler then routes new users to /onboarding (and
+      // returning users to /dashboard) based on profile state. Pointing
+      // the email link directly at /onboarding would skip the code
+      // exchange entirely, leaving the user without a session.
       const appOrigin =
         typeof window !== 'undefined'
           ? window.location.origin
@@ -59,7 +60,7 @@ export default function RegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${appOrigin}/onboarding`,
+          emailRedirectTo: `${appOrigin}/auth/callback`,
           data: {
             full_name: `${firstName} ${lastName}`,
           },
