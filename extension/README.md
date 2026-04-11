@@ -151,7 +151,7 @@ Click the extension icon to view:
 ```
 wrenlist-skylark-extension/
 ├── manifest.json              # Extension configuration
-├── background.js              # Service worker (Crosslist code + Wrenlist handlers)
+├── background.js              # Compiled service worker bundle (from src/background/)
 ├── content-scripts/
 │   └── content.js            # Content script for marketplace pages
 ├── popup.html                # Popup UI
@@ -204,10 +204,9 @@ wrenlist-skylark-extension/
 
 ## 📝 Notes
 
-- Based on Crosslist extension architecture for stability
-- All marketplace-specific code preserved for reliability
-- Wrenlist-specific integration layer added on top
-- Does not interfere with existing Wrenlist extension
+- Marketplace clients are written in TypeScript under `src/background/marketplaces/`
+- Each marketplace has a mapper (product → marketplace payload) and a client (auth + HTTP)
+- Shared helpers (retry, logging, concurrency) live in `src/background/shared/`
 
 ## 🔄 Version History
 

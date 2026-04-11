@@ -1,1 +1,13 @@
 .vercel
+
+# Compiled TS output — rebuilt via `npx tsc`
+dist/
+
+# Chrome-generated local cache when loading the extension unpacked —
+# machine-specific and must never ship.
+_metadata/
+
+# Legacy root-level compiled bundle that used to ship as the service
+# worker. The MV3 service worker now lives at dist/background/index.js;
+# this file is dead weight and must not come back.
+/background.js

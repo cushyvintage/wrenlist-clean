@@ -1,7 +1,6 @@
 /**
- * Wrenlist Skylark - Content Script
+ * Wrenlist - Content Script
  * Button injection for marketplace product pages
- * Based on Crosslist's proven architecture
  */
 
 (function() {
@@ -16,7 +15,7 @@
     text: '#2d3025'           // wren-text-primary
   };
 
-  // Marketplace configurations (from Crosslist)
+  // Marketplace configurations
   const MARKETPLACES = [
     {
       site: 'vinted',

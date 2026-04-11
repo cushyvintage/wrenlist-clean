@@ -6,10 +6,7 @@
 
 ## Starting point
 
-Wrenlist's first Chrome Web Store submission is **`0.9.0`** (2026-04-11). The
-previous `1.4.0` was a holdover from the Crosslist fork and never shipped to
-real Wrenlist users, so we reset the version rather than carrying inherited
-numbering.
+Wrenlist's first Chrome Web Store submission is **`0.9.0`** (2026-04-11).
 
 **`0.9.x`** is the public beta series. We graduate to **`1.0.0`** when:
 
@@ -86,7 +83,7 @@ From a clean working tree on `main`:
    `src/hooks/useExtensionInfo.ts`. This is how the web app tells old
    installs "you're out of date" — see next section.
 5. **Rebuild the bundle.** Do not reuse an old `extension/dist/`. Stale
-   bundles are how the Crosslist→Wrenlist rename initially shipped half-done.
+   bundles are a known source of "works locally, broken in prod" bugs.
    From the project root:
    ```
    npm run build:extension     # clean rebuild (rm -rf dist && tsc)

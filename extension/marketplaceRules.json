@@ -179,7 +179,7 @@
         {
           "header": "User-Agent",
           "operation": "set",
-          "value": "mercari_b/crosslist"
+          "value": "mercari_b/wrenlist"
         }
       ],
       "responseHeaders": [

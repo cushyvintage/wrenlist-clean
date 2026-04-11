@@ -205,7 +205,7 @@ export class DepopMapper {
 
   /**
    * Map colour label to Depop slug.
-   * Handles both old Crosslist Color enum values AND new unified colour labels.
+   * Handles both legacy Color enum values AND new unified colour labels.
    * Depop accepts: black, grey, white, brown, tan, cream, yellow, red, burgundy,
    * orange, pink, purple, blue, navy, green, khaki, multi, silver, gold
    */
