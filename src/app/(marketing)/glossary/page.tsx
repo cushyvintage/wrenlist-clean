@@ -83,7 +83,7 @@ export default function GlossaryPage() {
             </h1>
           </Reveal>
           <Reveal>
-            <p className="text-lg sm:text-xl font-light text-[#6b7d6a] leading-relaxed">
+            <p className="text-lg sm:text-xl font-light text-[#4a6147] leading-relaxed">
               A complete guide to reseller terminology. From condition grading to business metrics, master the language of UK thrifting and online selling.
             </p>
           </Reveal>

@@ -118,11 +118,11 @@ export default function CalculatorPage() {
       <div className="max-w-4xl mx-auto px-5 sm:px-8 lg:px-12 py-12">
         {/* HEADER */}
         <div className="text-center mb-10">
-          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">free tool</div>
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#527050] mb-2.5">free tool</div>
           <h1 className="hero-fade-2 font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c] mb-2">
             UK Marketplace <em className="italic">Fee Calculator</em>
           </h1>
-          <p className="hero-fade-3 text-sm font-normal text-[#6b7d6a] max-w-lg mx-auto">
+          <p className="hero-fade-3 text-sm font-normal text-[#4a6147] max-w-lg mx-auto">
             Enter your sale price and cost — see exactly what you&apos;d keep on Vinted, eBay, Etsy, Depop & Shopify.
           </p>
         </div>
@@ -130,11 +130,11 @@ export default function CalculatorPage() {
         {/* INPUT SECTION */}
         <Reveal className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2">
+            <label className="block text-xs font-medium uppercase tracking-wider text-[#527050] mb-2">
               Sale price
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9e88] text-sm">£</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#527050] text-sm">£</span>
               <input
                 type="number"
                 value={salePrice}
@@ -147,11 +147,11 @@ export default function CalculatorPage() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2">
+            <label className="block text-xs font-medium uppercase tracking-wider text-[#527050] mb-2">
               Cost price
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9e88] text-sm">£</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#527050] text-sm">£</span>
               <input
                 type="number"
                 value={costPrice}
@@ -164,11 +164,11 @@ export default function CalculatorPage() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2">
+            <label className="block text-xs font-medium uppercase tracking-wider text-[#527050] mb-2">
               Postage (seller pays)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9e88] text-sm">£</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#527050] text-sm">£</span>
               <input
                 type="number"
                 value={postage}
@@ -218,19 +218,19 @@ export default function CalculatorPage() {
                       <div className={`font-serif text-2xl font-medium ${r.netProfit >= 0 ? 'text-[#1e2e1c]' : 'text-red-600'}`}>
                         {formatGBP(r.netProfit)}
                       </div>
-                      <div className="text-xs text-[#8a9e88] mt-0.5">
+                      <div className="text-xs text-[#527050] mt-0.5">
                         net profit · {margin.toFixed(0)}% margin
                       </div>
                     </div>
 
                     <div className="border-t border-[rgba(61,92,58,0.08)] pt-3 space-y-1.5">
                       <div className="flex justify-between text-xs">
-                        <span className="text-[#8a9e88]">Platform fees</span>
-                        <span className="text-[#6b7d6a] font-medium">{formatGBP(r.totalFees)}</span>
+                        <span className="text-[#527050]">Platform fees</span>
+                        <span className="text-[#4a6147] font-medium">{formatGBP(r.totalFees)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-[#8a9e88]">You keep</span>
-                        <span className="text-[#6b7d6a] font-medium">{formatGBP(sale - r.totalFees)}</span>
+                        <span className="text-[#527050]">You keep</span>
+                        <span className="text-[#4a6147] font-medium">{formatGBP(sale - r.totalFees)}</span>
                       </div>
                     </div>
                   </div>
@@ -240,7 +240,7 @@ export default function CalculatorPage() {
 
             {/* COMPARISON BAR */}
             <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-5 mb-6">
-              <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-4">fees compared</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-4">fees compared</div>
               <div className="space-y-3">
                 {results.map((r) => {
                   const maxFee = Math.max(...results.map((x) => x.totalFees), 1)
@@ -254,7 +254,7 @@ export default function CalculatorPage() {
                           style={{ width: `${Math.max(barWidth, 1)}%`, backgroundColor: r.color + '40' }}
                         />
                       </div>
-                      <div className="w-14 text-xs text-[#6b7d6a] text-right font-medium flex-shrink-0">
+                      <div className="w-14 text-xs text-[#4a6147] text-right font-medium flex-shrink-0">
                         {formatGBP(r.totalFees)}
                       </div>
                     </div>
@@ -265,7 +265,7 @@ export default function CalculatorPage() {
 
             {/* FEE NOTES */}
             <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-5 mb-10">
-              <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-3">how fees are calculated</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-3">how fees are calculated</div>
               <div className="space-y-2">
                 {results.map((r) => (
                   <div key={r.platform} className="flex gap-2 items-start text-xs">
@@ -275,12 +275,12 @@ export default function CalculatorPage() {
                     />
                     <div>
                       <span className="font-medium text-[#1e2e1c]">{r.platform}</span>
-                      <span className="text-[#8a9e88]"> — {r.notes}</span>
+                      <span className="text-[#527050]"> — {r.notes}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-[#8a9e88] mt-4 italic">
+              <p className="text-xs text-[#527050] mt-4 italic">
                 Fees are approximate and based on standard UK seller accounts as of April 2026. Actual fees may vary by category, seller level, and promotions. Shopify fee excludes monthly subscription (from £25/mo).
               </p>
             </div>
@@ -292,7 +292,7 @@ export default function CalculatorPage() {
           <h2 className="font-serif text-xl sm:text-2xl font-normal text-[#1e2e1c] mb-3">
             Track your <em className="italic">real</em> margins automatically
           </h2>
-          <p className="text-sm text-[#6b7d6a] mb-6 max-w-md mx-auto">
+          <p className="text-sm text-[#4a6147] mb-6 max-w-md mx-auto">
             Wrenlist calculates your actual profit on every find — across every platform — so you always know your margin before you list.
           </p>
           <a

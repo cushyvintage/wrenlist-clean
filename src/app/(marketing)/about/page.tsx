@@ -10,7 +10,7 @@ export default function AboutPage() {
       {/* HEADER */}
       <div className="bg-white border-b border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-12">
         <div className="max-w-2xl mx-auto">
-          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">why wrenlist</div>
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#527050] mb-2.5">why wrenlist</div>
           <h1 className="hero-fade-2 font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
             Not just another<br />
             <em className="italic">crosslisting tool.</em>
@@ -23,13 +23,13 @@ export default function AboutPage() {
         {/* LEFT: THE PROBLEM */}
         <div className="border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.14)] px-5 sm:px-8 lg:px-12 py-10">
           <h2 className="font-serif text-2xl font-normal text-[#1e2e1c] mb-3.5">The problem with other tools</h2>
-          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a] mb-4">
+          <p className="text-sm font-normal leading-relaxed text-[#4a6147] mb-4">
             Vendoo and Crosslist are built for listing speed. They&apos;re great at taking something you&apos;ve already decided to sell and pushing it to multiple platforms. That&apos;s useful.
           </p>
-          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a] mb-4">
+          <p className="text-sm font-normal leading-relaxed text-[#4a6147] mb-4">
             But most UK thrifters don&apos;t have a listing problem. They have a <em className="font-serif text-base text-[#1e2e1c]">business clarity</em> problem. What did I pay for this? Where did I source it? Which categories actually make money? Which platforms convert fastest? Which hauls were worth doing again?
           </p>
-          <p className="text-sm font-normal leading-relaxed text-[#6b7d6a]">
+          <p className="text-sm font-normal leading-relaxed text-[#4a6147]">
             Those questions live in a Notes app, a spreadsheet, or nowhere at all. Wrenlist is the answer to all of them — built specifically for the way UK thrifters actually work.
           </p>
         </div>
@@ -66,7 +66,7 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-[#1e2e1c] mb-1">{item.title}</div>
-                  <div className="text-sm font-normal text-[#6b7d6a] leading-relaxed">{item.desc}</div>
+                  <div className="text-sm font-normal text-[#4a6147] leading-relaxed">{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -80,11 +80,11 @@ export default function AboutPage() {
           <p className="font-serif text-lg sm:text-xl font-normal leading-relaxed text-[#1e2e1c]">
             &ldquo;Wrenlist showed me exactly which sourcing locations were worth my time. That changed everything about how I plan my weekends.&rdquo;
           </p>
-          <p className="mt-4 text-xs text-[#8a9e88]">— Early access user · UK reseller</p>
+          <p className="mt-4 text-xs text-[#527050]">— Early access user · UK reseller</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center">
           <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">5</div>
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-2">marketplaces supported</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mt-2">marketplaces supported</div>
         </div>
       </div>
 

@@ -46,7 +46,7 @@ export function MarketingNav() {
             style={{ mixBlendMode: 'multiply' }}
           />
           <div className="font-serif text-xl font-medium tracking-wider text-[#1e2e1c]">
-            WREN<em className="font-light italic text-[#8a9e88]">list</em>
+            WREN<em className="font-light italic text-[#527050]">list</em>
           </div>
         </Link>
 
@@ -58,7 +58,7 @@ export function MarketingNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-xs ${isActive ? 'font-medium text-[#1e2e1c]' : 'font-light text-[#6b7d6a] hover:text-[#1e2e1c]'}`}
+                className={`text-xs ${isActive ? 'font-medium text-[#1e2e1c]' : 'font-light text-[#4a6147] hover:text-[#1e2e1c]'}`}
               >
                 {item.label}
               </Link>
@@ -69,7 +69,7 @@ export function MarketingNav() {
         <div className="flex gap-2 items-center flex-shrink-0">
           <a
             href="/login"
-            className="hidden sm:block border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-[#6b7d6a] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]"
+            className="hidden sm:block border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-[#4a6147] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]"
           >
             log in
           </a>
@@ -109,7 +109,7 @@ export function MarketingNav() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`block text-sm ${isActive ? 'font-medium text-[#1e2e1c]' : 'font-light text-[#6b7d6a]'}`}
+                className={`block text-sm ${isActive ? 'font-medium text-[#1e2e1c]' : 'font-light text-[#4a6147]'}`}
               >
                 {item.label}
               </Link>
@@ -117,7 +117,7 @@ export function MarketingNav() {
           })}
           <a
             href="/login"
-            className="block text-sm font-light text-[#6b7d6a] sm:hidden"
+            className="block text-sm font-light text-[#4a6147] sm:hidden"
           >
             log in
           </a>

@@ -85,8 +85,8 @@ export default function HmrcReportingPost() {
       <article className="max-w-2xl mx-auto px-5 sm:px-8 lg:px-12 py-12">
         {/* HEADER */}
         <div className="mb-10">
-          <Link href="/blog" className="text-xs text-[#8a9e88] hover:text-[#5a7a57]">← All posts</Link>
-          <div className="flex items-center gap-3 text-10px font-medium uppercase text-[#8a9e88] mt-6 mb-3">
+          <Link href="/blog" className="text-xs text-[#527050] hover:text-[#5a7a57]">← All posts</Link>
+          <div className="flex items-center gap-3 text-10px font-medium uppercase text-[#527050] mt-6 mb-3">
             <span>Tax</span>
             <span>·</span>
             <time dateTime={PUBLISHED}>11 April 2026</time>
@@ -96,7 +96,7 @@ export default function HmrcReportingPost() {
           <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#1e2e1c] leading-tight mb-4">
             HMRC now sees your Vinted & eBay sales. <em className="italic">Here&apos;s what that means.</em>
           </h1>
-          <p className="text-base text-[#6b7d6a] leading-relaxed">
+          <p className="text-base text-[#4a6147] leading-relaxed">
             If you sell on Vinted, eBay, Etsy, Depop, or Airbnb in the UK, the rules changed on 1 January 2024.
             The platforms now send your sales data directly to HMRC once a year. Here&apos;s a plain-English
             guide to what that actually means for you as a reseller — and what you should do about it.
@@ -107,19 +107,19 @@ export default function HmrcReportingPost() {
         <div className="prose prose-sm max-w-none space-y-6 text-[#1e2e1c] leading-relaxed">
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">What actually changed in 2024?</h2>
-            <p className="text-sm text-[#6b7d6a]">
+            <p className="text-sm text-[#4a6147]">
               The UK adopted the OECD&apos;s Digital Platform Reporting rules (a global standard
               introduced in 2023 and implemented across Europe). From 1 January 2024, any UK digital
               marketplace that facilitates sales of goods or services has a legal obligation to collect
               seller data and report it to HMRC by 31 January of the following year. That includes:
             </p>
-            <ul className="text-sm text-[#6b7d6a] space-y-1 mt-3 ml-5 list-disc">
+            <ul className="text-sm text-[#4a6147] space-y-1 mt-3 ml-5 list-disc">
               <li>Vinted, eBay, Etsy, Depop, Amazon (goods)</li>
               <li>Airbnb, Booking.com (accommodation)</li>
               <li>Uber, Deliveroo, Bolt (services)</li>
               <li>Any UK platform where you list things for sale</li>
             </ul>
-            <p className="text-sm text-[#6b7d6a] mt-3">
+            <p className="text-sm text-[#4a6147] mt-3">
               The first reports covering calendar year 2024 were due by 31 January 2025. HMRC now
               has a copy of your annual gross sales, number of transactions, and identifying details
               for every UK seller above a minimum threshold (30 sales or €2,000 / year, roughly).
@@ -128,11 +128,11 @@ export default function HmrcReportingPost() {
 
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">Does this mean I owe tax?</h2>
-            <p className="text-sm text-[#6b7d6a]">
+            <p className="text-sm text-[#4a6147]">
               Not necessarily. The rules changed how HMRC <em>gets</em> your data, not whether you owe tax. The
               underlying tax rules are the same as before:
             </p>
-            <ul className="text-sm text-[#6b7d6a] space-y-2 mt-3 ml-5 list-disc">
+            <ul className="text-sm text-[#4a6147] space-y-2 mt-3 ml-5 list-disc">
               <li>
                 <strong className="text-[#1e2e1c]">Selling your own used stuff</strong> — clothes, furniture,
                 old toys — is generally <strong>not taxable</strong>, no matter how much you earn. You&apos;re
@@ -144,7 +144,7 @@ export default function HmrcReportingPost() {
                 the <strong>£1,000 trading allowance</strong> in a UK tax year (6 April to 5 April).
               </li>
             </ul>
-            <p className="text-sm text-[#6b7d6a] mt-3">
+            <p className="text-sm text-[#4a6147] mt-3">
               The line between &ldquo;selling my old stuff&rdquo; and &ldquo;trading&rdquo; is what HMRC
               calls the badges of trade: regularity, intention to make a profit, modification of items,
               advertising, and so on. If you&apos;re buying from charity shops or car boots with the intent
@@ -154,21 +154,21 @@ export default function HmrcReportingPost() {
 
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">The £1,000 trading allowance in plain English</h2>
-            <p className="text-sm text-[#6b7d6a]">
+            <p className="text-sm text-[#4a6147]">
               If your total reselling sales for the tax year stay under £1,000 (<em>gross</em> — before fees
               and postage are deducted), you don&apos;t need to register for Self Assessment or declare the
               income at all. Keep records anyway in case your situation changes.
             </p>
-            <p className="text-sm text-[#6b7d6a] mt-3">
+            <p className="text-sm text-[#4a6147] mt-3">
               Over £1,000? You need to register with HMRC by 5 October following the end of the tax year
               in which you crossed the threshold, and file a Self Assessment return by 31 January. You can
               then claim either:
             </p>
-            <ul className="text-sm text-[#6b7d6a] space-y-1 mt-3 ml-5 list-disc">
+            <ul className="text-sm text-[#4a6147] space-y-1 mt-3 ml-5 list-disc">
               <li>The flat £1,000 trading allowance (no need to track expenses), OR</li>
               <li>Your actual allowable expenses (cost of goods, postage, fees, mileage, etc.)</li>
             </ul>
-            <p className="text-sm text-[#6b7d6a] mt-3">
+            <p className="text-sm text-[#4a6147] mt-3">
               Pick whichever is higher. Most resellers with real inventory costs are better off claiming
               actual expenses.
             </p>
@@ -176,10 +176,10 @@ export default function HmrcReportingPost() {
 
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">What expenses can I claim?</h2>
-            <p className="text-sm text-[#6b7d6a]">
+            <p className="text-sm text-[#4a6147]">
               If you&apos;re claiming actual expenses rather than the £1,000 allowance, keep records of:
             </p>
-            <ul className="text-sm text-[#6b7d6a] space-y-1 mt-3 ml-5 list-disc">
+            <ul className="text-sm text-[#4a6147] space-y-1 mt-3 ml-5 list-disc">
               <li><strong className="text-[#1e2e1c]">Cost of goods</strong> — what you paid for the items you sold</li>
               <li><strong className="text-[#1e2e1c]">Postage and packaging</strong> — labels, tape, poly mailers</li>
               <li><strong className="text-[#1e2e1c]">Platform and payment fees</strong> — eBay FVF, Etsy fees, PayPal, Stripe</li>
@@ -191,7 +191,7 @@ export default function HmrcReportingPost() {
 
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">The practical checklist</h2>
-            <ol className="text-sm text-[#6b7d6a] space-y-2 mt-3 ml-5 list-decimal">
+            <ol className="text-sm text-[#4a6147] space-y-2 mt-3 ml-5 list-decimal">
               <li>
                 <strong className="text-[#1e2e1c]">Work out if you&apos;re over the threshold.</strong>{' '}
                 Use our <Link href="/tax-estimator" className="text-[#5a7a57] underline font-medium">free tax estimator</Link>{' '}
@@ -227,13 +227,13 @@ export default function HmrcReportingPost() {
 
           <section>
             <h2 className="font-serif text-xl font-medium text-[#1e2e1c] mt-8 mb-3">Don&apos;t panic, do prepare</h2>
-            <p className="text-sm text-[#6b7d6a]">
+            <p className="text-sm text-[#4a6147]">
               The Digital Platform Reporting rules haven&apos;t created new taxes — they&apos;ve just made it
               much harder to accidentally (or deliberately) underreport. HMRC already had the power to ask
               platforms for seller data; now they get it automatically. If you&apos;ve always been above-board,
               nothing changes. If you&apos;ve been casual about it, now&apos;s the time to clean up your records.
             </p>
-            <p className="text-sm text-[#6b7d6a] mt-3">
+            <p className="text-sm text-[#4a6147] mt-3">
               The good news: with modern tools, tracking is a 30-second task per sale, not an
               end-of-year panic.
             </p>
@@ -245,7 +245,7 @@ export default function HmrcReportingPost() {
           <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-2">
             Not sure where you stand?
           </h3>
-          <p className="text-sm text-[#6b7d6a] mb-5 max-w-md mx-auto">
+          <p className="text-sm text-[#4a6147] mb-5 max-w-md mx-auto">
             Use our free UK reseller tax estimator to work out whether you&apos;re over the £1,000
             trading allowance and what you might owe. 60 seconds, no signup.
           </p>

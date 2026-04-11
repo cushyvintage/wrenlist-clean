@@ -196,11 +196,11 @@ export default function TaxEstimatorClient() {
       <div className="max-w-4xl mx-auto px-5 sm:px-8 lg:px-12 py-12">
         {/* HEADER */}
         <div className="text-center mb-10">
-          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">free tool · 2025/26 tax year</div>
+          <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-[#527050] mb-2.5">free tool · 2025/26 tax year</div>
           <h1 className="hero-fade-2 font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c] mb-2">
             UK Reseller <em className="italic">Tax Estimator</em>
           </h1>
-          <p className="hero-fade-3 text-sm font-normal text-[#6b7d6a] max-w-lg mx-auto">
+          <p className="hero-fade-3 text-sm font-normal text-[#4a6147] max-w-lg mx-auto">
             Am I over the £1,000 trading allowance? Do I need to file Self Assessment? Work it out in 60 seconds.
           </p>
         </div>
@@ -208,8 +208,8 @@ export default function TaxEstimatorClient() {
         {/* 2024 HMRC NOTE */}
         <Reveal className="mb-8">
           <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-5">
-            <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2">since january 2024</div>
-            <p className="text-sm text-[#6b7d6a] leading-relaxed">
+            <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-2">since january 2024</div>
+            <p className="text-sm text-[#4a6147] leading-relaxed">
               UK marketplaces (Vinted, eBay, Etsy, Depop, Airbnb) now report seller earnings directly to HMRC under
               the new Digital Platform Reporting rules. If you earn over £1,000 in a tax year, HMRC already knows.
               This tool helps you work out what you might owe <em>before</em> you file.
@@ -220,14 +220,14 @@ export default function TaxEstimatorClient() {
         {/* INPUTS */}
         <Reveal delay={1}>
           <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-6 mb-6">
-            <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-4">your numbers (tax year 6 Apr 2025 – 5 Apr 2026)</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-4">your numbers (tax year 6 Apr 2025 – 5 Apr 2026)</div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <InputField label="Day-job salary (if any)" value={salary} onChange={setSalary} placeholder="0" hint="Gross PAYE salary from employer, before tax" />
               <InputField label="Total reselling sales" value={grossSales} onChange={setGrossSales} placeholder="5000" hint="Everything you sold — all platforms combined" />
             </div>
 
-            <div className="text-10px font-semibold uppercase text-[#8a9e88] mb-3 mt-6">allowable expenses</div>
+            <div className="text-10px font-semibold uppercase text-[#527050] mb-3 mt-6">allowable expenses</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <InputField label="Cost of goods" value={cogs} onChange={setCogs} placeholder="800" hint="What you paid to source the items you sold" />
               <InputField label="Postage paid by you" value={postage} onChange={setPostage} placeholder="400" hint="Postage, packaging, labels" />
@@ -235,7 +235,7 @@ export default function TaxEstimatorClient() {
               <InputField label="Other expenses" value={otherExpenses} onChange={setOtherExpenses} placeholder="0" hint="Phone, storage, subscriptions (Wrenlist counts)" />
             </div>
 
-            <div className="text-10px font-semibold uppercase text-[#8a9e88] mb-3 mt-6">business mileage</div>
+            <div className="text-10px font-semibold uppercase text-[#527050] mb-3 mt-6">business mileage</div>
             <InputField label="Miles driven for sourcing/delivery" value={mileage} onChange={setMileage} placeholder="0" prefix="" suffix="miles" hint="45p/mile first 10k, 25p/mile after (HMRC simplified expenses)" />
           </div>
         </Reveal>
@@ -254,7 +254,7 @@ export default function TaxEstimatorClient() {
         {showResults && result.overTradingAllowance && (
           <Reveal delay={3}>
             <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-6 mb-6">
-              <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-4">breakdown</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-4">breakdown</div>
 
               <div className="space-y-2.5 text-sm">
                 <Row label="Gross sales" value={formatGBP(result.grossSales)} />
@@ -264,7 +264,7 @@ export default function TaxEstimatorClient() {
                 )}
                 <Row label="Gross profit" value={formatGBP(result.grossProfit)} bold />
                 {result.tradingAllowanceApplied && (
-                  <div className="text-xs text-[#8a9e88] italic pl-2">
+                  <div className="text-xs text-[#527050] italic pl-2">
                     Trading allowance (£1,000) claimed instead of expenses — more favourable.
                   </div>
                 )}
@@ -284,8 +284,8 @@ export default function TaxEstimatorClient() {
         {/* RULES REFERENCE */}
         <Reveal delay={4}>
           <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-6 mb-10">
-            <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-4">how this is calculated</div>
-            <ul className="space-y-2 text-xs text-[#6b7d6a] leading-relaxed">
+            <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-4">how this is calculated</div>
+            <ul className="space-y-2 text-xs text-[#4a6147] leading-relaxed">
               <li><strong className="text-[#1e2e1c]">£1,000 trading allowance</strong> — gross trading income up to £1,000/year is tax-free and does not need to be declared.</li>
               <li><strong className="text-[#1e2e1c]">£12,570 personal allowance</strong> — first £12,570 of total income (salary + profit) is tax-free.</li>
               <li><strong className="text-[#1e2e1c]">20% basic rate</strong> — income between £12,571 and £50,270.</li>
@@ -314,7 +314,7 @@ export default function TaxEstimatorClient() {
           <h2 className="font-serif text-xl sm:text-2xl font-normal text-[#1e2e1c] mb-3">
             Track your profit, expenses & mileage <em className="italic">automatically</em>
           </h2>
-          <p className="text-sm text-[#6b7d6a] mb-6 max-w-md mx-auto">
+          <p className="text-sm text-[#4a6147] mb-6 max-w-md mx-auto">
             Wrenlist logs every sale, every fee, every mile — so when tax season lands, your numbers are ready. Export to CSV for your accountant.
           </p>
           <a
@@ -346,7 +346,7 @@ function InputField({ label, value, onChange, placeholder, hint, prefix = '£', 
     <div>
       <label className="block text-xs font-medium text-[#1e2e1c] mb-1.5">{label}</label>
       <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9e88] text-sm">{prefix}</span>}
+        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#527050] text-sm">{prefix}</span>}
         <input
           type="number"
           value={value}
@@ -356,9 +356,9 @@ function InputField({ label, value, onChange, placeholder, hint, prefix = '£', 
           className={`w-full ${prefix ? 'pl-7' : 'pl-4'} ${suffix ? 'pr-14' : 'pr-4'} py-2.5 border border-[rgba(61,92,58,0.14)] rounded-lg bg-[#f5f0e8] text-[#1e2e1c] font-serif text-base focus:outline-none focus:border-[#5a7a57]`}
           placeholder={placeholder}
         />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a9e88] text-xs">{suffix}</span>}
+        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#527050] text-xs">{suffix}</span>}
       </div>
-      {hint && <div className="text-10px text-[#8a9e88] mt-1 leading-tight">{hint}</div>}
+      {hint && <div className="text-10px text-[#527050] mt-1 leading-tight">{hint}</div>}
     </div>
   )
 }
@@ -375,8 +375,8 @@ interface RowProps {
 function Row({ label, value, bold, subtle, tiny, highlight }: RowProps) {
   return (
     <div className={`flex justify-between items-baseline ${tiny ? 'text-xs pl-4' : ''}`}>
-      <span className={`${subtle ? 'text-[#8a9e88]' : 'text-[#6b7d6a]'} ${bold ? 'font-medium text-[#1e2e1c]' : ''}`}>{label}</span>
-      <span className={`${bold ? 'font-serif text-base font-medium text-[#1e2e1c]' : 'text-[#6b7d6a]'} ${highlight ? 'text-[#5a7a57]' : ''}`}>{value}</span>
+      <span className={`${subtle ? 'text-[#527050]' : 'text-[#4a6147]'} ${bold ? 'font-medium text-[#1e2e1c]' : ''}`}>{label}</span>
+      <span className={`${bold ? 'font-serif text-base font-medium text-[#1e2e1c]' : 'text-[#4a6147]'} ${highlight ? 'text-[#5a7a57]' : ''}`}>{value}</span>
     </div>
   )
 }

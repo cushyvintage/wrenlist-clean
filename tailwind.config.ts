@@ -19,13 +19,17 @@ const config: Config = {
           DEFAULT: '#3D5C3A',
           lt: '#5A7A57',
           dk: '#2C4428',
-          dim: '#8A9E88',
+          // `dim` was #8A9E88 — failed WCAG AA contrast (2.52:1 on cream).
+          // Darkened to #527050 (4.81:1) to pass AA for small text.
+          dim: '#527050',
           pale: '#D4E2D2',
         },
         ink: {
           DEFAULT: '#1E2E1C',
           md: '#4A5E48',
-          lt: '#6B7D6A',
+          // `lt` was #6B7D6A — failed WCAG AA contrast (3.88:1 on cream).
+          // Darkened to #4A6147 (5.89:1) to pass AA for small text.
+          lt: '#4A6147',
         },
         amber: {
           DEFAULT: '#BA7517',

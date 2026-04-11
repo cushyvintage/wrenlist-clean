@@ -23,17 +23,17 @@ const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description,
     {founding && !featured && price !== '0' && <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-10px font-semibold uppercase bg-[#e8dcc2] text-[#7a5a2a] px-2 py-1 rounded">founding</div>}
     <div className={`text-sm font-medium text-[#1e2e1c] mb-4 ${featured || (founding && price !== '0') ? 'pt-4' : ''}`}>{tier}</div>
     <div className="flex items-baseline gap-1 mb-1">
-      <span className="text-sm font-normal text-[#6b7d6a]">£</span>
+      <span className="text-sm font-normal text-[#4a6147]">£</span>
       <span className="font-serif text-3xl font-medium text-[#1e2e1c]">{isAnnual && annualMonthly ? annualMonthly : price}</span>
-      <span className="text-sm font-normal text-[#6b7d6a]">/mo</span>
+      <span className="text-sm font-normal text-[#4a6147]">/mo</span>
     </div>
     {isAnnual && annualMonthly && price !== '0' && (
-      <div className="text-xs text-[#8a9e88] mb-2">£{price} billed annually</div>
+      <div className="text-xs text-[#527050] mb-2">£{price} billed annually</div>
     )}
     {founding && postLaunchPrice && price !== '0' && !isAnnual && (
       <div className="text-10px text-[#a08050] mb-2 whitespace-nowrap">Normally £{postLaunchPrice}/mo</div>
     )}
-    <p className="text-sm font-normal text-[#6b7d6a] mb-6 h-10">{description}</p>
+    <p className="text-sm font-normal text-[#4a6147] mb-6 h-10">{description}</p>
     <div className="mb-6">
       <div className="text-2xl font-serif font-medium text-ink">{limit}</div>
       <div className="text-10px font-semibold uppercase text-sage-dim">finds / month</div>
@@ -105,16 +105,6 @@ export function PricingSection() {
       limit: 'Unlimited',
       featured: false,
       features: ['Everything in Forager', 'Unlimited finds', 'Priority listing queue', 'Priority support'],
-    },
-    {
-      tier: 'Flock',
-      price: annual ? '566' : '59',
-      annualMonthly: '47',
-      postLaunchPrice: '69',
-      description: 'For small teams and vintage shops.',
-      limit: 'Unlimited',
-      featured: false,
-      features: ['Everything in Soar', '3 team seats', 'Shared inventory', 'API access', 'Custom Shopify storefront'],
     },
   ]
 

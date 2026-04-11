@@ -7,14 +7,17 @@ export default function PrivacyPage() {
       <MarketingNav />
 
       <div className="max-w-2xl mx-auto px-5 sm:px-10 py-12">
-        <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mb-2.5">legal</div>
+        <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-2.5">legal</div>
         <h1 className="font-serif text-3xl font-normal text-[#1e2e1c] mb-2">Privacy Policy</h1>
-        <p className="text-xs text-[#8a9e88] mb-10">Last updated: April 2026</p>
+        <p className="text-xs text-[#527050] mb-10">Last updated: April 2026</p>
 
-        <div className="space-y-8 text-sm font-normal leading-relaxed text-[#6b7d6a]">
+        <div className="space-y-8 text-sm font-normal leading-relaxed text-[#4a6147]">
           <section>
-            <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">About us</h2>
-            <p>Wrenlist is operated by Cushyvintage Limited. We are committed to protecting your privacy in accordance with UK GDPR (as amended by the Data Protection, Privacy and Electronic Communications (Amendment) Regulations 2020) and the Data Protection Act 2018.</p>
+            <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Who we are (data controller)</h2>
+            <p>Wrenlist is operated by Dominic Cushnan, a sole trader based in the United Kingdom, trading as Wrenlist. Dominic Cushnan is the data controller for personal data processed through the Wrenlist service.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">Contact:</strong> <a href="mailto:admin@wrenlist.com" className="text-[#5a7a57] underline">admin@wrenlist.com</a></p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">ICO registration:</strong> Registered with the UK Information Commissioner&apos;s Office (registration number pending — updated on issue).</p>
+            <p className="mt-2">We process your personal data in accordance with the UK General Data Protection Regulation and the Data Protection Act 2018.</p>
           </section>
 
           <section>

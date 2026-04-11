@@ -18,12 +18,12 @@ const RoadmapCard = ({ title, desc, votes, tag, featured = false }: RoadmapCardP
       : 'border-[rgba(61,92,58,0.14)] bg-white'
   }`}>
     <div className="text-sm font-medium text-[#1e2e1c] mb-1 leading-tight">{title}</div>
-    <p className="text-xs font-normal text-[#6b7d6a] leading-relaxed mb-2.5">{desc}</p>
+    <p className="text-xs font-normal text-[#4a6147] leading-relaxed mb-2.5">{desc}</p>
     <div className="flex items-center justify-between">
-      <span className="text-xs font-medium text-[#6b7d6a] bg-[#ede8de] border border-[rgba(61,92,58,0.14)] px-2 py-1 rounded">
+      <span className="text-xs font-medium text-[#4a6147] bg-[#ede8de] border border-[rgba(61,92,58,0.14)] px-2 py-1 rounded">
         {votes} votes
       </span>
-      <span className="text-xs text-[#6b7d6a] bg-[#ede8de] px-2 py-1 rounded">{tag}</span>
+      <span className="text-xs text-[#4a6147] bg-[#ede8de] px-2 py-1 rounded">{tag}</span>
     </div>
   </div>
 )
@@ -78,7 +78,7 @@ export default function RoadmapPage() {
               <h1 className="hero-fade-1 font-serif text-3xl font-normal text-[#1e2e1c] mb-1">
                 What we&apos;re <em className="italic">building.</em>
               </h1>
-              <p className="hero-fade-2 text-sm font-normal text-[#6b7d6a]">See what&apos;s shipped, what&apos;s in progress, and what&apos;s coming next.</p>
+              <p className="hero-fade-2 text-sm font-normal text-[#4a6147]">See what&apos;s shipped, what&apos;s in progress, and what&apos;s coming next.</p>
             </div>
           </div>
         </div>

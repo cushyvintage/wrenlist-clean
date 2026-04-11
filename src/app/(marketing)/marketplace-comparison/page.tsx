@@ -85,7 +85,7 @@ export default function MarketplaceComparisonPage() {
             </h1>
           </Reveal>
           <Reveal>
-            <p className="text-lg sm:text-xl font-light text-[#6b7d6a] leading-relaxed">
+            <p className="text-lg sm:text-xl font-light text-[#4a6147] leading-relaxed">
               Vinted, eBay, Etsy, Depop, and Shopify each serve different audiences and item types. Most successful UK resellers sell on multiple platforms. Here's how they compare in 2025/26.
             </p>
           </Reveal>
@@ -114,38 +114,38 @@ export default function MarketplaceComparisonPage() {
                 <tbody>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Vinted</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Free for sellers (buyers pay protection fee)</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Clothing, shoes, bags</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">1–2 days</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Very easy</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Free for sellers (buyers pay protection fee)</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Clothing, shoes, bags</td>
+                    <td className="px-4 py-3 text-[#4a6147]">1–2 days</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Very easy</td>
                   </tr>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">eBay</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">6–13%</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Collectibles, niche items</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">2–3 days</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Moderate</td>
+                    <td className="px-4 py-3 text-[#4a6147]">6–13%</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Collectibles, niche items</td>
+                    <td className="px-4 py-3 text-[#4a6147]">2–3 days</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Moderate</td>
                   </tr>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Etsy</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">8–16%</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Vintage, handmade, curated</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">3–5 days</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Easy</td>
+                    <td className="px-4 py-3 text-[#4a6147]">8–16%</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Vintage, handmade, curated</td>
+                    <td className="px-4 py-3 text-[#4a6147]">3–5 days</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Easy</td>
                   </tr>
                   <tr className="border-b border-[rgba(61,92,58,0.14)]">
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Depop</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">No seller commission + ~2.9% + 30p payment processing</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Fashion, Gen Z audience</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">1–2 days</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Very easy</td>
+                    <td className="px-4 py-3 text-[#4a6147]">No seller commission + ~2.9% + 30p payment processing</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Fashion, Gen Z audience</td>
+                    <td className="px-4 py-3 text-[#4a6147]">1–2 days</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Very easy</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-medium text-[#1e2e1c]">Shopify</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">$29–399/mo + payment fees</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">Serious brands, high volume</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">1–3 days</td>
-                    <td className="px-4 py-3 text-[#6b7d6a]">High</td>
+                    <td className="px-4 py-3 text-[#4a6147]">$29–399/mo + payment fees</td>
+                    <td className="px-4 py-3 text-[#4a6147]">Serious brands, high volume</td>
+                    <td className="px-4 py-3 text-[#4a6147]">1–3 days</td>
+                    <td className="px-4 py-3 text-[#4a6147]">High</td>
                   </tr>
                 </tbody>
               </table>
@@ -166,10 +166,10 @@ export default function MarketplaceComparisonPage() {
             <Reveal>
               <div className="border-l-4 border-[#3d5c3a] pl-6 pb-8 border-b border-[rgba(61,92,58,0.14)]">
                 <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">Vinted</h3>
-                <p className="text-[#6b7d6a] mb-4 leading-relaxed">
+                <p className="text-[#4a6147] mb-4 leading-relaxed">
                   The #1 secondhand fashion app in the UK. Fast sales, minimal friction, huge audience of young buyers looking for bargains.
                 </p>
-                <div className="space-y-2 text-sm text-[#6b7d6a]">
+                <div className="space-y-2 text-sm text-[#4a6147]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> Instant notifications, high sell-through rate, automatic postage labels, simple listing (photo + text), buyer pool trusts the platform</p>
                   <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> No seller fees — buyers pay a buyer protection fee instead. Limited to clothing, accessories, shoes and homeware. Algorithm favours frequent listers, pricing tends to race to the bottom.</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Clothing, designer pieces, fast turnover, new sellers (lowest friction entry)</p>
@@ -181,10 +181,10 @@ export default function MarketplaceComparisonPage() {
             <Reveal>
               <div className="border-l-4 border-[#3d5c3a] pl-6 pb-8 border-b border-[rgba(61,92,58,0.14)]">
                 <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">eBay UK</h3>
-                <p className="text-[#6b7d6a] mb-4 leading-relaxed">
+                <p className="text-[#4a6147] mb-4 leading-relaxed">
                   Largest auction & fixed-price platform in the UK. Older buyer base with strong purchasing power. Best for niche collectibles and hard-to-find items.
                 </p>
-                <div className="space-y-2 text-sm text-[#6b7d6a]">
+                <div className="space-y-2 text-sm text-[#4a6147]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> 15M+ UK buyers, higher AOV for collectibles, auction format can drive competition (higher final price), detailed item descriptions valued, established seller ratings matter</p>
                   <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> 6–13% final value fees, longer listings (need detailed condition, dimensions, item specifics), auction unpredictability, slower sales (7–14 days average)</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Collectibles, vintage furniture, niche hobbies, sellers with patience and attention to detail</p>
@@ -196,10 +196,10 @@ export default function MarketplaceComparisonPage() {
             <Reveal>
               <div className="border-l-4 border-[#3d5c3a] pl-6 pb-8 border-b border-[rgba(61,92,58,0.14)]">
                 <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">Etsy</h3>
-                <p className="text-[#6b7d6a] mb-4 leading-relaxed">
+                <p className="text-[#4a6147] mb-4 leading-relaxed">
                   Global vintage and handmade marketplace with a strongly curated vibe. Buyers actively search for authentic, quality vintage items.
                 </p>
-                <div className="space-y-2 text-sm text-[#6b7d6a]">
+                <div className="space-y-2 text-sm text-[#4a6147]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> 8–16% fees (all-in: listing + transaction + payment), global reach, vintage items perform well, strong brand loyalty, buyers expect premium quality</p>
                   <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> Highest percentage fees, shipping complications (international by default), Etsy's algorithm favours vintage/handmade stories (requires good photos + copy), slower organic growth (requires shop setup + consistent listings)</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Vintage furniture, mid-century homeware, jewellery, sellers with strong photography skills</p>
@@ -211,10 +211,10 @@ export default function MarketplaceComparisonPage() {
             <Reveal>
               <div className="border-l-4 border-[#3d5c3a] pl-6 pb-8 border-b border-[rgba(61,92,58,0.14)]">
                 <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">Depop</h3>
-                <p className="text-[#6b7d6a] mb-4 leading-relaxed">
+                <p className="text-[#4a6147] mb-4 leading-relaxed">
                   Social-first secondhand fashion app. Heavily Gen Z, fast, Instagram-like. Best for fashion-forward sellers who enjoy community engagement.
                 </p>
-                <div className="space-y-2 text-sm text-[#6b7d6a]">
+                <div className="space-y-2 text-sm text-[#4a6147]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> Very young buyer base (high impulse purchase), social discovery (followers, likes), Depop's in-app messaging, automatic shipping labels, high engagement culture</p>
                   <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> No platform commission (removed 2023) but payment processing fee applies (~2.9% + 30p). Requires constant engagement, algorithm favours active sellers, can feel saturated with small sellers.</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Fashion, streetwear, thrifted brands, sellers who like social selling and community</p>
@@ -226,10 +226,10 @@ export default function MarketplaceComparisonPage() {
             <Reveal>
               <div className="border-l-4 border-[#3d5c3a] pl-6 pb-8">
                 <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">Shopify</h3>
-                <p className="text-[#6b7d6a] mb-4 leading-relaxed">
+                <p className="text-[#4a6147] mb-4 leading-relaxed">
                   DIY storefront platform. Requires your own branding, marketing, and customer acquisition. Best for established businesses with consistent inventory.
                 </p>
-                <div className="space-y-2 text-sm text-[#6b7d6a]">
+                <div className="space-y-2 text-sm text-[#4a6147]">
                   <p><strong className="text-[#1e2e1c]">✓ Pros:</strong> Full control over brand, no marketplace caps on listings, competitive analysis & SEO possible, customer data owned (not platform's), lower take-rate long-term</p>
                   <p><strong className="text-[#1e2e1c]">✗ Cons:</strong> $29–399/month fixed cost + payment processing fees (2–3%), requires website setup + marketing budget, no built-in buyer audience (you own acquisition costs), high initial complexity</p>
                   <p><strong className="text-[#1e2e1c]">💰 Best for:</strong> Established brands, high-volume sellers, strong email list, own marketing channel</p>
@@ -252,11 +252,11 @@ export default function MarketplaceComparisonPage() {
               <p className="text-[#1e2e1c] leading-relaxed mb-6">
                 <strong>The answer: all of them (or most of them).</strong>
               </p>
-              <p className="text-[#6b7d6a] leading-relaxed mb-6">
+              <p className="text-[#4a6147] leading-relaxed mb-6">
                 The most successful UK resellers don't pick one platform — they list the same item across 3–5 platforms and let the network effects work. Here's a starter strategy:
               </p>
 
-              <div className="space-y-4 text-sm text-[#6b7d6a]">
+              <div className="space-y-4 text-sm text-[#4a6147]">
                 <div>
                   <p className="font-medium text-[#1e2e1c] mb-1">1. Start with Vinted</p>
                   <p>Lowest friction, fastest sales, easiest for new sellers. Get your first 20 sales here.</p>
@@ -279,7 +279,7 @@ export default function MarketplaceComparisonPage() {
                 </div>
               </div>
 
-              <p className="text-[#6b7d6a] mt-6 leading-relaxed">
+              <p className="text-[#4a6147] mt-6 leading-relaxed">
                 Wrenlist does exactly this for you — simultaneously list, manage inventory, and track sales across all platforms from one dashboard.
               </p>
             </div>

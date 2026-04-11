@@ -150,14 +150,14 @@ export default function LandingPage() {
             <span className="w-2 h-2 rounded-full bg-[#3d5c3a] animate-pulse" />
             <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Open Beta — Free for 3 months</span>
           </div>
-          <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">The thrifter&apos;s operating system</p>
+          <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#527050]">The thrifter&apos;s operating system</p>
           <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
             Every find,<br />
             <em className="italic text-[#5a7a57]">accounted</em>
             <br />
             for.
           </h1>
-          <p className="hero-fade-3 mb-7 max-w-sm font-normal leading-relaxed text-[#6b7d6a]">
+          <p className="hero-fade-3 mb-7 max-w-sm font-normal leading-relaxed text-[#4a6147]">
             Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
           </p>
           <div className="hero-fade-4 flex gap-4 items-center">
@@ -171,7 +171,7 @@ export default function LandingPage() {
         </div>
 
         <div className="hero-fade-5 flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88]">your inventory at a glance</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#527050]">your inventory at a glance</div>
 
           {/* Inventory Cards */}
           {[
@@ -182,7 +182,7 @@ export default function LandingPage() {
             <div key={i} className="rounded border border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] p-4 flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium text-[#1e2e1c]">{item.name}</div>
-                <div className="text-xs text-[#8a9e88] mt-1">{item.meta}</div>
+                <div className="text-xs text-[#527050] mt-1">{item.meta}</div>
                 <div className="mt-1.5 flex gap-2">
                   <span className="text-xs font-medium px-2 py-1 rounded" style={{backgroundColor: item.badgeBg, color: '#5a7a57'}}>{item.badge}</span>
                 </div>
@@ -203,7 +203,7 @@ export default function LandingPage() {
             ].map((stat, i) => (
               <div key={i} className="rounded border border-[rgba(61,92,58,0.12)] bg-[#f5f0e8] p-3 text-center">
                 <div className="font-serif text-2xl font-medium text-[#1e2e1c]">{stat.n}</div>
-                <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-1">{stat.l}</div>
+                <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mt-1">{stat.l}</div>
                 <div className="text-xs text-[#5a7a57] mt-0.5">{stat.up}</div>
               </div>
             ))}
@@ -221,7 +221,7 @@ export default function LandingPage() {
           <div key={i} className={`px-5 sm:px-10 py-9 ${i < 2 ? 'border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.12)]' : ''}`}>
             <div className="font-serif text-4xl md:text-5xl text-[#e0d9cc] mb-2.5">{feat.num}</div>
             <div className="text-sm font-medium text-[#1e2e1c] mb-2">{feat.title}</div>
-            <div className="text-sm font-normal leading-relaxed text-[#6b7d6a]">{feat.body}</div>
+            <div className="text-sm font-normal leading-relaxed text-[#4a6147]">{feat.body}</div>
           </div>
         ))}
       </div>
@@ -230,7 +230,7 @@ export default function LandingPage() {
       <section className="bg-[#f5f0e8] px-5 sm:px-8 lg:px-12 py-12">
         <div className="mx-auto max-w-4xl">
           <Reveal className="mb-12 text-center">
-            <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#8a9e88]">everything included</div>
+            <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#527050]">everything included</div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1e2e1c]">
               One product. <em className="italic">Every tool.</em>
             </h2>
@@ -246,14 +246,14 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-[#1e2e1c] mb-1 leading-snug">{feat.title}</div>
-                    <div className="text-xs font-normal text-[#6b7d6a] leading-snug">{feat.desc}</div>
+                    <div className="text-xs font-normal text-[#4a6147] leading-snug">{feat.desc}</div>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="text-center text-xs text-[#6b7d6a] font-normal mt-5">
+          <div className="text-center text-xs text-[#4a6147] font-normal mt-5">
             All features included during beta. <Link href="/pricing" className="text-[#5a7a57] underline">See pricing after beta →</Link>
           </div>
         </div>
@@ -265,11 +265,11 @@ export default function LandingPage() {
           <p className="font-serif text-lg sm:text-xl font-normal leading-relaxed text-[#1e2e1c]">
             &ldquo;I used to track everything in a Notes app. Wrenlist made me realise how much money I was leaving at the bottom of the pile.&rdquo;
           </p>
-          <p className="mt-4 text-xs text-[#8a9e88]">— Jordan K., full-time reseller · London, UK</p>
+          <p className="mt-4 text-xs text-[#527050]">— Jordan K., full-time reseller · London, UK</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center">
           <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">68%</div>
-          <div className="text-xs font-medium uppercase tracking-wider text-[#8a9e88] mt-2">avg user margin</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mt-2">avg user margin</div>
         </div>
       </Reveal>
 

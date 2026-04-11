@@ -265,7 +265,7 @@ export default function GlossaryClient() {
             className="w-full px-4 py-3 rounded border border-[rgba(61,92,58,0.22)] bg-white text-[#1e2e1c] placeholder-[#9aab98] focus:outline-none focus:ring-2 focus:ring-[#3d5c3a] focus:border-transparent"
           />
           {searchTerm && (
-            <p className="text-sm text-[#6b7d6a] mt-2">
+            <p className="text-sm text-[#4a6147] mt-2">
               Found <span className="font-medium">{totalMatches}</span> term{totalMatches !== 1 ? 's' : ''}
             </p>
           )}
@@ -285,12 +285,12 @@ export default function GlossaryClient() {
                 {terms.map((item) => (
                   <div
                     key={`${category}-${item.term}`}
-                    className="border-l-4 border-[#8a9e88] pl-4"
+                    className="border-l-4 border-[#527050] pl-4"
                   >
                     <h3 className="font-medium text-[#1e2e1c] text-lg mb-2">
                       {item.term}
                     </h3>
-                    <p className="text-[#6b7d6a] leading-relaxed text-sm">
+                    <p className="text-[#4a6147] leading-relaxed text-sm">
                       {item.definition}
                     </p>
                   </div>
@@ -305,7 +305,7 @@ export default function GlossaryClient() {
       {searchTerm && totalMatches === 0 && (
         <Reveal>
           <div className="text-center py-12">
-            <p className="text-[#6b7d6a] text-lg mb-4">
+            <p className="text-[#4a6147] text-lg mb-4">
               No terms found matching "<span className="font-medium">{searchTerm}</span>"
             </p>
             <button
@@ -325,7 +325,7 @@ export default function GlossaryClient() {
             <h3 className="font-serif text-xl font-medium text-[#1e2e1c] mb-3">
               Still getting to grips with reselling?
             </h3>
-            <p className="text-[#6b7d6a] mb-6 leading-relaxed">
+            <p className="text-[#4a6147] mb-6 leading-relaxed">
               Check out our marketplace comparison guide to understand where to sell, and use Wrenlist to manage everything across all platforms simultaneously.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
