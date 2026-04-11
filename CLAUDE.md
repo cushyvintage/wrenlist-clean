@@ -1,5 +1,22 @@
 # CLAUDE.md — Wrenlist Dev Notes
 
+## Domains (read this first)
+
+Wrenlist runs on **three distinct domains** — confusing these has cost
+real debugging time:
+
+- **`wrenlist.com`** — marketing site. Hitting any app path here (e.g.
+  `/platform-connect`) redirects to `/login`. Do NOT use this for
+  end-to-end testing of app features.
+- **`app.wrenlist.com`** — the actual Next.js app. This is where users
+  are logged in and where the extension's content scripts run. When you
+  need to screenshot or inspect the live app, always use this host.
+- **`api.wrenlist.com`** — Supabase custom domain (see Supabase section
+  below).
+
+For browser-automation testing, always navigate to `app.wrenlist.com`,
+not `wrenlist.com`.
+
 ## Supabase (wrenlist-clean)
 - **Project ID:** tewtfroudyicwfubgcqi
 - **Custom domain:** https://api.wrenlist.com (production URL — use this)
