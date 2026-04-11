@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
   { id: 'templates', label: 'Templates', icon: NavIcons.templates, path: '/templates', section: 'WORKSPACE', pageTitle: 'Templates' },
   // INSIGHTS
+  { id: 'insights', label: 'Wren Insights', icon: NavIcons.insights, path: '/insights', section: 'INSIGHTS', pageTitle: 'Insight history' },
   { id: 'analytics', label: 'Analytics', icon: NavIcons.analytics, path: '/analytics', section: 'INSIGHTS', pageTitle: 'Analytics' },
   { id: 'price-research', label: 'Price Research', icon: NavIcons['price-research'], path: '/price-research', section: 'INSIGHTS', pageTitle: 'Price Research' },
   { id: 'sold', label: 'Sold', icon: NavIcons.sold, path: '/sold', section: 'INSIGHTS', pageTitle: 'Sold' },

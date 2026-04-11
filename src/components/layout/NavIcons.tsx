@@ -34,6 +34,12 @@ export const NavIcons: Record<string, React.ReactNode> = {
       <path d="M1 11L4 7l3 2 3-4 2 2" stroke="currentColor" {...s} />
     </svg>
   ),
+  insights: (
+    <svg viewBox="0 0 14 14" fill="none">
+      <path d="M7 1v1M7 12v1M1 7h1M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" {...s} />
+      <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth={1.1} />
+    </svg>
+  ),
   'price-research': (
     <svg viewBox="0 0 14 14" fill="none">
       <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth={1.1} />
