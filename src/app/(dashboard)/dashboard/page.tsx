@@ -151,6 +151,27 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {/* New user: Vinted import nudge — only when fewer than 5 finds */}
+      {!isLoading && finds.length < 5 && (
+        <div className="rounded-lg border border-[rgba(61,92,58,0.14)] bg-white p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+          <div>
+            <div className="text-sm font-medium text-ink mb-1">
+              Already selling on Vinted? Bring your listings across.
+            </div>
+            <p className="text-xs text-ink-lt">
+              One-click import of your active Vinted inventory into Wrenlist. Takes 60 seconds.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/import?platform=vinted')}
+            className="flex-shrink-0 text-sage hover:text-sage-dk"
+          >
+            Import from Vinted →
+          </Button>
+        </div>
+      )}
+
       {/* Stat cards */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

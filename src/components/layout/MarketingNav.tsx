@@ -11,6 +11,7 @@ const navItems = [
   { href: '/extension', label: 'extension' },
   { href: '/calculator', label: 'fee calculator' },
   { href: '/tax-estimator', label: 'tax estimator' },
+  { href: '/blog', label: 'blog' },
   { href: '/roadmap', label: 'roadmap' },
 ]
 
