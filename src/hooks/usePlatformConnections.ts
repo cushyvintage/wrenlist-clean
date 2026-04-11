@@ -28,6 +28,7 @@ interface EbayConnectionState {
 export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPolicies: boolean) {
   const [vintedConnected, setVintedConnected] = useState(false)
   const [vintedUsername, setVintedUsername] = useState<string | null>(null)
+  const [vintedIsBusiness, setVintedIsBusiness] = useState(false)
   const [vintedLoading, setVintedLoading] = useState(false)
   const [vintedSyncLoading, setVintedSyncLoading] = useState(false)
   const [vintedSyncResult, setVintedSyncResult] = useState<{ updated: number; failed: number } | null>(null)
@@ -87,6 +88,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
           if (connectRes.ok) {
             const connectData = await connectRes.json()
             setVintedUsername(connectData.data?.vintedUsername || response.username)
+            setVintedIsBusiness(Boolean(connectData.data?.isBusiness))
           } else {
             setVintedUsername(response.username)
           }
@@ -176,6 +178,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
           const data = await response.json()
           setVintedConnected(data.data.connected)
           setVintedUsername(data.data.vintedUsername)
+          setVintedIsBusiness(Boolean(data.data.isBusiness))
         }
       } catch {
         // Silently fail
@@ -369,7 +372,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     setVintedLoading(true)
     try {
       const response = await fetch('/api/vinted/connect', { method: 'DELETE' })
-      if (response.ok) { setVintedConnected(false); setVintedUsername(null) }
+      if (response.ok) { setVintedConnected(false); setVintedUsername(null); setVintedIsBusiness(false) }
     } catch {
       setPageError('Failed to disconnect Vinted')
     } finally {
@@ -379,8 +382,9 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
   return {
     // Vinted
-    vintedConnected, vintedUsername, vintedLoading, vintedSyncLoading, vintedSyncResult,
-    vintedActionError, checkVintedSession, handleVintedSync, handleVintedDisconnect,
+    vintedConnected, vintedUsername, vintedIsBusiness, vintedLoading, vintedSyncLoading,
+    vintedSyncResult, vintedActionError,
+    checkVintedSession, handleVintedSync, handleVintedDisconnect,
     // Shopify
     shopifyConnected, shopifyName, shopifyDomain, shopifyFormOpen, setShopifyFormOpen,
     shopifyFormData, setShopifyFormData, shopifyLoading, shopifyError,

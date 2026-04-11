@@ -10,6 +10,8 @@ const EXTENSION_PLATFORMS: Platform[] = ['etsy', 'facebook', 'depop']
 export interface ConnectedPlatform {
   platform: Platform
   username?: string
+  /** Vinted only: true if the account is a Pro/business seller. */
+  isBusiness?: boolean
 }
 
 interface ConnectedPlatformsOptions {
@@ -188,13 +190,17 @@ async function checkVintedViaExtension(): Promise<ConnectedPlatform | null> {
 
     const extensionUsername = r.username || undefined
 
-    // Try to get resolved display name from DB
+    // Try to get resolved display name + business flag from DB
     try {
       const res = await fetch('/api/vinted/connect')
       if (res.ok) {
         const data = await res.json()
         if (data.data?.connected && data.data?.vintedUsername) {
-          return { platform: 'vinted', username: data.data.vintedUsername }
+          return {
+            platform: 'vinted',
+            username: data.data.vintedUsername,
+            isBusiness: Boolean(data.data.isBusiness),
+          }
         }
       }
     } catch { /* fall through to extension username */ }

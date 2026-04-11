@@ -21,15 +21,22 @@ const ALL_PLATFORMS: Platform[] = [
 ]
 
 export function PlatformGrid({ connected, loading, onSelectPlatform }: PlatformGridProps) {
-  const connectedSet = new Set(connected.map((c) => c.platform))
+  const connectedByPlatform = new Map(connected.map((c) => [c.platform, c] as const))
 
   return (
     <div>
       <p className="text-sm text-ink-lt mb-4">Select a marketplace to import from</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {ALL_PLATFORMS.map((platform) => {
-          const isConnected = connectedSet.has(platform)
+          const connection = connectedByPlatform.get(platform)
+          const isConnected = Boolean(connection)
           const hasImport = IMPORT_SUPPORTED.includes(platform)
+          const vintedAccountLabel =
+            platform === 'vinted' && connection
+              ? connection.isBusiness
+                ? 'Pro account'
+                : 'Personal account'
+              : null
 
           return (
             <button
@@ -49,6 +56,22 @@ export function PlatformGrid({ connected, loading, onSelectPlatform }: PlatformG
                     <span className="w-1.5 h-1.5 rounded-full bg-sage inline-block" />
                     connected
                   </span>
+                  {vintedAccountLabel && (
+                    <span
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                        connection?.isBusiness
+                          ? 'bg-sage/15 text-sage-dk'
+                          : 'bg-cream-md text-ink-lt'
+                      }`}
+                      title={
+                        connection?.isBusiness
+                          ? 'Vinted Pro (business) — sales include invoice details'
+                          : 'Personal Vinted account'
+                      }
+                    >
+                      {vintedAccountLabel}
+                    </span>
+                  )}
                   {!hasImport && (
                     <span className="text-[10px] text-ink-lt">import coming soon</span>
                   )}

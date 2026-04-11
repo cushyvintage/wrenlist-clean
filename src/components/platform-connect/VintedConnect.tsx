@@ -7,6 +7,7 @@ import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 interface VintedConnectProps {
   vintedConnected: boolean
   vintedUsername: string | null
+  vintedIsBusiness?: boolean
   vintedLoading: boolean
   vintedSyncLoading: boolean
   vintedSyncResult: { updated: number; failed: number } | null
@@ -23,6 +24,7 @@ interface VintedConnectProps {
 export function VintedConnect({
   vintedConnected,
   vintedUsername,
+  vintedIsBusiness = false,
   vintedLoading,
   vintedSyncLoading,
   vintedSyncResult,
@@ -35,6 +37,7 @@ export function VintedConnect({
   onVintedSync,
   onDisconnect,
 }: VintedConnectProps) {
+  const accountTypeLabel = vintedIsBusiness ? 'Pro' : 'Personal'
   if (!vintedConnected && !extensionDetected) {
     // State A: Not connected (no extension)
     return (
@@ -84,23 +87,46 @@ export function VintedConnect({
           <MarketplaceIcon platform="vinted" size="lg" />
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="font-medium text-sm text-ink flex items-center gap-1.5">Vinted — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
+                vintedIsBusiness
+                  ? 'bg-sage/15 text-sage-dk border border-sage/30'
+                  : 'bg-cream-md text-ink-lt border border-border'
+              }`}
+              title={vintedIsBusiness ? 'Vinted Pro (business) account — invoices are issued for sales' : 'Personal Vinted account'}
+            >
+              {accountTypeLabel}
+            </span>
           </div>
           <div className="text-xs text-ink-lt">Account: {vintedUsername}</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
+      <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
         <div>
           <div className="text-xs font-medium text-ink-lt mb-1">Username</div>
           <div className="text-sm text-ink font-mono">{vintedUsername}</div>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-ink-lt mb-1">Account type</div>
+          <div className="text-sm text-ink">{accountTypeLabel}{vintedIsBusiness ? ' (business)' : ''}</div>
         </div>
         <div>
           <div className="text-xs font-medium text-ink-lt mb-1">Platform</div>
           <div className="text-sm text-ink">Vinted UK</div>
         </div>
       </div>
+
+      {vintedIsBusiness && (
+        <div className="flex items-start gap-3 p-3 bg-sage/5 border border-sage/20 rounded mb-4 text-xs text-ink-lt">
+          <span className="text-sage">ℹ</span>
+          <div>
+            <strong className="text-ink">Vinted Pro account detected.</strong> Pro sellers issue invoices on sales, so imported sales will include richer buyer + tax details than personal accounts.
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
         <div>

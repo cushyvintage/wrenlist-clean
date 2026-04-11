@@ -147,6 +147,7 @@ export default function PlatformConnectPage() {
         <VintedConnect
           vintedConnected={platforms.vintedConnected}
           vintedUsername={platforms.vintedUsername}
+          vintedIsBusiness={platforms.vintedIsBusiness}
           vintedLoading={platforms.vintedLoading}
           vintedSyncLoading={platforms.vintedSyncLoading}
           vintedSyncResult={platforms.vintedSyncResult}
