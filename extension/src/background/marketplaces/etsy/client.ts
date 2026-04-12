@@ -298,12 +298,19 @@ export class EtsyClient {
 
     const html = await resp.text();
 
-    // Extract total pages from pagination — multiple possible formats
-    const pagesMatch =
-      html.match(/of\s+(\d+)\s*</) ||       // "of 9<"
-      html.match(/of (\d+)/) ||              // "of 9" plain text
-      html.match(/page=(\d+)[^"]*"[^>]*>\s*(?:last|›|»)/i);  // last page link
-    const totalPages = pagesMatch ? parseInt(pagesMatch[1], 10) : 1;
+    // Extract total pages — look for pagination patterns
+    // The page text shows "Page 1 [select] of 9 [nav arrows]"
+    // In HTML this renders as an input/select + "of N"
+    const totalPagesJson = html.match(/"total_pages"\s*:\s*(\d+)/);
+    const totalPagesHtml =
+      html.match(/>\s*of\s+(\d+)\s*</) ||        // ">of 9<" in pagination
+      html.match(/page_count["\s:]+(\d+)/) ||     // page_count in JSON
+      html.match(/total_page[s]?["\s:]+(\d+)/);   // total_pages in JSON
+    const totalPages = totalPagesJson
+      ? parseInt(totalPagesJson[1], 10)
+      : totalPagesHtml
+        ? parseInt(totalPagesHtml[1], 10)
+        : 1;
 
     // Find the largest script tag containing order data
     const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
