@@ -8,22 +8,24 @@ function optionalEnv(key: string, fallback = ""): string {
   return process.env[key] || fallback
 }
 
-// Only validate on server side
+// Lazy config: getters prevent build-time crashes when env vars
+// are unavailable (e.g. Vercel preview deploys without env config).
+// Values are read at call-time, not at import-time.
 export const config = {
   supabase: {
-    url: requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    anonKey: requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    get url() { return requireEnv("NEXT_PUBLIC_SUPABASE_URL") },
+    get anonKey() { return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") },
   },
   ebay: {
-    clientId: optionalEnv("EBAY_CLIENT_ID"),
-    clientSecret: optionalEnv("EBAY_CLIENT_SECRET"),
-    runame: optionalEnv("EBAY_RUNAME"),
-    environment: optionalEnv("EBAY_ENVIRONMENT", "production") as "sandbox" | "production",
+    get clientId() { return optionalEnv("EBAY_CLIENT_ID") },
+    get clientSecret() { return optionalEnv("EBAY_CLIENT_SECRET") },
+    get runame() { return optionalEnv("EBAY_RUNAME") },
+    get environment() { return optionalEnv("EBAY_ENVIRONMENT", "production") as "sandbox" | "production" },
   },
   sentry: {
-    dsn: optionalEnv("SENTRY_DSN"),
+    get dsn() { return optionalEnv("SENTRY_DSN") },
   },
   stripe: {
-    secretKey: optionalEnv("STRIPE_SECRET_KEY"),
+    get secretKey() { return optionalEnv("STRIPE_SECRET_KEY") },
   },
 } as const
