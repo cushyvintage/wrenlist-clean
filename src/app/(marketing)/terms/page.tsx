@@ -42,7 +42,8 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Data ownership</h2>
-            <p>You own all inventory data, photos, and listing content stored in Wrenlist. Wrenlist does not claim any rights to your data. If you cancel your account, you can request a full export of your data in standard format at any time. Data will be securely deleted within 30 days of account closure upon request.</p>
+            <p>You own all inventory data, photos, and listing content stored in Wrenlist. Wrenlist does not claim any rights to your data. If you cancel your account, you can request a full export of your data in standard format at any time.</p>
+            <p className="mt-2">When you delete your account, all personal data is permanently deleted immediately. We retain a fully anonymised, non-identifying record of product and sales data (category, brand, condition, pricing, timing) for aggregate analytics and service improvement. This anonymised data cannot be linked back to you. See our <a href="/privacy" className="text-[#5a7a57] underline">Privacy Policy</a> for details.</p>
           </section>
 
           <section>

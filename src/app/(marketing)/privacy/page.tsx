@@ -16,7 +16,7 @@ export default function PrivacyPage() {
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Who we are (data controller)</h2>
             <p>Wrenlist is operated by Dominic Cushnan, a sole trader based in the United Kingdom, trading as Wrenlist. Dominic Cushnan is the data controller for personal data processed through the Wrenlist service.</p>
             <p className="mt-2"><strong className="text-[#1e2e1c]">Contact:</strong> <a href="mailto:admin@wrenlist.com" className="text-[#5a7a57] underline">admin@wrenlist.com</a></p>
-            <p className="mt-2"><strong className="text-[#1e2e1c]">ICO registration:</strong> Registered with the UK Information Commissioner&apos;s Office (registration number pending — updated on issue).</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">ICO registration:</strong> Registered with the UK Information Commissioner&apos;s Office (registration number C1906785).</p>
             <p className="mt-2">We process your personal data in accordance with the UK General Data Protection Regulation and the Data Protection Act 2018.</p>
           </section>
 
@@ -71,7 +71,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Data retention</h2>
             <p><strong className="text-[#1e2e1c]">While Your Account is Active:</strong> Your data is retained as long as your Wrenlist account is active.</p>
-            <p className="mt-2"><strong className="text-[#1e2e1c]">After Deletion:</strong> If you delete your account, all personal data is permanently deleted within 30 days. Backup copies are securely destroyed within 90 days.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">After Deletion:</strong> If you delete your account, all personal data (name, email, photos, descriptions, marketplace tokens) is permanently deleted immediately. Backup copies are securely destroyed within 90 days.</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">Anonymised Data Retention:</strong> When you delete your account, we retain a fully anonymised record of your product and sales data (category, brand, condition, pricing, sell-through timing) for service improvement and aggregate analytics. This data contains no user identifiers, photos, descriptions, or any information that could identify you. Under UK GDPR Recital 26, anonymised data is not personal data and is exempt from data subject rights. If you object to this retention, contact <a href="mailto:admin@wrenlist.com" className="text-[#5a7a57] underline">admin@wrenlist.com</a> before deleting your account.</p>
             <p className="mt-2"><strong className="text-[#1e2e1c]">Legal Obligations:</strong> If required by law (e.g., tax or fraud investigations), we may retain data longer to comply with UK legal requirements.</p>
           </section>
 
