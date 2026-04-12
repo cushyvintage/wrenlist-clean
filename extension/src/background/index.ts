@@ -1664,6 +1664,8 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       return withExtensionVersion({ success: true, message: "Extension available" });
     case "get_depop_categories":
       return handleGetDepopCategories();
+    case "get_depop_token":
+      return handleGetDepopToken();
     case "detect_shopify_store":
     case "detectshopifystore":
       return handleDetectShopifyStore();
@@ -2954,6 +2956,13 @@ async function handleSyncVintedStatus(message: ExternalMessage) {
       stats: { checked: 0, updated: 0, unchanged: 0, failed: 0 },
     });
   }
+}
+
+async function handleGetDepopToken() {
+  const cookies = await chrome.cookies.getAll({ domain: "depop.com" });
+  const token = cookies.find(c => c.name === "access_token")?.value;
+  if (!token) return withExtensionVersion({ success: false, message: "No Depop access token" });
+  return withExtensionVersion({ success: true, token });
 }
 
 async function handleGetDepopCategories() {

@@ -1255,11 +1255,34 @@ export default function ImportPage() {
     })
   }
 
+  /** Get Depop bearer token from extension cookies */
+  function getDepopToken(): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        resolve(null)
+        return
+      }
+      const timeout = setTimeout(() => resolve(null), 5000)
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        { action: 'get_depop_token' },
+        (resp) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError || !resp?.token) resolve(null)
+          else resolve(resp.token as string)
+        }
+      )
+    })
+  }
+
   async function handleDepopImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Depop listings...')
+
+    // Get bearer token once for server-side enrichment
+    const depopToken = await getDepopToken()
 
     let imported = 0
     let skipped = 0
@@ -1303,6 +1326,7 @@ export default function ImportPage() {
                   marketplaceUrl: detail?.marketplaceUrl || item.listingUrl,
                 },
                 url: item.listingUrl,
+                depopBearerToken: depopToken || undefined,
               }),
             }
           )
