@@ -2,9 +2,16 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAdminAuth } from '@/lib/with-auth'
+import { PLANS } from '@/config/plans'
 import type { User } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
+
+/** Plan monthly prices for MRR calc */
+const PLAN_PRICES: Record<string, number> = {}
+for (const plan of PLANS) {
+  PLAN_PRICES[plan.id] = plan.monthlyPrice
+}
 
 interface OpsMetrics {
   // KPIs
@@ -12,15 +19,22 @@ interface OpsMetrics {
   payingUsers: number
   newSignupsThisWeek: number
   mrrEstimate: number
+  conversionRate: number
   // Platform connections
   ebayConnected: number
   vintedConnected: number
   etsyConnected: number
   shopifyConnected: number
+  depopConnected: number
   // Inventory
   totalProducts: number
   activeListings: number
+  listingRate: number
   stashes: number
+  // Activity
+  extensionActive7d: number
+  publishJobs24h: number
+  errorEvents24h: number
   // Recent signups
   recentSignups: Array<{
     email: string
@@ -32,146 +46,149 @@ interface OpsMetrics {
 
 async function getOpsMetricsHandler(req: NextRequest, _user: User) {
   try {
-
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
     )
 
-    // 1. Total users (from auth.users)
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-    if (authError) throw new Error(`Auth users error: ${authError.message}`)
-    const totalUsers = authUsers?.users?.length || 0
-
-    // 2. Paying users (from profiles where plan != 'free')
-    const { data: payingUsersData, error: payingError } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact' })
-      .neq('plan', 'free')
-    if (payingError) throw new Error(`Paying users error: ${payingError.message}`)
-    const payingUsers = payingUsersData?.length || 0
-
-    // 3. New signups this week
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const { data: newSignups, error: newSignupsError } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact' })
-      .gte('created_at', sevenDaysAgo)
-    if (newSignupsError) throw new Error(`New signups error: ${newSignupsError.message}`)
-    const newSignupsThisWeek = newSignups?.length || 0
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-    // 4. Platform connections
-    const { data: ebayTokens, error: ebayError } = await supabase
-      .from('ebay_tokens')
-      .select('user_id', { count: 'exact' })
-    if (ebayError) throw new Error(`eBay tokens error: ${ebayError.message}`)
-    const ebayConnected = ebayTokens?.length || 0
+    // ── Parallel batch 1: all count queries ─────────────────────────
+    const [
+      profilesResult,
+      payingResult,
+      newSignupsResult,
+      ebayResult,
+      vintedResult,
+      etsyResult,
+      shopifyResult,
+      depopResult,
+      findsCountResult,
+      activeFindsResult,
+      stashesResult,
+      extensionResult,
+      publishJobsResult,
+      errorEventsResult,
+      recentSignupsResult,
+    ] = await Promise.all([
+      // Total users from profiles (scales better than auth.admin.listUsers)
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      // Paying users with plan breakdown for MRR
+      supabase.from('profiles').select('plan').neq('plan', 'free'),
+      // New signups this week
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
+      // Platform connections (count only)
+      supabase.from('ebay_tokens').select('id', { count: 'exact', head: true }),
+      supabase.from('vinted_connections').select('id', { count: 'exact', head: true }),
+      supabase.from('etsy_connections').select('id', { count: 'exact', head: true }),
+      supabase.from('shopify_connections').select('id', { count: 'exact', head: true }),
+      supabase.from('depop_connections').select('id', { count: 'exact', head: true }),
+      // Inventory counts
+      supabase.from('finds').select('id', { count: 'exact', head: true }),
+      supabase.from('finds').select('id', { count: 'exact', head: true }).eq('status', 'listed'),
+      supabase.from('stashes').select('id', { count: 'exact', head: true }),
+      // Extension activity (unique users in last 7 days)
+      supabase.from('extension_heartbeats').select('user_id', { count: 'exact', head: true }).gte('last_seen', sevenDaysAgo),
+      // Publish jobs in last 24h
+      supabase.from('publish_jobs').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo),
+      // Error events in last 24h
+      supabase.from('marketplace_events').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo).eq('status', 'error'),
+      // Recent signups (last 10 with plan)
+      supabase.from('profiles').select('id, created_at, plan').order('created_at', { ascending: false }).limit(10),
+    ])
 
-    const { data: vintedConnections, error: vintedError } = await supabase
-      .from('vinted_connections')
-      .select('user_id', { count: 'exact' })
-    if (vintedError) throw new Error(`Vinted connections error: ${vintedError.message}`)
-    const vintedConnected = vintedConnections?.length || 0
+    const totalUsers = profilesResult.count ?? 0
+    const payingUsersData = payingResult.data ?? []
+    const payingUsers = payingUsersData.length
+    const newSignupsThisWeek = newSignupsResult.count ?? 0
 
-    const { data: etsyConnections, error: etsyError } = await supabase
-      .from('etsy_connections')
-      .select('user_id', { count: 'exact' })
-    if (etsyError) throw new Error(`Etsy connections error: ${etsyError.message}`)
-    const etsyConnected = etsyConnections?.length || 0
+    // MRR from actual plan prices
+    const mrrEstimate = payingUsersData.reduce((sum, row) => {
+      return sum + (PLAN_PRICES[row.plan] ?? 0)
+    }, 0)
 
-    const { data: shopifyConnections, error: shopifyError } = await supabase
-      .from('shopify_connections')
-      .select('user_id', { count: 'exact' })
-    if (shopifyError) throw new Error(`Shopify connections error: ${shopifyError.message}`)
-    const shopifyConnected = shopifyConnections?.length || 0
+    const ebayConnected = ebayResult.count ?? 0
+    const vintedConnected = vintedResult.count ?? 0
+    const etsyConnected = etsyResult.count ?? 0
+    const shopifyConnected = shopifyResult.count ?? 0
+    const depopConnected = depopResult.count ?? 0
+    const totalProducts = findsCountResult.count ?? 0
+    const activeListings = activeFindsResult.count ?? 0
+    const stashes = stashesResult.count ?? 0
+    const extensionActive7d = extensionResult.count ?? 0
+    const publishJobs24h = publishJobsResult.count ?? 0
+    const errorEvents24h = errorEventsResult.count ?? 0
+    const listingRate = totalProducts > 0 ? Math.round((activeListings / totalProducts) * 1000) / 10 : 0
+    const conversionRate = totalUsers > 0 ? Math.round((payingUsers / totalUsers) * 1000) / 10 : 0
 
-    // 5. Inventory
-    const { data: allFinds, error: findsError } = await supabase
-      .from('finds')
-      .select('id, status')
-    if (findsError) throw new Error(`Finds error: ${findsError.message}`)
-    const totalProducts = allFinds?.length || 0
-    const activeListings = allFinds?.filter((f: any) => f.status === 'listed').length || 0
+    // ── Recent signups: batch platform counts ───────────────────────
+    const recentRaw = recentSignupsResult.data ?? []
+    const userIds = recentRaw.map((p) => p.id)
 
-    // 6. Stashes
-    const { data: allStashes, error: stashesError } = await supabase
-      .from('stashes')
-      .select('id', { count: 'exact' })
-    if (stashesError) throw new Error(`Stashes error: ${stashesError.message}`)
-    const stashes = allStashes?.length || 0
+    let recentSignups: OpsMetrics['recentSignups'] = []
 
-    // 7. Recent signups (last 10)
-    const { data: recentSignupsRaw, error: recentError } = await supabase
-      .from('profiles')
-      .select('id, created_at, plan, user_id: id')
-      .order('created_at', { ascending: false })
-      .limit(10)
-    if (recentError) throw new Error(`Recent signups error: ${recentError.message}`)
+    if (userIds.length > 0) {
+      // Batch: get emails + platform counts in parallel
+      const [emailsResult, ebayBatch, vintedBatch, etsyBatch, shopifyBatch, depopBatch] = await Promise.all([
+        // Get emails for all 10 users in one call
+        supabase.auth.admin.listUsers({ perPage: 1000 }),
+        supabase.from('ebay_tokens').select('user_id').in('user_id', userIds),
+        supabase.from('vinted_connections').select('user_id').in('user_id', userIds),
+        supabase.from('etsy_connections').select('user_id').in('user_id', userIds),
+        supabase.from('shopify_connections').select('user_id').in('user_id', userIds),
+        supabase.from('depop_connections').select('user_id').in('user_id', userIds),
+      ])
 
-    // Fetch email addresses for recent signups
-    const recentSignups = await Promise.all(
-      (recentSignupsRaw || []).map(async (profile: any) => {
-        try {
-          const { data: userData } = await supabase.auth.admin.getUserById(profile.id)
-          const email = userData?.user?.email || 'Unknown'
+      // Build email lookup
+      const emailMap = new Map<string, string>()
+      for (const u of emailsResult.data?.users ?? []) {
+        emailMap.set(u.id, u.email ?? 'Unknown')
+      }
 
-          // Count platform connections for this user
-          const { data: ebay } = await supabase
-            .from('ebay_tokens')
-            .select('id', { count: 'exact' })
-            .eq('user_id', profile.id)
-          const { data: vinted } = await supabase
-            .from('vinted_connections')
-            .select('id', { count: 'exact' })
-            .eq('user_id', profile.id)
-          const { data: etsy } = await supabase
-            .from('etsy_connections')
-            .select('id', { count: 'exact' })
-            .eq('user_id', profile.id)
-          const { data: shopify } = await supabase
-            .from('shopify_connections')
-            .select('id', { count: 'exact' })
-            .eq('user_id', profile.id)
+      // Build platform count per user
+      const platformCounts = new Map<string, number>()
+      for (const id of userIds) platformCounts.set(id, 0)
+      for (const row of ebayBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
+      for (const row of vintedBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
+      for (const row of etsyBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
+      for (const row of shopifyBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
+      for (const row of depopBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
 
-          const platformCount = (ebay?.length || 0) + (vinted?.length || 0) + (etsy?.length || 0) + (shopify?.length || 0)
-
-          return {
-            email,
-            createdAt: new Date(profile.created_at).toISOString(),
-            plan: profile.plan || 'free',
-            platformCount,
-          }
-        } catch (err) {
-          return {
-            email: 'Error fetching',
-            createdAt: profile.created_at,
-            plan: profile.plan || 'free',
-            platformCount: 0,
-          }
-        }
-      })
-    )
+      recentSignups = recentRaw.map((profile) => ({
+        email: emailMap.get(profile.id) ?? 'Unknown',
+        createdAt: new Date(profile.created_at).toISOString(),
+        plan: profile.plan || 'free',
+        platformCount: platformCounts.get(profile.id) ?? 0,
+      }))
+    }
 
     const metrics: OpsMetrics = {
       totalUsers,
       payingUsers,
       newSignupsThisWeek,
-      mrrEstimate: payingUsers * 19, // £19 ARPU placeholder
+      mrrEstimate,
+      conversionRate,
       ebayConnected,
       vintedConnected,
       etsyConnected,
       shopifyConnected,
+      depopConnected,
       totalProducts,
       activeListings,
+      listingRate,
       stashes,
+      extensionActive7d,
+      publishJobs24h,
+      errorEvents24h,
       recentSignups,
     }
 
     return ApiResponseHelper.success(metrics)
   } catch (err) {
     console.error('[ops-metrics]', err)
-    return ApiResponseHelper.error((err as any).message || 'Failed to fetch metrics', 500)
+    return ApiResponseHelper.error((err as Error).message || 'Failed to fetch metrics', 500)
   }
 }
 

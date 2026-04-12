@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { isAdmin } from '@/lib/admin'
+import { fetchApi } from '@/lib/api-utils'
 
 interface RecentSignup {
   email: string
@@ -17,19 +18,35 @@ interface OpsMetrics {
   payingUsers: number
   newSignupsThisWeek: number
   mrrEstimate: number
+  conversionRate: number
   ebayConnected: number
   vintedConnected: number
   etsyConnected: number
   shopifyConnected: number
+  depopConnected: number
   totalProducts: number
   activeListings: number
+  listingRate: number
   stashes: number
+  extensionActive7d: number
+  publishJobs24h: number
+  errorEvents24h: number
   recentSignups: RecentSignup[]
 }
 
-function StatCard({ label, value, unit = '' }: { label: string; value: string | number; unit?: string }) {
+function StatCard({
+  label,
+  value,
+  unit = '',
+  highlight = false,
+}: {
+  label: string
+  value: string | number
+  unit?: string
+  highlight?: boolean
+}) {
   return (
-    <div className="bg-white rounded-lg border border-sage/14 p-4 flex flex-col">
+    <div className={`bg-white rounded-lg border p-4 flex flex-col ${highlight ? 'border-amber-300 bg-amber-50/30' : 'border-sage/14'}`}>
       <div className="text-xs text-sage-dim uppercase tracking-[.08em] font-semibold mb-2">{label}</div>
       <div className="text-2xl font-semibold text-ink">
         {value}
@@ -45,43 +62,49 @@ export default function OpsAdminPage() {
   const [metrics, setMetrics] = useState<OpsMetrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  // Admin gate
+  // Admin gate — inside effect, not between hooks
   useEffect(() => {
     if (user && !isAdmin(user.email)) {
       router.replace('/dashboard')
     }
   }, [user, router])
 
+  const loadMetrics = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const data = await fetchApi<OpsMetrics>('/api/admin/ops-metrics')
+      setMetrics(data)
+      setError(null)
+      setLastUpdated(new Date())
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load metrics')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Fetch on mount
+  useEffect(() => {
+    if (user && isAdmin(user.email)) {
+      loadMetrics()
+    }
+  }, [user, loadMetrics])
+
+  // Auto-refresh every 60s
+  useEffect(() => {
+    if (!user || !isAdmin(user.email)) return
+    const interval = setInterval(loadMetrics, 60_000)
+    return () => clearInterval(interval)
+  }, [user, loadMetrics])
+
+  // Gate render (after all hooks)
   if (!user || !isAdmin(user.email)) {
     return null
   }
 
-  // Fetch metrics
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch('/api/admin/ops-metrics')
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch metrics')
-        }
-
-        const data = await response.json()
-        setMetrics(data.data)
-        setError(null)
-      } catch (err) {
-        setError((err as any).message || 'Failed to load metrics')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchMetrics()
-  }, [])
-
-  if (isLoading) {
+  if (isLoading && !metrics) {
     return (
       <div className="min-h-screen bg-cream p-6">
         <div className="max-w-7xl mx-auto">
@@ -92,7 +115,7 @@ export default function OpsAdminPage() {
     )
   }
 
-  if (error) {
+  if (error && !metrics) {
     return (
       <div className="min-h-screen bg-cream p-6">
         <div className="max-w-7xl mx-auto">
@@ -115,33 +138,43 @@ export default function OpsAdminPage() {
   }
 
   const formattedMRR = `£${metrics.mrrEstimate.toLocaleString('en-GB')}`
-  const conversionRate = metrics.totalUsers > 0 ? ((metrics.payingUsers / metrics.totalUsers) * 100).toFixed(1) : '0'
-  const listingRate = metrics.totalProducts > 0 ? ((metrics.activeListings / metrics.totalProducts) * 100).toFixed(1) : '0'
 
   return (
     <div className="min-h-screen bg-cream p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-semibold text-ink mb-8">Ops Dashboard</h1>
+        {/* Header with refresh */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-semibold text-ink">Ops Dashboard</h1>
+          <button
+            onClick={loadMetrics}
+            disabled={isLoading}
+            className="px-3 py-1.5 text-xs font-medium text-sage-dim border border-sage/14 rounded-md hover:bg-white transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Refreshing…' : '↻ Refresh'}
+          </button>
+        </div>
 
-        {/* Row 1: KPI Cards */}
+        {/* Row 1: KPIs */}
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">KPIs</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <StatCard label="Total Users" value={metrics.totalUsers} />
             <StatCard label="Paying Users" value={metrics.payingUsers} />
+            <StatCard label="Conversion" value={metrics.conversionRate} unit="%" />
             <StatCard label="New This Week" value={metrics.newSignupsThisWeek} />
-            <StatCard label="MRR Estimate" value={formattedMRR} />
+            <StatCard label="MRR" value={formattedMRR} highlight />
           </div>
         </section>
 
         {/* Row 2: Platform Connections */}
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Platform Connections</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard label="eBay Connected" value={metrics.ebayConnected} />
-            <StatCard label="Vinted Connected" value={metrics.vintedConnected} />
-            <StatCard label="Etsy Connected" value={metrics.etsyConnected} />
-            <StatCard label="Shopify Connected" value={metrics.shopifyConnected} />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <StatCard label="eBay" value={metrics.ebayConnected} />
+            <StatCard label="Vinted" value={metrics.vintedConnected} />
+            <StatCard label="Etsy" value={metrics.etsyConnected} />
+            <StatCard label="Shopify" value={metrics.shopifyConnected} />
+            <StatCard label="Depop" value={metrics.depopConnected} />
           </div>
         </section>
 
@@ -151,12 +184,22 @@ export default function OpsAdminPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Total Products" value={metrics.totalProducts} />
             <StatCard label="Active Listings" value={metrics.activeListings} />
-            <StatCard label="Listing Rate" value={listingRate} unit="%" />
+            <StatCard label="Listing Rate" value={metrics.listingRate} unit="%" />
             <StatCard label="Stashes" value={metrics.stashes} />
           </div>
         </section>
 
-        {/* Row 4: Recent Signups Table */}
+        {/* Row 4: Activity & Health */}
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Activity (24h / 7d)</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatCard label="Extension Active (7d)" value={metrics.extensionActive7d} />
+            <StatCard label="Publish Jobs (24h)" value={metrics.publishJobs24h} />
+            <StatCard label="Errors (24h)" value={metrics.errorEvents24h} highlight={metrics.errorEvents24h > 0} />
+          </div>
+        </section>
+
+        {/* Row 5: Recent Signups Table */}
         <section>
           <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Recent Signups (Last 10)</h2>
           <div className="bg-white rounded-lg border border-sage/14 overflow-hidden">
@@ -191,7 +234,13 @@ export default function OpsAdminPage() {
                           })}
                         </td>
                         <td className="px-4 py-3 text-sm text-ink capitalize">
-                          <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: '#E8F5E3' }}>
+                          <span
+                            className="px-2 py-1 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor: signup.plan === 'free' ? '#f3f4f6' : '#E8F5E3',
+                              color: signup.plan === 'free' ? '#6b7280' : '#2d5016',
+                            }}
+                          >
                             {signup.plan}
                           </span>
                         </td>
@@ -212,8 +261,12 @@ export default function OpsAdminPage() {
         </section>
 
         {/* Metadata */}
-        <div className="mt-8 pt-6 border-t border-sage/14">
-          <p className="text-xs text-sage-dim">Last updated: {new Date().toLocaleString('en-GB')}</p>
+        <div className="mt-8 pt-6 border-t border-sage/14 flex items-center justify-between">
+          <p className="text-xs text-sage-dim">
+            Last updated: {lastUpdated ? lastUpdated.toLocaleString('en-GB') : '—'}
+            {isLoading && <span className="ml-2 text-sage-dim/60">refreshing…</span>}
+          </p>
+          <p className="text-xs text-sage-dim">Auto-refreshes every 60s</p>
         </div>
       </div>
     </div>
