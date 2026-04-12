@@ -73,12 +73,12 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       errorEventsResult,
       recentSignupsResult,
     ] = await Promise.all([
-      // Total users from profiles (scales better than auth.admin.listUsers)
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      // Paying users with plan breakdown for MRR
-      supabase.from('profiles').select('plan').neq('plan', 'free'),
-      // New signups this week
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
+      // Total users — use auth.users as source of truth (profiles can be orphaned from test accounts)
+      supabase.auth.admin.listUsers({ perPage: 1000 }),
+      // Paying users with plan breakdown for MRR — inner join with auth.users to exclude orphans
+      supabase.from('profiles').select('plan, user_id').neq('plan', 'free'),
+      // New signups this week (from auth.users created_at, but approximated via profiles)
+      supabase.from('profiles').select('user_id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
       // Platform connections (count only)
       supabase.from('ebay_tokens').select('id', { count: 'exact', head: true }),
       supabase.from('vinted_connections').select('id', { count: 'exact', head: true }),
@@ -95,12 +95,17 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       supabase.from('publish_jobs').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo),
       // Error events in last 24h
       supabase.from('marketplace_events').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo).eq('status', 'error'),
-      // Recent signups (last 10 with plan)
-      supabase.from('profiles').select('id, created_at, plan').order('created_at', { ascending: false }).limit(10),
+      // Recent signups (last 10 with plan) — need user_id for auth + platform lookups
+      supabase.from('profiles').select('id, user_id, created_at, plan').order('created_at', { ascending: false }).limit(10),
     ])
 
-    const totalUsers = profilesResult.count ?? 0
-    const payingUsersData = payingResult.data ?? []
+    // Build auth user set for filtering orphaned profiles
+    const authUsers = profilesResult.data?.users ?? []
+    const authUserIds = new Set(authUsers.map((u) => u.id))
+    const authEmailMap = new Map(authUsers.map((u) => [u.id, u.email ?? 'Unknown']))
+    const totalUsers = authUsers.length
+
+    const payingUsersData = (payingResult.data ?? []).filter((row) => authUserIds.has(row.user_id))
     const payingUsers = payingUsersData.length
     const newSignupsThisWeek = newSignupsResult.count ?? 0
 
@@ -123,29 +128,21 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
     const listingRate = totalProducts > 0 ? Math.round((activeListings / totalProducts) * 1000) / 10 : 0
     const conversionRate = totalUsers > 0 ? Math.round((payingUsers / totalUsers) * 1000) / 10 : 0
 
-    // ── Recent signups: batch platform counts ───────────────────────
-    const recentRaw = recentSignupsResult.data ?? []
-    const userIds = recentRaw.map((p) => p.id)
+    // ── Recent signups: filter orphans, batch platform counts ────────
+    const recentRaw = (recentSignupsResult.data ?? []).filter((p) => authUserIds.has(p.user_id))
+    const userIds = recentRaw.map((p) => p.user_id)
 
     let recentSignups: OpsMetrics['recentSignups'] = []
 
     if (userIds.length > 0) {
-      // Batch: get emails + platform counts in parallel
-      const [emailsResult, ebayBatch, vintedBatch, etsyBatch, shopifyBatch, depopBatch] = await Promise.all([
-        // Get emails for all 10 users in one call
-        supabase.auth.admin.listUsers({ perPage: 1000 }),
+      // Batch platform counts in parallel
+      const [ebayBatch, vintedBatch, etsyBatch, shopifyBatch, depopBatch] = await Promise.all([
         supabase.from('ebay_tokens').select('user_id').in('user_id', userIds),
         supabase.from('vinted_connections').select('user_id').in('user_id', userIds),
         supabase.from('etsy_connections').select('user_id').in('user_id', userIds),
         supabase.from('shopify_connections').select('user_id').in('user_id', userIds),
         supabase.from('depop_connections').select('user_id').in('user_id', userIds),
       ])
-
-      // Build email lookup
-      const emailMap = new Map<string, string>()
-      for (const u of emailsResult.data?.users ?? []) {
-        emailMap.set(u.id, u.email ?? 'Unknown')
-      }
 
       // Build platform count per user
       const platformCounts = new Map<string, number>()
@@ -157,10 +154,10 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       for (const row of depopBatch.data ?? []) platformCounts.set(row.user_id, (platformCounts.get(row.user_id) ?? 0) + 1)
 
       recentSignups = recentRaw.map((profile) => ({
-        email: emailMap.get(profile.id) ?? 'Unknown',
+        email: authEmailMap.get(profile.user_id) ?? 'Unknown',
         createdAt: new Date(profile.created_at).toISOString(),
         plan: profile.plan || 'free',
-        platformCount: platformCounts.get(profile.id) ?? 0,
+        platformCount: platformCounts.get(profile.user_id) ?? 0,
       }))
     }
 
