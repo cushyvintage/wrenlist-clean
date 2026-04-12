@@ -5,6 +5,62 @@ import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { withAuth } from '@/lib/with-auth'
 
+/**
+ * Mirror a photo from an external CDN to Supabase Storage.
+ */
+async function mirrorPhotoToStorage(
+  photoUrl: string,
+  index: number,
+  userId: string,
+  listingId: string
+): Promise<string | null> {
+  try {
+    if (!photoUrl || !photoUrl.startsWith('http')) return null
+
+    const response = await fetch(photoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+      },
+    })
+
+    if (!response.ok) return null
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    let extension = 'jpg'
+    if (contentType.includes('png')) extension = 'png'
+    else if (contentType.includes('webp')) extension = 'webp'
+
+    const filename = `${userId}/etsy-${listingId}-${index}.${extension}`
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('find-photos')
+      .upload(filename, buffer, {
+        contentType,
+        cacheControl: '31536000',
+        upsert: true,
+      })
+
+    if (uploadError) return null
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('find-photos')
+      .getPublicUrl(filename)
+
+    return urlData.publicUrl
+  } catch {
+    return null
+  }
+}
+
 interface EtsySaleItem {
   itemId?: string
   title?: string
@@ -263,6 +319,13 @@ export const POST = withAuth(async (req, user) => {
           } else {
             const sku = `ET-OTH-${Date.now().toString(36).toUpperCase().slice(-6)}`
 
+            // Mirror photo to Supabase Storage
+            let photos: string[] = []
+            if (item.thumbnailUrl) {
+              const mirrored = await mirrorPhotoToStorage(item.thumbnailUrl, 0, user.id, itemId)
+              photos = [mirrored || item.thumbnailUrl]
+            }
+
             const { data: newFind, error: findError } = await supabase
               .from('finds')
               .insert({
@@ -272,7 +335,7 @@ export const POST = withAuth(async (req, user) => {
                 asking_price_gbp: item.price || sale.grossAmount,
                 sold_price_gbp: item.price || sale.grossAmount,
                 sold_at: sale.orderDate || new Date().toISOString(),
-                photos: item.thumbnailUrl ? [item.thumbnailUrl] : [],
+                photos,
                 sku,
                 status: 'sold',
                 platform_fields: {
