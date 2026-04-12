@@ -277,6 +277,7 @@ export default function ImportPage() {
             coverImage: string | null
             marketplaceUrl: string | null
             status: string
+            created?: string | null
           }>
           nextPage?: string | null
           username?: string
@@ -335,6 +336,7 @@ export default function ImportPage() {
             alreadyImported: importedSet.has(id),
             checked: !importedSet.has(id),
             listingStatus: p.status === 'draft' ? 'draft' : 'active',
+            platformListedAt: p.created || null,
           })
         }
 
@@ -595,6 +597,7 @@ export default function ImportPage() {
             gender?: string | null
             group?: string | null
             productType?: string | null
+            created?: string | null
             marketplaceUrl: string | null
             status?: string
           }>
@@ -658,6 +661,7 @@ export default function ImportPage() {
             alreadyImported: importedSet.has(id),
             checked: !importedSet.has(id) && listingStatus === 'active',
             listingStatus,
+            platformListedAt: p.created || null,
           })
           // Store enrichment data
           meta.set(id, {
