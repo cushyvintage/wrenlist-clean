@@ -996,11 +996,49 @@ export default function ImportPage() {
     }
   }
 
+  /** Fetch rich listing detail from extension (photos, description, brand, condition, etc.) */
+  function fetchFacebookListingDetail(listingId: string): Promise<{
+    title?: string
+    description?: string
+    cover?: string
+    images?: string[]
+    brand?: string
+    condition?: string
+    color?: string
+    size?: string[]
+    price?: number
+    category?: string[]
+  } | null> {
+    return new Promise((resolve) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        resolve(null)
+        return
+      }
+      const timeout = setTimeout(() => resolve(null), 15000)
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        {
+          action: 'get_marketplace_listing',
+          marketplace: 'facebook',
+          params: { id: listingId, marketplace: 'facebook' },
+        },
+        (resp) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError || !resp) {
+            resolve(null)
+          } else {
+            resolve(resp)
+          }
+        }
+      )
+    })
+  }
+
   async function handleFacebookImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
 
-    vintedImport.setFetching('Importing Facebook listings...')
+    vintedImport.setFetching('Enriching Facebook listings...')
 
     let imported = 0
     let skipped = 0
@@ -1009,6 +1047,20 @@ export default function ImportPage() {
     try {
       for (const item of selected) {
         try {
+          // Enrich with detail call to get all photos, description, brand, condition
+          const detail = await fetchFacebookListingDetail(item.id)
+
+          // Build photo list: cover + additional images from detail
+          const allPhotos: string[] = []
+          if (detail?.cover) allPhotos.push(detail.cover)
+          if (detail?.images?.length) {
+            for (const img of detail.images) {
+              if (img && !allPhotos.includes(img)) allPhotos.push(img)
+            }
+          }
+          // Fallback to feed thumbnail if detail fetch failed
+          if (allPhotos.length === 0 && item.photo) allPhotos.push(item.photo)
+
           const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
             '/api/import/marketplace-item',
             {
@@ -1018,10 +1070,17 @@ export default function ImportPage() {
                 marketplace: 'facebook',
                 marketplaceProductId: item.id,
                 productData: {
-                  title: item.title,
-                  price: item.price,
-                  coverImage: item.photo,
+                  title: detail?.title || item.title,
+                  description: detail?.description || null,
+                  price: detail?.price ?? item.price,
+                  coverImage: allPhotos[0] || null,
+                  photos: allPhotos.slice(1),
                   marketplaceUrl: item.listingUrl,
+                  brand: detail?.brand || null,
+                  condition: detail?.condition || null,
+                  colour: detail?.color || null,
+                  size: detail?.size?.[0] || null,
+                  category: detail?.category?.[0] || null,
                 },
                 url: item.listingUrl,
               }),
