@@ -8,6 +8,9 @@ export interface SoldCompListing {
   condition: string | null
   days_to_sell: number | null
   sold_at: string | null
+  photos: string[]
+  category: string | null
+  brand: string | null
 }
 
 /** Per-platform breakdown */
@@ -45,6 +48,8 @@ interface SoldCompRow {
   profit_gbp: number | null
   platform_category_id: string | null
   buyer_marketplace: string | null
+  photos: string[] | null
+  brand: string | null
   user_id: string
 }
 
@@ -83,10 +88,10 @@ export async function getWrenlistSoldComps(
   // We query the view via RPC-style raw SQL since views + FTS are easier that way
   let sql = `
     SELECT
-      find_id, marketplace, title, condition, category,
+      find_id, marketplace, title, condition, category, brand,
       listing_price, sold_price_gbp, asking_price_gbp,
       sold_at, days_to_sell, cost_gbp, profit_gbp,
-      platform_category_id, buyer_marketplace, user_id
+      platform_category_id, buyer_marketplace, photos, user_id
     FROM training_sold_comps
     WHERE to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(description, ''))
           @@ plainto_tsquery('english', $1)
@@ -123,7 +128,7 @@ export async function getWrenlistSoldComps(
   if (error || !rows) {
     const fallbackQuery = supabase
       .from('training_sold_comps')
-      .select('find_id, marketplace, title, condition, category, listing_price, sold_price_gbp, asking_price_gbp, sold_at, days_to_sell, cost_gbp, profit_gbp, platform_category_id, buyer_marketplace, user_id')
+      .select('find_id, marketplace, title, condition, category, brand, listing_price, sold_price_gbp, asking_price_gbp, sold_at, days_to_sell, cost_gbp, profit_gbp, platform_category_id, buyer_marketplace, photos, user_id')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('sold_at', { ascending: false, nullsFirst: false })
       .limit(200)
@@ -190,6 +195,9 @@ export async function getWrenlistSoldComps(
     condition: r.condition,
     days_to_sell: r.days_to_sell,
     sold_at: r.sold_at,
+    photos: r.photos ?? [],
+    category: r.category,
+    brand: r.brand,
   }))
 
   return {

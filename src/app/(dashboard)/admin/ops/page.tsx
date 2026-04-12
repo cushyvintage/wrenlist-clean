@@ -39,6 +39,9 @@ interface OpsMetrics {
   soldCompsAvgPrice: number
   soldCompsPlatforms: Record<string, number>
   soldCompsAvgDaysToSell: number
+  soldCompsWithPhotos: number
+  soldCompsAvgPhotos: number
+  soldCompsFieldCoverage: Record<string, number>
   recentSignups: RecentSignup[]
 }
 
@@ -220,17 +223,55 @@ export default function OpsAdminPage() {
 
         {/* Row 6: Sold Comps / ML Training Data */}
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Sold Comps / ML Training</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em]">Sold Comps / ML Training</h2>
+            <div className="flex gap-2">
+              <a
+                href="/api/admin/training-export?format=json"
+                className="px-3 py-1.5 text-xs font-medium text-sage-dim border border-sage/14 rounded-md hover:bg-white transition-colors"
+              >
+                ↓ JSON
+              </a>
+              <a
+                href="/api/admin/training-export?format=csv"
+                className="px-3 py-1.5 text-xs font-medium text-sage-dim border border-sage/14 rounded-md hover:bg-white transition-colors"
+              >
+                ↓ CSV
+              </a>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <StatCard label="Total Sold Records" value={metrics.soldCompsTotal} highlight />
             <StatCard label="Avg Sale Price" value={`£${metrics.soldCompsAvgPrice.toFixed(2)}`} />
-            <StatCard label="Avg Days to Sell" value={metrics.soldCompsAvgDaysToSell} />
+            <StatCard label="With Photos" value={`${metrics.soldCompsWithPhotos} (${metrics.soldCompsAvgPhotos} avg)`} />
             <StatCard
               label="Platforms"
               value={Object.entries(metrics.soldCompsPlatforms)
                 .map(([p, c]) => `${p}: ${c}`)
                 .join(', ') || '—'}
             />
+          </div>
+          {/* Field coverage bar */}
+          <div className="bg-white rounded-lg border border-sage/14 p-4">
+            <div className="text-xs text-sage-dim uppercase tracking-[.08em] font-semibold mb-3">Field Coverage</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {Object.entries(metrics.soldCompsFieldCoverage).map(([field, pct]) => (
+                <div key={field} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-ink capitalize">{field}</span>
+                      <span className={pct > 50 ? 'text-sage' : 'text-amber-600'}>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-sage/10 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${pct > 50 ? 'bg-sage' : 'bg-amber-400'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

@@ -45,6 +45,9 @@ interface OpsMetrics {
   soldCompsAvgPrice: number
   soldCompsPlatforms: Record<string, number>
   soldCompsAvgDaysToSell: number
+  soldCompsWithPhotos: number
+  soldCompsAvgPhotos: number
+  soldCompsFieldCoverage: Record<string, number>
   // Recent signups
   recentSignups: Array<{
     email: string
@@ -119,7 +122,7 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       supabase.from('deleted_accounts').select('days_active, total_revenue_gbp'),
       supabase.from('anonymised_sales').select('id', { count: 'exact', head: true }),
       // Sold comps (training data)
-      supabase.from('training_sold_comps').select('marketplace, sold_price_gbp, days_to_sell'),
+      supabase.from('training_sold_comps').select('marketplace, sold_price_gbp, days_to_sell, photos, brand, condition, size, colour, cost_gbp, description'),
     ])
 
     const payingUsersData = payingResult.data ?? []
@@ -192,6 +195,13 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       marketplace: string
       sold_price_gbp: number | null
       days_to_sell: number | null
+      photos: string[] | null
+      brand: string | null
+      condition: string | null
+      size: string | null
+      colour: string | null
+      cost_gbp: number | null
+      description: string | null
     }>
     const soldCompsTotal = soldCompsRows.length
     const soldPrices = soldCompsRows
@@ -209,6 +219,24 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
     const soldCompsPlatforms: Record<string, number> = {}
     for (const row of soldCompsRows) {
       soldCompsPlatforms[row.marketplace] = (soldCompsPlatforms[row.marketplace] ?? 0) + 1
+    }
+    // Photo stats
+    const rowsWithPhotos = soldCompsRows.filter((r) => r.photos && r.photos.length > 0)
+    const soldCompsWithPhotos = rowsWithPhotos.length
+    const photoLengths = rowsWithPhotos.map((r) => r.photos!.length)
+    const soldCompsAvgPhotos = photoLengths.length > 0
+      ? Math.round((photoLengths.reduce((a, b) => a + b, 0) / photoLengths.length) * 10) / 10
+      : 0
+    // Field coverage (% of rows that have this field populated)
+    const total = soldCompsTotal || 1
+    const soldCompsFieldCoverage: Record<string, number> = {
+      photos: Math.round((soldCompsWithPhotos / total) * 100),
+      brand: Math.round((soldCompsRows.filter((r) => r.brand).length / total) * 100),
+      condition: Math.round((soldCompsRows.filter((r) => r.condition).length / total) * 100),
+      size: Math.round((soldCompsRows.filter((r) => r.size).length / total) * 100),
+      colour: Math.round((soldCompsRows.filter((r) => r.colour).length / total) * 100),
+      cost: Math.round((soldCompsRows.filter((r) => r.cost_gbp != null).length / total) * 100),
+      description: Math.round((soldCompsRows.filter((r) => r.description).length / total) * 100),
     }
 
     const metrics: OpsMetrics = {
@@ -237,6 +265,9 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       soldCompsAvgPrice,
       soldCompsPlatforms,
       soldCompsAvgDaysToSell,
+      soldCompsWithPhotos,
+      soldCompsAvgPhotos,
+      soldCompsFieldCoverage,
       recentSignups,
     }
 
