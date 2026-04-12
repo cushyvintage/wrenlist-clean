@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // 3. Load profile for the leave-notification email context
     const { data: profile } = await admin
       .from('profiles')
-      .select('full_name, plan, stripe_customer_id')
+      .select('full_name, plan, stripe_customer_id, created_at')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -163,10 +163,93 @@ export async function POST(request: NextRequest) {
       console.error('[account/delete] admin leave email failed:', emailResults[1].error)
     }
 
-    // 6. Delete from tables that block auth user deletion (no CASCADE on their FK)
+    // 6. Snapshot anonymised data BEFORE deletion (GDPR Recital 26 — anonymised data is not personal data)
+    try {
+      // Fetch all finds + their marketplace data for this user
+      const [findsResult, pmdResult, connectionsCount] = await Promise.all([
+        admin.from('finds').select('id, category, brand, condition, size, colour, cost_gbp, asking_price_gbp, sold_price_gbp, status, sourced_at, sold_at, source_type, selected_marketplaces, created_at').eq('user_id', user.id),
+        admin.from('product_marketplace_data').select('find_id, marketplace, status').eq('user_id', user.id),
+        // Count platform connections
+        Promise.all([
+          admin.from('ebay_tokens').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          admin.from('vinted_connections').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          admin.from('etsy_connections').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          admin.from('shopify_connections').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          admin.from('depop_connections').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        ]),
+      ])
+
+      const finds = findsResult.data ?? []
+      const pmds = pmdResult.data ?? []
+      const platformsConnected = connectionsCount.reduce((sum, r) => sum + (r.count ?? 0), 0)
+
+      // Build marketplace lookup: find_id → marketplace (from PMD where status is 'sold' or 'listed')
+      const findMarketplace = new Map<string, string>()
+      for (const pmd of pmds) {
+        if (pmd.status === 'sold' || pmd.status === 'listed') {
+          findMarketplace.set(pmd.find_id, pmd.marketplace)
+        }
+      }
+
+      // Insert anonymised sales rows — no user_id, no photos, no description
+      if (finds.length > 0) {
+        const salesRows = finds.map((f) => ({
+          category: f.category,
+          brand: f.brand,
+          condition: f.condition,
+          size: f.size,
+          colour: f.colour,
+          cost_gbp: f.cost_gbp,
+          asking_price_gbp: f.asking_price_gbp,
+          sold_price_gbp: f.sold_price_gbp,
+          status: f.status,
+          sourced_at: f.sourced_at,
+          sold_at: f.sold_at,
+          days_to_sell: f.sourced_at && f.sold_at
+            ? Math.round((new Date(f.sold_at).getTime() - new Date(f.sourced_at).getTime()) / 86400000)
+            : null,
+          marketplace: findMarketplace.get(f.id) ?? null,
+          source_type: f.source_type,
+          selected_marketplaces: f.selected_marketplaces,
+        }))
+        await admin.from('anonymised_sales').insert(salesRows)
+      }
+
+      // Determine which platforms were used
+      const platformsUsed: string[] = []
+      for (const [i, name] of (['ebay', 'vinted', 'etsy', 'shopify', 'depop'] as const).entries()) {
+        if ((connectionsCount[i]?.count ?? 0) > 0) platformsUsed.push(name)
+      }
+
+      // Insert churn ledger row
+      const totalSold = finds.filter((f) => f.status === 'sold').length
+      const totalRevenue = finds.reduce((sum, f) => sum + (Number(f.sold_price_gbp) || 0), 0)
+      const accountCreatedAt = profile?.created_at ?? user.created_at
+
+      await admin.from('deleted_accounts').insert({
+        account_created_at: accountCreatedAt,
+        plan,
+        reason,
+        feedback,
+        alternative_tool: alternativeTool,
+        days_active: accountCreatedAt
+          ? Math.round((Date.now() - new Date(accountCreatedAt).getTime()) / 86400000)
+          : null,
+        total_finds: finds.length,
+        total_sold: totalSold,
+        total_revenue_gbp: totalRevenue,
+        platforms_connected: platformsConnected,
+        platforms_used: platformsUsed,
+      })
+    } catch (snapErr) {
+      // Anonymisation is best-effort — must not block GDPR erasure
+      console.error('[account/delete] anonymisation snapshot failed:', snapErr)
+    }
+
+    // 7. Delete from tables that block auth user deletion (no CASCADE on their FK)
     //
     // marketplace_events: user_id REFERENCES auth.users(id) — no cascade
-    // email_sends: user_id FK — no cascade (lives in Supabase cloud, confirmed from code usage)
+    // email_sends: user_id FK — no cascade
     // profiles: user_id FK — no cascade (intentional, one-row-per-user)
     //
     // Everything else (finds, expenses, connections, etc.) has

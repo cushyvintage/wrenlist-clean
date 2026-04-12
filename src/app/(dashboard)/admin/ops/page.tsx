@@ -31,6 +31,10 @@ interface OpsMetrics {
   extensionActive7d: number
   publishJobs24h: number
   errorEvents24h: number
+  deletedAccounts: number
+  avgDaysActiveBeforeChurn: number | null
+  revenueLostToChurn: number
+  anonymisedSalesCount: number
   recentSignups: RecentSignup[]
 }
 
@@ -199,7 +203,18 @@ export default function OpsAdminPage() {
           </div>
         </section>
 
-        {/* Row 5: Recent Signups Table */}
+        {/* Row 5: Churn */}
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Churn</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Deleted Accounts" value={metrics.deletedAccounts} highlight={metrics.deletedAccounts > 0} />
+            <StatCard label="Avg Days Active" value={metrics.avgDaysActiveBeforeChurn ?? '—'} />
+            <StatCard label="Revenue Lost" value={`£${metrics.revenueLostToChurn.toLocaleString('en-GB')}`} />
+            <StatCard label="Anonymised Sales" value={metrics.anonymisedSalesCount} />
+          </div>
+        </section>
+
+        {/* Row 6: Recent Signups Table */}
         <section>
           <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Recent Signups (Last 10)</h2>
           <div className="bg-white rounded-lg border border-sage/14 overflow-hidden">

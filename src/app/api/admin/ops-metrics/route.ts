@@ -35,6 +35,11 @@ interface OpsMetrics {
   extensionActive7d: number
   publishJobs24h: number
   errorEvents24h: number
+  // Churn
+  deletedAccounts: number
+  avgDaysActiveBeforeChurn: number | null
+  revenueLostToChurn: number
+  anonymisedSalesCount: number
   // Recent signups
   recentSignups: Array<{
     email: string
@@ -79,6 +84,8 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       publishJobsResult,
       errorEventsResult,
       recentSignupsResult,
+      churnResult,
+      anonymisedSalesResult,
     ] = await Promise.all([
       // Paying users — filter to valid auth users
       supabase.from('profiles').select('plan, user_id').neq('plan', 'free').in('user_id', authUserIds),
@@ -102,6 +109,9 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       supabase.from('marketplace_events').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo).eq('status', 'error'),
       // Recent signups — filter to valid auth users BEFORE limit so orphans don't push out real users
       supabase.from('profiles').select('id, user_id, created_at, plan').in('user_id', authUserIds).order('created_at', { ascending: false }).limit(10),
+      // Churn data
+      supabase.from('deleted_accounts').select('days_active, total_revenue_gbp'),
+      supabase.from('anonymised_sales').select('id', { count: 'exact', head: true }),
     ])
 
     const payingUsersData = payingResult.data ?? []
@@ -160,6 +170,15 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       }))
     }
 
+    // ── Churn metrics ──────────────────────────────────────────────
+    const churnRows = churnResult.data ?? []
+    const deletedAccounts = churnRows.length
+    const avgDaysActiveBeforeChurn = deletedAccounts > 0
+      ? Math.round(churnRows.reduce((sum, r) => sum + (r.days_active ?? 0), 0) / deletedAccounts)
+      : null
+    const revenueLostToChurn = churnRows.reduce((sum, r) => sum + (Number(r.total_revenue_gbp) || 0), 0)
+    const anonymisedSalesCount = anonymisedSalesResult.count ?? 0
+
     const metrics: OpsMetrics = {
       totalUsers,
       payingUsers,
@@ -178,6 +197,10 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       extensionActive7d,
       publishJobs24h,
       errorEvents24h,
+      deletedAccounts,
+      avgDaysActiveBeforeChurn,
+      revenueLostToChurn,
+      anonymisedSalesCount,
       recentSignups,
     }
 
