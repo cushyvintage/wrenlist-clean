@@ -35,6 +35,10 @@ interface OpsMetrics {
   avgDaysActiveBeforeChurn: number | null
   revenueLostToChurn: number
   anonymisedSalesCount: number
+  soldCompsTotal: number
+  soldCompsAvgPrice: number
+  soldCompsPlatforms: Record<string, number>
+  soldCompsAvgDaysToSell: number
   recentSignups: RecentSignup[]
 }
 
@@ -214,7 +218,23 @@ export default function OpsAdminPage() {
           </div>
         </section>
 
-        {/* Row 6: Recent Signups Table */}
+        {/* Row 6: Sold Comps / ML Training Data */}
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Sold Comps / ML Training</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Total Sold Records" value={metrics.soldCompsTotal} highlight />
+            <StatCard label="Avg Sale Price" value={`£${metrics.soldCompsAvgPrice.toFixed(2)}`} />
+            <StatCard label="Avg Days to Sell" value={metrics.soldCompsAvgDaysToSell} />
+            <StatCard
+              label="Platforms"
+              value={Object.entries(metrics.soldCompsPlatforms)
+                .map(([p, c]) => `${p}: ${c}`)
+                .join(', ') || '—'}
+            />
+          </div>
+        </section>
+
+        {/* Row 7: Recent Signups Table */}
         <section>
           <h2 className="text-sm font-semibold text-sage-dim uppercase tracking-[.08em] mb-4">Recent Signups (Last 10)</h2>
           <div className="bg-white rounded-lg border border-sage/14 overflow-hidden">

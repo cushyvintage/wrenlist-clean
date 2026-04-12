@@ -40,6 +40,11 @@ interface OpsMetrics {
   avgDaysActiveBeforeChurn: number | null
   revenueLostToChurn: number
   anonymisedSalesCount: number
+  // Sold comps / ML training
+  soldCompsTotal: number
+  soldCompsAvgPrice: number
+  soldCompsPlatforms: Record<string, number>
+  soldCompsAvgDaysToSell: number
   // Recent signups
   recentSignups: Array<{
     email: string
@@ -86,6 +91,7 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       recentSignupsResult,
       churnResult,
       anonymisedSalesResult,
+      soldCompsResult,
     ] = await Promise.all([
       // Paying users — filter to valid auth users
       supabase.from('profiles').select('plan, user_id').neq('plan', 'free').in('user_id', authUserIds),
@@ -112,6 +118,8 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       // Churn data
       supabase.from('deleted_accounts').select('days_active, total_revenue_gbp'),
       supabase.from('anonymised_sales').select('id', { count: 'exact', head: true }),
+      // Sold comps (training data)
+      supabase.from('training_sold_comps').select('marketplace, sold_price_gbp, days_to_sell'),
     ])
 
     const payingUsersData = payingResult.data ?? []
@@ -179,6 +187,30 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
     const revenueLostToChurn = churnRows.reduce((sum, r) => sum + (Number(r.total_revenue_gbp) || 0), 0)
     const anonymisedSalesCount = anonymisedSalesResult.count ?? 0
 
+    // ── Sold comps / ML training data ────────────────────────────
+    const soldCompsRows = (soldCompsResult.data ?? []) as Array<{
+      marketplace: string
+      sold_price_gbp: number | null
+      days_to_sell: number | null
+    }>
+    const soldCompsTotal = soldCompsRows.length
+    const soldPrices = soldCompsRows
+      .map((r) => Number(r.sold_price_gbp))
+      .filter((p) => p > 0)
+    const soldCompsAvgPrice = soldPrices.length > 0
+      ? Math.round((soldPrices.reduce((a, b) => a + b, 0) / soldPrices.length) * 100) / 100
+      : 0
+    const soldDays = soldCompsRows
+      .map((r) => r.days_to_sell)
+      .filter((d): d is number => d != null && d >= 0)
+    const soldCompsAvgDaysToSell = soldDays.length > 0
+      ? Math.round(soldDays.reduce((a, b) => a + b, 0) / soldDays.length)
+      : 0
+    const soldCompsPlatforms: Record<string, number> = {}
+    for (const row of soldCompsRows) {
+      soldCompsPlatforms[row.marketplace] = (soldCompsPlatforms[row.marketplace] ?? 0) + 1
+    }
+
     const metrics: OpsMetrics = {
       totalUsers,
       payingUsers,
@@ -201,6 +233,10 @@ async function getOpsMetricsHandler(req: NextRequest, _user: User) {
       avgDaysActiveBeforeChurn,
       revenueLostToChurn,
       anonymisedSalesCount,
+      soldCompsTotal,
+      soldCompsAvgPrice,
+      soldCompsPlatforms,
+      soldCompsAvgDaysToSell,
       recentSignups,
     }
 
