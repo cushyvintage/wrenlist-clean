@@ -16,6 +16,7 @@ import { createVintedServices } from "./marketplaces/vinted/index.js";
 import {
   VintedCooldownError,
   VintedLoggedOutError,
+  VintedRetryLaterError,
   VintedTokenFetchError,
   type VintedClient,
 } from "./marketplaces/vinted/client.js";
@@ -445,7 +446,10 @@ type ExternalMessage = Record<string, unknown>;
       console.log("[VintedSalesSync] Fetching sales, stopAtId:", stopAtId || "(none)");
 
       const { client } = createVintedServices({ tld: "co.uk" });
-      await client.bootstrap();
+      // Silent bootstrap: never open a background Vinted tab from the sync
+      // alarm. If the direct fetch can't get a CSRF, we defer to the next
+      // cycle rather than flashing a tab in the user's browser.
+      await client.bootstrap(false, false);
       const result = await client.getSales(1, 50, stopAtId);
 
       if (!result.sales || result.sales.length === 0) {
@@ -533,6 +537,16 @@ type ExternalMessage = Record<string, unknown>;
           "vinted-sync",
           "Skipped: token refresh on cooldown — retry next cycle",
           { secondsRemaining: e.secondsRemaining },
+        );
+        return;
+      }
+      if (e instanceof VintedRetryLaterError) {
+        // Direct fetch didn't yield a CSRF and we deliberately disabled the
+        // tab fallback for this silent alarm path. Not an error — just wait
+        // for the next cycle (or for the user to open Vinted / trigger a
+        // publish, either of which will warm the token cache).
+        console.info(
+          `[VintedSalesSync] Deferring this cycle — ${e.reason}`,
         );
         return;
       }
@@ -1896,11 +1910,19 @@ async function handleGetVintedSession() {
     const tld = domainMatch?.[1] ?? "com";
     const username = vUidCookie.value;
     
-    // Now create a Vinted client with the detected TLD and bootstrap it
+    // Now create a Vinted client with the detected TLD and bootstrap it.
+    // IMPORTANT: this handler is invoked by the Wrenlist web app on a 60s
+    // poll from multiple pages (dashboard, finds, listings, add-find) so it
+    // MUST NOT open a background Vinted tab — that was the real source of
+    // the "tab keeps popping up every minute" bug. We have the v_uid cookie
+    // already, which is enough to confidently answer "logged in?". The
+    // bootstrap call is pure enrichment (gets the display-name username via
+    // CSRF'd API call). If it fails silently, we fall through to the cookie
+    // value and report logged-in=true.
     const { client } = createVintedServices({ tld });
 
     try {
-      await client.bootstrap();
+      await client.bootstrap(false, false);
       const isLoggedIn = await client.checkLogin();
       // Use the actual username from the client (login field) if available, fall back to cookie value
       const actualUsername = client.getUsername() || username;
@@ -1913,33 +1935,18 @@ async function handleGetVintedSession() {
         extensionVersion: EXTENSION_VERSION,
       };
     } catch (bootstrapError) {
-      // Bootstrap failed — cookies may still be refreshing. Wait and retry once with force.
-      console.warn("[Vinted] Bootstrap failed during session check, retrying in 3s:", bootstrapError);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const { client: retryClient } = createVintedServices({ tld });
-        await retryClient.bootstrap(true);
-        const isLoggedIn = await retryClient.checkLogin();
-        const actualUsername = retryClient.getUsername() || username;
-        console.log("[Vinted] Retry bootstrap succeeded, loggedIn:", isLoggedIn);
-        return {
-          success: true,
-          loggedIn: isLoggedIn,
-          username: isLoggedIn ? actualUsername : undefined,
-          tld,
-          extensionVersion: EXTENSION_VERSION,
-        };
-      } catch (retryError) {
-        console.warn("[Vinted] Retry bootstrap also failed:", retryError);
-        return {
-          success: true,
-          loggedIn: true, // Cookie exists, assume logged in
-          username,
-          tld,
-          error: "Could not verify session fully, but cookie exists",
-          extensionVersion: EXTENSION_VERSION,
-        };
-      }
+      // Silent bootstrap failed — most likely Cloudflare blocked the direct
+      // fetch and we deliberately skipped the tab fallback. Not a real
+      // problem: the cookie exists, so the user IS logged in. Return that
+      // and let enrichment happen later (during an actual publish/delist).
+      console.info("[Vinted] Session check: silent bootstrap deferred —", bootstrapError instanceof Error ? bootstrapError.message : bootstrapError);
+      return {
+        success: true,
+        loggedIn: true, // Cookie exists, assume logged in
+        username,
+        tld,
+        extensionVersion: EXTENSION_VERSION,
+      };
     }
   } catch (error) {
     console.error("[Vinted] Session check error:", error);

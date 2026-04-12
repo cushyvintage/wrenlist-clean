@@ -25,7 +25,7 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
           </div>
           <div className="text-xs text-ink-lt">
             {etsyLoading ? 'Checking login...' : etsyConnected
-              ? 'Crosslist your finds to Etsy via browser automation'
+              ? 'Ready to list your finds on Etsy'
               : 'Log in to etsy.com, then click Check connection'}
           </div>
         </div>
@@ -54,7 +54,7 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
 
       {etsyConnected && (
         <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
-          Etsy crosslisting uses browser automation — the extension opens the Etsy listing form, fills all fields, uploads images, selects the category, and clicks Publish. No API key needed.
+          Wrenlist posts to Etsy through your logged-in browser, the same way you would by hand — filling in the listing form, uploading photos, and hitting Publish for you. Nothing to set up.
         </div>
       )}
     </div>

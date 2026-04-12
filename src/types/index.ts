@@ -647,3 +647,26 @@ export interface TestResult {
 export interface TestRunWithResults extends TestRun {
   results: TestResult[]
 }
+
+// ============================================================================
+// ROADMAP
+// ============================================================================
+
+export type RoadmapStatus =
+  | 'under_consideration'
+  | 'planned'
+  | 'in_progress'
+  | 'released'
+  | 'rejected'
+
+export interface RoadmapItemDTO {
+  id: string
+  title: string
+  description: string
+  tag: string
+  status: RoadmapStatus
+  featured: boolean
+  vote_count: number
+  voted_by_me: boolean
+  created_at: string
+}

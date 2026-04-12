@@ -24,7 +24,7 @@ export function DepopConnect({ depopConnected, depopLoading, onCheckConnection }
           </div>
           <div className="text-xs text-ink-lt">
             {depopLoading ? 'Checking login...' : depopConnected
-              ? 'Crosslist your finds to Depop via REST API'
+              ? 'Ready to list your finds on Depop'
               : 'Log in to depop.com, then click Check connection'}
           </div>
         </div>
@@ -53,7 +53,7 @@ export function DepopConnect({ depopConnected, depopLoading, onCheckConnection }
 
       {depopConnected && (
         <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
-          Depop uses cookie-based authentication. The extension reads your Depop session from the browser and posts listings via their REST API with presigned S3 image uploads.
+          Wrenlist uses your existing Depop login to post listings on your behalf. As long as you stay signed in to Depop in this browser, your finds will go straight to your shop.
         </div>
       )}
     </div>

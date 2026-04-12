@@ -189,6 +189,12 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `test_runs` | Internal E2E test run tracking | ON |
 | `test_results` | Individual test case results per run | ON |
 
+**Public roadmap**
+| Table | Purpose | RLS |
+|---|---|---|
+| `roadmap_items` | Public roadmap feature requests (anon read; writes via service-role API) | ON |
+| `roadmap_votes` | One row per (user, item) upvote; users manage own rows only | ON |
+
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
 - **`product_marketplace_data.customer_id`** (uuid FK) links sold items to `customers` table

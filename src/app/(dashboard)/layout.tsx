@@ -13,9 +13,10 @@ import { NavIcons } from '@/components/layout/NavIcons'
 import { isAdmin } from '@/lib/admin'
 
 // IDs that support nested routes (e.g. /finds/123 highlights Finds)
-const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect', 'admin-category-config', 'admin-import']
+const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect', 'admin-category-config', 'admin-import', 'admin-ops']
 
 const ADMIN_NAV_ITEMS = [
+  { id: 'admin-ops', label: 'Ops Dashboard', icon: NavIcons.admin, path: '/admin/ops', section: 'ADMIN', pageTitle: 'Admin — Ops Dashboard' },
   { id: 'admin-category-config', label: 'Category Config', icon: NavIcons.admin, path: '/admin/category-config', section: 'ADMIN', pageTitle: 'Admin — Category Config' },
   { id: 'admin-import', label: 'Legacy Import', icon: NavIcons.import, path: '/admin/import', section: 'ADMIN', pageTitle: 'Admin — Legacy Import' },
   { id: 'testing', label: 'E2E Testing', icon: NavIcons.testing, path: '/testing', section: 'ADMIN', pageTitle: 'Admin — E2E Testing' },

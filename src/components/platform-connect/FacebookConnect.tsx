@@ -24,7 +24,7 @@ export function FacebookConnect({ facebookConnected, facebookLoading, onCheckCon
           </div>
           <div className="text-xs text-ink-lt">
             {facebookLoading ? 'Checking login...' : facebookConnected
-              ? 'Local pickup listings via browser automation'
+              ? 'Ready to post local pickup listings'
               : 'Log in to facebook.com, then click Check connection'}
           </div>
         </div>
@@ -53,7 +53,7 @@ export function FacebookConnect({ facebookConnected, facebookLoading, onCheckCon
 
       {facebookConnected && (
         <div className="text-xs text-ink-lt bg-cream-md rounded p-3">
-          Facebook Marketplace UK uses local pickup only. The extension scrapes session tokens from facebook.com and posts listings via their internal GraphQL API.
+          Facebook Marketplace in the UK is local pickup only — buyers collect from you. Wrenlist uses your existing Facebook login to post listings to Marketplace for you.
         </div>
       )}
     </div>

@@ -69,38 +69,12 @@ Used to tell the user when a publish, update, or delist action has
 completed or failed. Notifications only fire in response to actions the
 user initiated.
 
-### Host permissions (per marketplace)
-Each declared marketplace host is needed so the extension can make
-authenticated requests to that marketplace's internal API on behalf of
-the signed-in user to list, update, or delist their own inventory:
+### Host permissions (per marketplace) — 969 chars, fits 1000-char limit
+Each declared marketplace host lets the extension make authenticated requests to that marketplace's internal API on behalf of the signed-in user to list, update, or delist their own inventory. The extension only touches a site the user has explicitly connected in Wrenlist.
 
-- **Vinted** — `*.vinted.co.uk`, `*.vinted.com`, `*.vinted.fr`,
-  `*.vinted.de`, `*.vinted.es`, `*.vinted.it`. Wrenlist is built in the
-  UK but UK sellers routinely cross-list to Vinted's other European
-  locales (FR / DE / ES / IT), so the extension supports the full set
-  of Vinted domains a UK seller would realistically use.
-- **eBay** — `*.ebay.com`, `*.ebay.co.uk`, `*.ebay.ie`, `*.ebay.ca`,
-  `*.ebay.com.au`. Same reasoning: UK resellers commonly list on
-  multiple eBay sites for international buyers, and eBay's site-specific
-  domains each serve their own internal API, so the extension needs
-  host access on each one the user has an account with. The extension
-  only touches a site if the user has explicitly connected it in
-  Wrenlist.
-- **Etsy** — `www.etsy.com`. Etsy serves every locale from one domain.
-- **Shopify** — `admin.shopify.com/store/*` and `*.myshopify.com/admin/*`
-  for the user's own store admin.
-- **Depop** — `*.depop.com`.
-- **Facebook Marketplace** — `*.facebook.com` and `upload.facebook.com`
-  so the extension can post a listing to the user's own Facebook
-  Marketplace account and upload its images. The extension only runs
-  on Facebook when the user has explicitly connected Facebook in
-  Wrenlist and triggered a publish/delist action; it does not read
-  the news feed, messages, profile, or any other Facebook surface.
-- **Wrenlist** — `*.wrenlist.com` is the user's own Wrenlist dashboard,
-  which is how the extension receives publish/delist jobs and reports
-  results back.
+Vinted (*.vinted.co.uk/.com/.fr/.de/.es/.it), eBay (*.ebay.com/.co.uk/.ie/.ca/.com.au), Etsy (www.etsy.com), Shopify (admin.shopify.com/store/*, *.myshopify.com/admin/*), Depop (*.depop.com), Facebook Marketplace (*.facebook.com, upload.facebook.com).
 
-The extension does not read or modify any page outside these hosts.
+Wrenlist is UK-built, but UK resellers cross-list across Vinted's European locales and multiple eBay sites for international buyers; each site-specific domain serves its own internal API, so host access is needed on each one the user has an account with. *.wrenlist.com is the user's own Wrenlist dashboard — how the extension receives publish/delist jobs and reports back. The extension does not read or modify any page outside these hosts.
 
 ---
 

@@ -123,8 +123,11 @@ export class VintedClient {
     lastRefresh: number;
   } | null = null;
   
-  // Token TTL: 15 minutes - tokens are valid for much longer, but we refresh periodically
-  private static readonly TOKEN_TTL_MS = 15 * 60 * 1000;
+  // Token TTL: 60 minutes. Vinted session-bound CSRF tokens are valid for far
+  // longer (as long as the Vinted session itself), but we refresh hourly as a
+  // safety net. Must stay well above VINTED_SALES_SYNC_INTERVAL_MINUTES so the
+  // cache hits between sync cycles and we don't open a new Vinted tab every run.
+  private static readonly TOKEN_TTL_MS = 60 * 60 * 1000;
   
   // Prevent concurrent bootstrap operations - share the promise across all instances
   private static bootstrapPromise: Promise<void> | null = null;
@@ -144,7 +147,7 @@ export class VintedClient {
     void this.updateHeaderRules();
   }
 
-  public async bootstrap(force = false): Promise<void> {
+  public async bootstrap(force = false, allowTabFallback = true): Promise<void> {
     // Check if we can use cached global tokens (same TLD, not expired, not forced)
     if (
       !force &&
@@ -182,7 +185,7 @@ export class VintedClient {
     }
 
     // Perform actual bootstrap and cache the promise
-    VintedClient.bootstrapPromise = this.doBootstrap(force);
+    VintedClient.bootstrapPromise = this.doBootstrap(force, allowTabFallback);
     try {
       await VintedClient.bootstrapPromise;
     } finally {
@@ -190,8 +193,8 @@ export class VintedClient {
     }
   }
 
-  private async doBootstrap(force: boolean): Promise<void> {
-    await this.setTokens(force);
+  private async doBootstrap(force: boolean, allowTabFallback: boolean): Promise<void> {
+    await this.setTokens(force, allowTabFallback);
     // After setting tokens, detect the actual TLD from cookies and update URLs if needed
     await this.detectAndUpdateTldFromCookies();
     
@@ -530,7 +533,41 @@ export class VintedClient {
     }
 
     VintedClient.lastTabRefresh = Date.now();
-    console.log("[Vinted] Opening background tab for token refresh...");
+
+    // Try to reuse an existing Vinted tab before opening a new one. If the
+    // user already has vinted.* open anywhere, we executeScript against it
+    // and never create a new tab. Only fall back to opening a background tab
+    // when no existing Vinted tab is found.
+    try {
+      const existingTabs = await chrome.tabs.query({
+        url: ["*://*.vinted.co.uk/*", "*://*.vinted.com/*", "*://*.vinted.de/*", "*://*.vinted.fr/*", "*://*.vinted.it/*", "*://*.vinted.es/*", "*://*.vinted.pl/*", "*://*.vinted.nl/*"],
+      });
+      const readyTab = existingTabs.find((t) => t.id && t.status === "complete");
+      if (readyTab?.id) {
+        console.log("[Vinted] Reusing existing Vinted tab", readyTab.id, "for token refresh (no new tab)");
+        try {
+          const result = await chrome.scripting.executeScript({
+            target: { tabId: readyTab.id },
+            func: () => document.documentElement.outerHTML,
+          });
+          const html = result?.[0]?.result ?? "";
+          if (html && html.includes("CSRF") && !html.includes("session-refresh")) {
+            return html;
+          }
+          if (html && (html.includes("signup") || html.includes("session-refresh"))) {
+            throw new VintedLoggedOutError();
+          }
+          console.log("[Vinted] Existing tab had no usable CSRF, falling through to new tab");
+        } catch (err) {
+          if (err instanceof VintedLoggedOutError) throw err;
+          console.log("[Vinted] executeScript against existing tab failed:", err);
+        }
+      }
+    } catch (err) {
+      console.log("[Vinted] Existing-tab lookup failed, falling through to new tab:", err);
+    }
+
+    console.log("[Vinted] No reusable Vinted tab found, opening background tab for token refresh...");
 
     return new Promise(async (resolve, reject) => {
       const tab = await chrome.tabs.create({
@@ -610,9 +647,9 @@ export class VintedClient {
     });
   }
 
-  private async setTokens(force = false): Promise<void> {
+  private async setTokens(force = false, allowTabFallback = true): Promise<void> {
     try {
-      console.log("[Vinted] Debug: setTokens called, force:", force);
+      console.log("[Vinted] Debug: setTokens called, force:", force, "allowTabFallback:", allowTabFallback);
       
       // First, check in-memory global cache (fastest, prevents tab opens entirely)
       if (
@@ -698,6 +735,16 @@ export class VintedClient {
         //   VintedCooldownError   → transient, retry next cycle
         //   VintedLoggedOutError  → user action required
         //   any other throw       → wrap as VintedTokenFetchError
+        // If caller asked us NOT to open a background tab (silent flows like
+        // the sales-sync alarm), skip the tab fallback entirely and bail out
+        // with a soft retry-later error. The user won't see a tab flashing;
+        // the next alarm cycle will try again.
+        if (!allowTabFallback) {
+          console.log("[Vinted] Direct fetch didn't return CSRF; tab fallback disabled — deferring to next cycle");
+          throw new VintedRetryLaterError(
+            "direct fetch returned no CSRF and tab fallback is disabled in this context",
+          );
+        }
         console.log("[Vinted] Direct fetch didn't return CSRF, trying tab refresh...");
         try {
           html = await this.refreshTokens();
