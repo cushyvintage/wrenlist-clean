@@ -2961,8 +2961,9 @@ async function handleSyncVintedStatus(message: ExternalMessage) {
 async function handleGetDepopToken() {
   const cookies = await chrome.cookies.getAll({ domain: "depop.com" });
   const token = cookies.find(c => c.name === "access_token")?.value;
+  const userId = cookies.find(c => c.name === "user_id")?.value;
   if (!token) return withExtensionVersion({ success: false, message: "No Depop access token" });
-  return withExtensionVersion({ success: true, token });
+  return withExtensionVersion({ success: true, token, userId });
 }
 
 async function handleGetDepopCategories() {

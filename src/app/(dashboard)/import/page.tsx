@@ -1255,8 +1255,8 @@ export default function ImportPage() {
     })
   }
 
-  /** Get Depop bearer token from extension cookies */
-  function getDepopToken(): Promise<string | null> {
+  /** Get Depop bearer token + userId from extension cookies */
+  function getDepopCredentials(): Promise<{ token: string; userId?: string } | null> {
     return new Promise((resolve) => {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
         resolve(null)
@@ -1269,7 +1269,7 @@ export default function ImportPage() {
         (resp) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError || !resp?.token) resolve(null)
-          else resolve(resp.token as string)
+          else resolve({ token: resp.token as string, userId: resp.userId as string | undefined })
         }
       )
     })
@@ -1282,7 +1282,7 @@ export default function ImportPage() {
     vintedImport.setFetching('Importing Depop listings...')
 
     // Get bearer token once for server-side enrichment
-    const depopToken = await getDepopToken()
+    const depopCreds = await getDepopCredentials()
 
     let imported = 0
     let skipped = 0
@@ -1326,7 +1326,8 @@ export default function ImportPage() {
                   marketplaceUrl: detail?.marketplaceUrl || item.listingUrl,
                 },
                 url: item.listingUrl,
-                depopBearerToken: depopToken || undefined,
+                depopBearerToken: depopCreds?.token || undefined,
+                depopUserId: depopCreds?.userId || undefined,
               }),
             }
           )

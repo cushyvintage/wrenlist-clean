@@ -155,7 +155,7 @@ async function mirrorPhotoToStorage(
  * Fetch full listing detail from Depop's public API (server-side, no CORS).
  * Returns enriched product data or null if the API call fails.
  */
-async function fetchDepopDetail(listingId: string, bearerToken?: string): Promise<{
+async function fetchDepopDetail(listingId: string, bearerToken?: string, depopUserId?: string): Promise<{
   description?: string
   brand?: string
   condition?: string
@@ -169,6 +169,7 @@ async function fetchDepopDetail(listingId: string, bearerToken?: string): Promis
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     }
     if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`
+    if (depopUserId) headers['Depop-UserId'] = depopUserId
 
     const res = await fetch(`https://webapi.depop.com/api/v2/products/${listingId}/?lang=en`, { headers })
     if (!res.ok) {
@@ -266,7 +267,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   // Server-side enrichment for Depop (extension's getListing returns null for some items)
   if (marketplace === 'depop') {
     const depopToken = (body as { depopBearerToken?: string }).depopBearerToken
-    const detail = await fetchDepopDetail(String(marketplaceProductId), depopToken || undefined)
+    const depopUserId = (body as { depopUserId?: string }).depopUserId
+    const detail = await fetchDepopDetail(String(marketplaceProductId), depopToken || undefined, depopUserId || undefined)
     if (detail) {
       if (detail.description && !productData.description) productData.description = detail.description
       if (detail.brand && !productData.brand) productData.brand = detail.brand
