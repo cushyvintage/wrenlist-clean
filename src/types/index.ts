@@ -166,6 +166,7 @@ export interface Find {
   sold_at: string | null
   photos: string[]
   sku: string | null
+  selected_marketplaces?: string[] | null
   platform_fields: PlatformFields | null
   ai_generated_description: string | null
   ai_suggested_price_low: number | null

@@ -128,9 +128,13 @@ export default function InventoryDetailPage() {
 
         setFind(data)
 
-        const platforms = Object.keys(data.platform_fields || {}).filter(
-          (p) => p === 'vinted' || p === 'ebay' || p === 'etsy' || p === 'shopify'
+        // Determine selected platforms from platform_fields keys or selected_marketplaces column
+        const VALID_PLATFORMS = ['vinted', 'ebay', 'etsy', 'shopify', 'facebook', 'depop'] as const
+        const pfKeys = Object.keys(data.platform_fields || {}).filter(
+          (p) => (VALID_PLATFORMS as readonly string[]).includes(p)
         ) as Platform[]
+        const smCol = (data.selected_marketplaces || []) as Platform[]
+        const platforms = pfKeys.length > 0 ? pfKeys : smCol
 
         setFormData({
           title: data.name || '',
@@ -142,7 +146,7 @@ export default function InventoryDetailPage() {
           quantity: 1,
           photos: [],
           photoPreviews: data.photos || [],
-          selectedPlatforms: platforms.length > 0 ? platforms : [],
+          selectedPlatforms: platforms,
           platformFields: (data.platform_fields as PlatformFieldsData) || {},
           shippingWeight: data.shipping_weight_grams ?? null,
           shippingDimensions: {

@@ -13,64 +13,49 @@ import { generateUniqueSKU } from '@/lib/sku.server'
 function classifyCategoryFromTitle(title: string): string {
   const t = title.toLowerCase()
 
-  // Clothing & accessories
-  if (/\b(dress|shirt|blouse|jacket|coat|jeans|trousers|skirt|cardigan|jumper|sweater|hoodie|blazer|suit|shorts|leggings|dungarees|kimono|poncho|waistcoat)\b/.test(t)) return 'clothing'
-  if (/\b(shoes?|boots?|trainers?|sneakers?|sandals?|heels?|loafers?|slippers?|pumps)\b/.test(t)) return 'clothing'
-  if (/\b(handbag|purse|wallet|clutch|tote bag|backpack|rucksack|satchel|messenger bag)\b/.test(t)) return 'clothing'
-  if (/\b(scarf|hat|gloves?|belt|tie|bow tie|cufflinks?|brooch|necklace|bracelet|earrings?|ring|jewel)/i.test(t)) return 'clothing'
+  // Returns leaf-level categories (top_general) so they match the category picker dropdown
+  if (/\b(dress|shirt|blouse|jacket|coat|jeans|trousers|skirt|cardigan|jumper|sweater|hoodie|blazer|suit|shorts|leggings|dungarees|kimono|poncho|waistcoat)\b/.test(t)) return 'clothing_womenswear_general'
+  if (/\b(shoes?|boots?|trainers?|sneakers?|sandals?|heels?|loafers?|slippers?|pumps)\b/.test(t)) return 'clothing_womenswear_general'
+  if (/\b(handbag|purse|wallet|clutch|tote bag|backpack|rucksack|satchel|messenger bag)\b/.test(t)) return 'clothing_womenswear_general'
+  if (/\b(scarf|hat|gloves?|belt|tie|bow tie|cufflinks?|brooch|necklace|bracelet|earrings?|ring|jewel)/i.test(t)) return 'clothing_womenswear_general'
 
-  // Books & media
-  if (/\b(book|novel|paperback|hardback|hardcover|edition|treasury|encyclopedia|dictionary|atlas|biography|autobiography|isbn)\b/.test(t)) return 'books_media'
-  if (/\b(vinyl|record|lp|cd|dvd|blu-ray|cassette|vhs)\b/.test(t)) return 'books_media'
+  if (/\b(book|novel|paperback|hardback|hardcover|edition|treasury|encyclopedia|dictionary|atlas|biography|autobiography|isbn)\b/.test(t)) return 'books_media_general'
+  if (/\b(vinyl|record|lp|cd|dvd|blu-ray|cassette|vhs)\b/.test(t)) return 'books_media_general'
 
-  // Home & garden
-  if (/\b(plate|bowl|mug|cup|saucer|teapot|vase|jug|pitcher|decanter|tureen|platter|dish|casserole)\b/.test(t)) return 'home_garden'
-  if (/\b(lamp|mirror|cushion|curtain|rug|candle|frame|clock|ornament|figurine)\b/.test(t)) return 'home_garden'
-  if (/\b(garden|planter|plant pot|watering|patio|heater|shed|mower|lawn|fence|gate|compost|basket)\b/.test(t)) return 'home_garden'
-  if (/\b(furniture|chair|table|desk|shelf|cabinet|drawer|wardrobe|bookcase|bench|stool|sofa|couch|bed|mattress)\b/.test(t)) return 'home_garden'
-  if (/\b(kitchen|cutlery|pan|pot|chopping board|baking|kettle|toaster|blender|mixer)\b/.test(t)) return 'home_garden'
-  if (/\b(porcelain|ceramic|pottery|stoneware|earthenware|bone china|chintz|wedgwood|spode|denby|royal doulton|minton)\b/.test(t)) return 'home_garden'
+  if (/\b(plate|bowl|mug|cup|saucer|teapot|vase|jug|pitcher|decanter|tureen|platter|dish|casserole)\b/.test(t)) return 'home_garden_general'
+  if (/\b(lamp|mirror|cushion|curtain|rug|candle|frame|clock|ornament|figurine)\b/.test(t)) return 'home_garden_general'
+  if (/\b(garden|planter|plant pot|watering|patio|heater|shed|mower|lawn|fence|gate|compost|basket)\b/.test(t)) return 'home_garden_general'
+  if (/\b(furniture|chair|table|desk|shelf|cabinet|drawer|wardrobe|bookcase|bench|stool|sofa|couch|bed|mattress)\b/.test(t)) return 'home_garden_general'
+  if (/\b(kitchen|cutlery|pan|pot|chopping board|baking|kettle|toaster|blender|mixer)\b/.test(t)) return 'home_garden_general'
+  if (/\b(porcelain|ceramic|pottery|stoneware|earthenware|bone china|chintz|wedgwood|spode|denby|royal doulton|minton)\b/.test(t)) return 'home_garden_general'
 
-  // Antiques
-  if (/\b(antique|victorian|edwardian|georgian|regency|art deco|art nouveau|vintage.*19[0-4]\d|c\.\s*1[89]\d\d)\b/.test(t)) return 'antiques'
+  if (/\b(antique|victorian|edwardian|georgian|regency|art deco|art nouveau|vintage.*19[0-4]\d|c\.\s*1[89]\d\d)\b/.test(t)) return 'antiques_general'
 
-  // Collectibles
-  if (/\b(medal|coin|stamp|badge|pin|militaria|memorabilia|card|trading card|pokemon|model|diecast|die-?cast)\b/.test(t)) return 'collectibles'
+  if (/\b(medal|coin|stamp|badge|pin|militaria|memorabilia|card|trading card|pokemon|model|diecast|die-?cast)\b/.test(t)) return 'collectibles_general'
 
-  // Electronics
-  if (/\b(phone|iphone|samsung|ipad|tablet|laptop|computer|monitor|speaker|headphones?|earbuds|charger|cable|adapter|camera|playstation|xbox|nintendo|console|controller)\b/.test(t)) return 'electronics'
+  if (/\b(phone|iphone|samsung|ipad|tablet|laptop|computer|monitor|speaker|headphones?|earbuds|charger|cable|adapter|camera|playstation|xbox|nintendo|console|controller)\b/.test(t)) return 'electronics_general'
 
-  // Toys & games
-  if (/\b(toy|lego|playmobil|barbie|doll|puzzle|board game|game|teddy|plush|action figure|nerf)\b/.test(t)) return 'toys_games'
+  if (/\b(toy|lego|playmobil|barbie|doll|puzzle|board game|game|teddy|plush|action figure|nerf)\b/.test(t)) return 'toys_games_general'
 
-  // Art
-  if (/\b(painting|print|lithograph|etching|watercolour|watercolor|oil painting|canvas|artwork|sculpture|statue)\b/.test(t)) return 'art'
+  if (/\b(painting|print|lithograph|etching|watercolour|watercolor|oil painting|canvas|artwork|sculpture|statue)\b/.test(t)) return 'art_general'
 
-  // Sports & outdoors
-  if (/\b(bike|bicycle|golf|tennis|football|cricket|rugby|running|hiking|camping|fishing|yoga|gym|dumbbell|weight|treadmill|kayak|surfboard)\b/.test(t)) return 'sports_outdoors'
+  if (/\b(bike|bicycle|golf|tennis|football|cricket|rugby|running|hiking|camping|fishing|yoga|gym|dumbbell|weight|treadmill|kayak|surfboard)\b/.test(t)) return 'sports_outdoors_general'
 
-  // Baby & toddler
-  if (/\b(baby|toddler|pram|pushchair|buggy|stroller|highchair|cot|nursery|bib|dummy|nappy|potty|car seat)\b/.test(t)) return 'baby_toddler'
+  if (/\b(baby|toddler|pram|pushchair|buggy|stroller|highchair|cot|nursery|bib|dummy|nappy|potty|car seat)\b/.test(t)) return 'baby_toddler_general'
 
-  // Musical instruments
-  if (/\b(guitar|piano|keyboard|drum|violin|ukulele|flute|saxophone|trumpet|harmonica|microphone|amplifier|amp)\b/.test(t)) return 'musical_instruments'
+  if (/\b(guitar|piano|keyboard|drum|violin|ukulele|flute|saxophone|trumpet|harmonica|microphone|amplifier|amp)\b/.test(t)) return 'musical_instruments_general'
 
-  // Health & beauty
-  if (/\b(perfume|fragrance|makeup|cosmetic|skincare|moisturiser|serum|cologne|aftershave|razor|hair dryer|straightener|curler)\b/.test(t)) return 'health_beauty'
+  if (/\b(perfume|fragrance|makeup|cosmetic|skincare|moisturiser|serum|cologne|aftershave|razor|hair dryer|straightener|curler)\b/.test(t)) return 'health_beauty_general'
 
-  // Craft supplies
-  if (/\b(fabric|yarn|wool|thread|sewing|knitting|crochet|embroidery|beads?|craft|ribbon|button|pattern)\b/.test(t)) return 'craft_supplies'
+  if (/\b(fabric|yarn|wool|thread|sewing|knitting|crochet|embroidery|beads?|craft|ribbon|button|pattern)\b/.test(t)) return 'craft_supplies_general'
 
-  // Pet supplies
-  if (/\b(dog|cat|pet|fish tank|aquarium|bird cage|hamster|rabbit|leash|collar|pet bed|scratching post)\b/.test(t)) return 'pet_supplies'
+  if (/\b(dog|cat|pet|fish tank|aquarium|bird cage|hamster|rabbit|leash|collar|pet bed|scratching post)\b/.test(t)) return 'pet_supplies_general'
 
-  // Vehicles & parts
-  if (/\b(car|motorcycle|motorbike|scooter|bicycle|tyre|wheel|bumper|exhaust|engine|alternator|brake|headlight|wing mirror)\b/.test(t)) return 'vehicles_parts'
+  if (/\b(car|motorcycle|motorbike|scooter|bicycle|tyre|wheel|bumper|exhaust|engine|alternator|brake|headlight|wing mirror)\b/.test(t)) return 'vehicles_parts_general'
 
-  // Vintage catch-all (after more specific categories)
-  if (/\bvintage\b/.test(t)) return 'collectibles'
+  if (/\bvintage\b/.test(t)) return 'collectibles_general'
 
-  return 'other'
+  return 'other_general'
 }
 
 interface MarketplaceItemPayload {
