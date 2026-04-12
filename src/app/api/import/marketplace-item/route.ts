@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
@@ -14,6 +15,63 @@ interface MarketplaceItemPayload {
     status?: string
   }
   url?: string | null
+}
+
+/**
+ * Mirror a photo from an external CDN to Supabase Storage.
+ * Returns the public Supabase URL, or null on failure.
+ */
+async function mirrorPhotoToStorage(
+  photoUrl: string,
+  userId: string,
+  marketplace: string,
+  listingId: string
+): Promise<string | null> {
+  try {
+    if (!photoUrl || !photoUrl.startsWith('http')) return null
+
+    const response = await fetch(photoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+      },
+    })
+
+    if (!response.ok) return null
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    let extension = 'jpg'
+    if (contentType.includes('png')) extension = 'png'
+    else if (contentType.includes('webp')) extension = 'webp'
+
+    const filename = `${userId}/${marketplace}-${listingId}-0.${extension}`
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('find-photos')
+      .upload(filename, buffer, {
+        contentType,
+        cacheControl: '31536000',
+        upsert: true,
+      })
+
+    if (uploadError) return null
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('find-photos')
+      .getPublicUrl(filename)
+
+    return urlData.publicUrl
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -49,7 +107,15 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     ? parseFloat(productData.price)
     : (productData.price ?? 0)
 
-  const photos: string[] = productData.coverImage ? [productData.coverImage] : []
+  // Mirror cover image to Supabase Storage (external CDN URLs are ephemeral)
+  const photos: string[] = []
+  if (productData.coverImage) {
+    const mirrored = await mirrorPhotoToStorage(
+      productData.coverImage, user.id, marketplace, String(marketplaceProductId)
+    )
+    photos.push(mirrored || productData.coverImage)
+  }
+
   const listingUrl = productData.marketplaceUrl || body.url || null
 
   // Create the find
