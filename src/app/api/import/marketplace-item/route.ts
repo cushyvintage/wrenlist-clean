@@ -339,6 +339,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       photos,
       sku,
       source_type: 'online_haul',
+      source_name: marketplace.charAt(0).toUpperCase() + marketplace.slice(1),
       status: 'listed',
       platform_fields: platformFields,
       selected_marketplaces: [marketplace],
