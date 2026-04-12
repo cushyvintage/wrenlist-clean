@@ -77,7 +77,10 @@ export function PlatformGrid({ connected, loading, onSelectPlatform }: PlatformG
                   )}
                 </div>
               ) : (
-                <span className="text-xs text-ink-lt">not connected</span>
+                <span className="text-xs text-ink-lt flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  not connected
+                </span>
               )}
             </button>
           )
