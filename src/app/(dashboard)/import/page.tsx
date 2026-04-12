@@ -364,82 +364,68 @@ export default function ImportPage() {
       let cursor: string | undefined
       const allItems: ImportableItem[] = []
 
-      while (allItems.length < IMPORT_LIMIT) {
-        const response = await new Promise<{
-          success?: boolean
-          products?: Array<{
-            marketplaceId: string
-            title: string
-            price: string | number | null
-            coverImage: string | null
-            marketplaceUrl: string | null
-            status?: string
-          }>
-          nextPage?: string | null
-          message?: string
-        }>((resolve) => {
-          const timeout = setTimeout(
-            () => resolve({ message: 'Timed out fetching Etsy listings' }),
-            30000
-          )
-          chrome.runtime.sendMessage(
-            EXTENSION_ID,
-            {
-              action: 'get_marketplace_listings',
-              marketplace: 'etsy',
-              params: {
-                page: cursor,
-                perPage: 40,
-              },
+      // getAllListings returns everything in one call (no pagination needed)
+      const response = await new Promise<{
+        products?: Array<{
+          marketplaceId: string
+          title: string
+          price: string | number | null
+          coverImage: string | null
+          marketplaceUrl: string | null
+          isSold?: boolean
+          isHidden?: boolean
+        }>
+        nextPage?: string | null
+        message?: string
+        error?: string
+      }>((resolve) => {
+        const timeout = setTimeout(
+          () => resolve({ message: 'Timed out fetching Etsy listings' }),
+          60000 // longer timeout — fetches 3 states sequentially
+        )
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          {
+            action: 'get_marketplace_listings',
+            marketplace: 'etsy',
+            params: {
+              status: 'all',
+              perPage: 40,
             },
-            (resp) => {
-              clearTimeout(timeout)
-              if (chrome.runtime.lastError) {
-                resolve({ message: chrome.runtime.lastError.message })
-              } else {
-                resolve(resp || { message: 'No response' })
-              }
+          },
+          (resp) => {
+            clearTimeout(timeout)
+            if (chrome.runtime.lastError) {
+              resolve({ message: chrome.runtime.lastError.message })
+            } else {
+              resolve(resp || { message: 'No response' })
             }
-          )
-        })
-
-        // get_marketplace_listings returns { products, nextPage } without success flag
-        if (!response.products) {
-          if (allItems.length === 0) {
-            setFetchError(response.message || 'Failed to fetch Etsy listings')
-            setIsFetching(false)
-            return
           }
-          break
-        }
+        )
+      })
 
-        const products = response.products || []
-        if (products.length === 0) break
+      if (!response.products) {
+        setFetchError(response.message || response.error || 'Failed to fetch Etsy listings')
+        setIsFetching(false)
+        return
+      }
 
-        for (const p of products) {
-          if (allItems.length >= IMPORT_LIMIT) break
-          const id = String(p.marketplaceId)
-          const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
-          allItems.push({
-            id,
-            platform: 'etsy',
-            title: p.title || 'Untitled',
-            price,
-            photo: p.coverImage,
-            listingId: id,
-            listingUrl: p.marketplaceUrl,
-            alreadyImported: importedSet.has(id),
-            checked: !importedSet.has(id),
-            listingStatus: 'active',
-          })
-        }
-
-        setFetchedCount(allItems.length)
-        setItems([...allItems])
-        setTotalCount(allItems.length)
-
-        cursor = response.nextPage ?? undefined
-        if (!cursor) break
+      for (const p of response.products) {
+        const id = String(p.marketplaceId)
+        const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+        const status = p.isSold ? 'sold' as const : p.isHidden ? 'draft' as const : 'active' as const
+        allItems.push({
+          id,
+          platform: 'etsy',
+          title: p.title || 'Untitled',
+          price,
+          photo: p.coverImage,
+          listingId: id,
+          listingUrl: p.marketplaceUrl,
+          alreadyImported: importedSet.has(id),
+          checked: !importedSet.has(id) && status === 'active',
+          listingStatus: status,
+        })
       }
 
       setItems(allItems)
@@ -1161,6 +1147,37 @@ export default function ImportPage() {
     }
   }
 
+  /** Fetch full listing detail from Depop via extension */
+  function getDepopListingDetail(id: string): Promise<{
+    title?: string
+    description?: string | null
+    price?: number
+    brand?: string | null
+    condition?: string | null
+    color?: string | null
+    category?: string[]
+    size?: string[]
+    images?: string[]
+    cover?: string | null
+    marketplaceUrl?: string
+  } | null> {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 15000)
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        { action: 'get_marketplace_listing', marketplace: 'depop', params: { id } },
+        (resp) => {
+          clearTimeout(timeout)
+          if (chrome.runtime.lastError || !resp) {
+            resolve(null)
+          } else {
+            resolve(resp)
+          }
+        }
+      )
+    })
+  }
+
   async function handleDepopImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
@@ -1172,8 +1189,21 @@ export default function ImportPage() {
     let errors = 0
 
     try {
-      for (const item of selected) {
+      for (let idx = 0; idx < selected.length; idx++) {
+        const item = selected[idx]!
         try {
+          // Enrich: get full listing from extension (all photos, description, brand, etc.)
+          const detail = await getDepopListingDetail(item.id)
+
+          // Collect all photos: cover + additional images
+          const allPhotos: string[] = []
+          if (detail?.cover) allPhotos.push(detail.cover)
+          if (detail?.images?.length) {
+            for (const img of detail.images) {
+              if (img && !allPhotos.includes(img)) allPhotos.push(img)
+            }
+          }
+
           const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
             '/api/import/marketplace-item',
             {
@@ -1183,10 +1213,17 @@ export default function ImportPage() {
                 marketplace: 'depop',
                 marketplaceProductId: item.id,
                 productData: {
-                  title: item.title,
-                  price: item.price,
-                  coverImage: item.photo,
-                  marketplaceUrl: item.listingUrl,
+                  title: detail?.title || item.title,
+                  description: detail?.description || null,
+                  price: detail?.price ?? item.price,
+                  coverImage: detail?.cover || item.photo,
+                  photos: allPhotos.length > 0 ? allPhotos : undefined,
+                  brand: detail?.brand || null,
+                  condition: detail?.condition || null,
+                  category: detail?.category?.[0] || null,
+                  colour: detail?.color || null,
+                  size: detail?.size?.[0]?.split('|')[1] || null,
+                  marketplaceUrl: detail?.marketplaceUrl || item.listingUrl,
                 },
                 url: item.listingUrl,
               }),
@@ -1203,6 +1240,11 @@ export default function ImportPage() {
         }
 
         vintedImport.runImportProgress(imported, skipped, errors, selected.length)
+
+        // Polite delay every 3 items to avoid Depop rate limiting
+        if (idx > 0 && idx % 3 === 0) {
+          await new Promise(r => setTimeout(r, 500))
+        }
       }
 
       vintedImport.setDone(imported, skipped, errors, selected.length)
