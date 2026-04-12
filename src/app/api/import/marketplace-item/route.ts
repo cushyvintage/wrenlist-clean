@@ -156,8 +156,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   if (productData.size) platformFields.size = productData.size
 
   // Create the find
-  const brand = productData.brand && productData.brand.toLowerCase() !== 'no brand'
-    ? productData.brand : null
+  const JUNK_BRANDS = ['no brand', 'unknown', 'unbranded', 'n/a', 'none', 'other']
+  const rawBrand = productData.brand?.trim() || null
+  const brand = rawBrand && !JUNK_BRANDS.includes(rawBrand.toLowerCase()) && rawBrand.length <= 60
+    ? rawBrand : null
 
   const { data: find, error: findError } = await supabase
     .from('finds')
