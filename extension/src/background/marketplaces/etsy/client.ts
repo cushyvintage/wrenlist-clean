@@ -66,6 +66,8 @@ export interface EtsyOrder {
     country: string | null; zip: string | null;
   } | null;
   itemCount: number;
+  /** Listing IDs resolved from transaction_id → listing_id mapping */
+  listingIds: string[];
 }
 
 /** Convert Etsy money (pence/cents) to pounds/dollars */
@@ -347,6 +349,17 @@ export class EtsyClient {
     const rawOrders = (search.orders || []) as RawEtsyOrder[];
     const rawBuyers = (search.buyers || []) as RawEtsyBuyer[];
     const rawPackages = (search.packages || []) as RawEtsyPackage[];
+    const rawTransactions = (search.transactions || []) as Array<{
+      transaction_id: number; listing_id: number; cost?: RawEtsyMoney;
+    }>;
+
+    // Map transaction_id → listing_id
+    const txnToListing = new Map<number, number>();
+    for (const t of rawTransactions) {
+      if (t.transaction_id && t.listing_id) {
+        txnToListing.set(t.transaction_id, t.listing_id);
+      }
+    }
 
     // Index buyers by buyer_id
     const buyerMap = new Map<number, RawEtsyBuyer>();
@@ -404,6 +417,10 @@ export class EtsyClient {
           zip: (o.shipping_address).zip as string || null,
         } : null,
         itemCount: o.transaction_ids?.length || 0,
+        listingIds: (o.transaction_ids || [])
+          .map((tid) => txnToListing.get(tid))
+          .filter((id): id is number => id != null)
+          .map(String),
       };
     });
 

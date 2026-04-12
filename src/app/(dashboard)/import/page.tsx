@@ -1038,6 +1038,59 @@ export default function ImportPage() {
     const totalItems = soldItems.length
     let totalSynced = 0, totalSkipped = 0, totalCreated = 0, totalErrors = 0
 
+    vintedImport.setFetching('Fetching Etsy order details...')
+
+    // Build a set of selected listing IDs for matching
+    const selectedIds = new Set(soldItems.map((i) => i.id))
+
+    // Fetch receipts from Etsy orders page (paginate until we've matched all selected items)
+    type EtsyReceipt = {
+      orderId: number; orderDate: string | null; buyer: {
+        id: string; name: string | null; email: string | null; username: string | null
+      } | null;
+      grossAmount: number | null; shippingCost: number | null; netAmount: number | null;
+      currency: string; paymentMethod: string | null; shippingMethod: string | null;
+      isCanceled: boolean; listingIds: string[]; transactionIds: number[]
+    }
+    const matchedReceipts = new Map<string, EtsyReceipt>() // listingId → receipt
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      let pg = 1
+      const maxPages = 20
+      while (pg <= maxPages) {
+        const receiptResp = await new Promise<{
+          orders?: EtsyReceipt[]; totalPages?: number
+        }>((resolve) => {
+          const t = setTimeout(() => resolve({}), 30000)
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            { action: 'get_etsy_receipts', params: { page: pg } },
+            (resp) => {
+              clearTimeout(t)
+              if (chrome.runtime.lastError) resolve({})
+              else resolve(resp || {})
+            }
+          )
+        })
+
+        const orders = receiptResp.orders || []
+        if (orders.length === 0) break
+
+        for (const order of orders) {
+          for (const lid of order.listingIds || []) {
+            if (selectedIds.has(lid) && !matchedReceipts.has(lid)) {
+              matchedReceipts.set(lid, order)
+            }
+          }
+        }
+
+        // Stop if we've matched all selected items or no more pages
+        if (matchedReceipts.size >= selectedIds.size) break
+        if (orders.length < 20) break // last page
+        pg++
+      }
+    }
+
     vintedImport.runImportProgress(0, 0, 0, totalItems)
 
     try {
@@ -1045,28 +1098,33 @@ export default function ImportPage() {
       for (let i = 0; i < soldItems.length; i += CHUNK_SIZE) {
         const chunk = soldItems.slice(i, i + CHUNK_SIZE)
 
-        const basicSales = chunk.map((item) => ({
-          receiptId: `import_${item.id}`,
-          grossAmount: item.price || 0,
-          netAmount: item.price || 0,
-          currency: 'GBP',
-          items: [{
-            itemId: item.id,
-            title: item.title,
-            price: item.price || 0,
-            thumbnailUrl: item.photo,
-            itemUrl: item.listingUrl,
-          }],
-          isBundle: false,
-          itemCount: 1,
-          orderDate: null,
-        }))
+        const enrichedSales = chunk.map((item) => {
+          const receipt = matchedReceipts.get(item.id)
+          return {
+            receiptId: receipt ? String(receipt.orderId) : `import_${item.id}`,
+            grossAmount: receipt?.grossAmount ?? item.price ?? 0,
+            shippingCost: receipt?.shippingCost ?? null,
+            netAmount: receipt?.netAmount ?? item.price ?? 0,
+            currency: receipt?.currency || 'GBP',
+            buyer: receipt?.buyer || null,
+            orderDate: receipt?.orderDate || null,
+            items: [{
+              itemId: item.id,
+              title: item.title,
+              price: receipt?.grossAmount ?? item.price ?? 0,
+              thumbnailUrl: item.photo,
+              itemUrl: item.listingUrl,
+            }],
+            isBundle: (receipt?.listingIds?.length || 1) > 1,
+            itemCount: receipt?.listingIds?.length || 1,
+          }
+        })
 
         try {
           const res = await fetch('/api/etsy/sync-sales', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sales: basicSales }),
+            body: JSON.stringify({ sales: enrichedSales }),
           })
 
           if (res.ok) {
