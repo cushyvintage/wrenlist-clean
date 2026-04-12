@@ -13,6 +13,8 @@ export interface ImportableItem {
   alreadyImported: boolean
   checked: boolean
   listingStatus: ListingStatus
+  /** ISO timestamp of when the item was first listed on the platform */
+  platformListedAt?: string | null
 }
 
 export type ImportFilter = 'all' | 'not_imported' | 'imported'

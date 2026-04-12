@@ -93,6 +93,7 @@ One row per find per marketplace. The ONLY table for marketplace listing state.
 | fields | JSONB | Default {} |
 | status | TEXT | CHECK: not_listed, listed, sold, error, delisted, needs_delist |
 | error_message | TEXT | |
+| platform_listed_at | TIMESTAMPTZ | When item was first listed on the platform (from platform data) |
 | last_synced_at | TIMESTAMPTZ | |
 | created_at, updated_at | TIMESTAMPTZ | |
 

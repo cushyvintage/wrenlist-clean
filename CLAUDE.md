@@ -197,6 +197,7 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
+- **`product_marketplace_data.platform_listed_at`** (timestamptz) — when the item was first listed on the platform (from platform data, not our `created_at`)
 - **`product_marketplace_data.customer_id`** (uuid FK) links sold items to `customers` table
 - **`finds.platform_fields`** (jsonb) stores platform-specific form fields
 - **`finds.selected_marketplaces`** (text[]) stores which platforms a find targets

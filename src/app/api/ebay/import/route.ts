@@ -108,10 +108,10 @@ export async function POST(request: NextRequest) {
           if (existing) { skipped++; continue }
 
           // Fetch offer for this SKU to get price and listing ID
-          let offerData: any = {}
           let listingId: string | null = null
           let price: number | null = null
           let categoryId: string | null = null
+          let platformListedAt: string | null = null
 
           try {
             const offers = await ebayClient.apiRequest(
@@ -122,6 +122,10 @@ export async function POST(request: NextRequest) {
               price = parseFloat(offer.pricingSummary?.price?.value || '0')
               listingId = offer.listingId || offer.offerId
               categoryId = offer.categoryId
+              // eBay offer includes listing.listingStartDate (ISO 8601)
+              if (offer.listing?.listingStartDate) {
+                platformListedAt = offer.listing.listingStartDate
+              }
             }
           } catch {}
 
@@ -167,6 +171,7 @@ export async function POST(request: NextRequest) {
               platform_category_id: categoryId,
               listing_price: price,
               status: 'listed',
+              platform_listed_at: platformListedAt,
             })
           }
 

@@ -11,6 +11,7 @@ interface MarketplaceData {
   platform_listing_url: string | null
   platform_listing_id: string | null
   error_message: string | null
+  platform_listed_at: string | null
 }
 
 interface FindViewModeProps {

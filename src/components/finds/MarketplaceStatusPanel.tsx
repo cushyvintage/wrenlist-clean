@@ -8,6 +8,7 @@ interface MarketplaceData {
   platform_listing_url: string | null
   platform_listing_id: string | null
   error_message: string | null
+  platform_listed_at: string | null
 }
 
 interface MarketplaceStatusPanelProps {
@@ -75,6 +76,11 @@ export function MarketplaceStatusPanel({
                     : md.status === 'delisted' ? 'Delisted'
                     : md.status}
                 </span>
+                {md.platform_listed_at && (
+                  <span className="text-xs" style={{ color: '#8A9E88' }}>
+                    Listed {new Date(md.platform_listed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {md.platform_listing_url && (

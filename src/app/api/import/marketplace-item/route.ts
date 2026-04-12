@@ -76,6 +76,8 @@ interface MarketplaceItemPayload {
     category?: string | null
   }
   url?: string | null
+  /** ISO timestamp of when the item was first listed on the platform */
+  platformListedAt?: string | null
 }
 
 /**
@@ -357,6 +359,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       platform_listing_url: listingUrl,
       listing_price: price,
       status: pmdStatus,
+      platform_listed_at: body.platformListedAt || null,
     })
 
   if (pmdError) {

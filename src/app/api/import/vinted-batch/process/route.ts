@@ -238,6 +238,12 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Derive platform_listed_at from Vinted's created_at_ts (unix seconds)
+        const vintedCreatedTs = item.created_at_ts || item.vintedMetadata?.created_at_ts
+        const platformListedAt = vintedCreatedTs
+          ? new Date(vintedCreatedTs * 1000).toISOString()
+          : null
+
         await supabase.from('product_marketplace_data').insert({
           find_id: find.id,
           marketplace: 'vinted',
@@ -246,6 +252,7 @@ export async function POST(request: NextRequest) {
           platform_category_id: String(item.catalog_id || item.vintedMetadata?.catalog_id || ''),
           listing_price: askingPrice,
           status: pmdStatus,
+          platform_listed_at: platformListedAt,
         })
 
         logMarketplaceEvent(supabase, user.id, {

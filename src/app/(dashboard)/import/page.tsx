@@ -479,6 +479,7 @@ export default function ImportPage() {
             price: string | number | null
             coverImage: string | null
             marketplaceUrl: string | null
+            created?: string | null
           }>
           nextPage?: string | null
           message?: string
@@ -536,6 +537,7 @@ export default function ImportPage() {
             alreadyImported: importedSet.has(id),
             checked: !importedSet.has(id),
             listingStatus: 'active',
+            platformListedAt: p.created || null,
           })
         }
 
@@ -1003,6 +1005,7 @@ export default function ImportPage() {
                   marketplaceUrl: item.listingUrl,
                 },
                 url: item.listingUrl,
+                platformListedAt: item.platformListedAt || null,
               }),
             }
           )
@@ -1187,6 +1190,7 @@ export default function ImportPage() {
                   category: detail?.category?.[0] || null,
                 },
                 url: item.listingUrl,
+                platformListedAt: item.platformListedAt || null,
               }),
             }
           )
@@ -1240,6 +1244,7 @@ export default function ImportPage() {
                   marketplaceUrl: item.listingUrl,
                 },
                 url: item.listingUrl,
+                platformListedAt: item.platformListedAt || null,
               }),
             }
           )
@@ -1311,6 +1316,7 @@ export default function ImportPage() {
                   marketplaceUrl: item.listingUrl,
                 },
                 url: item.listingUrl,
+                platformListedAt: item.platformListedAt || null,
               }),
             }
           )
@@ -1384,6 +1390,7 @@ export default function ImportPage() {
                   status: 'sold',
                 },
                 url: item.listingUrl,
+                platformListedAt: item.platformListedAt || null,
               }),
             }
           )
