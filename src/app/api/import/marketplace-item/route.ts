@@ -87,7 +87,7 @@ async function mirrorPhotoToStorage(
  * Fetch full listing detail from Depop's public API (server-side, no CORS).
  * Returns enriched product data or null if the API call fails.
  */
-async function fetchDepopDetail(listingId: string): Promise<{
+async function fetchDepopDetail(listingId: string, bearerToken?: string): Promise<{
   description?: string
   brand?: string
   condition?: string
@@ -96,13 +96,17 @@ async function fetchDepopDetail(listingId: string): Promise<{
   photos?: string[]
 } | null> {
   try {
-    const res = await fetch(`https://webapi.depop.com/api/v2/products/${listingId}/?lang=en`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    })
-    if (!res.ok) return null
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    }
+    if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`
+
+    const res = await fetch(`https://webapi.depop.com/api/v2/products/${listingId}/?lang=en`, { headers })
+    if (!res.ok) {
+      console.warn(`[Depop enrichment] API returned ${res.status} for listing ${listingId}`)
+      return null
+    }
 
     const data = await res.json()
 
@@ -193,7 +197,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   // Server-side enrichment for Depop (extension's getListing returns null for some items)
   if (marketplace === 'depop') {
-    const detail = await fetchDepopDetail(String(marketplaceProductId))
+    const depopToken = (body as { depopBearerToken?: string }).depopBearerToken
+    const detail = await fetchDepopDetail(String(marketplaceProductId), depopToken || undefined)
     if (detail) {
       if (detail.description && !productData.description) productData.description = detail.description
       if (detail.brand && !productData.brand) productData.brand = detail.brand
@@ -260,7 +265,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       asking_price_gbp: price,
       photos,
       sku,
-      source_type: 'marketplace_import',
+      source_type: 'online_haul',
       status: 'listed',
       platform_fields: platformFields,
       selected_marketplaces: [marketplace],
