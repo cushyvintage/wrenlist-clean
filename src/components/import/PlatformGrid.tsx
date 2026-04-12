@@ -12,7 +12,7 @@ interface PlatformGridProps {
 }
 
 /** Platforms that have working import handlers */
-const IMPORT_SUPPORTED: Platform[] = ['ebay', 'vinted', 'shopify']
+const IMPORT_SUPPORTED: Platform[] = ['ebay', 'vinted', 'shopify', 'etsy', 'facebook', 'depop']
 
 /** All platforms shown in the grid, in display order */
 const ALL_PLATFORMS: Platform[] = [

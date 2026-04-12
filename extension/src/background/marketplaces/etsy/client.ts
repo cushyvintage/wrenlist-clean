@@ -122,7 +122,7 @@ export class EtsyClient {
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("sort_field", "ending_date");
     url.searchParams.set("sort_order", "descending");
-    url.searchParams.set("state", "inactive");
+    url.searchParams.set("state", "active");
     url.searchParams.set("language_id", "0");
     url.searchParams.set("query", "");
     url.searchParams.set("is_retail", "true");

@@ -449,7 +449,7 @@ type ExternalMessage = Record<string, unknown>;
       // Silent bootstrap: never open a background Vinted tab from the sync
       // alarm. If the direct fetch can't get a CSRF, we defer to the next
       // cycle rather than flashing a tab in the user's browser.
-      await client.bootstrap(false, false);
+      await client.bootstrap();
       const result = await client.getSales(1, 50, stopAtId);
 
       if (!result.sales || result.sales.length === 0) {
@@ -1922,7 +1922,7 @@ async function handleGetVintedSession() {
     const { client } = createVintedServices({ tld });
 
     try {
-      await client.bootstrap(false, false);
+      await client.bootstrap();
       const isLoggedIn = await client.checkLogin();
       // Use the actual username from the client (login field) if available, fall back to cookie value
       const actualUsername = client.getUsername() || username;
@@ -2036,7 +2036,7 @@ async function handleGetVintedSales(message: ExternalMessage) {
     const totalPages = (params.pages as number | undefined) ?? (message.pages as number | undefined) ?? 1;
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let allSales: any[] = [];
@@ -2108,7 +2108,7 @@ async function handleGetVintedOrder(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const order = await client.getOrderDetails(transactionId);
 
@@ -2142,7 +2142,7 @@ async function handleGetVintedConversationItems(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const items = await client.getConversationItems(conversationId);
 
@@ -2173,7 +2173,7 @@ async function handleGetVintedConversationMessages(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const result = await client.getConversationMessages(conversationId);
 
@@ -2209,7 +2209,7 @@ async function handleGetVintedShipmentDetails(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const details = await client.getShipmentDetails(shipmentId);
     
@@ -2239,7 +2239,7 @@ async function handleGetVintedLabelOptions(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const options = await client.getShipmentLabelOptions(shipmentId);
 
@@ -2272,7 +2272,7 @@ async function handleGetVintedDropOffPoints(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const points = await client.getNearbyDropOffPoints(shipmentId, labelType, latitude, longitude);
 
@@ -2310,7 +2310,7 @@ async function handleOrderVintedLabel(message: ExternalMessage) {
     }
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     let result;
     
@@ -2359,7 +2359,7 @@ async function handleGetVintedLabel(message: ExternalMessage) {
     console.log(`[handleGetVintedLabel] Fetching label for shipment ${shipmentId}`);
 
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     // Get full shipment details including label URL, tracking, and carrier
     const details = await client.getShipmentLabelDetails(shipmentId);
@@ -2518,6 +2518,22 @@ function resolveTldFromMessage(message: ExternalMessage, marketplace: string) {
   );
 }
 
+/**
+ * Detect the user's Vinted TLD from the v_uid cookie domain.
+ * Returns e.g. "co.uk", "com", "de". Falls back to "co.uk".
+ */
+async function detectVintedTld(): Promise<string> {
+  try {
+    const allCookies = await chrome.cookies.getAll({});
+    const vUid = allCookies.find(c => c.domain.includes("vinted") && c.name === "v_uid");
+    if (vUid) {
+      const m = vUid.domain.match(/vinted\.([^.]+(?:\.[^.]+)?)$/);
+      if (m?.[1]) return m[1];
+    }
+  } catch { /* cookie access failed */ }
+  return "co.uk";
+}
+
 async function handleImportToWrenlist(
   message: { marketplace?: string; productId?: string; url?: string; productData?: Record<string, unknown>; wrenlistBaseUrl?: string },
   _sender: chrome.runtime.MessageSender,
@@ -2628,9 +2644,9 @@ async function handleBatchImportVinted(message: ExternalMessage) {
     const baseUrl = await getWrenlistBaseUrl(
       (message as { wrenlistBaseUrl?: string }).wrenlistBaseUrl,
     );
-    const tld = resolveTldFromMessage(message, "vinted") ?? "com";
+    const tld = resolveTldFromMessage(message, "vinted") ?? await detectVintedTld();
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     // Check if specific listing IDs are provided
     const listingIds = (message as { listingIds?: string[] | number[] }).listingIds;
@@ -2776,7 +2792,7 @@ async function handleSyncVintedStatus(message: ExternalMessage) {
     const { client } = createVintedServices({ tld });
     
     try {
-      await client.bootstrap();
+      await client.bootstrap(false, true);
     } catch (bootstrapError) {
       console.error("[Vinted Sync] Bootstrap failed:", bootstrapError);
       return withExtensionVersion({
@@ -3134,9 +3150,9 @@ interface BatchListingPayload {
  */
 async function handleGetVintedListings(message: ExternalMessage) {
   try {
-    const tld = resolveTldFromMessage(message, "vinted") ?? "com";
+    const tld = resolveTldFromMessage(message, "vinted") ?? await detectVintedTld();
     const { client } = createVintedServices({ tld });
-    await client.bootstrap();
+    await client.bootstrap(false, true);
 
     const loggedIn = await client.checkLogin();
     if (!loggedIn) {

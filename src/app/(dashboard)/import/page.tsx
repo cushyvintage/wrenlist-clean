@@ -1292,6 +1292,7 @@ export default function ImportPage() {
                 else if (selectedPlatform === 'shopify') loadShopifyListings()
                 else if (selectedPlatform === 'etsy') loadEtsyListings()
                 else if (selectedPlatform === 'facebook') loadFacebookListings()
+                else if (selectedPlatform === 'depop') loadDepopListings()
               }}
               className="px-5 py-2.5 text-sm font-medium bg-cream-md text-ink rounded hover:bg-cream-dk transition"
             >

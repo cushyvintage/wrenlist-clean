@@ -100,13 +100,13 @@ async function publishViaVinted(product: Product, tld: string) {
     title: product.title?.substring(0, 40),
   }));
   const services = createVintedServices({ tld });
-  await services.client.bootstrap();
+  await services.client.bootstrap(false, true);
   let payload = await services.mapProduct(product);
   console.log('[DEBUG publishViaVinted] payload keys:', Object.keys(payload), 'item keys:', payload.item ? Object.keys(payload.item) : 'NO ITEM');
   let result = await services.client.postListing(payload);
 
   if (!result.success && needsVintedTokenRefresh(result)) {
-    await services.client.bootstrap(true);
+    await services.client.bootstrap(true, true);
     payload = await services.mapProduct(product);
     result = await services.client.postListing(payload);
   }
@@ -174,10 +174,10 @@ async function delistViaDepop(id: string, tld: string) {
 
 async function delistViaVinted(id: string, tld: string) {
   const services = createVintedServices({ tld });
-  await services.client.bootstrap();
+  await services.client.bootstrap(false, true);
   let result = await services.client.delistListing(id);
   if (!result.success && needsVintedTokenRefresh(result)) {
-    await services.client.bootstrap(true);
+    await services.client.bootstrap(true, true);
     result = await services.client.delistListing(id);
   }
   return result;

@@ -9,13 +9,9 @@ added or removed should have a matching justification here.
 ## Single-purpose description
 
 Wrenlist lets resellers publish, update, and delist their own listings
-across Vinted, eBay, Etsy, Shopify, and Depop from a single Wrenlist
-inventory. The extension is the user-side automation layer that connects
-their marketplace accounts to their Wrenlist account at wrenlist.com.
-Wrenlist is built and supported in the UK; the extension supports
-marketplace locales that UK sellers commonly use for cross-border sales
-(for example eBay .co.uk / .com / .ie / .ca / .com.au, and Vinted UK /
-FR / DE / ES / IT).
+across multiple supported marketplaces from a single Wrenlist inventory.
+The extension is the user-side automation layer that connects their
+marketplace accounts to their Wrenlist account at wrenlist.com.
 
 ---
 

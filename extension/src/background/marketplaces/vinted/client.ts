@@ -94,6 +94,35 @@ export class VintedRetryLaterError extends Error {
   }
 }
 
+/**
+ * Extract CSRF token from Vinted page HTML. Vinted embeds JSON inside HTML
+ * with escaped quotes, so the token appears as either:
+ *   "CSRF_TOKEN":"uuid"        (unescaped)
+ *   \"CSRF_TOKEN\":\"uuid\"    (escaped in JSON-in-script)
+ * This regex handles both.
+ */
+function extractCsrfToken(html: string): string | null {
+  const m = html.match(/\\?"CSRF_TOKEN\\?":\\?"([a-f0-9\-]+)/);
+  return m?.[1] ?? null;
+}
+
+/**
+ * Check if a URL is a Vinted login/signup redirect. This is the ONLY reliable
+ * way to detect "logged out" — the HTML of a normal logged-in Vinted page
+ * contains the words "login", "signup", and "session-refresh" in JSON
+ * payloads, feature flags, and navigation links.
+ */
+function isVintedLoginUrl(url: string): boolean {
+  if (!url) return false;
+  const path = new URL(url).pathname;
+  return (
+    path.startsWith("/member/general/login") ||
+    path.startsWith("/member/general/signup") ||
+    path.startsWith("/auth/") ||
+    path === "/session-refresh"
+  );
+}
+
 export class VintedClient {
   private baseUrl: string;
   private apiUrl: string;
@@ -134,7 +163,7 @@ export class VintedClient {
   
   // Cooldown for tab-based refreshes (to prevent tab spam)
   private static lastTabRefresh = 0;
-  private static readonly TAB_REFRESH_COOLDOWN_MS = 60 * 1000; // 1 minute minimum between tab opens
+  private static readonly TAB_REFRESH_COOLDOWN_MS = 10 * 1000; // 10s — only user-initiated callers reach this now
 
   constructor(private tld: string) {
     const urls = buildVintedUrls(this.tld);
@@ -147,7 +176,7 @@ export class VintedClient {
     void this.updateHeaderRules();
   }
 
-  public async bootstrap(force = false, allowTabFallback = true): Promise<void> {
+  public async bootstrap(force = false, allowTabFallback = false): Promise<void> {
     // Check if we can use cached global tokens (same TLD, not expired, not forced)
     if (
       !force &&
@@ -548,14 +577,18 @@ export class VintedClient {
         try {
           const result = await chrome.scripting.executeScript({
             target: { tabId: readyTab.id },
-            func: () => document.documentElement.outerHTML,
+            func: () => ({
+              html: document.documentElement.outerHTML,
+              url: window.location.href,
+            }),
           });
-          const html = result?.[0]?.result ?? "";
-          if (html && html.includes("CSRF") && !html.includes("session-refresh")) {
-            return html;
-          }
-          if (html && (html.includes("signup") || html.includes("session-refresh"))) {
+          const { html, url } = result?.[0]?.result ?? { html: "", url: "" };
+          // Check if we landed on a login/signup PAGE (URL-based, not HTML content)
+          if (isVintedLoginUrl(url)) {
             throw new VintedLoggedOutError();
+          }
+          if (html && extractCsrfToken(html)) {
+            return html;
           }
           console.log("[Vinted] Existing tab had no usable CSRF, falling through to new tab");
         } catch (err) {
@@ -586,7 +619,10 @@ export class VintedClient {
         resolve("");
       }, 40000);
 
-      const fetchHtml = () => document.documentElement.outerHTML;
+      const fetchHtmlAndUrl = () => ({
+        html: document.documentElement.outerHTML,
+        url: window.location.href,
+      });
 
       const listener = async (
         tabId: number,
@@ -598,24 +634,25 @@ export class VintedClient {
         let html = "";
         let attempts = 0;
         const maxAttempts = 8; // 8 attempts * 5 seconds = 40 seconds max
-        
+
         do {
           if (completed) return;
           await wait(5000);
           attempts++;
-          
+
           try {
             const result = await chrome.scripting.executeScript({
               target: { tabId },
-              func: fetchHtml,
+              func: fetchHtmlAndUrl,
             });
-            html = result?.[0]?.result ?? "";
-            
-            // Check if we're on a login page — user is logged out of Vinted.
-            // This is NOT self-recoverable; reject with a distinct error so
-            // the caller can surface it to the user (not a "retry later" soft
-            // skip — nothing will change until they sign back in).
-            if (html && (html.includes("signup") || html.includes("login") || html.includes("session-refresh"))) {
+            const data = result?.[0]?.result ?? { html: "", url: "" };
+            html = data.html;
+
+            // Check if we're on a login page by URL — user is logged out.
+            // The HTML will contain words like "login" and "signup" even on a
+            // normal logged-in page (in JSON payloads, nav links, feature
+            // flags), so URL-based detection is the only reliable method.
+            if (isVintedLoginUrl(data.url)) {
               completed = true;
               await chrome.tabs.remove(tab.id!).catch(() => {}); // Handle tab already closed
               chrome.tabs.onUpdated.removeListener(listener);
@@ -634,7 +671,7 @@ export class VintedClient {
               return;
             }
           }
-        } while (!html.includes("CSRF") && attempts < maxAttempts);
+        } while (!extractCsrfToken(html) && attempts < maxAttempts);
         
         completed = true;
         await chrome.tabs.remove(tab.id!).catch(() => {}); // Handle tab already closed
@@ -647,7 +684,7 @@ export class VintedClient {
     });
   }
 
-  private async setTokens(force = false, allowTabFallback = true): Promise<void> {
+  private async setTokens(force = false, allowTabFallback = false): Promise<void> {
     try {
       console.log("[Vinted] Debug: setTokens called, force:", force, "allowTabFallback:", allowTabFallback);
       
@@ -727,8 +764,8 @@ export class VintedClient {
       }
 
       // Check if direct fetch returned a valid CSRF token
-      let match = html ? html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/) : null;
-      if (!match || match.length < 2) {
+      let csrfFromHtml = html ? extractCsrfToken(html) : null;
+      if (!csrfFromHtml) {
         // Fallback: open hidden tab (handles Cloudflare challenges).
         // refreshTokens() can throw three distinct errors — propagate them
         // as-is so the outer caller can branch on error type:
@@ -765,25 +802,25 @@ export class VintedClient {
             "Vinted tab refresh returned no HTML (timeout or Cloudflare challenge)",
           );
         }
-        match = html.match(/"CSRF_TOKEN":"([a-z0-9\-]+)"/);
-        if (!match || match.length < 2) {
+        csrfFromHtml = extractCsrfToken(html);
+        if (!csrfFromHtml) {
           throw new VintedTokenFetchError(
             "CSRF token not found in Vinted HTML response (Cloudflare challenge or page structure changed)",
           );
         }
       }
-      this.csrfToken = match[1];
+      this.csrfToken = csrfFromHtml;
 
-      // Extract anon_id from page HTML
-      match = html.match(/"anon_id":"([a-z0-9\-]+)"/);
-      if (!match || match.length < 2) {
+      // Extract anon_id from page HTML (also escaped in JSON-in-HTML)
+      const anonMatch = html.match(/\\?"anon_id\\?":\\?"([a-f0-9\-]+)/);
+      if (!anonMatch || !anonMatch[1]) {
         throw new Error("Anon id not found in HTML response");
       }
-      this.anonId = match[1];
+      this.anonId = anonMatch[1];
 
       // Extract uploadSessionId from HTML (from page HTML)
       // This is embedded in the page's JSON data and used for temp_uuid + upload_session_id
-      const uploadMatch = html.match(/"uploadSessionId":"([a-z0-9\-]+)"/);
+      const uploadMatch = html.match(/\\?"uploadSessionId\\?":\\?"([a-z0-9\-]+)/);
       if (uploadMatch && uploadMatch[1]) {
         this.uploadSessionId = uploadMatch[1];
         console.log("[Vinted] Debug: Found uploadSessionId from HTML:", this.uploadSessionId);
@@ -880,12 +917,13 @@ export class VintedClient {
         console.log("[Vinted] Debug: Context around anon_id:", context);
       }
 
-      // Extract user_id from page HTML 
+      // Extract user_id from page HTML
       // Only try HTML parsing if we didn't get username from cookie
-      // This regex has two alternatives with OR: 
+      // This regex has two alternatives with OR:
       // 1. Matches "user_id":123 or "userId":123
       // 2. Matches "id":123,"anon_id" (id comes before anon_id in JSON)
       // Only one capture group will be populated depending on which alternative matches
+      let match: RegExpMatchArray | null = null;
       if (!this.username) {
         match = html.match(/"(?:user_id|userId)[\\]*":[\\"]*([0-9]+)[\\"]*|[\\]*"id[\\]*":([0-9]+),[\\]*"anon_id[\\]*"/);
       } else {
