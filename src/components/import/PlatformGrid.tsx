@@ -53,7 +53,7 @@ export function PlatformGrid({ connected, loading, onSelectPlatform }: PlatformG
               {isConnected ? (
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-xs text-sage font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sage inline-block" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                     connected
                   </span>
                   {vintedAccountLabel && (
