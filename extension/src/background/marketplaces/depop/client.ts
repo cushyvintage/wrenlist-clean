@@ -275,13 +275,14 @@ export class DepopClient {
   public async getListings(
     cursor?: string,
     limit = 200,
+    statusFilter = "selling",
   ): Promise<MarketplaceListingResult> {
     await this.ensureSession();
 
     const params = new URLSearchParams({
       limit: limit.toString(),
       cursor: cursor ?? "",
-      statusFilter: "selling",
+      statusFilter,
     });
 
     const response = await fetch(`${DEPOP_SHOP_PRODUCTS}?${params.toString()}`, {
@@ -320,6 +321,7 @@ export class DepopClient {
         productType: product.productType || null,
         created: product.dateCreated,
         marketplaceUrl: this.getProductUrl(product.slug),
+        status: statusFilter === "sold" ? "sold" : statusFilter === "draft" ? "draft" : "active",
       };
     });
 

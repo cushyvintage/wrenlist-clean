@@ -347,7 +347,8 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       sku,
       source_type: 'online_haul',
       source_name: marketplace.charAt(0).toUpperCase() + marketplace.slice(1),
-      status: 'listed',
+      status: productData.status === 'sold' ? 'sold' : 'listed',
+      sold_price_gbp: productData.status === 'sold' ? price : null,
       platform_fields: platformFields,
       selected_marketplaces: [marketplace],
     })
@@ -361,6 +362,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   // Create marketplace data row
+  const pmdStatus = productData.status === 'sold' ? 'sold' : 'listed'
   const { error: pmdError } = await supabase
     .from('product_marketplace_data')
     .insert({
@@ -369,7 +371,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       platform_listing_id: String(marketplaceProductId),
       platform_listing_url: listingUrl,
       listing_price: price,
-      status: 'listed',
+      status: pmdStatus,
     })
 
   if (pmdError) {

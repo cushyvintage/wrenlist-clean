@@ -103,8 +103,22 @@ export async function fetchMarketplaceListings({
   const tld = resolveTld(marketplace, options);
   const normalizedUsername = normalizeUsername(username);
   switch (marketplace) {
-    case "depop":
-      return createDepopServices({ tld }).client.getListings(page, perPage);
+    case "depop": {
+      const depopStatus = options.status ?? 'all';
+      if (depopStatus === 'all') {
+        // Fetch selling + sold sequentially
+        const client = createDepopServices({ tld }).client;
+        const selling = await client.getListings(page, perPage, "selling");
+        const sold = await client.getListings(page, perPage, "sold");
+        return {
+          products: [...selling.products, ...sold.products],
+          nextPage: selling.nextPage || sold.nextPage,
+          username: selling.username,
+        };
+      }
+      const statusMap: Record<string, string> = { active: "selling", sold: "sold" };
+      return createDepopServices({ tld }).client.getListings(page, perPage, statusMap[depopStatus] || "selling");
+    }
     case "vinted": {
       const status = options.status ?? 'all';
       return createVintedServices({ tld }).client.getListings(

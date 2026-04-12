@@ -10,6 +10,8 @@ const PLATFORM_NAMES: Record<string, string> = {
   vinted: 'Vinted',
   etsy: 'Etsy',
   shopify: 'Shopify',
+  depop: 'Depop',
+  facebook: 'Facebook',
 }
 
 export type StatusFilter = 'all' | ListingStatus
@@ -110,7 +112,7 @@ export function ImportHeader({
         <div className="flex items-center gap-1">
           {(platform === 'vinted'
             ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['hidden', 'Hidden']] as const
-            : platform === 'etsy'
+            : platform === 'etsy' || platform === 'depop'
             ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['draft', 'Draft']] as const
             : [['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const
           ).map(([value, label]) => (

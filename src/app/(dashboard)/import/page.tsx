@@ -594,13 +594,14 @@ export default function ImportPage() {
             group?: string | null
             productType?: string | null
             marketplaceUrl: string | null
+            status?: string
           }>
           nextPage?: string | null
           message?: string
         }>((resolve) => {
           const timeout = setTimeout(
             () => resolve({ message: 'Timed out fetching Depop listings' }),
-            30000
+            60000  // longer timeout — fetches selling + sold
           )
           chrome.runtime.sendMessage(
             EXTENSION_ID,
@@ -610,6 +611,7 @@ export default function ImportPage() {
               params: {
                 page: cursor,
                 perPage: 200,
+                status: 'all',
               },
             },
             (resp) => {
@@ -640,6 +642,9 @@ export default function ImportPage() {
           if (allItems.length >= IMPORT_LIMIT) break
           const id = String(p.marketplaceId)
           const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+          const listingStatus = p.status === 'sold' ? 'sold' as const
+            : p.status === 'draft' ? 'draft' as const
+            : 'active' as const
           allItems.push({
             id,
             platform: 'depop',
@@ -649,8 +654,8 @@ export default function ImportPage() {
             listingId: id,
             listingUrl: p.marketplaceUrl,
             alreadyImported: importedSet.has(id),
-            checked: !importedSet.has(id),
-            listingStatus: 'active',
+            checked: !importedSet.has(id) && listingStatus === 'active',
+            listingStatus,
           })
           // Store enrichment data
           meta.set(id, {
@@ -768,7 +773,11 @@ export default function ImportPage() {
     } else if (selectedPlatform === 'facebook') {
       await handleFacebookImport()
     } else if (selectedPlatform === 'depop') {
-      await handleDepopImport()
+      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
+      const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
+      if (hasActiveItems) await handleDepopImport()
+      if (hasSoldItems) await handleDepopSoldImport()
     }
   }
 
@@ -1329,6 +1338,69 @@ export default function ImportPage() {
       await loadDepopListings()
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleDepopSoldImport() {
+    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    if (soldItems.length === 0) return
+
+    vintedImport.setFetching('Importing sold Depop listings...')
+
+    let imported = 0
+    let skipped = 0
+    let errors = 0
+
+    try {
+      for (const item of soldItems) {
+        try {
+          const meta = depopMeta.get(item.id)
+          let category: string | null = null
+          if (meta?.group && meta?.productType) {
+            const gender = meta.gender === 'female' ? 'womenswear'
+              : meta.gender === 'male' ? 'menswear' : 'everything-else'
+            category = `${gender}|${meta.group}|${meta.productType}`
+          }
+
+          const result = await fetchApi<{ success?: boolean; skipped?: boolean }>(
+            '/api/import/marketplace-item',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                marketplace: 'depop',
+                marketplaceProductId: item.id,
+                productData: {
+                  title: item.title,
+                  description: meta?.description || null,
+                  price: item.price,
+                  coverImage: item.photo,
+                  photos: meta?.photos?.length ? meta.photos : undefined,
+                  brand: meta?.brand || null,
+                  condition: meta?.condition || null,
+                  category,
+                  colour: meta?.colour || null,
+                  marketplaceUrl: item.listingUrl,
+                  status: 'sold',
+                },
+                url: item.listingUrl,
+              }),
+            }
+          )
+
+          if (result.skipped) skipped++
+          else imported++
+        } catch {
+          errors++
+        }
+
+        vintedImport.runImportProgress(imported, skipped, errors, soldItems.length)
+      }
+
+      vintedImport.setDone(imported, skipped, errors, soldItems.length)
+      await loadDepopListings()
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Sold import failed')
     }
   }
 
