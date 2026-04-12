@@ -82,6 +82,72 @@ async function mirrorPhotoToStorage(
   }
 }
 
+/**
+ * Fetch full listing detail from Depop's public API (server-side, no CORS).
+ * Returns enriched product data or null if the API call fails.
+ */
+async function fetchDepopDetail(listingId: string): Promise<{
+  description?: string
+  brand?: string
+  condition?: string
+  colour?: string
+  category?: string
+  photos?: string[]
+} | null> {
+  try {
+    const res = await fetch(`https://webapi.depop.com/api/v2/products/${listingId}/?lang=en`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    })
+    if (!res.ok) return null
+
+    const data = await res.json()
+
+    // Map condition
+    const conditionMap: Record<string, string> = {
+      brand_new: 'new_with_tags',
+      like_new: 'new_without_tags',
+      used_like_new: 'new_without_tags',
+      used_excellent: 'very_good',
+      used_good: 'good',
+      used_fair: 'fair',
+    }
+
+    // Build category from gender + group + productType
+    const gender = data.isKids ? 'kidswear'
+      : data.gender === 'female' ? 'womenswear'
+      : data.gender === 'male' ? 'menswear'
+      : 'everything-else'
+    const category = data.group && data.productType
+      ? `${gender}|${data.group}|${data.productType}`
+      : undefined
+
+    // Extract all photo URLs (highest resolution)
+    const photos: string[] = []
+    if (Array.isArray(data.pictures)) {
+      for (const pic of data.pictures) {
+        if (Array.isArray(pic) && pic.length > 0) {
+          const best = pic[pic.length - 1]
+          if (best?.url) photos.push(best.url)
+        }
+      }
+    }
+
+    return {
+      description: data.description || undefined,
+      brand: data.brandName || undefined,
+      condition: conditionMap[data.condition?.id] || undefined,
+      colour: data.colour?.[0]?.name || undefined,
+      category,
+      photos: photos.length > 0 ? photos : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Map Facebook/extension condition strings to Wrenlist FindCondition */
 function mapCondition(raw?: string | null): string {
   if (!raw) return 'good'
@@ -122,6 +188,21 @@ export const POST = withAuth(async (req: NextRequest, user) => {
 
   if (existing) {
     return ApiResponseHelper.success({ skipped: true, reason: 'already_imported' })
+  }
+
+  // Server-side enrichment for Depop (extension's getListing returns null for some items)
+  if (marketplace === 'depop') {
+    const detail = await fetchDepopDetail(String(marketplaceProductId))
+    if (detail) {
+      if (detail.description && !productData.description) productData.description = detail.description
+      if (detail.brand && !productData.brand) productData.brand = detail.brand
+      if (detail.condition && !productData.condition) productData.condition = detail.condition
+      if (detail.colour && !productData.colour) productData.colour = detail.colour
+      if (detail.category && !productData.category) productData.category = detail.category
+      if (detail.photos && (!productData.photos || productData.photos.length === 0)) {
+        productData.photos = detail.photos
+      }
+    }
   }
 
   const price = typeof productData.price === 'string'
