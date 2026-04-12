@@ -13,6 +13,7 @@ import {
 import type { ListingActionResult, SupportedMarketplace } from "./orchestrator/types.js";
 import { normalizeError } from "./orchestrator/utils.js";
 import { createVintedServices } from "./marketplaces/vinted/index.js";
+import { createEtsyServices } from "./marketplaces/etsy/index.js";
 import {
   VintedCooldownError,
   VintedLoggedOutError,
@@ -1666,6 +1667,8 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       return handleGetDepopCategories();
     case "get_depop_token":
       return handleGetDepopToken();
+    case "probe_depop_api":
+      return handleProbeDepopApi(message);
     case "detect_shopify_store":
     case "detectshopifystore":
       return handleDetectShopifyStore();
@@ -1718,6 +1721,13 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       return handleFetchWrenlistApi(message);
     case "vinted_debug_info":
       return handleVintedDebugInfo();
+    case "get_etsy_receipts":
+    case "probe_etsy_receipts": {
+      const rp = (message.params as Record<string, unknown>) ?? {};
+      const rpPage = (rp.page as number | undefined) ?? (message.page as number | undefined) ?? 1;
+      const rpStatus = (rp.status as "completed" | "open" | undefined) ?? "completed";
+      return createEtsyServices().client.getReceipts(rpPage, rpStatus);
+    }
     default:
       throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);
   }
@@ -2964,6 +2974,42 @@ async function handleGetDepopToken() {
   const userId = cookies.find(c => c.name === "user_id")?.value;
   if (!token) return withExtensionVersion({ success: false, message: "No Depop access token" });
   return withExtensionVersion({ success: true, token, userId });
+}
+
+async function handleProbeDepopApi(message: ExternalMessage) {
+  const cookies = await chrome.cookies.getAll({ domain: "depop.com" });
+  const token = cookies.find(c => c.name === "access_token")?.value;
+  const userId = cookies.find(c => c.name === "user_id")?.value;
+  if (!token) return withExtensionVersion({ success: false, message: "No Depop token" });
+
+  const endpoints = [
+    "/api/v1/receipts/?role=seller",
+    "/api/v1/receipts/?role=buyer",
+    "/api/v1/receipts/?role=seller&status=all",
+    "/api/v1/receipts/?role=seller&status=completed",
+    "/api/v1/receipts/?role=seller&limit=5",
+    "/api/v1/receipts/?role=seller&status=all&limit=5",
+  ];
+
+  const results: Record<string, { status: number; preview?: string }> = {};
+  for (const ep of endpoints) {
+    try {
+      const r = await fetch(`https://webapi.depop.com${ep}`, {
+        headers: {
+          authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          accept: "application/json, text/plain, */*",
+          ...(userId ? { "Depop-UserId": userId } : {}),
+        },
+        credentials: "include",
+      });
+      const text = await r.text();
+      results[ep] = { status: r.status, preview: text.substring(0, 200) };
+    } catch (e) {
+      results[ep] = { status: 0, preview: String(e) };
+    }
+  }
+  return withExtensionVersion({ success: true, results });
 }
 
 async function handleGetDepopCategories() {

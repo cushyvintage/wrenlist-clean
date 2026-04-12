@@ -12,6 +12,68 @@ import {
 } from "./constants.js";
 import { log, wait, remoteLog } from "../../shared/api.js";
 
+// ─── Raw SSR types (from Etsy's embedded JSON) ─────────────────────
+interface RawEtsyMoney { value: number; currency_code: string; formatted_value: string | null }
+interface RawEtsyCostBreakdown {
+  items_cost?: RawEtsyMoney; discounted_items_cost?: RawEtsyMoney;
+  shipping_cost?: RawEtsyMoney; total_cost?: RawEtsyMoney;
+  tax_cost?: RawEtsyMoney; discount?: RawEtsyMoney;
+  refund?: RawEtsyMoney; buyer_cost?: RawEtsyMoney;
+}
+interface RawEtsyPayment {
+  payment_method?: string; cost_breakdown?: RawEtsyCostBreakdown;
+}
+interface RawEtsyBuyer {
+  buyer_id: number; name?: string; username?: string; email?: string;
+  profile_url?: string; is_repeat_buyer?: boolean;
+}
+interface RawEtsyPackageItem { transaction_id: string | number }
+interface RawEtsyPackage {
+  shipping_method_name?: string; tracking_code?: string; carrier_name?: string;
+  shipping_cost?: RawEtsyMoney; package_items?: RawEtsyPackageItem[];
+}
+interface RawEtsyOrder {
+  order_id: number; order_date: number; buyer_id: number;
+  transaction_ids?: number[]; payment?: RawEtsyPayment;
+  is_canceled?: boolean; order_url?: string;
+  shipping_address?: Record<string, unknown>;
+}
+
+/** Parsed Etsy order for use in Wrenlist sync */
+export interface EtsyOrder {
+  orderId: number;
+  orderDate: string | null;
+  orderUrl: string | null;
+  isCanceled: boolean;
+  transactionIds: number[];
+  buyer: {
+    id: string; name: string | null; username: string | null;
+    email: string | null; profileUrl: string | null; isRepeatBuyer: boolean;
+  } | null;
+  grossAmount: number | null;
+  shippingCost: number | null;
+  transactionFee: number | null;
+  processingFee: number | null;
+  listingFee: number | null;
+  netAmount: number | null;
+  currency: string;
+  paymentMethod: string | null;
+  shippingMethod: string | null;
+  trackingNumber: string | null;
+  carrier: string | null;
+  shippingAddress: {
+    name: string | null; city: string | null; state: string | null;
+    country: string | null; zip: string | null;
+  } | null;
+  itemCount: number;
+}
+
+/** Convert Etsy money (pence/cents) to pounds/dollars */
+function moneyToPounds(m: RawEtsyMoney | undefined): number | null {
+  if (!m || m.value == null) return null;
+  return m.value / 100;
+}
+
 interface EtsyListingSummary {
   listing_id: number;
   title: string;
@@ -206,6 +268,139 @@ export class EtsyClient {
     }
 
     return { products: allProducts, nextPage: null };
+  }
+
+  // ─── Receipts (SSR HTML scraping) ─────────────────────────────────
+
+  /**
+   * Fetch sold order receipts from Etsy's SSR orders page.
+   * Etsy has no internal JSON API for receipts — the data is embedded
+   * as JSON inside a script tag on the orders page HTML.
+   * Path: data.initial_data.orders.orders_search.{orders,buyers,packages}
+   */
+  public async getReceipts(
+    page = 1,
+    status: "completed" | "open" = "completed",
+  ): Promise<{
+    orders: EtsyOrder[];
+    totalPages: number;
+    page: number;
+  }> {
+    const url = `${this.baseUrl}/your/orders/sold/${status}?completed_date=all&page=${page}`;
+    const resp = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "text/html" },
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Etsy orders page returned ${resp.status}`);
+    }
+
+    const html = await resp.text();
+
+    // Extract total pages from pagination — multiple possible formats
+    const pagesMatch =
+      html.match(/of\s+(\d+)\s*</) ||       // "of 9<"
+      html.match(/of (\d+)/) ||              // "of 9" plain text
+      html.match(/page=(\d+)[^"]*"[^>]*>\s*(?:last|›|»)/i);  // last page link
+    const totalPages = pagesMatch ? parseInt(pagesMatch[1], 10) : 1;
+
+    // Find the largest script tag containing order data
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let orderScript = "";
+    let scriptMatch;
+    while ((scriptMatch = scriptRegex.exec(html)) !== null) {
+      const content = scriptMatch[1];
+      if (content.includes("Etsy_Order_Transaction") && content.length > orderScript.length) {
+        orderScript = content;
+      }
+    }
+
+    if (!orderScript) return { orders: [], totalPages, page };
+
+    // Parse the JSON blob (assigned to a JS variable in a script tag)
+    let parsed: Record<string, unknown> | null = null;
+    const jsonMatch = orderScript.match(/=\s*(\{[\s\S]+\})\s*;?\s*$/);
+    if (jsonMatch?.[1]) {
+      try { parsed = JSON.parse(jsonMatch[1]) as Record<string, unknown>; } catch { /* ignore */ }
+    }
+    if (!parsed) {
+      try { parsed = JSON.parse(orderScript) as Record<string, unknown>; } catch { /* ignore */ }
+    }
+    if (!parsed) return { orders: [], totalPages, page };
+
+    // Navigate to data.initial_data.orders.orders_search
+    const data = parsed.data as Record<string, unknown> | undefined;
+    const initialData = data?.initial_data as Record<string, unknown> | undefined;
+    const ordersData = initialData?.orders as Record<string, unknown> | undefined;
+    const search = ordersData?.orders_search as Record<string, unknown> | undefined;
+
+    if (!search) return { orders: [], totalPages, page };
+
+    const rawOrders = (search.orders || []) as RawEtsyOrder[];
+    const rawBuyers = (search.buyers || []) as RawEtsyBuyer[];
+    const rawPackages = (search.packages || []) as RawEtsyPackage[];
+
+    // Index buyers by buyer_id
+    const buyerMap = new Map<number, RawEtsyBuyer>();
+    for (const b of rawBuyers) {
+      if (b.buyer_id) buyerMap.set(b.buyer_id, b);
+    }
+
+    // Map raw orders to EtsyOrder
+    const orders: EtsyOrder[] = rawOrders.map((o) => {
+      const buyer = buyerMap.get(o.buyer_id);
+
+      // Find packages matching this order's transactions
+      // transaction_id in package_items is a string, but in orders it's a number
+      const txnIdStrs = (o.transaction_ids || []).map(String);
+      const orderPackages = rawPackages.filter((p) =>
+        p.package_items?.some((pi) =>
+          txnIdStrs.includes(String(pi.transaction_id))
+        )
+      );
+      const pkg = orderPackages[0];
+
+      const payment = o.payment as RawEtsyPayment | undefined;
+      const costBreakdown = payment?.cost_breakdown as RawEtsyCostBreakdown | undefined;
+
+      return {
+        orderId: o.order_id,
+        orderDate: o.order_date ? new Date(o.order_date * 1000).toISOString() : null,
+        orderUrl: o.order_url || null,
+        isCanceled: o.is_canceled || false,
+        transactionIds: o.transaction_ids || [],
+        buyer: buyer ? {
+          id: String(buyer.buyer_id),
+          name: buyer.name || null,
+          username: buyer.username || null,
+          email: buyer.email || null,
+          profileUrl: buyer.profile_url || null,
+          isRepeatBuyer: buyer.is_repeat_buyer || false,
+        } : null,
+        grossAmount: moneyToPounds(costBreakdown?.items_cost),
+        shippingCost: moneyToPounds(costBreakdown?.shipping_cost),
+        transactionFee: null, // Etsy fees not in buyer-facing cost_breakdown
+        processingFee: null,
+        listingFee: null,
+        netAmount: moneyToPounds(costBreakdown?.total_cost),
+        currency: costBreakdown?.items_cost?.currency_code || "GBP",
+        paymentMethod: payment?.payment_method || null,
+        shippingMethod: pkg?.shipping_method_name || null,
+        trackingNumber: pkg?.tracking_code || null,
+        carrier: pkg?.carrier_name || null,
+        shippingAddress: o.shipping_address ? {
+          name: (o.shipping_address).name as string || null,
+          city: (o.shipping_address).city as string || null,
+          state: (o.shipping_address).state as string || null,
+          country: (o.shipping_address).country_name as string || null,
+          zip: (o.shipping_address).zip as string || null,
+        } : null,
+        itemCount: o.transaction_ids?.length || 0,
+      };
+    });
+
+    return { orders, totalPages, page };
   }
 
   public async getListing(id: string): Promise<Product | null> {
