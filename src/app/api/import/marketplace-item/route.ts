@@ -285,19 +285,26 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     ? parseFloat(productData.price)
     : (productData.price ?? 0)
 
-  // Collect all photo URLs (cover + additional photos array)
+  // Collect all photo URLs (cover + additional photos array), cap at 10
+  const MAX_PHOTOS = 10
   const rawPhotoUrls: string[] = []
   if (productData.coverImage) rawPhotoUrls.push(productData.coverImage)
   if (productData.photos?.length) {
     for (const p of productData.photos) {
       if (p && !rawPhotoUrls.includes(p)) rawPhotoUrls.push(p)
+      if (rawPhotoUrls.length >= MAX_PHOTOS) break
     }
   }
 
-  // Mirror all photos to Supabase Storage (external CDN URLs are ephemeral)
+  // Mirror all photos to Supabase Storage in parallel (external CDN URLs are ephemeral)
   const listingIdStr = String(marketplaceProductId)
   const mirrorResults = await Promise.all(
-    rawPhotoUrls.map((url, i) => mirrorPhotoToStorage(url, i, user.id, marketplace, listingIdStr))
+    rawPhotoUrls.map((url, i) =>
+      Promise.race([
+        mirrorPhotoToStorage(url, i, user.id, marketplace, listingIdStr),
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 15000)), // 15s timeout per photo
+      ])
+    )
   )
   const photos = mirrorResults.map((mirrored, i) => mirrored || rawPhotoUrls[i])
 

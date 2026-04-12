@@ -46,30 +46,23 @@ export function ImportHeader({
   statusFilter,
   onStatusFilterChange,
 }: ImportHeaderProps) {
-  // Use a ref to track confirm state to avoid React re-render race conditions
-  const confirmingRef = useRef(false)
-  const [, forceUpdate] = useState(0)
+  const [confirming, setConfirming] = useState(false)
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleImportClick() {
-    if (confirmingRef.current) {
+    if (confirming) {
       // Second click — execute import
-      confirmingRef.current = false
+      setConfirming(false)
       if (confirmTimer.current) clearTimeout(confirmTimer.current)
-      forceUpdate(n => n + 1)
       onImport()
     } else {
       // First click — enter confirm state
-      confirmingRef.current = true
-      forceUpdate(n => n + 1)
+      setConfirming(true)
       confirmTimer.current = setTimeout(() => {
-        confirmingRef.current = false
-        forceUpdate(n => n + 1)
+        setConfirming(false)
       }, 6000)
     }
   }
-
-  const confirming = confirmingRef.current
 
   return (
     <div className="space-y-4">

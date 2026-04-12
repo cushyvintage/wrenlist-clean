@@ -560,16 +560,38 @@ export class FacebookClient {
     }
 
     // Path 3: search all roots for photo data (Facebook sometimes splits across payloads)
+    // Only use this as a fallback — filter aggressively to avoid thumbnails/avatars/UI images
     if (photoUris.length === 0) {
+      const candidateUris: string[] = [];
       for (const root of roots) {
         try {
-          const text = root;
-          // Look for image URIs in the response
-          const uriMatches = text.matchAll(/"uri"\s*:\s*"(https:\/\/scontent[^"]+)"/g);
+          const uriMatches = root.matchAll(/"uri"\s*:\s*"(https:\/\/scontent[^"]+)"/g);
           for (const m of uriMatches) {
-            if (m[1] && !photoUris.includes(m[1])) photoUris.push(m[1]);
+            if (m[1] && !candidateUris.includes(m[1])) candidateUris.push(m[1]);
           }
         } catch { /* skip */ }
+      }
+
+      // Deduplicate: Facebook serves the same image at multiple sizes.
+      // Extract the base hash from the URL path (e.g. /v/t39.30808-6/abc123_n.jpg)
+      // and keep only the largest version of each unique image.
+      const seenHashes = new Set<string>();
+      for (const uri of candidateUris) {
+        // Extract filename hash — the unique part before _n.jpg / _o.jpg / _s.jpg
+        const pathMatch = uri.match(/\/([a-zA-Z0-9_]+)_[nospq]\.(jpg|png|webp)/);
+        const hash = pathMatch?.[1] ?? uri;
+        if (seenHashes.has(hash)) continue;
+        seenHashes.add(hash);
+
+        // Skip small images (avatars, icons) — look for dimension hints in URL
+        // Facebook CDN URLs with /cp0/ or /c0/ are often profile pics or thumbnails
+        if (/\/p\d+x\d+\//.test(uri)) {
+          const dimMatch = uri.match(/\/p(\d+)x(\d+)\//);
+          if (dimMatch && parseInt(dimMatch[1]) < 200) continue;
+        }
+
+        photoUris.push(uri);
+        if (photoUris.length >= 10) break;
       }
     }
 
@@ -592,15 +614,21 @@ export class FacebookClient {
           } catch { /* skip */ }
         }
 
-        // Try image URIs from HTML
+        // Try image URIs from HTML (with same dedup logic)
         if (photoUris.length === 0) {
           const htmlUriMatches = html.matchAll(/"uri"\s*:\s*"(https:\/\/scontent[^"]+)"/g);
-          const seen = new Set<string>();
+          const seenHtml = new Set<string>();
           for (const m of htmlUriMatches) {
-            if (m[1] && !seen.has(m[1])) {
-              seen.add(m[1]);
-              photoUris.push(m[1]);
+            if (!m[1]) continue;
+            const pathMatch = m[1].match(/\/([a-zA-Z0-9_]+)_[nospq]\.(jpg|png|webp)/);
+            const hash = pathMatch?.[1] ?? m[1];
+            if (seenHtml.has(hash)) continue;
+            seenHtml.add(hash);
+            if (/\/p\d+x\d+\//.test(m[1])) {
+              const dimMatch = m[1].match(/\/p(\d+)x(\d+)\//);
+              if (dimMatch && parseInt(dimMatch[1]) < 200) continue;
             }
+            photoUris.push(m[1]);
             if (photoUris.length >= 10) break;
           }
         }
