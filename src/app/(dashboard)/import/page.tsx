@@ -473,7 +473,7 @@ export default function ImportPage() {
 
       while (allItems.length < IMPORT_LIMIT) {
         const response = await new Promise<{
-          success: boolean
+          success?: boolean
           products?: Array<{
             marketplaceId: string
             title: string
@@ -509,7 +509,8 @@ export default function ImportPage() {
           )
         })
 
-        if (!response.success) {
+        // get_marketplace_listings returns { products, nextPage } without success flag
+        if (!response.products) {
           if (allItems.length === 0) {
             setFetchError(response.message || 'Failed to fetch Facebook listings. Make sure you are logged in to facebook.com.')
             setIsFetching(false)
