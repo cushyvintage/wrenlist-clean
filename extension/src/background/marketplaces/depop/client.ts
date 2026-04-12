@@ -293,17 +293,35 @@ export class DepopClient {
       credentials: "include",
     }).then((res) => res.json());
 
-    const products = response.products.map((product: any) => ({
-      marketplaceId: product.id.toString(),
-      title: this.readableTitle(product.slug),
-      price: parseFloat(product.price.priceAmount),
-      coverImage:
-        product.pictures.length > 0
-          ? product.pictures[0].slice(-1)[0].url
-          : "",
-      created: product.dateCreated,
-      marketplaceUrl: this.getProductUrl(product.slug),
-    }));
+    const products = response.products.map((product: any) => {
+      // Extract all photo URLs (highest resolution variant per picture)
+      const allPhotos: string[] = [];
+      if (Array.isArray(product.pictures)) {
+        for (const pic of product.pictures) {
+          if (Array.isArray(pic) && pic.length > 0) {
+            const best = pic[pic.length - 1];
+            if (best?.url) allPhotos.push(best.url);
+          }
+        }
+      }
+
+      return {
+        marketplaceId: product.id.toString(),
+        title: this.readableTitle(product.slug),
+        price: parseFloat(product.price.priceAmount),
+        coverImage: allPhotos[0] || "",
+        photos: allPhotos,
+        description: product.description || null,
+        brand: product.brandName || null,
+        condition: product.condition?.id || null,
+        colour: product.colour?.[0]?.name || null,
+        gender: product.gender || null,
+        group: product.group || null,
+        productType: product.productType || null,
+        created: product.dateCreated,
+        marketplaceUrl: this.getProductUrl(product.slug),
+      };
+    });
 
     return {
       products,

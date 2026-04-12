@@ -38,6 +38,18 @@ export default function ImportPage() {
   const [fetchedCount, setFetchedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
+  // Extra metadata from Depop listings (keyed by listing ID)
+  const [depopMeta, setDepopMeta] = useState<Map<string, {
+    description?: string | null
+    brand?: string | null
+    condition?: string | null
+    colour?: string | null
+    photos?: string[]
+    gender?: string | null
+    group?: string | null
+    productType?: string | null
+  }>>(new Map())
+
   // Filters
   const [showOnlyNew, setShowOnlyNew] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -564,15 +576,23 @@ export default function ImportPage() {
       // Progressive cursor-based fetch
       let cursor: string | undefined
       const allItems: ImportableItem[] = []
+      const meta = new Map<string, { description?: string | null; brand?: string | null; condition?: string | null; colour?: string | null; photos?: string[]; gender?: string | null; group?: string | null; productType?: string | null }>()
 
       while (allItems.length < IMPORT_LIMIT) {
         const response = await new Promise<{
-          success?: boolean
           products?: Array<{
             marketplaceId: string
             title: string
             price: string | number | null
             coverImage: string | null
+            photos?: string[]
+            description?: string | null
+            brand?: string | null
+            condition?: string | null
+            colour?: string | null
+            gender?: string | null
+            group?: string | null
+            productType?: string | null
             marketplaceUrl: string | null
           }>
           nextPage?: string | null
@@ -632,6 +652,17 @@ export default function ImportPage() {
             checked: !importedSet.has(id),
             listingStatus: 'active',
           })
+          // Store enrichment data
+          meta.set(id, {
+            description: p.description,
+            brand: p.brand,
+            condition: p.condition,
+            colour: p.colour,
+            photos: p.photos,
+            gender: p.gender,
+            group: p.group,
+            productType: p.productType,
+          })
         }
 
         setFetchedCount(allItems.length)
@@ -644,6 +675,7 @@ export default function ImportPage() {
 
       setItems(allItems)
       setTotalCount(allItems.length)
+      setDepopMeta(meta)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to fetch Depop listings')
     } finally {
@@ -1224,65 +1256,11 @@ export default function ImportPage() {
     }
   }
 
-  /** Fetch full listing detail from Depop via extension */
-  function getDepopListingDetail(id: string): Promise<{
-    title?: string
-    description?: string | null
-    price?: number
-    brand?: string | null
-    condition?: string | null
-    color?: string | null
-    category?: string[]
-    size?: string[]
-    images?: string[]
-    cover?: string | null
-    marketplaceUrl?: string
-  } | null> {
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 15000)
-      chrome.runtime.sendMessage(
-        EXTENSION_ID,
-        { action: 'get_marketplace_listing', marketplace: 'depop', params: { id } },
-        (resp) => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError || !resp) {
-            resolve(null)
-          } else {
-            resolve(resp)
-          }
-        }
-      )
-    })
-  }
-
-  /** Get Depop bearer token + userId from extension cookies */
-  function getDepopCredentials(): Promise<{ token: string; userId?: string } | null> {
-    return new Promise((resolve) => {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        resolve(null)
-        return
-      }
-      const timeout = setTimeout(() => resolve(null), 5000)
-      chrome.runtime.sendMessage(
-        EXTENSION_ID,
-        { action: 'get_depop_token' },
-        (resp) => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError || !resp?.token) resolve(null)
-          else resolve({ token: resp.token as string, userId: resp.userId as string | undefined })
-        }
-      )
-    })
-  }
-
   async function handleDepopImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Depop listings...')
-
-    // Get bearer token once for server-side enrichment
-    const depopCreds = await getDepopCredentials()
 
     let imported = 0
     let skipped = 0
@@ -1292,16 +1270,15 @@ export default function ImportPage() {
       for (let idx = 0; idx < selected.length; idx++) {
         const item = selected[idx]!
         try {
-          // Enrich: get full listing from extension (all photos, description, brand, etc.)
-          const detail = await getDepopListingDetail(item.id)
+          // Use enrichment data captured during loadDepopListings
+          const meta = depopMeta.get(item.id)
 
-          // Collect all photos: cover + additional images
-          const allPhotos: string[] = []
-          if (detail?.cover) allPhotos.push(detail.cover)
-          if (detail?.images?.length) {
-            for (const img of detail.images) {
-              if (img && !allPhotos.includes(img)) allPhotos.push(img)
-            }
+          // Build category from Depop's gender/group/productType
+          let category: string | null = null
+          if (meta?.group && meta?.productType) {
+            const gender = meta.gender === 'female' ? 'womenswear'
+              : meta.gender === 'male' ? 'menswear' : 'everything-else'
+            category = `${gender}|${meta.group}|${meta.productType}`
           }
 
           const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
@@ -1313,21 +1290,18 @@ export default function ImportPage() {
                 marketplace: 'depop',
                 marketplaceProductId: item.id,
                 productData: {
-                  title: detail?.title || item.title,
-                  description: detail?.description || null,
-                  price: detail?.price ?? item.price,
-                  coverImage: detail?.cover || item.photo,
-                  photos: allPhotos.length > 0 ? allPhotos : undefined,
-                  brand: detail?.brand || null,
-                  condition: detail?.condition || null,
-                  category: detail?.category?.[0] || null,
-                  colour: detail?.color || null,
-                  size: detail?.size?.[0]?.split('|')[1] || null,
-                  marketplaceUrl: detail?.marketplaceUrl || item.listingUrl,
+                  title: item.title,
+                  description: meta?.description || null,
+                  price: item.price,
+                  coverImage: item.photo,
+                  photos: meta?.photos?.length ? meta.photos : undefined,
+                  brand: meta?.brand || null,
+                  condition: meta?.condition || null,
+                  category,
+                  colour: meta?.colour || null,
+                  marketplaceUrl: item.listingUrl,
                 },
                 url: item.listingUrl,
-                depopBearerToken: depopCreds?.token || undefined,
-                depopUserId: depopCreds?.userId || undefined,
               }),
             }
           )
