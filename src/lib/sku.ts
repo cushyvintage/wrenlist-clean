@@ -39,10 +39,15 @@ const CATEGORY_PREFIXES: Record<string, string> = {
  */
 export function generateSKU(category: string): string {
   const cat = category.toLowerCase()
-  // Try exact match first, then extract top-level from compound value (e.g. "clothing_womenswear_dresses" → "clothing")
-  const prefix = CATEGORY_PREFIXES[cat]
-    ?? CATEGORY_PREFIXES[cat.split('_')[0] ?? '']
-    ?? CATEGORY_PREFIXES.other
+  // Try exact match, then progressively shorter prefixes (e.g. "home_garden_general" → "home_garden" → "home")
+  let prefix = CATEGORY_PREFIXES[cat]
+  if (!prefix) {
+    const parts = cat.split('_')
+    for (let i = parts.length - 1; i >= 1 && !prefix; i--) {
+      prefix = CATEGORY_PREFIXES[parts.slice(0, i).join('_')]
+    }
+  }
+  if (!prefix) prefix = CATEGORY_PREFIXES.other
   const timestamp = Date.now().toString(36).toUpperCase().slice(-6)
   return `WL-${prefix}-${timestamp}`
 }
