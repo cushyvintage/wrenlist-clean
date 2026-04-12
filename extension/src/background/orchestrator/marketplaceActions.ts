@@ -132,6 +132,9 @@ export async function fetchMarketplaceListings({
       );
     }
     case "etsy":
+      if (options.status === "all") {
+        return createEtsyServices().client.getAllListings(perPage);
+      }
       return createEtsyServices().client.getListings(page, perPage);
     default:
       throw new Error(`${marketplace} is not supported`);

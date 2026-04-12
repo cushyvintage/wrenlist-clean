@@ -108,12 +108,15 @@ export class EtsyClient {
 
   // ─── Import (read-only) ────────────────────────────────────────────
 
-  public async getListings(
-    page?: string,
-    limit = 40,
-  ): Promise<MarketplaceListingResult> {
+  /**
+   * Fetch listings for a single state. Used internally by getListings() and getAllListings().
+   */
+  private async fetchListingsByState(
+    state: string,
+    offset: number,
+    limit: number,
+  ): Promise<{ listings: EtsyListingSummary[]; hasMore: boolean }> {
     const shopId = await this.getShopId();
-    const offset = page ? parseInt(page, 10) * limit : 0;
 
     const url = new URL(
       `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/v3/search`,
@@ -122,7 +125,7 @@ export class EtsyClient {
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("sort_field", "ending_date");
     url.searchParams.set("sort_order", "descending");
-    url.searchParams.set("state", "active");
+    url.searchParams.set("state", state);
     url.searchParams.set("language_id", "0");
     url.searchParams.set("query", "");
     url.searchParams.set("is_retail", "true");
@@ -139,6 +142,16 @@ export class EtsyClient {
     const data = (await resp.json()) as EtsyListingSummary[];
     const listings = Array.isArray(data) ? data : [];
 
+    return { listings, hasMore: listings.length === limit };
+  }
+
+  public async getListings(
+    page?: string,
+    limit = 40,
+  ): Promise<MarketplaceListingResult> {
+    const offset = page ? parseInt(page, 10) * limit : 0;
+    const { listings, hasMore } = await this.fetchListingsByState("active", offset, limit);
+
     const products: MarketplaceListingResult["products"] = listings.map(
       (l) => ({
         marketplaceId: String(l.listing_id),
@@ -150,11 +163,49 @@ export class EtsyClient {
       }),
     );
 
-    const nextOffset = offset + limit;
-    const nextPage =
-      listings.length === limit ? String(nextOffset / limit) : null;
-
+    const nextPage = hasMore ? String((offset + limit) / limit) : null;
     return { products, nextPage };
+  }
+
+  /**
+   * Fetch all listings across active, sold_out, and draft states.
+   * Etsy's API only accepts one state per request, so we make sequential calls.
+   */
+  public async getAllListings(
+    limit = 40,
+  ): Promise<MarketplaceListingResult> {
+    const allProducts: MarketplaceListingResult["products"] = [];
+    const states = ["active", "sold_out", "draft"] as const;
+
+    for (const state of states) {
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        // MV3 keepalive — prevent 30s service worker timeout
+        chrome.storage.local.set({ _keepAlive: Date.now() });
+
+        const result = await this.fetchListingsByState(state, offset, limit);
+
+        for (const l of result.listings) {
+          allProducts.push({
+            marketplaceId: String(l.listing_id),
+            title: l.title ?? null,
+            price: l.price ? parseFloat(l.price) : null,
+            coverImage: l.listing_images?.[0]?.url ?? null,
+            created: null,
+            marketplaceUrl: l.url ?? this.getProductUrl(l.listing_id),
+            isSold: state === "sold_out",
+            isHidden: state === "draft",
+          });
+        }
+
+        hasMore = result.hasMore;
+        offset += limit;
+      }
+    }
+
+    return { products: allProducts, nextPage: null };
   }
 
   public async getListing(id: string): Promise<Product | null> {

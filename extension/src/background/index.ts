@@ -1983,6 +1983,9 @@ async function handleGetListings(message: ExternalMessage) {
       username:
         (params.username as string | number | null | undefined) ??
         (message.username as string | number | null | undefined),
+      status:
+        (params.status as 'all' | 'active' | 'sold' | undefined) ??
+        (message.status as 'all' | 'active' | 'sold' | undefined),
       settings: (params.userSettings as Record<string, unknown>) ?? resolveSettings(message),
       tld: (params.tld as string | undefined) ?? resolveTldFromMessage(message, marketplace),
     });
@@ -3153,7 +3156,6 @@ async function handleGetVintedListings(message: ExternalMessage) {
     const tld = resolveTldFromMessage(message, "vinted") ?? await detectVintedTld();
     const { client } = createVintedServices({ tld });
     await client.bootstrap(false, true);
-
     const loggedIn = await client.checkLogin();
     if (!loggedIn) {
       return withExtensionVersion({

@@ -727,7 +727,12 @@ export default function ImportPage() {
     } else if (selectedPlatform === 'shopify') {
       await handleShopifyImport()
     } else if (selectedPlatform === 'etsy') {
-      await handleEtsyImport()
+      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
+      const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
+
+      if (hasActiveItems) await handleEtsyImport()
+      if (hasSoldItems) await handleEtsySoldImport()
     } else if (selectedPlatform === 'facebook') {
       await handleFacebookImport()
     } else if (selectedPlatform === 'depop') {
@@ -930,7 +935,7 @@ export default function ImportPage() {
   }
 
   async function handleEtsyImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    const selected = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus !== 'sold')
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Etsy listings...')
@@ -979,6 +984,78 @@ export default function ImportPage() {
       await loadEtsyListings()
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleEtsySoldImport() {
+    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    if (soldItems.length === 0) return
+
+    const totalItems = soldItems.length
+    let totalSynced = 0, totalSkipped = 0, totalCreated = 0, totalErrors = 0
+
+    vintedImport.runImportProgress(0, 0, 0, totalItems)
+
+    try {
+      const CHUNK_SIZE = 50
+      for (let i = 0; i < soldItems.length; i += CHUNK_SIZE) {
+        const chunk = soldItems.slice(i, i + CHUNK_SIZE)
+
+        const basicSales = chunk.map((item) => ({
+          receiptId: `import_${item.id}`,
+          grossAmount: item.price || 0,
+          netAmount: item.price || 0,
+          currency: 'GBP',
+          items: [{
+            itemId: item.id,
+            title: item.title,
+            price: item.price || 0,
+            thumbnailUrl: item.photo,
+            itemUrl: item.listingUrl,
+          }],
+          isBundle: false,
+          itemCount: 1,
+          orderDate: null,
+        }))
+
+        try {
+          const res = await fetch('/api/etsy/sync-sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sales: basicSales }),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+            const result = data.data || data
+            totalSynced += result.synced || 0
+            totalSkipped += result.skipped || 0
+            totalCreated += result.created || 0
+            totalErrors += result.errors || 0
+          } else {
+            totalErrors += chunk.length
+          }
+        } catch {
+          totalErrors += chunk.length
+        }
+
+        vintedImport.runImportProgress(totalSynced + totalCreated, totalSkipped, totalErrors, totalItems)
+
+        // Refresh imported status
+        try {
+          const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/marketplace-imported?marketplace=etsy')
+          const importedSet = new Set(importedData.importedIds)
+          setItems((prev) => prev.map((item) => ({
+            ...item,
+            alreadyImported: importedSet.has(item.id),
+            checked: importedSet.has(item.id) ? false : item.checked,
+          })))
+        } catch { /* non-fatal */ }
+      }
+
+      vintedImport.setDone(totalSynced + totalCreated, totalSkipped, totalErrors, totalItems)
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Sold import failed')
     }
   }
 

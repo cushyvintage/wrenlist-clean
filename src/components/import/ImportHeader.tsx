@@ -128,6 +128,8 @@ export function ImportHeader({
         <div className="flex items-center gap-1">
           {(platform === 'vinted'
             ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['hidden', 'Hidden']] as const
+            : platform === 'etsy'
+            ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['draft', 'Draft']] as const
             : [['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const
           ).map(([value, label]) => (
             <button
