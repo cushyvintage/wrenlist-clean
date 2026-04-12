@@ -522,22 +522,92 @@ export class FacebookClient {
       return null;
     }
 
-    const listing = JSON.parse(roots[0])?.data?.listing;
+    // The composer query may return multiple JSON roots — search all for listing data
+    let listing: any = null;
+    for (const root of roots) {
+      try {
+        const parsed = JSON.parse(root);
+        if (parsed?.data?.listing) {
+          listing = parsed.data.listing;
+          break;
+        }
+        // Some responses nest under data.viewer.marketplace_listing_composer
+        if (parsed?.data?.viewer?.marketplace_listing_composer?.listing) {
+          listing = parsed.data.viewer.marketplace_listing_composer.listing;
+          break;
+        }
+      } catch { /* skip malformed roots */ }
+    }
     if (!listing) {
       return null;
     }
 
-    const html = await fetch(
-      `${FACEBOOK_BASE_URL}/marketplace/item/${id}`,
-      {
-        credentials: "include",
-      },
-    ).then((res) => res.text());
-    const photosMatch = html.match(/"listing_photos":(\[.+?\])/);
-    const photos =
-      photosMatch && photosMatch.length === 2
-        ? (JSON.parse(photosMatch[1]) as Array<{ image_uri: string }>)
-        : [];
+    // Extract photos from GraphQL response first (multiple possible paths)
+    const photoUris: string[] = [];
+
+    // Path 1: listing.listing_photos (array of { image: { uri } })
+    const listingPhotos = listing.listing_photos ?? listing.photos ?? [];
+    if (Array.isArray(listingPhotos)) {
+      for (const p of listingPhotos) {
+        const uri = p?.image?.uri ?? p?.image_uri ?? p?.uri;
+        if (uri) photoUris.push(uri);
+      }
+    }
+
+    // Path 2: listing.primary_listing_photo
+    if (photoUris.length === 0 && listing.primary_listing_photo?.image?.uri) {
+      photoUris.push(listing.primary_listing_photo.image.uri);
+    }
+
+    // Path 3: search all roots for photo data (Facebook sometimes splits across payloads)
+    if (photoUris.length === 0) {
+      for (const root of roots) {
+        try {
+          const text = root;
+          // Look for image URIs in the response
+          const uriMatches = text.matchAll(/"uri"\s*:\s*"(https:\/\/scontent[^"]+)"/g);
+          for (const m of uriMatches) {
+            if (m[1] && !photoUris.includes(m[1])) photoUris.push(m[1]);
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    // Path 4: HTML scrape fallback
+    if (photoUris.length === 0) {
+      try {
+        const html = await fetch(
+          `${FACEBOOK_BASE_URL}/marketplace/item/${id}`,
+          { credentials: "include" },
+        ).then((res) => res.text());
+
+        // Try listing_photos JSON
+        const photosMatch = html.match(/"listing_photos":(\[.+?\])/);
+        if (photosMatch?.[1]) {
+          try {
+            const parsed = JSON.parse(photosMatch[1]) as Array<{ image_uri?: string }>;
+            for (const p of parsed) {
+              if (p.image_uri) photoUris.push(p.image_uri);
+            }
+          } catch { /* skip */ }
+        }
+
+        // Try image URIs from HTML
+        if (photoUris.length === 0) {
+          const htmlUriMatches = html.matchAll(/"uri"\s*:\s*"(https:\/\/scontent[^"]+)"/g);
+          const seen = new Set<string>();
+          for (const m of htmlUriMatches) {
+            if (m[1] && !seen.has(m[1])) {
+              seen.add(m[1]);
+              photoUris.push(m[1]);
+            }
+            if (photoUris.length >= 10) break;
+          }
+        }
+      } catch {
+        console.warn("[Facebook] HTML photo scrape failed for listing", id);
+      }
+    }
 
     const attributes = listing.attribute_data ?? [];
     const findAttribute = (label: string | string[]) => {
@@ -572,6 +642,18 @@ export class FacebookClient {
     const color = colorAttr?.value?.trim();
     const size = sizeAttr?.value?.trim();
 
+    // Title: try multiple field names (Facebook changes these)
+    const title = listing.name
+      || listing.base_marketplace_listing_title
+      || listing.marketplace_listing_title
+      || "";
+
+    // Description: try multiple field names
+    const description = listing.description
+      || listing.redacted_description?.text
+      || listing.marketplace_listing_description
+      || "";
+
     const price = listing.listing_price?.formatted_amount
       ? parseFloat(
           listing.listing_price.formatted_amount.replace(/[^\d.]/g, ""),
@@ -581,8 +663,8 @@ export class FacebookClient {
     return {
       id,
       marketPlaceId: id,
-      title: listing.name ?? "",
-      description: listing.description ?? "",
+      title,
+      description,
       category: [listing.category_id ?? ""],
       brand: findAttribute("Brand")?.value ?? undefined,
       condition,
@@ -590,9 +672,9 @@ export class FacebookClient {
       color: color ?? undefined,
       price,
       quantity: listing.quantity ?? 1,
-      images: photos.slice(1).map((photo) => photo.image_uri),
-      cover: photos[0]?.image_uri,
-      coverSmall: photos[0]?.image_uri,
+      images: photoUris.slice(1),
+      cover: photoUris[0] ?? undefined,
+      coverSmall: photoUris[0] ?? undefined,
       marketplaceUrl: this.getProductUrl(id),
       dynamicProperties: {},
       shipping: {},

@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
+import { generateUniqueSKU } from '@/lib/sku.server'
 
 interface MarketplaceItemPayload {
   marketplace: string
@@ -242,19 +243,24 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   const brand = rawBrand && !JUNK_BRANDS.includes(rawBrand.toLowerCase()) && rawBrand.length <= 60
     ? rawBrand : null
 
+  const category = productData.category || 'other'
+  const sku = await generateUniqueSKU(category, user.id)
+
   const { data: find, error: findError } = await supabase
     .from('finds')
     .insert({
       user_id: user.id,
       name: productData.title || 'Untitled import',
       description: productData.description || null,
-      category: productData.category || 'other',
+      category,
       condition,
       brand,
       colour: productData.colour || null,
       size: productData.size || null,
       asking_price_gbp: price,
       photos,
+      sku,
+      source_type: 'marketplace_import',
       status: 'listed',
       platform_fields: platformFields,
       selected_marketplaces: [marketplace],
