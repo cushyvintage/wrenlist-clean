@@ -29,7 +29,7 @@ export default function ImportPage() {
   const { connected: connectedPlatforms, loading: platformsLoading } = useConnectedPlatforms()
 
   // Platforms that have working import handlers
-  const IMPORT_SUPPORTED: Platform[] = ['ebay', 'vinted', 'shopify']
+  const IMPORT_SUPPORTED: Platform[] = ['ebay', 'vinted', 'shopify', 'etsy', 'facebook', 'depop']
 
   // Import items state
   const [items, setItems] = useState<ImportableItem[]>([])
@@ -60,6 +60,12 @@ export default function ImportPage() {
       loadVintedListings()
     } else if (selectedPlatform === 'shopify') {
       loadShopifyListings()
+    } else if (selectedPlatform === 'etsy') {
+      loadEtsyListings()
+    } else if (selectedPlatform === 'facebook') {
+      loadFacebookListings()
+    } else if (selectedPlatform === 'depop') {
+      loadDepopListings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPlatform, platformsLoading])
@@ -337,6 +343,325 @@ export default function ImportPage() {
     }
   }
 
+  // --- Etsy (fetch via extension) ---
+  async function loadEtsyListings() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setFetchError('Wrenlist extension required for Etsy import. Install it from the Chrome Web Store.')
+      return
+    }
+
+    setIsFetching(true)
+    setFetchedCount(0)
+
+    try {
+      // Get already-imported Etsy IDs
+      const importedData = await fetchApi<{ importedIds: string[] }>(
+        '/api/import/marketplace-imported?marketplace=etsy'
+      )
+      const importedSet = new Set(importedData.importedIds)
+
+      // Progressive cursor-based fetch
+      let cursor: string | undefined
+      const allItems: ImportableItem[] = []
+
+      while (allItems.length < IMPORT_LIMIT) {
+        const response = await new Promise<{
+          success: boolean
+          products?: Array<{
+            marketplaceId: string
+            title: string
+            price: string | number | null
+            coverImage: string | null
+            marketplaceUrl: string | null
+            status?: string
+          }>
+          nextPage?: string | null
+          message?: string
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: 'Timed out fetching Etsy listings' }),
+            30000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            {
+              action: 'get_marketplace_listings',
+              marketplace: 'etsy',
+              params: {
+                page: cursor,
+                perPage: 40,
+              },
+            },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
+            }
+          )
+        })
+
+        if (!response.success) {
+          if (allItems.length === 0) {
+            setFetchError(response.message || 'Failed to fetch Etsy listings')
+            setIsFetching(false)
+            return
+          }
+          break
+        }
+
+        const products = response.products || []
+        if (products.length === 0) break
+
+        for (const p of products) {
+          if (allItems.length >= IMPORT_LIMIT) break
+          const id = String(p.marketplaceId)
+          const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+          allItems.push({
+            id,
+            platform: 'etsy',
+            title: p.title || 'Untitled',
+            price,
+            photo: p.coverImage,
+            listingId: id,
+            listingUrl: p.marketplaceUrl,
+            alreadyImported: importedSet.has(id),
+            checked: !importedSet.has(id),
+            listingStatus: 'active',
+          })
+        }
+
+        setFetchedCount(allItems.length)
+        setItems([...allItems])
+        setTotalCount(allItems.length)
+
+        cursor = response.nextPage ?? undefined
+        if (!cursor) break
+      }
+
+      setItems(allItems)
+      setTotalCount(allItems.length)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to fetch Etsy listings')
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
+  // --- Facebook (fetch via extension GraphQL) ---
+  async function loadFacebookListings() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setFetchError('Wrenlist extension required for Facebook import. Install it from the Chrome Web Store.')
+      return
+    }
+
+    setIsFetching(true)
+    setFetchedCount(0)
+
+    try {
+      // Get already-imported Facebook IDs
+      const importedData = await fetchApi<{ importedIds: string[] }>(
+        '/api/import/marketplace-imported?marketplace=facebook'
+      )
+      const importedSet = new Set(importedData.importedIds)
+
+      // Progressive cursor-based fetch
+      let cursor: string | undefined
+      const allItems: ImportableItem[] = []
+
+      while (allItems.length < IMPORT_LIMIT) {
+        const response = await new Promise<{
+          success: boolean
+          products?: Array<{
+            marketplaceId: string
+            title: string
+            price: string | number | null
+            coverImage: string | null
+            marketplaceUrl: string | null
+          }>
+          nextPage?: string | null
+          message?: string
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: 'Timed out fetching Facebook listings' }),
+            30000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            {
+              action: 'get_marketplace_listings',
+              marketplace: 'facebook',
+              params: {
+                page: cursor,
+                perPage: 50,
+              },
+            },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
+            }
+          )
+        })
+
+        if (!response.success) {
+          if (allItems.length === 0) {
+            setFetchError(response.message || 'Failed to fetch Facebook listings. Make sure you are logged in to facebook.com.')
+            setIsFetching(false)
+            return
+          }
+          break
+        }
+
+        const products = response.products || []
+        if (products.length === 0) break
+
+        for (const p of products) {
+          if (allItems.length >= IMPORT_LIMIT) break
+          const id = String(p.marketplaceId)
+          const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+          allItems.push({
+            id,
+            platform: 'facebook',
+            title: p.title || 'Untitled',
+            price,
+            photo: p.coverImage,
+            listingId: id,
+            listingUrl: p.marketplaceUrl,
+            alreadyImported: importedSet.has(id),
+            checked: !importedSet.has(id),
+            listingStatus: 'active',
+          })
+        }
+
+        setFetchedCount(allItems.length)
+        setItems([...allItems])
+        setTotalCount(allItems.length)
+
+        cursor = response.nextPage ?? undefined
+        if (!cursor) break
+      }
+
+      setItems(allItems)
+      setTotalCount(allItems.length)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to fetch Facebook listings')
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
+  // --- Depop (fetch via extension API) ---
+  async function loadDepopListings() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setFetchError('Wrenlist extension required for Depop import. Install it from the Chrome Web Store.')
+      return
+    }
+
+    setIsFetching(true)
+    setFetchedCount(0)
+
+    try {
+      // Get already-imported Depop IDs
+      const importedData = await fetchApi<{ importedIds: string[] }>(
+        '/api/import/marketplace-imported?marketplace=depop'
+      )
+      const importedSet = new Set(importedData.importedIds)
+
+      // Progressive cursor-based fetch
+      let cursor: string | undefined
+      const allItems: ImportableItem[] = []
+
+      while (allItems.length < IMPORT_LIMIT) {
+        const response = await new Promise<{
+          success: boolean
+          products?: Array<{
+            marketplaceId: string
+            title: string
+            price: string | number | null
+            coverImage: string | null
+            marketplaceUrl: string | null
+          }>
+          nextPage?: string | null
+          message?: string
+        }>((resolve) => {
+          const timeout = setTimeout(
+            () => resolve({ success: false, message: 'Timed out fetching Depop listings' }),
+            30000
+          )
+          chrome.runtime.sendMessage(
+            EXTENSION_ID,
+            {
+              action: 'get_marketplace_listings',
+              marketplace: 'depop',
+              params: {
+                page: cursor,
+                perPage: 200,
+              },
+            },
+            (resp) => {
+              clearTimeout(timeout)
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, message: chrome.runtime.lastError.message })
+              } else {
+                resolve(resp || { success: false, message: 'No response' })
+              }
+            }
+          )
+        })
+
+        if (!response.success) {
+          if (allItems.length === 0) {
+            setFetchError(response.message || 'Failed to fetch Depop listings. Make sure you are logged in to depop.com.')
+            setIsFetching(false)
+            return
+          }
+          break
+        }
+
+        const products = response.products || []
+        if (products.length === 0) break
+
+        for (const p of products) {
+          if (allItems.length >= IMPORT_LIMIT) break
+          const id = String(p.marketplaceId)
+          const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
+          allItems.push({
+            id,
+            platform: 'depop',
+            title: p.title || 'Untitled',
+            price,
+            photo: p.coverImage,
+            listingId: id,
+            listingUrl: p.marketplaceUrl,
+            alreadyImported: importedSet.has(id),
+            checked: !importedSet.has(id),
+            listingStatus: 'active',
+          })
+        }
+
+        setFetchedCount(allItems.length)
+        setItems([...allItems])
+        setTotalCount(allItems.length)
+
+        cursor = response.nextPage ?? undefined
+        if (!cursor) break
+      }
+
+      setItems(allItems)
+      setTotalCount(allItems.length)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to fetch Depop listings')
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
   // --- Item selection ---
   const toggleItem = useCallback((id: string) => {
     setItems((prev) =>
@@ -412,6 +737,12 @@ export default function ImportPage() {
       }
     } else if (selectedPlatform === 'shopify') {
       await handleShopifyImport()
+    } else if (selectedPlatform === 'etsy') {
+      await handleEtsyImport()
+    } else if (selectedPlatform === 'facebook') {
+      await handleFacebookImport()
+    } else if (selectedPlatform === 'depop') {
+      await handleDepopImport()
     }
   }
 
@@ -609,6 +940,112 @@ export default function ImportPage() {
     }
   }
 
+  async function handleEtsyImport() {
+    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing Etsy listings...')
+
+    let imported = 0
+    let skipped = 0
+    let errors = 0
+
+    try {
+      for (const item of selected) {
+        try {
+          const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
+            '/api/import/marketplace-item',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                marketplace: 'etsy',
+                marketplaceProductId: item.id,
+                productData: {
+                  title: item.title,
+                  price: item.price,
+                  coverImage: item.photo,
+                  marketplaceUrl: item.listingUrl,
+                },
+                url: item.listingUrl,
+              }),
+            }
+          )
+
+          if (result.skipped) {
+            skipped++
+          } else {
+            imported++
+          }
+        } catch {
+          errors++
+        }
+
+        vintedImport.runImportProgress(imported, skipped, errors, selected.length)
+      }
+
+      vintedImport.setDone(imported, skipped, errors, selected.length)
+
+      // Refresh list
+      await loadEtsyListings()
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleFacebookImport() {
+    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing Facebook listings...')
+
+    let imported = 0
+    let skipped = 0
+    let errors = 0
+
+    try {
+      for (const item of selected) {
+        try {
+          const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
+            '/api/import/marketplace-item',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                marketplace: 'facebook',
+                marketplaceProductId: item.id,
+                productData: {
+                  title: item.title,
+                  price: item.price,
+                  coverImage: item.photo,
+                  marketplaceUrl: item.listingUrl,
+                },
+                url: item.listingUrl,
+              }),
+            }
+          )
+
+          if (result.skipped) {
+            skipped++
+          } else {
+            imported++
+          }
+        } catch {
+          errors++
+        }
+
+        vintedImport.runImportProgress(imported, skipped, errors, selected.length)
+      }
+
+      vintedImport.setDone(imported, skipped, errors, selected.length)
+
+      // Refresh list
+      await loadFacebookListings()
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
   async function handleShopifyImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
@@ -657,6 +1094,59 @@ export default function ImportPage() {
 
       // Refresh list
       await loadShopifyListings()
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleDepopImport() {
+    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing Depop listings...')
+
+    let imported = 0
+    let skipped = 0
+    let errors = 0
+
+    try {
+      for (const item of selected) {
+        try {
+          const result = await fetchApi<{ success?: boolean; skipped?: boolean; findId?: string }>(
+            '/api/import/marketplace-item',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                marketplace: 'depop',
+                marketplaceProductId: item.id,
+                productData: {
+                  title: item.title,
+                  price: item.price,
+                  coverImage: item.photo,
+                  marketplaceUrl: item.listingUrl,
+                },
+                url: item.listingUrl,
+              }),
+            }
+          )
+
+          if (result.skipped) {
+            skipped++
+          } else {
+            imported++
+          }
+        } catch {
+          errors++
+        }
+
+        vintedImport.runImportProgress(imported, skipped, errors, selected.length)
+      }
+
+      vintedImport.setDone(imported, skipped, errors, selected.length)
+
+      // Refresh list
+      await loadDepopListings()
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
@@ -800,6 +1290,8 @@ export default function ImportPage() {
                 if (selectedPlatform === 'ebay') loadEbayInventory()
                 else if (selectedPlatform === 'vinted') loadVintedListings()
                 else if (selectedPlatform === 'shopify') loadShopifyListings()
+                else if (selectedPlatform === 'etsy') loadEtsyListings()
+                else if (selectedPlatform === 'facebook') loadFacebookListings()
               }}
               className="px-5 py-2.5 text-sm font-medium bg-cream-md text-ink rounded hover:bg-cream-dk transition"
             >
