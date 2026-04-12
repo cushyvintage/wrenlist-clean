@@ -366,7 +366,7 @@ export default function ImportPage() {
 
       while (allItems.length < IMPORT_LIMIT) {
         const response = await new Promise<{
-          success: boolean
+          success?: boolean
           products?: Array<{
             marketplaceId: string
             title: string
@@ -379,7 +379,7 @@ export default function ImportPage() {
           message?: string
         }>((resolve) => {
           const timeout = setTimeout(
-            () => resolve({ success: false, message: 'Timed out fetching Etsy listings' }),
+            () => resolve({ message: 'Timed out fetching Etsy listings' }),
             30000
           )
           chrome.runtime.sendMessage(
@@ -395,15 +395,16 @@ export default function ImportPage() {
             (resp) => {
               clearTimeout(timeout)
               if (chrome.runtime.lastError) {
-                resolve({ success: false, message: chrome.runtime.lastError.message })
+                resolve({ message: chrome.runtime.lastError.message })
               } else {
-                resolve(resp || { success: false, message: 'No response' })
+                resolve(resp || { message: 'No response' })
               }
             }
           )
         })
 
-        if (!response.success) {
+        // get_marketplace_listings returns { products, nextPage } without success flag
+        if (!response.products) {
           if (allItems.length === 0) {
             setFetchError(response.message || 'Failed to fetch Etsy listings')
             setIsFetching(false)
@@ -580,7 +581,7 @@ export default function ImportPage() {
 
       while (allItems.length < IMPORT_LIMIT) {
         const response = await new Promise<{
-          success: boolean
+          success?: boolean
           products?: Array<{
             marketplaceId: string
             title: string
@@ -592,7 +593,7 @@ export default function ImportPage() {
           message?: string
         }>((resolve) => {
           const timeout = setTimeout(
-            () => resolve({ success: false, message: 'Timed out fetching Depop listings' }),
+            () => resolve({ message: 'Timed out fetching Depop listings' }),
             30000
           )
           chrome.runtime.sendMessage(
@@ -608,15 +609,16 @@ export default function ImportPage() {
             (resp) => {
               clearTimeout(timeout)
               if (chrome.runtime.lastError) {
-                resolve({ success: false, message: chrome.runtime.lastError.message })
+                resolve({ message: chrome.runtime.lastError.message })
               } else {
-                resolve(resp || { success: false, message: 'No response' })
+                resolve(resp || { message: 'No response' })
               }
             }
           )
         })
 
-        if (!response.success) {
+        // get_marketplace_listings returns { products, nextPage } without success flag
+        if (!response.products) {
           if (allItems.length === 0) {
             setFetchError(response.message || 'Failed to fetch Depop listings. Make sure you are logged in to depop.com.')
             setIsFetching(false)
