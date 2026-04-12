@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+// React import not needed — stateless component
 import type { Platform } from '@/types'
 import type { ListingStatus } from './types'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
@@ -46,23 +46,12 @@ export function ImportHeader({
   statusFilter,
   onStatusFilterChange,
 }: ImportHeaderProps) {
-  const [confirming, setConfirming] = useState(false)
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+  // Import directly on click — user has already selected items deliberately
   function handleImportClick() {
-    if (confirming) {
-      // Second click — execute import
-      setConfirming(false)
-      if (confirmTimer.current) clearTimeout(confirmTimer.current)
-      onImport()
-    } else {
-      // First click — enter confirm state
-      setConfirming(true)
-      confirmTimer.current = setTimeout(() => {
-        setConfirming(false)
-      }, 6000)
-    }
+    onImport()
   }
+
+  const confirming = false
 
   return (
     <div className="space-y-4">
