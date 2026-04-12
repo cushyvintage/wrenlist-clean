@@ -37,6 +37,9 @@ Other Integrations
 Metrics (not yet populated)
 ├── daily_metrics     - Daily KPIs
 └── monthly_metrics   - Monthly performance
+
+Views (ML/training)
+└── training_sold_comps - Sold comps view (finds+PMD+customers, service-role only)
 ```
 
 All tables: RLS ON, user_id FK → auth.users(id) ON DELETE CASCADE

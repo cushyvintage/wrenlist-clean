@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { searchSoldItems, EbayListingStats } from '@/lib/ebay-finding'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getWrenlistSoldComps, WrenlistSoldCompsResult } from '@/lib/wrenlist-sold-comps'
 
 interface SampleListing {
   title: string
@@ -21,9 +22,22 @@ interface PlatformData {
   sample_listings: SampleListing[]
 }
 
+interface WrenlistPlatformData {
+  avg_price: number
+  median_price: number
+  min_price: number
+  max_price: number
+  avg_days_to_sell: number
+  total_found: number
+  source: 'wrenlist_sold'
+  by_platform: Record<string, { avg_price: number; count: number; avg_days_to_sell: number }>
+  sample_listings: SampleListing[]
+}
+
 interface PriceResearchResponse {
   vinted: PlatformData
   ebay: PlatformData
+  wrenlist?: WrenlistPlatformData
   recommendation: {
     suggested_price: number
     best_platform: string
@@ -80,7 +94,15 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    // 1. Try real eBay sold data
+    // 1a. Try Wrenlist internal sold-comps data (ground truth)
+    let wrenlistComps: WrenlistSoldCompsResult | null = null
+    try {
+      wrenlistComps = await getWrenlistSoldComps(query)
+    } catch (err) {
+      console.error('Wrenlist sold comps lookup failed:', err)
+    }
+
+    // 1b. Try real eBay sold data
     const ebayStats = await searchSoldItems(query)
 
     // 2. Call GPT-4o for Vinted estimates + recommendation
@@ -89,6 +111,10 @@ export const POST = withAuth(async (request, user) => {
     let gptData: GptPriceResponse | null = null
 
     if (hasOpenAI) {
+      const wrenlistContext = wrenlistComps
+        ? `\n\nIMPORTANT: I have real Wrenlist seller data (ground-truth cross-platform sold comps) for this item: ${wrenlistComps.total_found} items sold, avg £${wrenlistComps.avg_price}, median £${wrenlistComps.median_price}, range £${wrenlistComps.min_price}–£${wrenlistComps.max_price}, avg ${wrenlistComps.avg_days_to_sell} days to sell. Platform breakdown: ${Object.entries(wrenlistComps.by_platform).map(([p, d]) => `${p}: ${d.count} sold, avg £${d.avg_price}`).join('; ')}.\nThis is real seller data — prioritise it over estimates when making your recommendation.`
+        : ''
+
       const ebayContext = ebayStats
         ? `\n\nIMPORTANT: I already have real eBay UK sold data for this item: ${ebayStatsToSummary(ebayStats)}\nDo NOT include an "ebay" key in your response. Only provide "vinted" and "recommendation". Base your recommendation on the real eBay data I provided plus your Vinted estimates.`
         : ''
@@ -104,7 +130,7 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
   "vinted": { "avg_price": number, "min_price": number, "max_price": number, "avg_days_to_sell": number, "sample_listings": [{"title": string, "price": number, "condition": string, "days_ago": number}] },
   ${ebayJsonShape}"recommendation": { "suggested_price": number, "best_platform": string, "reasoning": string }
 }
-Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data. All prices in GBP.${ebayContext}`
+Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data. All prices in GBP.${wrenlistContext}${ebayContext}`
 
       try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -189,14 +215,43 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
       }
     }
 
-    // Recommendation: use GPT's if available, otherwise derive from eBay data
-    const recommendation = gptData?.recommendation ?? {
-      suggested_price: ebay.avg_price,
-      best_platform: 'eBay',
-      reasoning: `Based on ${ebayStats?.total_found ?? 0} recent sold items on eBay UK.`,
+    // Wrenlist: include if we have internal sold comps
+    let wrenlist: WrenlistPlatformData | undefined
+    if (wrenlistComps) {
+      wrenlist = {
+        avg_price: wrenlistComps.avg_price,
+        median_price: wrenlistComps.median_price,
+        min_price: wrenlistComps.min_price,
+        max_price: wrenlistComps.max_price,
+        avg_days_to_sell: wrenlistComps.avg_days_to_sell,
+        total_found: wrenlistComps.total_found,
+        source: 'wrenlist_sold',
+        by_platform: wrenlistComps.by_platform,
+        sample_listings: wrenlistComps.sample_listings.map((l) => ({
+          title: l.title,
+          price: l.price,
+          condition: l.condition ?? 'unknown',
+          days_ago: l.days_to_sell ?? 0,
+        })),
+      }
     }
 
-    const result: PriceResearchResponse = { vinted, ebay, recommendation }
+    // Recommendation: prefer Wrenlist ground truth > GPT > eBay fallback
+    const recommendation = gptData?.recommendation
+      ?? (wrenlistComps
+        ? {
+            suggested_price: wrenlistComps.median_price,
+            best_platform: Object.entries(wrenlistComps.by_platform)
+              .sort(([, a], [, b]) => b.count - a.count)[0]?.[0] ?? 'vinted',
+            reasoning: `Based on ${wrenlistComps.total_found} real sales from Wrenlist sellers (median £${wrenlistComps.median_price}).`,
+          }
+        : {
+            suggested_price: ebay.avg_price,
+            best_platform: 'eBay',
+            reasoning: `Based on ${ebayStats?.total_found ?? 0} recent sold items on eBay UK.`,
+          })
+
+    const result: PriceResearchResponse = { vinted, ebay, ...(wrenlist ? { wrenlist } : {}), recommendation }
 
     // Fire-and-forget: save to history for QA/analytics
     createSupabaseServerClient().then((supabase) => {
