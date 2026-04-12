@@ -5,6 +5,74 @@ import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 import { generateUniqueSKU } from '@/lib/sku.server'
 
+/**
+ * Lightweight keyword-based category classifier for imported listings.
+ * No API calls — instant, works for bulk imports. Returns a top-level
+ * Wrenlist category or 'other' if no match.
+ */
+function classifyCategoryFromTitle(title: string): string {
+  const t = title.toLowerCase()
+
+  // Clothing & accessories
+  if (/\b(dress|shirt|blouse|jacket|coat|jeans|trousers|skirt|cardigan|jumper|sweater|hoodie|blazer|suit|shorts|leggings|dungarees|kimono|poncho|waistcoat)\b/.test(t)) return 'clothing'
+  if (/\b(shoes?|boots?|trainers?|sneakers?|sandals?|heels?|loafers?|slippers?|pumps)\b/.test(t)) return 'clothing'
+  if (/\b(handbag|purse|wallet|clutch|tote bag|backpack|rucksack|satchel|messenger bag)\b/.test(t)) return 'clothing'
+  if (/\b(scarf|hat|gloves?|belt|tie|bow tie|cufflinks?|brooch|necklace|bracelet|earrings?|ring|jewel)/i.test(t)) return 'clothing'
+
+  // Books & media
+  if (/\b(book|novel|paperback|hardback|hardcover|edition|treasury|encyclopedia|dictionary|atlas|biography|autobiography|isbn)\b/.test(t)) return 'books_media'
+  if (/\b(vinyl|record|lp|cd|dvd|blu-ray|cassette|vhs)\b/.test(t)) return 'books_media'
+
+  // Home & garden
+  if (/\b(plate|bowl|mug|cup|saucer|teapot|vase|jug|pitcher|decanter|tureen|platter|dish|casserole)\b/.test(t)) return 'home_garden'
+  if (/\b(lamp|mirror|cushion|curtain|rug|candle|frame|clock|ornament|figurine)\b/.test(t)) return 'home_garden'
+  if (/\b(garden|planter|plant pot|watering|patio|heater|shed|mower|lawn|fence|gate|compost|basket)\b/.test(t)) return 'home_garden'
+  if (/\b(furniture|chair|table|desk|shelf|cabinet|drawer|wardrobe|bookcase|bench|stool|sofa|couch|bed|mattress)\b/.test(t)) return 'home_garden'
+  if (/\b(kitchen|cutlery|pan|pot|chopping board|baking|kettle|toaster|blender|mixer)\b/.test(t)) return 'home_garden'
+  if (/\b(porcelain|ceramic|pottery|stoneware|earthenware|bone china|chintz|wedgwood|spode|denby|royal doulton|minton)\b/.test(t)) return 'home_garden'
+
+  // Antiques
+  if (/\b(antique|victorian|edwardian|georgian|regency|art deco|art nouveau|vintage.*19[0-4]\d|c\.\s*1[89]\d\d)\b/.test(t)) return 'antiques'
+
+  // Collectibles
+  if (/\b(medal|coin|stamp|badge|pin|militaria|memorabilia|card|trading card|pokemon|model|diecast|die-?cast)\b/.test(t)) return 'collectibles'
+
+  // Electronics
+  if (/\b(phone|iphone|samsung|ipad|tablet|laptop|computer|monitor|speaker|headphones?|earbuds|charger|cable|adapter|camera|playstation|xbox|nintendo|console|controller)\b/.test(t)) return 'electronics'
+
+  // Toys & games
+  if (/\b(toy|lego|playmobil|barbie|doll|puzzle|board game|game|teddy|plush|action figure|nerf)\b/.test(t)) return 'toys_games'
+
+  // Art
+  if (/\b(painting|print|lithograph|etching|watercolour|watercolor|oil painting|canvas|artwork|sculpture|statue)\b/.test(t)) return 'art'
+
+  // Sports & outdoors
+  if (/\b(bike|bicycle|golf|tennis|football|cricket|rugby|running|hiking|camping|fishing|yoga|gym|dumbbell|weight|treadmill|kayak|surfboard)\b/.test(t)) return 'sports_outdoors'
+
+  // Baby & toddler
+  if (/\b(baby|toddler|pram|pushchair|buggy|stroller|highchair|cot|nursery|bib|dummy|nappy|potty|car seat)\b/.test(t)) return 'baby_toddler'
+
+  // Musical instruments
+  if (/\b(guitar|piano|keyboard|drum|violin|ukulele|flute|saxophone|trumpet|harmonica|microphone|amplifier|amp)\b/.test(t)) return 'musical_instruments'
+
+  // Health & beauty
+  if (/\b(perfume|fragrance|makeup|cosmetic|skincare|moisturiser|serum|cologne|aftershave|razor|hair dryer|straightener|curler)\b/.test(t)) return 'health_beauty'
+
+  // Craft supplies
+  if (/\b(fabric|yarn|wool|thread|sewing|knitting|crochet|embroidery|beads?|craft|ribbon|button|pattern)\b/.test(t)) return 'craft_supplies'
+
+  // Pet supplies
+  if (/\b(dog|cat|pet|fish tank|aquarium|bird cage|hamster|rabbit|leash|collar|pet bed|scratching post)\b/.test(t)) return 'pet_supplies'
+
+  // Vehicles & parts
+  if (/\b(car|motorcycle|motorbike|scooter|bicycle|tyre|wheel|bumper|exhaust|engine|alternator|brake|headlight|wing mirror)\b/.test(t)) return 'vehicles_parts'
+
+  // Vintage catch-all (after more specific categories)
+  if (/\bvintage\b/.test(t)) return 'collectibles'
+
+  return 'other'
+}
+
 interface MarketplaceItemPayload {
   marketplace: string
   marketplaceProductId: string
@@ -248,7 +316,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   const brand = rawBrand && !JUNK_BRANDS.includes(rawBrand.toLowerCase()) && rawBrand.length <= 60
     ? rawBrand : null
 
-  const category = productData.category || 'other'
+  // Auto-classify from title if no category provided
+  const rawCategory = productData.category || 'other'
+  const title = productData.title || 'Untitled import'
+  const category = rawCategory === 'other' ? classifyCategoryFromTitle(title) : rawCategory
   const sku = await generateUniqueSKU(category, user.id)
 
   const { data: find, error: findError } = await supabase
