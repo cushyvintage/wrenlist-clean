@@ -840,9 +840,10 @@ export class EtsyClient {
     }).then((r) => r.text());
 
     const patterns = [
+      /name="csrf_nonce"\s+content="([^"]+)"/,
+      /name="csrf_nonce"[^>]*(?:content|value)="([^"]+)"/,
       /"csrf_nonce"\s*:\s*"([^"]+)"/,
       /csrf_nonce.*?"([^"]+)"/,
-      /name="csrf_nonce"[^>]*value="([^"]+)"/,
     ];
 
     for (const pattern of patterns) {
