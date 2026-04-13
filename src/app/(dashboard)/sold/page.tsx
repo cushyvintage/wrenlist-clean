@@ -59,21 +59,28 @@ interface SoldResponse {
 const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   delivered: { bg: 'bg-status-success-bg', text: 'text-status-success', label: 'Delivered' },
   'in transit': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'In Transit' },
+  'awaiting collection': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Awaiting Collection' },
   'label sent': { bg: 'bg-status-info-bg', text: 'text-status-info', label: 'Label Sent' },
   shipped: { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Shipped' },
+  returning: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Returning' },
   refunded: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Refunded' },
   cancelled: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Cancelled' },
 }
 
-/** Statuses that mean the order still needs seller action */
-const NEEDS_ACTION_STATUSES = new Set([null, undefined, '', 'label sent', 'shipped', 'in transit'])
+/** Statuses that genuinely need seller action (ship it or add tracking) */
+const NEEDS_ACTION_STATUSES = new Set(['label sent', ''])
+
+/** How many days after sale before we stop treating null-status as "needs action" */
+const NEEDS_ACTION_WINDOW_DAYS = 5
 
 function normalizeStatus(raw: string | null | undefined): string | null {
   if (!raw) return null
   const lower = raw.toLowerCase()
-  // Vinted sends verbose strings like "Package delivered."
+  // Vinted sends verbose strings like "Package delivered.", "Returning to sender."
   if (lower.includes('delivered')) return 'delivered'
   if (lower.includes('transit')) return 'in transit'
+  if (lower.includes('post office') || lower.includes('collection')) return 'awaiting collection'
+  if (lower.includes('return')) return 'returning'
   if (lower.includes('label')) return 'label sent'
   if (lower.includes('shipped') || lower.includes('sent')) return 'shipped'
   if (lower.includes('refund')) return 'refunded'
@@ -83,11 +90,29 @@ function normalizeStatus(raw: string | null | undefined): string | null {
 
 function needsAction(item: SoldItem): boolean {
   const status = normalizeStatus(item.shipmentStatus)
-  return NEEDS_ACTION_STATUSES.has(status)
+  // Known actionable statuses
+  if (status !== null) return NEEDS_ACTION_STATUSES.has(status)
+  // Null status: only needs action if sold recently (within window)
+  if (!item.sold_at) return false
+  const daysSinceSale = (Date.now() - new Date(item.sold_at).getTime()) / (1000 * 60 * 60 * 24)
+  return daysSinceSale <= NEEDS_ACTION_WINDOW_DAYS
 }
 
-function ShipmentBadge({ status }: { status: string | null | undefined }) {
-  if (!status) return <span className="text-ink-lt text-xs">Awaiting shipment</span>
+function ShipmentBadge({ status, soldAt }: { status: string | null | undefined; soldAt?: string | null }) {
+  if (!status) {
+    // No shipment data — if recent sale, likely awaiting shipment; otherwise unknown
+    if (soldAt) {
+      const daysSinceSale = (Date.now() - new Date(soldAt).getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSinceSale <= NEEDS_ACTION_WINDOW_DAYS) {
+        return <span className="text-ink-lt text-xs">Awaiting shipment</span>
+      }
+    }
+    return (
+      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-cream text-ink-lt">
+        No tracking
+      </span>
+    )
+  }
   const key = normalizeStatus(status) || status.toLowerCase()
   const style = SHIPMENT_STYLES[key] || { bg: 'bg-cream', text: 'text-ink-lt', label: status }
   return (
@@ -164,7 +189,7 @@ function OrderCard({
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
           </div>
           <div className="flex items-center gap-2 mt-1.5">
-            <ShipmentBadge status={item.shipmentStatus} />
+            <ShipmentBadge status={item.shipmentStatus} soldAt={item.sold_at} />
             {item.trackingNumber && (
               <span className="text-[11px] text-ink-lt font-mono truncate max-w-[140px]" title={item.trackingNumber}>
                 {item.trackingNumber}
@@ -914,7 +939,7 @@ export default function SoldHistoryPage() {
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <ShipmentBadge status={item.shipmentStatus} />
+                        <ShipmentBadge status={item.shipmentStatus} soldAt={item.sold_at} />
                       </td>
                       <td className="px-3 py-2 text-ink-lt text-xs truncate max-w-[100px]">
                         {item.buyer || '--'}

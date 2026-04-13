@@ -76,8 +76,10 @@ const CONDITION_LABELS: Record<string, string> = {
 const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   delivered: { bg: 'bg-green-100', text: 'text-green-800', label: 'Delivered' },
   'in transit': { bg: 'bg-amber-100', text: 'text-amber-800', label: 'In Transit' },
+  'awaiting collection': { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Awaiting Collection' },
   'label sent': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Label Sent' },
   shipped: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Shipped' },
+  returning: { bg: 'bg-red-100', text: 'text-red-800', label: 'Returning' },
   refunded: { bg: 'bg-red-100', text: 'text-red-800', label: 'Refunded' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
 }
@@ -87,6 +89,8 @@ function normaliseShipmentStatus(raw: string): string {
   const s = raw.toLowerCase().replace(/\.$/, '').trim()
   if (s.includes('delivered')) return 'delivered'
   if (s.includes('in transit') || s.includes('on its way')) return 'in transit'
+  if (s.includes('post office') || s.includes('collection')) return 'awaiting collection'
+  if (s.includes('return')) return 'returning'
   if (s.includes('label sent') || s.includes('shipping label')) return 'label sent'
   if (s.includes('shipped')) return 'shipped'
   if (s.includes('refund')) return 'refunded'
