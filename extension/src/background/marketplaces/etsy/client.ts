@@ -801,7 +801,8 @@ export class EtsyClient {
   }>> {
     const results: Array<{ listingId: string; visits: number; title: string | null; imageUrl: string | null }> = [];
 
-    for (const id of listingIds) {
+    for (let i = 0; i < listingIds.length; i++) {
+      const id = listingIds[i];
       chrome.storage.local.set({ _keepAlive: Date.now() });
       try {
         const stat = await this.getListingStats(id);
@@ -810,7 +811,7 @@ export class EtsyClient {
         results.push({ listingId: id, visits: 0, title: null, imageUrl: null });
       }
       // Rate limit: ~5/sec max
-      if (listingIds.indexOf(id) < listingIds.length - 1) {
+      if (i < listingIds.length - 1) {
         await wait(200);
       }
     }
@@ -1514,7 +1515,8 @@ export class EtsyClient {
       error?: string;
     }> = [];
 
-    for (const id of listingIds) {
+    for (let i = 0; i < listingIds.length; i++) {
+      const id = listingIds[i];
       chrome.storage.local.set({ _keepAlive: Date.now() });
       try {
         const inv = await this.getListingInventory(id);
@@ -1532,7 +1534,7 @@ export class EtsyClient {
         });
       }
       // Rate limit: ~5/sec max
-      if (listingIds.indexOf(id) < listingIds.length - 1) {
+      if (i < listingIds.length - 1) {
         await wait(200);
       }
     }

@@ -284,15 +284,17 @@ export const POST = withAuth(async (req, user) => {
           itemCount: sale.itemCount || saleItems.length,
         }
 
+        // Upsert customer once per sale (not per item)
+        const customerId = await upsertEtsyCustomer(supabase, user.id, sale)
+
         for (const item of saleItems) {
           const itemId = String(item.itemId || '')
           if (!itemId) continue
 
-          const customerId = await upsertEtsyCustomer(supabase, user.id, sale)
-
           const { data: existingPmd } = await supabase
             .from('product_marketplace_data')
             .select('find_id, status, fields')
+            .eq('user_id', user.id)
             .eq('marketplace', 'etsy')
             .eq('platform_listing_id', itemId)
             .maybeSingle()

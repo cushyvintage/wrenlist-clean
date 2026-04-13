@@ -101,10 +101,11 @@ export const POST = withAuth(async (req, user) => {
     updateData.total_quality_opportunities = listingQuality.totalOpportunities ?? 0
   }
 
-  // Upsert: update if exists, insert if not (user may refresh stats before connecting)
+  // Update only — connection row must already exist from etsy/connect flow
   const { error } = await supabase
     .from('etsy_connections')
-    .upsert({ user_id: user.id, ...updateData }, { onConflict: 'user_id' })
+    .update(updateData)
+    .eq('user_id', user.id)
 
   if (error) return ApiResponseHelper.internalError(error.message)
 
