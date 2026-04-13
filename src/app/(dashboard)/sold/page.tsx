@@ -948,7 +948,7 @@ export default function SoldHistoryPage() {
                         £{item.sold_price_gbp?.toFixed(2) || '--'}
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink-lt">
-                        {item.serviceFee != null && item.serviceFee > 0 && item.grossAmount != null && item.netAmount != null && item.grossAmount !== item.netAmount
+                        {item.serviceFee != null && item.serviceFee > 0
                           ? `−£${item.serviceFee.toFixed(2)}`
                           : '--'}
                       </td>

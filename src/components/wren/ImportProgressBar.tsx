@@ -63,6 +63,12 @@ export function ImportProgressBar({ state }: ImportProgressBarProps) {
     ? Math.round(((elapsed / state.imported) * (state.total - state.imported)))
     : null
 
+  // Are we waiting for the very first batch to complete?
+  const isFirstBatch = state.phase === 'importing' && state.imported === 0
+  const batchSize = 50
+  const currentBatch = Math.floor(state.imported / batchSize) + 1
+  const totalBatches = Math.ceil(state.total / batchSize)
+
   const formatTime = (secs: number) => {
     if (secs < 60) return `${secs}s`
     const m = Math.floor(secs / 60)
@@ -84,24 +90,36 @@ export function ImportProgressBar({ state }: ImportProgressBarProps) {
           {state.phase === 'error' && <span className="text-red-600">✗</span>}
           <span className="text-sm font-medium text-ink">
             {state.phase === 'fetching' && 'Fetching listings...'}
-            {state.phase === 'importing' && `Importing — ${state.imported} of ${state.total}`}
+            {state.phase === 'importing' && (
+              isFirstBatch
+                ? `Processing first batch (1 of ${totalBatches})...`
+                : `Importing — ${state.imported} of ${state.total}`
+            )}
             {state.phase === 'done' && `Imported ${state.imported} finds`}
             {state.phase === 'error' && 'Import failed'}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-ink-lt">
           {state.phase === 'importing' && (
-            <>
-              <span className="font-mono font-medium text-ink">{percentage}%</span>
-              <span className="text-ink-lt/50">·</span>
-              <span>{formatTime(elapsed)} elapsed</span>
-              {eta !== null && eta > 0 && (
-                <>
-                  <span className="text-ink-lt/50">·</span>
-                  <span>~{formatTime(eta)} left</span>
-                </>
-              )}
-            </>
+            isFirstBatch ? (
+              <>
+                <span className="font-medium text-ink">batch 1 of {totalBatches}</span>
+                <span className="text-ink-lt/50">·</span>
+                <span>{formatTime(elapsed)} elapsed</span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono font-medium text-ink">{percentage}%</span>
+                <span className="text-ink-lt/50">·</span>
+                <span>{formatTime(elapsed)} elapsed</span>
+                {eta !== null && eta > 0 && (
+                  <>
+                    <span className="text-ink-lt/50">·</span>
+                    <span>~{formatTime(eta)} left</span>
+                  </>
+                )}
+              </>
+            )
           )}
           {state.phase === 'done' && elapsed > 0 && (
             <span>took {formatTime(elapsed)}</span>
@@ -111,14 +129,20 @@ export function ImportProgressBar({ state }: ImportProgressBarProps) {
 
       {/* Progress bar */}
       <div className="w-full h-2.5 bg-cream-md rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${
-            state.phase === 'error' ? 'bg-red-400'
-            : state.phase === 'done' ? 'bg-green-500'
-            : 'bg-sage'
-          }`}
-          style={{ width: `${state.phase === 'done' ? 100 : percentage}%` }}
-        />
+        {isFirstBatch ? (
+          <div
+            className="h-full w-1/3 rounded-full bg-sage/70 animate-[indeterminate_1.5s_ease-in-out_infinite]"
+          />
+        ) : (
+          <div
+            className={`h-full rounded-full transition-all duration-500 ease-out ${
+              state.phase === 'error' ? 'bg-red-400'
+              : state.phase === 'done' ? 'bg-green-500'
+              : 'bg-sage'
+            }`}
+            style={{ width: `${state.phase === 'done' ? 100 : percentage}%` }}
+          />
+        )}
       </div>
 
       {/* Fun message during import */}

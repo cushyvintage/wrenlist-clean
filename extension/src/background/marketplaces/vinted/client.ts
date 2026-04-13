@@ -1807,8 +1807,8 @@ export class VintedClient {
     };
   }
 
-  public async getListing(id: string): Promise<Product | null> {
-    await this.setTokens();
+  public async getListing(id: string, retry = false): Promise<Product | null> {
+    await this.setTokens(retry);
     const response = await fetch(`${this.apiUrl}/item_upload/items/${id}`, {
       headers: {
         Accept: "application/json, text/plain, */*",
@@ -1818,6 +1818,12 @@ export class VintedClient {
       },
       credentials: "include",
     });
+
+    // Retry once with fresh tokens on 401/403
+    if (!retry && (response.status === 401 || response.status === 403)) {
+      console.warn(`[Vinted] getListing(${id}) got ${response.status}, refreshing tokens and retrying...`);
+      return this.getListing(id, true);
+    }
 
     if (response.status !== 200) {
       throw new Error(`Invalid response: ${response.status} ${await response.text()}`);

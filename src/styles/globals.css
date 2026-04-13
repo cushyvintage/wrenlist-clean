@@ -190,6 +190,10 @@
     from { transform: scaleX(0); }
     to   { transform: scaleX(1); }
   }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
   @keyframes wrenHop {
     0%   { transform: translateY(0) rotate(0deg); }
     30%  { transform: translateY(-4px) rotate(-6deg); }

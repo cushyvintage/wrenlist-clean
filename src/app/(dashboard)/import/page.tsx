@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Platform } from '@/types'
 import { fetchApi } from '@/lib/api-utils'
@@ -35,6 +35,7 @@ export default function ImportPage() {
   const [items, setItems] = useState<ImportableItem[]>([])
   const [isFetching, setIsFetching] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const shopifyRetriedRef = useRef(false)
   const [fetchedCount, setFetchedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
@@ -311,7 +312,25 @@ export default function ImportPage() {
 
         if (!response.success) {
           if (allItems.length === 0) {
-            setFetchError(response.message || 'Failed to fetch Shopify listings')
+            const msg = response.message || 'Failed to fetch Shopify listings'
+            const needsLogin = msg.includes('Tokens not found') || msg.includes('Failed to fetch tokens') || msg.includes('valid Shopify')
+            if (needsLogin && !shopifyRetriedRef.current) {
+              // Open Shopify admin in background tab so session cookies get set
+              shopifyRetriedRef.current = true
+              try {
+                chrome.runtime.sendMessage(EXTENSION_ID, {
+                  action: 'opentab',
+                  url: `https://${storeDomain}/admin`,
+                  focusTab: false,
+                })
+              } catch { /* extension may not support opentab */ }
+              setFetchError(`Opening Shopify admin to refresh your session... please wait a moment then try again.`)
+              setIsFetching(false)
+              return
+            }
+            setFetchError(needsLogin
+              ? `Please log in to your Shopify admin (${storeDomain}) in another tab, then try again.`
+              : msg)
             setIsFetching(false)
             return
           }
@@ -839,6 +858,7 @@ export default function ImportPage() {
     const CHUNK_SIZE = 50
     const totalItems = selectedIds.length
     let totalImported = 0, totalSkipped = 0, totalErrors = 0
+    let consecutiveFailures = 0
 
     vintedImport.runImportProgress(0, 0, 0, totalItems)
 
@@ -882,10 +902,24 @@ export default function ImportPage() {
           totalImported += response.results.success || 0
           totalSkipped += response.results.skipped || 0
           totalErrors += response.results.errors || 0
+          consecutiveFailures = 0
         } else {
           // Chunk failed — count all items as errors but continue with next chunk
           console.warn(`[Import] Chunk ${chunkNum} failed: ${response.message}`)
           totalErrors += chunk.length
+          consecutiveFailures++
+
+          // Stop early on auth failures — Vinted session expired
+          if ((response as { needsLogin?: boolean }).needsLogin) {
+            vintedImport.setError('Vinted session expired. Please visit vinted.co.uk, then try again.')
+            return
+          }
+
+          // Stop after 2 consecutive chunk failures — something systemic is wrong
+          if (consecutiveFailures >= 2) {
+            vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
+            return
+          }
         }
 
         vintedImport.runImportProgress(totalImported, totalSkipped, totalErrors, totalItems)
