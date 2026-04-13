@@ -13,7 +13,6 @@ import type { Platform } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { ShippingLabelModal } from '@/components/sold/ShippingLabelModal'
 import { useConfirm } from '@/components/wren/ConfirmProvider'
-import { showSuccess, showError } from '@/lib/toast-error'
 
 interface SoldItem {
   id: string
@@ -188,9 +187,6 @@ function OrderCard({
             )}
             <span className="text-ink-lt text-xs">{item.buyer || 'Unknown buyer'}</span>
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
-            {item.sold_at && (Date.now() - new Date(item.sold_at).getTime()) < 86400000 && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 text-amber-700">new</span>
-            )}
           </div>
           <div className="flex items-center gap-2 mt-1.5">
             <ShipmentBadge status={item.shipmentStatus} soldAt={item.sold_at} />
@@ -283,26 +279,6 @@ function OrderCard({
               Generate Label
             </button>
           )}
-          {item.marketplace === 'ebay' && item.transactionId && (
-            <a
-              href={`https://www.ebay.co.uk/mesh/ord/details?orderid=${encodeURIComponent(item.transactionId)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
-            >
-              Ship via eBay
-            </a>
-          )}
-          {item.marketplace === 'etsy' && (
-            <a
-              href="https://www.etsy.com/your/orders/sold"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
-            >
-              Ship via Etsy
-            </a>
-          )}
           {item.labelUrl && (
             <a
               href={item.labelUrl}
@@ -317,37 +293,6 @@ function OrderCard({
       )}
     </div>
   )
-}
-
-/* ── Extension message helper with timeout ───────────────────── */
-
-function sendExtensionMessage(action: string, params: Record<string, unknown>, timeoutMs = 10000): Promise<unknown[]> {
-  return Promise.race([
-    new Promise<unknown[]>((resolve, reject) => {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        reject(new Error('Extension not available'))
-        return
-      }
-      chrome.runtime.sendMessage(
-        EXTENSION_ID,
-        { action, params },
-        (response: Record<string, unknown> | undefined) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-            return
-          }
-          if (!response?.success) {
-            reject(new Error((response?.error as string) || 'Extension request failed'))
-            return
-          }
-          resolve((response.sales as unknown[]) || [])
-        }
-      )
-    }),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Extension timed out — is it installed and active?')), timeoutMs)
-    ),
-  ])
 }
 
 /* ── Chunked sync helper (avoids Vercel 413 on large payloads) ── */
@@ -379,79 +324,6 @@ async function syncSalesInChunks(sales: unknown[]): Promise<{ synced: number; cr
   return { synced: totalSynced, created: totalCreated, errors: totalErrors, needsPhotoBackfill: allPhotoBackfill }
 }
 
-/* ── Sync Dropdown ───────────────────────────────────────────── */
-
-function SyncDropdown({
-  isSyncing, onSyncAll, onSyncEbay, onSyncVinted, onSyncEtsy, onBackfill,
-  isEbaySyncing, isVintedSyncing, isEtsySyncing, isBackfilling,
-}: {
-  isSyncing: boolean
-  onSyncAll: () => void
-  onSyncEbay: () => void
-  onSyncVinted: () => void
-  onSyncEtsy: () => void
-  onBackfill: () => void
-  isEbaySyncing: boolean
-  isVintedSyncing: boolean
-  isEtsySyncing: boolean
-  isBackfilling: boolean
-}) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="relative">
-      <div className="flex">
-        <button
-          onClick={onSyncAll}
-          disabled={isSyncing}
-          className="px-3 py-1.5 text-xs font-medium rounded-l border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
-        >
-          {isSyncing ? 'Syncing...' : 'Sync Sales'}
-        </button>
-        <button
-          onClick={() => setOpen(!open)}
-          className="px-1.5 py-1.5 text-xs font-medium rounded-r border border-l-0 border-sage text-sage hover:bg-sage hover:text-white transition"
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.2" fill="none" /></svg>
-        </button>
-      </div>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded shadow-lg z-20 min-w-[180px] py-1">
-          <button
-            onClick={() => { onSyncEbay(); setOpen(false) }}
-            disabled={isEbaySyncing}
-            className="w-full text-left px-3 py-2 text-xs hover:bg-cream transition disabled:opacity-50"
-          >
-            {isEbaySyncing ? 'Syncing...' : 'Sync eBay'}
-          </button>
-          <button
-            onClick={() => { onSyncVinted(); setOpen(false) }}
-            disabled={isVintedSyncing}
-            className="w-full text-left px-3 py-2 text-xs hover:bg-cream transition disabled:opacity-50"
-          >
-            {isVintedSyncing ? 'Syncing...' : 'Sync Vinted'}
-          </button>
-          <button
-            onClick={() => { onSyncEtsy(); setOpen(false) }}
-            disabled={isEtsySyncing}
-            className="w-full text-left px-3 py-2 text-xs hover:bg-cream transition disabled:opacity-50"
-          >
-            {isEtsySyncing ? 'Syncing...' : 'Sync Etsy'}
-          </button>
-          <div className="border-t border-border my-1" />
-          <button
-            onClick={() => { onBackfill(); setOpen(false) }}
-            disabled={isBackfilling}
-            className="w-full text-left px-3 py-2 text-xs text-ink-lt hover:bg-cream transition disabled:opacity-50"
-          >
-            {isBackfilling ? 'Backfilling...' : 'Backfill addresses'}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 /* ── Main Page ────────────────────────────────────────────────── */
 
 export default function SoldHistoryPage() {
@@ -461,10 +333,10 @@ export default function SoldHistoryPage() {
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [showAllAction, setShowAllAction] = useState(false)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [actionView, setActionView] = useState<'cards' | 'picklist'>('cards')
-  const [actionPlatformFilter, setActionPlatformFilter] = useState<string>('all')
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -483,22 +355,13 @@ export default function SoldHistoryPage() {
     loadSoldItems()
   }, [loadSoldItems])
 
-  // Auto-refresh when tab becomes visible (catches cron-synced sales)
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') loadSoldItems()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [loadSoldItems])
-
   const allItems = data?.items ?? []
   const metrics = data?.metrics ?? null
 
-  // Split into needs-action vs completed (newest first — recent sales need shipping attention first)
+  // Split into needs-action vs completed
   const actionItems = allItems
     .filter(needsAction)
-    .sort((a, b) => new Date(b.sold_at || 0).getTime() - new Date(a.sold_at || 0).getTime())
+    .sort((a, b) => new Date(a.sold_at || 0).getTime() - new Date(b.sold_at || 0).getTime())
 
   // Filter history table items
   const filteredItems = allItems.filter((item) => {
@@ -563,12 +426,33 @@ export default function SoldHistoryPage() {
   const handleSyncSales = useCallback(async () => {
     if (isSyncing) return
     setIsSyncing(true)
+    setSyncMessage(null)
 
     try {
-      const sales = await sendExtensionMessage('get_vinted_sales', { perPage: 100, enrich: true })
+      const sales = await new Promise<unknown[]>((resolve, reject) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+          reject(new Error('Extension not available'))
+          return
+        }
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'get_vinted_sales', params: { pages: 20, perPage: 100, enrich: true } },
+          (response: Record<string, unknown> | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+              return
+            }
+            if (!response?.success) {
+              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
+              return
+            }
+            resolve((response.sales as unknown[]) || [])
+          }
+        )
+      })
 
       if (!Array.isArray(sales) || sales.length === 0) {
-        showSuccess('Vinted: no new sales found')
+        setSyncMessage('No new sales found')
         return
       }
 
@@ -582,10 +466,11 @@ export default function SoldHistoryPage() {
         })
       }
 
-      showSuccess(`Vinted: synced ${syncData.synced} items, created ${syncData.created} new`)
+      setSyncMessage(`Synced ${syncData.synced} items, created ${syncData.created} new`)
       loadSoldItems()
     } catch (err) {
-      showError(err)
+      console.error('Sync failed:', err)
+      setSyncMessage(err instanceof Error ? err.message : 'Sync failed')
     } finally {
       setIsSyncing(false)
     }
@@ -594,60 +479,46 @@ export default function SoldHistoryPage() {
   const handleBackfillAddresses = useCallback(async () => {
     if (isBackfilling) return
     setIsBackfilling(true)
+    setSyncMessage(null)
 
     try {
-      const sales = await sendExtensionMessage('get_vinted_sales', { pages: 10, perPage: 100, enrich: true }, 30000)
+      const sales = await new Promise<unknown[]>((resolve, reject) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+          reject(new Error('Extension not available'))
+          return
+        }
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { action: 'get_vinted_sales', params: { pages: 20, perPage: 100, enrich: true } },
+          (response: Record<string, unknown> | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+              return
+            }
+            if (!response?.success) {
+              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
+              return
+            }
+            resolve((response.sales as unknown[]) || [])
+          }
+        )
+      })
 
       if (!Array.isArray(sales) || sales.length === 0) {
-        showSuccess('No sales found to backfill')
+        setSyncMessage('No sales found to backfill')
         return
       }
 
       const syncData = await syncSalesInChunks(sales)
 
-      showSuccess(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
+      setSyncMessage(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
       loadSoldItems()
     } catch (err) {
-      showError(err)
+      setSyncMessage(err instanceof Error ? err.message : 'Backfill failed')
     } finally {
       setIsBackfilling(false)
     }
   }, [isBackfilling, loadSoldItems])
-
-  /* ── Etsy sync handler ─────────────────────────────────── */
-
-  const [isEtsySyncing, setIsEtsySyncing] = useState(false)
-
-  const handleEtsySync = useCallback(async () => {
-    if (isEtsySyncing) return
-    setIsEtsySyncing(true)
-
-    try {
-      const receipts = await sendExtensionMessage('get_etsy_receipts', { status: 'all' }, 15000)
-
-      if (!Array.isArray(receipts) || receipts.length === 0) {
-        showSuccess('Etsy: no new sales found')
-        return
-      }
-
-      const result = await fetchApi<{
-        synced: number
-        created: number
-        errors: number
-      }>('/api/etsy/sync-sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sales: receipts }),
-      })
-
-      showSuccess(`Etsy: synced ${result.synced} items, created ${result.created} new`)
-      loadSoldItems()
-    } catch (err) {
-      showError(err)
-    } finally {
-      setIsEtsySyncing(false)
-    }
-  }, [isEtsySyncing, loadSoldItems])
 
   /* ── eBay sync handler ─────────────────────────────────── */
 
@@ -656,25 +527,22 @@ export default function SoldHistoryPage() {
   const handleEbaySync = useCallback(async () => {
     if (isEbaySyncing) return
     setIsEbaySyncing(true)
+    setSyncMessage(null)
 
     try {
       const result = await fetchApi<{
         ordersChecked: number
         itemsSold: number
         enriched: number
-        delistedFrom: string[]
         message: string
       }>('/api/ebay/sync-orders', { method: 'POST' })
 
-      showSuccess(`eBay: ${result.message}`)
-      if (result.delistedFrom?.length > 0) {
-        showSuccess(`Sold on eBay — auto-delisting from ${result.delistedFrom.join(', ')}`)
-      }
+      setSyncMessage(result.message || `Checked ${result.ordersChecked} orders, ${result.itemsSold} new sales`)
       if (result.itemsSold > 0 || result.enriched > 0) {
         loadSoldItems()
       }
     } catch (err) {
-      showError(err)
+      setSyncMessage(err instanceof Error ? err.message : 'eBay sync failed')
     } finally {
       setIsEbaySyncing(false)
     }
@@ -704,18 +572,32 @@ export default function SoldHistoryPage() {
         <div>
           <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
         </div>
-        <SyncDropdown
-          isSyncing={isSyncing || isEbaySyncing || isEtsySyncing}
-          onSyncAll={() => { handleEbaySync(); handleSyncSales(); handleEtsySync() }}
-          onSyncEbay={handleEbaySync}
-          onSyncVinted={handleSyncSales}
-          onSyncEtsy={handleEtsySync}
-          onBackfill={handleBackfillAddresses}
-          isEbaySyncing={isEbaySyncing}
-          isVintedSyncing={isSyncing}
-          isEtsySyncing={isEtsySyncing}
-          isBackfilling={isBackfilling}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleEbaySync}
+            disabled={isEbaySyncing}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+          >
+            {isEbaySyncing ? 'Syncing...' : 'Sync eBay Sales'}
+          </button>
+          <button
+            onClick={handleSyncSales}
+            disabled={isSyncing}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+          >
+            {isSyncing ? 'Syncing...' : 'Sync Vinted Sales'}
+          </button>
+          <button
+            onClick={handleBackfillAddresses}
+            disabled={isBackfilling}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
+          >
+            {isBackfilling ? 'Backfilling...' : 'Backfill addresses'}
+          </button>
+          {syncMessage && (
+            <span className="text-xs text-ink-lt">{syncMessage}</span>
+          )}
+        </div>
       </div>
 
       {/* Error state */}
@@ -732,18 +614,14 @@ export default function SoldHistoryPage() {
 
       {/* ── Needs Action section ─────────────────────────────── */}
       {!isLoading && actionItems.length > 0 && (() => {
-        const filteredActionItems = actionPlatformFilter === 'all'
-          ? actionItems
-          : actionItems.filter((i) => i.marketplace === actionPlatformFilter)
-        const actionPlatforms = [...new Set(actionItems.map((i) => i.marketplace).filter((m): m is string => !!m && m !== 'unknown'))]
         const PREVIEW_COUNT = 6
-        const visibleActions = showAllAction ? filteredActionItems : filteredActionItems.slice(0, PREVIEW_COUNT)
-        const hasMore = filteredActionItems.length > PREVIEW_COUNT
+        const visibleActions = showAllAction ? actionItems : actionItems.slice(0, PREVIEW_COUNT)
+        const hasMore = actionItems.length > PREVIEW_COUNT
 
         // Group for pick list: stash name → items (alphabetic by stash, then by name)
         const picklistGroups = (() => {
           const groups = new Map<string, SoldItem[]>()
-          for (const item of filteredActionItems) {
+          for (const item of actionItems) {
             const key = item.stashName || '— No stash —'
             if (!groups.has(key)) groups.set(key, [])
             groups.get(key)!.push(item)
@@ -768,25 +646,8 @@ export default function SoldHistoryPage() {
                   Needs action
                 </h2>
                 <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
-                  {filteredActionItems.length}
+                  {actionItems.length}
                 </span>
-                {actionPlatforms.length > 1 && (
-                  <div className="flex gap-1 ml-2">
-                    {['all', ...actionPlatforms].map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setActionPlatformFilter(p)}
-                        className={`px-2 py-0.5 text-[10px] font-medium rounded-full transition ${
-                          actionPlatformFilter === p
-                            ? 'bg-sage text-white'
-                            : 'bg-cream text-ink-lt hover:bg-cream-dk'
-                        }`}
-                      >
-                        {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex gap-1 bg-cream rounded p-1">
@@ -843,7 +704,7 @@ export default function SoldHistoryPage() {
                     onClick={() => setShowAllAction(!showAllAction)}
                     className="text-xs text-sage hover:text-sage-lt transition font-medium"
                   >
-                    {showAllAction ? 'Show less' : `Show all ${filteredActionItems.length} orders`}
+                    {showAllAction ? 'Show less' : `Show all ${actionItems.length} orders`}
                   </button>
                 )}
               </>
