@@ -2,6 +2,19 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
+/** Normalise address fields from different marketplace shapes into a common format */
+function normaliseAddress(addr: Record<string, unknown>) {
+  return {
+    name: (addr.name as string) ?? (addr.fullName as string) ?? null,
+    firstLine: (addr.firstLine as string) ?? (addr.line1 as string) ?? (addr.address_line1 as string) ?? null,
+    secondLine: (addr.secondLine as string) ?? (addr.line2 as string) ?? (addr.address_line2 as string) ?? null,
+    city: (addr.city as string) ?? null,
+    state: (addr.state as string) ?? (addr.stateOrProvince as string) ?? null,
+    country: (addr.country as string) ?? (addr.countryCode as string) ?? null,
+    zip: (addr.zip as string) ?? (addr.postalCode as string) ?? (addr.postcode as string) ?? null,
+  }
+}
+
 /**
  * GET /api/sold/[id]
  * Fetch a single sold item with marketplace + customer data
@@ -72,7 +85,7 @@ export const GET = withAuth(async (req, user, params) => {
       isGift: (sale?.isGift as boolean) ?? false,
       giftMessage: (sale?.giftMessage as string) ?? null,
       receiptItems: (sale?.receiptItems as unknown[]) ?? null,
-      shippingAddress: (sale?.shippingAddress as Record<string, unknown>) ?? null,
+      shippingAddress: sale?.shippingAddress ? normaliseAddress(sale.shippingAddress as Record<string, unknown>) : null,
       orderDate: (sale?.orderDate as string) ?? null,
     },
     customer: customer || null,

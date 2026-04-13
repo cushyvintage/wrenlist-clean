@@ -171,7 +171,7 @@ export async function enrichEbaySoldItem(
     shippingAddress,
     trackingNumber: null as string | null,
     carrier,
-    shipmentStatus: isNewSale ? 'Label Sent' : (existingSale?.shipmentStatus as string) || null,
+    shipmentStatus: isNewSale ? null : (existingSale?.shipmentStatus as string) || null,
     orderDate: order.creationDate || null,
     completedDate: null as string | null,
     deliveryCost,
