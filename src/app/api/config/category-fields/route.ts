@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { FieldConfig, Platform } from '@/types'
-import { getCategoryFields } from '@/data/marketplace/category-field-requirements'
-import { LEGACY_CATEGORY_MAP } from '@/data/marketplace-category-map'
-import type { PlatformFieldMap } from '@/types/categories'
 
 const CACHE_HEADERS = {
   'Cache-Control': 'private, max-age=3600, stale-while-revalidate=86400',
@@ -23,48 +20,67 @@ export const GET = async (req: NextRequest) => {
       )
     }
 
-    // Resolve legacy category names, then look up field requirements
-    const resolvedCategory = LEGACY_CATEGORY_MAP[category.toLowerCase()] ?? category.toLowerCase()
-    const mp = marketplace === 'ebay' || marketplace === 'vinted' ? marketplace : null
-    const fieldDefs = mp ? getCategoryFields(resolvedCategory, mp) : []
+    const supabase = await createSupabaseServerClient()
+    const resolvedCategory = category.toLowerCase()
 
-    // Convert CategoryFieldDef[] → PlatformFieldMap for backward compat with consumers
-    const staticFields: PlatformFieldMap = {}
-    for (const f of fieldDefs) {
-      staticFields[f.name.toLowerCase().replace(/\s+/g, '_')] = {
-        show: true,
-        required: f.required,
-        type: f.type === 'select' ? 'select' : 'text',
+    // Step 1: Try legacy resolution via DB
+    let canonicalCategory = resolvedCategory
+    const { data: legacyMatch } = await supabase
+      .from('categories')
+      .select('value')
+      .contains('legacy_values', [resolvedCategory])
+      .limit(1)
+      .single()
+
+    if (legacyMatch) {
+      canonicalCategory = legacyMatch.value
+    }
+
+    // Step 2: Get field requirements from category_field_requirements table
+    const { data: fieldReqRow } = await supabase
+      .from('category_field_requirements')
+      .select('fields')
+      .eq('category_value', canonicalCategory)
+      .eq('platform', marketplace)
+      .single()
+
+    // Convert CategoryFieldDef[] → PlatformFieldMap for backward compat
+    const staticFields: Record<string, FieldConfig> = {}
+    if (fieldReqRow?.fields && Array.isArray(fieldReqRow.fields)) {
+      for (const f of fieldReqRow.fields as Array<{ name: string; required?: boolean; type?: string }>) {
+        staticFields[f.name.toLowerCase().replace(/\s+/g, '_')] = {
+          show: true,
+          required: f.required ?? false,
+          type: (f.type === 'select' ? 'select' : 'text') as 'text' | 'select',
+        }
       }
     }
 
-    // Check DB for overrides (extension PATCH writes here)
-    const supabase = await createSupabaseServerClient()
-    const { data } = await supabase
+    // Step 3: Check marketplace_category_config for user/extension overrides
+    const { data: overrideRow } = await supabase
       .from('marketplace_category_config')
       .select('*')
-      .eq('category', resolvedCategory)
+      .eq('category', canonicalCategory)
       .eq('marketplace', marketplace)
       .single()
 
-    if (data?.fields) {
-      // Merge DB overrides on top of static data
-      const dbFields = data.fields as unknown as Record<string, FieldConfig>
+    if (overrideRow?.fields) {
+      const dbFields = overrideRow.fields as unknown as Record<string, FieldConfig>
       const merged = { ...staticFields }
       for (const [key, val] of Object.entries(dbFields)) {
         merged[key] = { ...merged[key], ...val }
       }
 
       return NextResponse.json(
-        { ...data, fields: merged },
+        { ...overrideRow, fields: merged },
         { headers: CACHE_HEADERS }
       )
     }
 
-    // No DB override — return static fields directly
+    // No override — return static fields
     return NextResponse.json(
       {
-        category: resolvedCategory,
+        category: canonicalCategory,
         marketplace,
         fields: staticFields,
       },

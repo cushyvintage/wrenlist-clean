@@ -1,6 +1,6 @@
 'use client'
 
-import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { formatPlatformName } from '@/lib/crosslist'
 import type { Platform } from '@/types'
@@ -18,6 +18,8 @@ const MAPPED_PLATFORMS: Platform[] = ['ebay', 'vinted', 'shopify', 'depop']
  * Helps users understand that not every category maps perfectly to every marketplace.
  */
 export default function CategoryPlatformStatus({ category, selectedPlatforms }: CategoryPlatformStatusProps) {
+  const { getPlatformId } = useCategoryTree()
+
   if (!category || selectedPlatforms.length === 0) return null
 
   const relevant = selectedPlatforms.filter((p) => MAPPED_PLATFORMS.includes(p))
@@ -27,7 +29,7 @@ export default function CategoryPlatformStatus({ category, selectedPlatforms }: 
   const fallback: Platform[] = []
 
   for (const platform of relevant) {
-    const id = getPlatformCategoryId(category, platform as 'ebay' | 'vinted' | 'shopify' | 'depop')
+    const id = getPlatformId(category, platform)
     if (id) {
       matched.push(platform)
     } else {

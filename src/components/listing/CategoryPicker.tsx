@@ -1,8 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { CATEGORY_TREE } from '@/data/marketplace-category-map'
-import type { CategoryNode } from '@/types/categories'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
+
+interface CategoryNode {
+  value: string
+  label: string
+  top_level: string
+  parent_group: string | null
+  platforms: Record<string, { id: string; name: string; path?: string }>
+}
 
 interface CategoryPickerProps {
   value: string
@@ -18,40 +25,34 @@ export default function CategoryPicker({
   onChange,
   selectedPlatforms,
 }: CategoryPickerProps) {
+  const { tree, topLevelKeys, isLoading } = useCategoryTree()
   const [step, setStep] = useState<'category' | 'subcategory'>('category')
   const [search, setSearch] = useState('')
   const [browsing, setBrowsing] = useState<string | null>(null)
 
-  const topLevelCategories = useMemo(
-    () => Object.keys(CATEGORY_TREE).sort(),
-    []
-  )
-
   const selectedTopLevel = useMemo(() => {
     if (!value) return null
-    for (const [topKey, subcats] of Object.entries(CATEGORY_TREE)) {
-      for (const node of Object.values(subcats)) {
+    for (const [topKey, subcats] of Object.entries(tree)) {
+      for (const node of subcats) {
         if (node.value === value) return topKey
       }
     }
-    // Try progressively longer prefixes for multi-segment keys (home_garden, books_media, etc.)
+    // Try progressively longer prefixes for multi-segment keys
     const parts = value.split('_')
     for (let i = parts.length - 1; i >= 1; i--) {
       const prefix = parts.slice(0, i).join('_')
-      if (prefix in CATEGORY_TREE) return prefix
+      if (prefix in tree) return prefix
     }
     return parts[0] ?? null
-  }, [value])
+  }, [value, tree])
 
   // Use browsing override when user clicked a top-level but hasn't picked a subcategory yet
   const activeTopLevel = browsing ?? selectedTopLevel
 
   const subcategories = useMemo(() => {
     if (!activeTopLevel) return []
-    const catTree = CATEGORY_TREE[activeTopLevel]
-    if (!catTree) return []
-    return Object.values(catTree)
-  }, [activeTopLevel])
+    return tree[activeTopLevel] ?? []
+  }, [activeTopLevel, tree])
 
   // Filter subcategories by search query
   const filteredSubcategories = useMemo(() => {
@@ -64,30 +65,18 @@ export default function CategoryPicker({
     )
   }, [subcategories, search])
 
-  // Group subcategories by L2 prefix when the list is large
-  // e.g. "advertising_general" and "advertising_food_and_bev" → group "Advertising"
+  // Group subcategories by parent_group when the list is large
   const groupedSubcategories = useMemo(() => {
-    if (!activeTopLevel) return []
     const items = filteredSubcategories
     if (items.length <= SEARCH_THRESHOLD) {
-      // Small list — no grouping needed
-      return [{ group: null, items }]
+      return [{ group: null as string | null, items }]
     }
-
-    // Extract the group prefix from subcategory keys
-    // key format: "advertising_general" → group = "advertising"
-    const catTree = CATEGORY_TREE[activeTopLevel]
-    if (!catTree) return [{ group: null, items }]
 
     const groups: { group: string | null; items: CategoryNode[] }[] = []
     const groupMap = new Map<string, CategoryNode[]>()
 
     for (const node of items) {
-      // Get the subcategory key by removing the top-level prefix from the value
-      const suffix = node.value.replace(`${activeTopLevel}_`, '')
-      const parts = suffix.split('_')
-      // Group key is the first segment of the suffix (e.g. "advertising", "womenswear")
-      const groupKey = parts.length > 1 ? (parts[0] ?? '__ungrouped') : '__ungrouped'
+      const groupKey = node.parent_group ?? '__ungrouped'
       const existing = groupMap.get(groupKey)
       if (existing) {
         existing.push(node)
@@ -98,7 +87,7 @@ export default function CategoryPicker({
 
     // Only use grouping if there are multiple groups
     if (groupMap.size <= 1) {
-      return [{ group: null, items }]
+      return [{ group: null as string | null, items }]
     }
 
     for (const [key, nodes] of groupMap.entries()) {
@@ -109,17 +98,13 @@ export default function CategoryPicker({
     }
 
     return groups.sort((a, b) => (a.group ?? '').localeCompare(b.group ?? ''))
-  }, [filteredSubcategories, activeTopLevel])
+  }, [filteredSubcategories])
 
   const selectedNode = useMemo(() => {
     if (!value || !selectedTopLevel) return null
-    const subs = CATEGORY_TREE[selectedTopLevel]
-    if (!subs) return null
-    for (const sub of Object.values(subs)) {
-      if (sub.value === value) return sub
-    }
-    return null
-  }, [value, selectedTopLevel])
+    const subs = tree[selectedTopLevel] ?? []
+    return subs.find((s) => s.value === value) ?? null
+  }, [value, selectedTopLevel, tree])
 
   const handleSelectSubcategory = (node: CategoryNode) => {
     onChange(node.value, node)
@@ -135,15 +120,12 @@ export default function CategoryPicker({
   }
 
   const handleCategoryClick = (cat: string) => {
-    const catTree = CATEGORY_TREE[cat]
-    if (!catTree) return
-    const subs = Object.values(catTree)
+    const subs = tree[cat] ?? []
     if (subs.length === 1 && subs[0]) {
       setBrowsing(null)
       onChange(subs[0].value, subs[0])
       return
     }
-    // Don't fire onChange — let the user pick from the subcategory list
     setBrowsing(cat)
     setStep('subcategory')
   }
@@ -179,12 +161,16 @@ export default function CategoryPicker({
     )
   }
 
+  if (isLoading) {
+    return <div className="text-sm text-sage-dim animate-pulse py-4">Loading categories...</div>
+  }
+
   return (
     <div className="space-y-3">
       {step === 'category' ? (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {topLevelCategories.map((cat) => (
+            {topLevelKeys.map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleCategoryClick(cat)}

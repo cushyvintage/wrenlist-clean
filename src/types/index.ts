@@ -239,6 +239,27 @@ export interface ProductMarketplaceData {
 }
 
 // ============================================================================
+// DEDUP
+// ============================================================================
+
+export interface DedupFindSummary {
+  id: string
+  name: string
+  photos: string[]
+  brand: string | null
+  selectedMarketplaces: string[]
+  status: string
+  description: string | null
+  createdAt?: string
+}
+
+export interface DedupCandidate {
+  findA: DedupFindSummary
+  findB: DedupFindSummary
+  similarityScore: number
+}
+
+// ============================================================================
 // CUSTOMERS (CRM)
 // ============================================================================
 
@@ -528,6 +549,39 @@ export interface CategoryFieldConfig {
   source: 'manual' | 'vinted_api' | 'ebay_api'
   last_updated: string
   created_at: string
+}
+
+// ============================================================================
+// CATEGORIES (DB source of truth)
+// ============================================================================
+
+export interface CategoryRow {
+  id: string
+  value: string
+  label: string
+  top_level: string
+  parent_group: string | null
+  platforms: Record<string, { id: string; name: string; path?: string }>
+  sort_order: number
+  legacy_values: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CategoryFieldRequirementRow {
+  id: string
+  category_value: string
+  platform: string
+  fields: Array<{
+    name: string
+    label: string
+    type: 'text' | 'select'
+    required: boolean
+    highlighted?: boolean
+    options?: string[]
+  }>
+  created_at: string
+  updated_at: string
 }
 
 // ============================================================================
