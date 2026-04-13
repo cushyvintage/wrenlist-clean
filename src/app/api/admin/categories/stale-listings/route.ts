@@ -47,12 +47,12 @@ export const GET = withAdminAuth(async (req) => {
     pmdQuery = pmdQuery.eq('marketplace', platformFilter)
   }
 
-  const { data: pmdRows, error: pmdErr } = await pmdQuery
+  const { data: pmdRows, error: pmdErr } = await pmdQuery.limit(2000)
   if (pmdErr) {
     return NextResponse.json({ error: pmdErr.message }, { status: 500 })
   }
   if (!pmdRows?.length) {
-    return NextResponse.json({ staleListings: [], count: 0 })
+    return NextResponse.json({ staleListings: [], count: 0, hasMore: false })
   }
 
   // 2. Collect unique find IDs and fetch finds (title + category)
@@ -137,5 +137,6 @@ export const GET = withAdminAuth(async (req) => {
     staleListings,
     count: staleListings.length,
     totalListed: pmdRows.length,
+    hasMore: pmdRows.length >= 2000,
   })
 })

@@ -269,9 +269,21 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       const missing = new Set<string>()
 
       // Check all fields marked required + shown in fieldConfig
+      // Look in shared fields first, then per-platform fields
       for (const [key, cfg] of Object.entries(fieldConfig)) {
         if (!cfg.required || !cfg.show) continue
-        const value = formData.platformFields.shared?.[key]
+        let value = formData.platformFields.shared?.[key]
+        // Also check per-platform field namespaces
+        if (value === undefined || value === null || value === '') {
+          for (const p of formData.selectedPlatforms) {
+            const platFields = (formData.platformFields as Record<string, Record<string, unknown> | undefined>)[p]
+            const platVal = platFields?.[key]
+            if (platVal !== undefined && platVal !== null && platVal !== '') {
+              value = platVal as typeof value
+              break
+            }
+          }
+        }
         const isEmpty = value === undefined || value === null || value === '' ||
           (Array.isArray(value) && value.length === 0)
         if (isEmpty) missing.add(key)
