@@ -127,12 +127,31 @@ export const GET = withAdminAuth(async (req) => {
         detail: 'No field requirements defined for any platform',
       })
     } else {
-      // Check if eBay has required fields defined (most categories should)
+      // Check eBay: mapping exists but no field requirements
       if (platforms.ebay?.id && !catFields.ebay?.length) {
         issues.push({
           type: 'missing_required_fields',
           platform: 'ebay',
           detail: 'eBay mapping exists but no field requirements defined',
+        })
+      }
+      // Check Vinted: mapping exists but no required fields (ISBN, Language etc.)
+      if (platforms.vinted?.id && catFields.vinted) {
+        const vintedRequired = (catFields.vinted as Array<{ required?: boolean; name?: string }>)
+          .filter((f) => f.required)
+        if (vintedRequired.length === 0) {
+          issues.push({
+            type: 'missing_required_fields',
+            platform: 'vinted',
+            detail: 'Vinted mapping exists but no required fields defined',
+          })
+        }
+      }
+      if (platforms.vinted?.id && !catFields.vinted?.length) {
+        issues.push({
+          type: 'missing_required_fields',
+          platform: 'vinted',
+          detail: 'Vinted mapping exists but no field requirements defined',
         })
       }
     }

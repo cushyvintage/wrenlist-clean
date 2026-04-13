@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import TaxonomySearchModal from './TaxonomySearchModal'
 import type { Platform } from '@/types'
@@ -69,9 +69,58 @@ export default function PlatformMappingEditor({
     onChange({ ...platforms, [platform]: { ...current, [field]: value } })
   }
 
+  // Auto-suggest: fetch best match for unmapped platforms
+  const [suggestions, setSuggestions] = useState<Record<string, { id: string; name: string; path: string; is_leaf: boolean } | null>>({})
+  const suggestFetchedRef = useRef(false)
+
+  useEffect(() => {
+    if (!categoryLabel || suggestFetchedRef.current) return
+    suggestFetchedRef.current = true
+
+    // Only fetch suggestions for unmapped platforms
+    const unmapped = PLATFORM_LIST.filter((p) => !platforms[p]?.id)
+    if (unmapped.length === 0) return
+
+    for (const platform of unmapped) {
+      fetch(`/api/admin/categories/taxonomy-search?platform=${platform}&q=${encodeURIComponent(categoryLabel)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const best = (data.results ?? [])[0]
+          if (best) {
+            setSuggestions((prev) => ({ ...prev, [platform]: best }))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [categoryLabel, platforms])
+
+  const handleApplySuggestion = (platform: string) => {
+    const suggestion = suggestions[platform]
+    if (!suggestion) return
+    onChange({
+      ...platforms,
+      [platform]: { id: suggestion.id, name: suggestion.name, path: suggestion.path },
+    })
+    setSuggestions((prev) => ({ ...prev, [platform]: null }))
+  }
+
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-semibold text-ink">Platform Mappings</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-ink">Platform Mappings</h4>
+        {Object.values(suggestions).some(Boolean) && (
+          <button
+            onClick={() => {
+              for (const [p, s] of Object.entries(suggestions)) {
+                if (s) handleApplySuggestion(p)
+              }
+            }}
+            className="px-2 py-1 text-[11px] font-medium text-sage hover:text-ink border border-sage/20 rounded hover:border-sage/40 transition-colors"
+          >
+            Apply all suggestions
+          </button>
+        )}
+      </div>
 
       {PLATFORM_LIST.map((platform) => {
         const mapping = platforms[platform]
@@ -118,6 +167,25 @@ export default function PlatformMappingEditor({
                         {mapping!.path}
                       </p>
                     )}
+                  </div>
+                ) : suggestions[platform] ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-sage-dim italic">Suggested:</span>
+                      <span className="text-sm font-medium text-ink">{suggestions[platform]!.name}</span>
+                      {suggestions[platform]!.is_leaf ? (
+                        <span className="px-1 py-0.5 text-[9px] font-medium bg-emerald-50 text-emerald-700 rounded">leaf</span>
+                      ) : (
+                        <span className="px-1 py-0.5 text-[9px] font-medium bg-amber-50 text-amber-700 rounded">parent</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-sage-dim mt-0.5">{suggestions[platform]!.path}</p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleApplySuggestion(platform) }}
+                      className="mt-1 px-2 py-0.5 text-[11px] font-medium text-white bg-sage rounded hover:bg-sage-lt transition-colors"
+                    >
+                      Apply suggestion
+                    </button>
                   </div>
                 ) : (
                   <span className="text-xs text-sage-dim italic">Not mapped</span>
