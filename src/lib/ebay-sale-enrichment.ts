@@ -17,6 +17,13 @@ interface EbayOrder {
     priceSubtotal?: { value?: string; currency?: string }
     deliveryCost?: { value?: string; currency?: string }
   }
+  /** eBay Fulfillment API paymentSummary — contains real fee and net payout data */
+  paymentSummary?: {
+    totalDueSeller?: { value?: string; currency?: string }
+    payments?: Array<{ amount?: { value?: string; currency?: string } }>
+  }
+  /** Total marketplace fee charged by eBay (final value fee + per-order fee) */
+  totalMarketplaceFee?: { value?: string; currency?: string }
   fulfillmentStartInstructions?: Array<{
     shippingStep?: {
       shipTo?: {
@@ -102,9 +109,38 @@ export async function enrichEbaySoldItem(
   // Parse financial data
   const grossAmount = parseFloat(lineItem.total?.value || '0')
   const deliveryCost = parseFloat(lineItem.deliveryCost?.value || '0')
-  // eBay final value fee is ~12.8% of item total (excluding shipping) for most categories
-  const estimatedFee = Math.round(grossAmount * 0.128 * 100) / 100
-  const netAmount = Math.round((grossAmount - estimatedFee) * 100) / 100
+
+  // Use real fee from eBay order when available, fall back to ~12.8% estimate
+  const lineItemCount = order.lineItems?.length || 1
+  let serviceFee: number
+  let netAmount: number
+  let feeSource: 'actual' | 'estimated'
+
+  const realFee = parseFloat(order.totalMarketplaceFee?.value || '')
+  const realNet = parseFloat(order.paymentSummary?.totalDueSeller?.value || '')
+
+  if (!isNaN(realFee) && realFee > 0) {
+    // Real fee available — split proportionally across line items if multi-item order
+    serviceFee = lineItemCount > 1
+      ? Math.round((realFee * (grossAmount / parseFloat(order.pricingSummary?.total?.value || '1'))) * 100) / 100
+      : realFee
+    netAmount = Math.round((grossAmount - serviceFee) * 100) / 100
+    feeSource = 'actual'
+  } else if (!isNaN(realNet) && realNet > 0) {
+    // No explicit fee but we have net payout — derive fee from gross minus net
+    const orderTotal = parseFloat(order.pricingSummary?.total?.value || '0')
+    const totalFee = orderTotal - realNet
+    serviceFee = lineItemCount > 1
+      ? Math.round((totalFee * (grossAmount / (orderTotal || 1))) * 100) / 100
+      : Math.round(totalFee * 100) / 100
+    netAmount = Math.round((grossAmount - serviceFee) * 100) / 100
+    feeSource = 'actual'
+  } else {
+    // Fallback: estimate at ~12.8% of item total
+    serviceFee = Math.round(grossAmount * 0.128 * 100) / 100
+    netAmount = Math.round((grossAmount - serviceFee) * 100) / 100
+    feeSource = 'estimated'
+  }
 
   // Build shipping address from fulfillment instructions
   const shipTo = order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo
@@ -127,8 +163,9 @@ export async function enrichEbaySoldItem(
       location: order.buyer.taxAddress?.countryCode || null,
     } : null,
     grossAmount,
-    serviceFee: estimatedFee,
+    serviceFee,
     netAmount,
+    feeSource,
     currency: lineItem.total?.currency || 'GBP',
     shippingAddress,
     trackingNumber: null as string | null,

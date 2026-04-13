@@ -558,6 +558,84 @@ export class eBayClient {
   }
 
   /**
+   * Get traffic report from Analytics API.
+   * Requires sell.analytics.readonly scope — may return 403 if not granted.
+   */
+  async getTrafficReport(params: {
+    startDate: string  // YYYYMMDD
+    endDate: string    // YYYYMMDD
+    marketplaceId?: string
+  }): Promise<{ data: Record<string, unknown> | null; error?: string }> {
+    const { startDate, endDate, marketplaceId = 'EBAY_GB' } = params
+    const filter = `marketplace_id:{${marketplaceId}},date_range:[${startDate}..${endDate}]`
+    const url = `/sell/analytics/v1/traffic_report?dimension=DAY&filter=${encodeURIComponent(filter)}`
+    try {
+      const data = await this.apiRequest(url, {
+        headers: { 'X-EBAY-C-MARKETPLACE-ID': marketplaceId },
+      })
+      return { data }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return { data: null, error: message }
+    }
+  }
+
+  /**
+   * Get recent order summary stats (total revenue, fees, count) from Fulfillment API.
+   * Uses orders already available — no extra scope needed.
+   */
+  async getOrderStats(params: { days?: number } = {}): Promise<{
+    orderCount: number
+    totalRevenue: number
+    totalFees: number
+    totalNet: number
+    currency: string
+    periodDays: number
+  }> {
+    const days = params.days || 30
+    const since = new Date(Date.now() - days * 86400000).toISOString()
+    const ordersResponse = await this.getOrders({
+      limit: 200,
+      filter: `creationdate:[${since}..],orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|COMPLETED}`,
+    })
+    const orders = (ordersResponse.orders || []) as Array<{
+      pricingSummary?: { total?: { value?: string; currency?: string } }
+      totalMarketplaceFee?: { value?: string }
+      paymentSummary?: { totalDueSeller?: { value?: string } }
+    }>
+
+    let totalRevenue = 0
+    let totalFees = 0
+    let totalNet = 0
+    let currency = 'GBP'
+
+    for (const order of orders) {
+      const orderTotal = parseFloat(order.pricingSummary?.total?.value || '0')
+      totalRevenue += orderTotal
+      if (order.pricingSummary?.total?.currency) currency = order.pricingSummary.total.currency
+
+      const fee = parseFloat(order.totalMarketplaceFee?.value || '0')
+      totalFees += fee
+
+      const net = parseFloat(order.paymentSummary?.totalDueSeller?.value || '0')
+      if (net > 0) {
+        totalNet += net
+      } else {
+        totalNet += orderTotal - fee
+      }
+    }
+
+    return {
+      orderCount: orders.length,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalFees: Math.round(totalFees * 100) / 100,
+      totalNet: Math.round(totalNet * 100) / 100,
+      currency,
+      periodDays: days,
+    }
+  }
+
+  /**
    * Get orders from Fulfillment API
    */
   async getOrders(params: { limit?: number; filter?: string } = {}): Promise<any> {

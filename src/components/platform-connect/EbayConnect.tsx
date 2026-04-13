@@ -1,8 +1,10 @@
 'use client'
 
-import { CheckCircle2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CheckCircle2, RefreshCw } from 'lucide-react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { trackEvent } from '@/lib/plausible'
+import { fetchApi } from '@/lib/api-utils'
 
 interface EbayPolicy {
   id: string
@@ -42,6 +44,30 @@ interface EbayConnectProps {
   onSalesDetectionToggle: () => void
 }
 
+interface EbaySellerStats {
+  orderStats: {
+    orderCount: number
+    totalRevenue: number
+    totalFees: number
+    totalNet: number
+    currency: string
+    periodDays: number
+    avgFeePercent: number | null
+  }
+  trafficStats: Record<string, unknown> | null
+  trafficError?: string
+  fetchedAt: string
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
 export function EbayConnect({
   ebay,
   ebayPolicies,
@@ -56,6 +82,42 @@ export function EbayConnect({
   onChangePoliciesClick,
   onSalesDetectionToggle,
 }: EbayConnectProps) {
+  const [sellerStats, setSellerStats] = useState<EbaySellerStats | null>(null)
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null)
+  const [statsRefreshing, setStatsRefreshing] = useState(false)
+
+  const loadCachedStats = useCallback(async () => {
+    try {
+      const res = await fetchApi<{ stats: EbaySellerStats | null; updatedAt: string | null }>('/api/ebay/seller-stats')
+      if (res.stats) setSellerStats(res.stats)
+      if (res.updatedAt) setStatsUpdatedAt(res.updatedAt)
+    } catch {
+      // silently fail — stats are non-critical
+    }
+  }, [])
+
+  const refreshStats = useCallback(async () => {
+    setStatsRefreshing(true)
+    try {
+      const res = await fetchApi<{ stats: EbaySellerStats; updatedAt: string }>('/api/ebay/seller-stats', {
+        method: 'POST',
+      })
+      if (res.stats) setSellerStats(res.stats)
+      if (res.updatedAt) setStatsUpdatedAt(res.updatedAt)
+    } catch {
+      // silently fail
+    } finally {
+      setStatsRefreshing(false)
+    }
+  }, [])
+
+  // Load cached stats when eBay is connected
+  useEffect(() => {
+    if (ebay.connected && ebay.setupComplete) {
+      loadCachedStats()
+    }
+  }, [ebay.connected, ebay.setupComplete, loadCachedStats])
+
   const handleConnectEbay = () => {
     trackEvent('PlatformConnected', { platform: 'ebay' })
     ebay.connectEbay()
@@ -145,6 +207,61 @@ export function EbayConnect({
             <div className="text-sm text-ink">eBay UK (GB)</div>
           </div>
         </div>
+
+        {/* Seller stats (30-day summary) */}
+        {sellerStats?.orderStats && sellerStats.orderStats.orderCount > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-medium text-ink-lt uppercase tracking-wide">Last 30 days</div>
+              <button
+                onClick={refreshStats}
+                disabled={statsRefreshing}
+                className="flex items-center gap-1 text-[10px] text-sage hover:text-sage-dk transition disabled:opacity-50"
+              >
+                <RefreshCw size={10} className={statsRefreshing ? 'animate-spin' : ''} />
+                {statsUpdatedAt ? timeAgo(statsUpdatedAt) : 'Refresh'}
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-cream-md rounded px-3 py-2 text-center">
+                <div className="text-lg font-mono font-semibold text-ink">{sellerStats.orderStats.orderCount}</div>
+                <div className="text-[10px] text-ink-lt uppercase tracking-wide">Orders</div>
+              </div>
+              <div className="bg-cream-md rounded px-3 py-2 text-center">
+                <div className="text-lg font-mono font-semibold text-ink">
+                  {sellerStats.orderStats.currency === 'GBP' ? '£' : '$'}{sellerStats.orderStats.totalRevenue.toFixed(0)}
+                </div>
+                <div className="text-[10px] text-ink-lt uppercase tracking-wide">Revenue</div>
+              </div>
+              <div className="bg-cream-md rounded px-3 py-2 text-center">
+                <div className="text-lg font-mono font-semibold text-ink">
+                  {sellerStats.orderStats.currency === 'GBP' ? '£' : '$'}{sellerStats.orderStats.totalFees.toFixed(0)}
+                </div>
+                <div className="text-[10px] text-ink-lt uppercase tracking-wide">Fees</div>
+              </div>
+              <div className="bg-cream-md rounded px-3 py-2 text-center">
+                <div className="text-lg font-mono font-semibold text-ink">
+                  {sellerStats.orderStats.avgFeePercent != null ? `${sellerStats.orderStats.avgFeePercent}%` : '—'}
+                </div>
+                <div className="text-[10px] text-ink-lt uppercase tracking-wide">Fee %</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No stats yet — show refresh button */}
+        {ebay.setupComplete && !sellerStats && (
+          <div className="mb-4">
+            <button
+              onClick={refreshStats}
+              disabled={statsRefreshing}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-sage border border-border rounded hover:bg-cream transition disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={statsRefreshing ? 'animate-spin' : ''} />
+              {statsRefreshing ? 'Loading stats...' : 'Load seller stats'}
+            </button>
+          </div>
+        )}
 
         {isTokenExpiringWithin7Days() && (
           <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
