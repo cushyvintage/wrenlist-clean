@@ -1011,8 +1011,8 @@ export class EtsyClient {
         who_made: whoMade,
         when_made: whenMade,
         is_supply: false,
-        // taxonomy_id 0 = let Etsy auto-categorize from title
-        taxonomy_id: product.dynamicProperties?.etsyTaxonomyId || 0,
+        // taxonomy_id must be >= 1. Fallback: 69 = "Home & Living" (broad Etsy category)
+        taxonomy_id: product.dynamicProperties?.etsyTaxonomyId || 69,
       };
 
       await remoteLog("info", "etsy.api-publish", "Creating draft listing", {
