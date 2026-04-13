@@ -7,8 +7,7 @@
  * vehicles_parts, home_garden), uses L2 prefix grouping to keep prompts short.
  */
 
-import { CATEGORY_TREE } from '@/data/marketplace-category-map'
-import type { CategoryNode } from '@/types/categories'
+import { getAllCategories, type CategoryRow } from '@/lib/category-db'
 
 const MAX_DIRECT_SUBCATS = 50
 
@@ -17,14 +16,13 @@ interface SubcatInfo {
   labels: Map<string, string>  // value → label
 }
 
-/** Get all leaf values and labels under a top-level */
-function getSubcatInfo(topLevel: string): SubcatInfo {
-  const nodes = CATEGORY_TREE[topLevel]
-  if (!nodes) return { values: [], labels: new Map() }
-  const entries = Object.values(nodes) as CategoryNode[]
+/** Get all leaf values and labels under a top-level from pre-loaded rows */
+function getSubcatInfo(topLevel: string, allCategories: CategoryRow[]): SubcatInfo {
+  const entries = allCategories.filter((c) => c.top_level === topLevel)
+  if (entries.length === 0) return { values: [], labels: new Map() }
   return {
-    values: entries.map(n => n.value),
-    labels: new Map(entries.map(n => [n.value, n.label])),
+    values: entries.map((n) => n.value),
+    labels: new Map(entries.map((n) => [n.value, n.label])),
   }
 }
 
@@ -93,7 +91,8 @@ export async function refineToLeafCategory(
   apiKey: string,
   itemTitle?: string,
 ): Promise<string> {
-  const { values, labels } = getSubcatInfo(topLevel)
+  const allCategories = await getAllCategories(topLevel)
+  const { values, labels } = getSubcatInfo(topLevel, allCategories)
 
   // No subcategories or "other" — return as-is
   if (topLevel === 'other' || values.length <= 1) {

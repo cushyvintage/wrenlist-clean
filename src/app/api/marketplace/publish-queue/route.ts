@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
-import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { getPlatformCategoryIdFromDb } from '@/lib/category-db'
 
 /**
  * GET /api/marketplace/publish-queue
@@ -66,7 +66,7 @@ export const GET = withAuth(async (_req, user) => {
     shopifyStoreDomain = conn?.store_domain || null
   }
 
-  const queue = items.map((item) => {
+  const queue = await Promise.all(items.map(async (item) => {
     const find = findsMap[item.find_id] || null
     // Resolve platform_category_id: PMD → vintedMetadata → category map
     let categoryId = item.platform_category_id || null
@@ -77,9 +77,9 @@ export const GET = withAuth(async (_req, user) => {
       if (item.marketplace === 'vinted' && vintedMeta?.catalog_id) {
         categoryId = String(vintedMeta.catalog_id)
       }
-      // Fallback: resolve from category map
+      // Fallback: resolve from category DB
       if (!categoryId && find.category && ['vinted', 'depop', 'etsy', 'shopify'].includes(item.marketplace)) {
-        const mapped = getPlatformCategoryId(find.category as string, item.marketplace as 'vinted' | 'depop' | 'etsy' | 'shopify')
+        const mapped = await getPlatformCategoryIdFromDb(find.category as string, item.marketplace)
         if (mapped) categoryId = mapped
       }
     }
@@ -94,7 +94,7 @@ export const GET = withAuth(async (_req, user) => {
         ? { settings: { shopifyShopUrl: shopifyStoreDomain } }
         : {}),
     }
-  })
+  }))
 
   return ApiResponseHelper.success(queue)
 })

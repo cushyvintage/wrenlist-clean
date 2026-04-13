@@ -1,45 +1,68 @@
 /**
  * eBay UK category mappings for Wrenlist
- * Generated from CATEGORY_TREE — uses verified LEAF category IDs
+ * Database-backed with lazy caching.
  *
  * Maps both:
  * - Top-level canonical keys (e.g. "ceramics") → first leaf eBay ID
  * - Leaf values (e.g. "ceramics_plates") → specific eBay leaf ID
+ * - Legacy aliases resolved through DB legacy_values
  */
 
-import { CATEGORY_TREE, LEGACY_CATEGORY_MAP, getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { getAllCategories, getLegacyCategoryMap, getPlatformCategoryIdFromDb } from '@/lib/category-db'
 
-export const EBAY_CATEGORY_MAP: Record<string, string> = (() => {
+let _cachedMap: Record<string, string> | null = null
+
+async function getEbayMap(): Promise<Record<string, string>> {
+  if (_cachedMap) return _cachedMap
+
+  const all = await getAllCategories()
+  const legacyMap = await getLegacyCategoryMap()
+
   const map: Record<string, string> = {}
 
-  for (const [topKey, subcats] of Object.entries(CATEGORY_TREE)) {
-    let firstId: string | null = null
-    for (const node of Object.values(subcats)) {
-      const ebayId = node.platforms.ebay?.id ?? '99'
-      map[node.value] = ebayId
-      if (!firstId) {
-        firstId = ebayId
-        map[topKey] = ebayId
-      }
+  // Group by top_level to find first leaf per top-level
+  const topFirstId: Record<string, string> = {}
+
+  for (const row of all) {
+    const ebayId = row.platforms?.ebay?.id ?? '99'
+    map[row.value] = ebayId
+    if (!topFirstId[row.top_level]) {
+      topFirstId[row.top_level] = ebayId
+      map[row.top_level] = ebayId
     }
   }
 
-  // Legacy aliases — resolve old values through LEGACY_CATEGORY_MAP
-  for (const [oldVal, newVal] of Object.entries(LEGACY_CATEGORY_MAP)) {
+  // Legacy aliases
+  for (const [oldVal, newVal] of Object.entries(legacyMap)) {
     if (!map[oldVal]) {
       map[oldVal] = map[newVal] ?? '99'
     }
   }
 
-  // Short aliases
   map['default'] = '99'
 
+  _cachedMap = map
   return map
-})()
+}
 
 /** Look up eBay leaf category ID for a find.category value */
-export function getEbayCategoryId(category: string): string {
-  // Try direct lookup, then legacy resolution, then platform ID from tree
-  const resolved = LEGACY_CATEGORY_MAP[category] ?? category
-  return EBAY_CATEGORY_MAP[resolved] ?? EBAY_CATEGORY_MAP[category] ?? getPlatformCategoryId(resolved, 'ebay') ?? '99'
+export async function getEbayCategoryId(category: string): Promise<string> {
+  const ebayMap = await getEbayMap()
+
+  // Try direct lookup
+  if (ebayMap[category]) return ebayMap[category]!
+
+  // Try platform ID from DB (handles legacy resolution internally)
+  const fromDb = await getPlatformCategoryIdFromDb(category, 'ebay')
+  if (fromDb) return fromDb
+
+  return '99'
+}
+
+/**
+ * Get the full eBay category map (for callers that need bulk access).
+ * Prefer getEbayCategoryId() for single lookups.
+ */
+export async function getEbayCategoryMap(): Promise<Record<string, string>> {
+  return getEbayMap()
 }

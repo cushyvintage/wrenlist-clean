@@ -4,14 +4,14 @@ import { Dispatch, SetStateAction } from 'react'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { FieldConfig } from '@/types'
 import type { FormData } from './useAddFindForm'
-import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import { showError } from '@/lib/toast-error'
 import type { PublishProgress, MarketplaceStatus } from '@/components/publish/PublishProgressPanel'
 
-/** Resolve Vinted catalog ID — prefer category map, fall back to known working leaf IDs */
-function getVintedCatalogId(category: string): number | null {
-  // Try category map first
-  const mapped = getPlatformCategoryId(category, 'vinted')
+/** Resolve Vinted catalog ID — prefer category tree, fall back to known working leaf IDs */
+function getVintedCatalogId(category: string, getPlatformId: (value: string, platform: string) => string | undefined): number | null {
+  // Try category tree first
+  const mapped = getPlatformId(category, 'vinted')
   if (mapped) return Number(mapped)
 
   // Fallback: known working Vinted leaf IDs for common stock categories
@@ -93,6 +93,7 @@ interface SubmitDeps {
 
 export function useAddFindSubmit(deps: SubmitDeps) {
   const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress } = deps
+  const { getPlatformId } = useCategoryTree()
 
   const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
     let photosToUpload = formData.photos.filter((f) => f.size > 0)
@@ -147,9 +148,9 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       ...(formData.selectedPlatforms.includes('vinted') ? {
         vinted: {
           ...formData.platformFields.vinted,
-          catalogId: formData.category ? getVintedCatalogId(formData.category) : null,
+          catalogId: formData.category ? getVintedCatalogId(formData.category, getPlatformId) : null,
           vintedMetadata: {
-            catalog_id: formData.category ? getVintedCatalogId(formData.category) : null,
+            catalog_id: formData.category ? getVintedCatalogId(formData.category, getPlatformId) : null,
             package_size_id: formData.shippingWeight
               ? formData.shippingWeight <= 500 ? 1
                 : formData.shippingWeight <= 1000 ? 2

@@ -3,7 +3,7 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
-import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
+import { getLeafCategoryByVintedIdFromDb } from '@/lib/category-db'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { findColourByVintedId } from '@/data/unified-colours'
 
@@ -153,7 +153,8 @@ export async function POST(request: NextRequest) {
         // Category: prefer leaf from reverse map, fall back to top-level lookup
         const rawCatalogId = item.catalog_id ?? item.vintedMetadata?.catalog_id
         const catalogIdStr = rawCatalogId ? String(rawCatalogId) : undefined
-        let category = (catalogIdStr && getLeafCategoryByVintedId(catalogIdStr)) || lookupVintedCategory(rawCatalogId)
+        const leafFromDb = catalogIdStr ? await getLeafCategoryByVintedIdFromDb(catalogIdStr) : undefined
+        let category = leafFromDb || await lookupVintedCategory(rawCatalogId)
 
         // If still "other", try text-based fallback from item.category
         if (category === 'other' && item.category) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { getCategoryNode, getTopLevelCategory } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 
 interface AutoDetectedCategoryBannerProps {
   autoDetectedCategory: { category: string; confidence: 'high' | 'medium' | 'low' } | null
@@ -10,17 +10,6 @@ interface AutoDetectedCategoryBannerProps {
   onDismiss: () => void
 }
 
-/** Format a category value for display: use node label if available, else humanize the slug */
-function formatCategory(value: string): string {
-  const node = getCategoryNode(value)
-  if (node) {
-    const topLevel = getTopLevelCategory(value)
-    const topLabel = topLevel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    return node.label !== topLabel ? `${topLabel} > ${node.label}` : node.label
-  }
-  return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
 export default function AutoDetectedCategoryBanner({
   autoDetectedCategory,
   hasCategory,
@@ -28,7 +17,20 @@ export default function AutoDetectedCategoryBanner({
   onApply,
   onDismiss,
 }: AutoDetectedCategoryBannerProps) {
+  const { getNode, getTopLevel } = useCategoryTree()
+
   if (!autoDetectedCategory || hasCategory || dismissedAutoDetection) return null
+
+  /** Format a category value for display: use node label if available, else humanize the slug */
+  const formatCategory = (value: string): string => {
+    const node = getNode(value)
+    if (node) {
+      const topLevel = getTopLevel(value)
+      const topLabel = topLevel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      return node.label !== topLabel ? `${topLabel} > ${node.label}` : node.label
+    }
+    return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  }
 
   const displayName = formatCategory(autoDetectedCategory.category)
 

@@ -9,7 +9,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi, parseApiError } from '@/lib/api-utils'
-import { getCategoryNode } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { Platform, FindCondition, Customer } from '@/types'
 
 interface SoldDetail {
@@ -123,12 +123,6 @@ function formatDate(dateString: string | null): string {
   })
 }
 
-function formatCategory(slug: string | null): string {
-  if (!slug) return '--'
-  const node = getCategoryNode(slug)
-  return node?.label || slug.replace(/_/g, ' ')
-}
-
 export default function SoldDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -137,6 +131,13 @@ export default function SoldDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const { getNode } = useCategoryTree()
+
+  const formatCategory = (slug: string | null): string => {
+    if (!slug) return '--'
+    const node = getNode(slug)
+    return node?.label || slug.replace(/_/g, ' ')
+  }
 
   const handleDelete = async () => {
     try {

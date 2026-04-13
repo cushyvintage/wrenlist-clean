@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { CATEGORY_TREE } from '@/data/marketplace-category-map'
+import { getTopLevelKeys } from '@/lib/category-db'
 import { refineToLeafCategory } from '@/lib/ai-category-refine'
-
-const VALID_TOP_LEVELS = Object.keys(CATEGORY_TREE)
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`classify-photo:${user.id}`, 20)
@@ -17,6 +15,8 @@ export const POST = withAuth(async (request, user) => {
   }
 
   try {
+    const VALID_TOP_LEVELS = await getTopLevelKeys()
+
     const { photoUrl } = await request.json()
     if (!photoUrl) {
       return NextResponse.json({ error: 'Photo URL is required' }, { status: 400 })

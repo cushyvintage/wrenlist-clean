@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 import { generateUniqueSKU } from '@/lib/sku.server'
+import { findPotentialDuplicates } from '@/lib/dedup-check.server'
 
 /**
  * Lightweight keyword-based category classifier for imported listings.
@@ -318,6 +319,11 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   const category = rawCategory === 'other' ? classifyCategoryFromTitle(title) : rawCategory
   const sku = await generateUniqueSKU(category, user.id)
 
+  // Advisory dedup check — warns but does NOT block import.
+  // Matches are returned in the response for the caller to surface in UI.
+  // Actual merging happens via /duplicates review page.
+  const dedupMatches = await findPotentialDuplicates(supabase, user.id, title)
+
   const { data: find, error: findError } = await supabase
     .from('finds')
     .insert({
@@ -366,5 +372,9 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     console.error('[marketplace-item import] PMD insert error:', pmdError.message)
   }
 
-  return ApiResponseHelper.success({ success: true, findId: find.id })
+  return ApiResponseHelper.success({
+    success: true,
+    findId: find.id,
+    potentialDuplicates: dedupMatches.length > 0 ? dedupMatches : undefined,
+  })
 })

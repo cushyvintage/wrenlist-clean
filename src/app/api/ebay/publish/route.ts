@@ -1,11 +1,11 @@
-import { EBAY_CATEGORY_MAP, getEbayCategoryId } from "@/lib/ebay-categories"
+import { getEbayCategoryId, getEbayCategoryMap } from "@/lib/ebay-categories"
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
-import { getCategoryFields } from '@/data/marketplace/category-field-requirements'
+import { getCategoryFieldsFromDb } from '@/lib/category-db'
 
 /** Infer eBay Department from Wrenlist category slug */
 function inferDepartment(category: string): string {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get category: try eBay's own suggestion API first, fall back to hardcoded map
-    let categoryId = getEbayCategoryId(find.category)
+    let categoryId = await getEbayCategoryId(find.category)
     try {
       const suggested = await ebayClient.getCategorySuggestion(find.name || find.category)
       if (suggested) categoryId = suggested
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Also try category-specific field requirements if they exist
-    const categoryFields = getCategoryFields(category, 'ebay')
+    const categoryFields = await getCategoryFieldsFromDb(category, 'ebay')
     for (const field of categoryFields.filter(f => f.required)) {
       if (aspects[field.name]) continue
       // Only fill fields we can confidently set

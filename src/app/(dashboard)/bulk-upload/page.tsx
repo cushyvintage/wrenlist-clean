@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Upload, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { CATEGORY_MAP } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { FindCondition } from '@/types'
 
 interface CsvRow {
@@ -29,7 +29,7 @@ interface ImportResult {
 }
 
 const VALID_CONDITIONS: FindCondition[] = ['new_with_tags', 'new_without_tags', 'very_good', 'good', 'fair', 'poor']
-const VALID_CATEGORIES = Object.keys(CATEGORY_MAP)
+// VALID_CATEGORIES is populated from useCategoryTree() inside the component
 
 function parseCSVLine(line: string): string[] {
   const fields: string[] = []
@@ -86,7 +86,7 @@ function parseCSV(csvText: string): CsvRow[] {
   return rows
 }
 
-function validateRow(row: CsvRow): ParsedFind {
+function validateRow(row: CsvRow, validCategories: string[]): ParsedFind {
   const errors: string[] = []
 
   const title = row.title?.trim() || ''
@@ -101,7 +101,7 @@ function validateRow(row: CsvRow): ParsedFind {
   if (!title) errors.push('Missing title')
   if (!category) {
     errors.push('Missing category')
-  } else if (!VALID_CATEGORIES.includes(category)) {
+  } else if (!validCategories.includes(category)) {
     errors.push(`Invalid category: ${category}`)
   }
   if (!condition) {
@@ -149,6 +149,8 @@ function validateRow(row: CsvRow): ParsedFind {
 
 export default function BulkUploadPage() {
   const router = useRouter()
+  const { flat } = useCategoryTree()
+  const validCategories = flat.map((c) => c.value)
   const [csvText, setCsvText] = useState('')
   const [parsedRows, setParsedRows] = useState<ParsedFind[]>([])
   const [isImporting, setIsImporting] = useState(false)
@@ -165,11 +167,11 @@ export default function BulkUploadPage() {
       const text = event.target?.result as string
       setCsvText(text)
       const rows = parseCSV(text)
-      const validated = rows.map(validateRow)
+      const validated = rows.map((row) => validateRow(row, validCategories))
       setParsedRows(validated)
     }
     reader.readAsText(file)
-  }, [])
+  }, [validCategories])
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -181,11 +183,11 @@ export default function BulkUploadPage() {
       const text = event.target?.result as string
       setCsvText(text)
       const rows = parseCSV(text)
-      const validated = rows.map(validateRow)
+      const validated = rows.map((row) => validateRow(row, validCategories))
       setParsedRows(validated)
     }
     reader.readAsText(file)
-  }, [])
+  }, [validCategories])
 
   const handleImport = useCallback(async () => {
     setIsImporting(true)

@@ -294,7 +294,7 @@ export const POST = withAuth(async (req, user) => {
             synced++
           } else {
             // No existing find — create new one from sale data
-            const category = lookupVintedCategory(null)
+            const category = await lookupVintedCategory(null)
             const catPrefix = category.slice(0, 3).toUpperCase()
             const sku = `VT-${catPrefix}-${Date.now().toString(36).toUpperCase().slice(-6)}`
 

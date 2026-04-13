@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { withAdminAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { createClient } from '@supabase/supabase-js'
-import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
+import { getLeafCategoryByVintedIdFromDb } from '@/lib/category-db'
 import { findColourByVintedId } from '@/data/unified-colours'
 
 /**
@@ -43,7 +43,7 @@ export const POST = withAdminAuth(async (_req: NextRequest, user) => {
     // Backfill leaf category from catalogId
     const topLevelCategories = new Set(['other', 'home_garden', 'collectibles', 'books_media', 'clothing', 'sports_outdoors', 'electronics', 'toys_games', 'art', 'antiques', 'baby_toddler', 'craft_supplies', 'health_beauty', 'musical_instruments', 'pet_supplies', 'vehicles_parts'])
     if (catalogId && topLevelCategories.has(find.category || '')) {
-      const leaf = getLeafCategoryByVintedId(String(catalogId))
+      const leaf = await getLeafCategoryByVintedIdFromDb(String(catalogId))
       if (leaf && leaf !== find.category) {
         updates.category = leaf
         categoryFixed++

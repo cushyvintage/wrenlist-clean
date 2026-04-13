@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { CATEGORY_TREE } from '@/data/marketplace-category-map'
-import type { CategoryNode } from '@/types/categories'
+import { getAllCategories, type CategoryRow } from '@/lib/category-db'
 
 // ------------------------------------------------------------------
 // Types
@@ -35,17 +34,14 @@ interface BatchResultItem {
 const VALID_PLATFORMS = ['vinted', 'ebay', 'shopify', 'depop', 'etsy']
 const MAX_BATCH_SIZE = 20
 
-/** Resolve a canonical category value to its label and top-level key */
-function resolveCategory(value: string): { label: string; topLevel: string } | null {
-  for (const [topKey, subcats] of Object.entries(CATEGORY_TREE)) {
-    const entries = subcats as Record<string, CategoryNode>
-    for (const node of Object.values(entries)) {
-      if (node.value === value) {
-        return { label: node.label, topLevel: topKey }
-      }
-    }
-  }
-  return null
+/** Resolve a canonical category value to its label and top-level key from pre-loaded rows */
+function resolveCategory(
+  allCategories: CategoryRow[],
+  value: string,
+): { label: string; topLevel: string } | null {
+  const row = allCategories.find((c) => c.value === value)
+  if (!row) return null
+  return { label: row.label, topLevel: row.top_level }
 }
 
 /**
@@ -91,6 +87,9 @@ export const POST = withAdminAuth(async (req, user) => {
     )
   }
 
+  // Load categories from DB once for the batch
+  const allCategories = await getAllCategories()
+
   // Build the internal URL for the single ai-match endpoint
   const origin = req.nextUrl.origin
 
@@ -98,7 +97,7 @@ export const POST = withAdminAuth(async (req, user) => {
 
   // Process sequentially to avoid hammering OpenAI rate limits
   for (const categoryValue of categoryValues) {
-    const resolved = resolveCategory(categoryValue)
+    const resolved = resolveCategory(allCategories, categoryValue)
     if (!resolved) {
       results.push({
         categoryValue,

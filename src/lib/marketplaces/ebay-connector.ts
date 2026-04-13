@@ -17,7 +17,7 @@ const CONDITION_MAP: Record<string, string> = {
   fair: 'USED',
 }
 
-import { EBAY_CATEGORY_MAP as CATEGORY_MAP } from '@/lib/ebay-categories'
+import { getEbayCategoryId } from '@/lib/ebay-categories'
 
 export class EbayConnector implements MarketplaceConnector {
   id = 'ebay' as const
@@ -83,7 +83,7 @@ export class EbayConnector implements MarketplaceConnector {
 
     // Map find to eBay format
     const condition = CONDITION_MAP[typedFind.condition || 'fair'] || 'USED'
-    const categoryId = CATEGORY_MAP[typedFind.category || 'Other'] || '99'
+    const categoryId = await getEbayCategoryId(typedFind.category || 'Other')
     const sku = typedFind.sku || `WR-${findId.substring(0, 8)}`
 
     // Create inventory item

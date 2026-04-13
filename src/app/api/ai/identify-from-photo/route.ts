@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { CATEGORY_TREE } from '@/data/marketplace-category-map'
+import { getTopLevelKeys } from '@/lib/category-db'
 import { refineToLeafCategory } from '@/lib/ai-category-refine'
-
-const VALID_TOP_LEVELS = Object.keys(CATEGORY_TREE)
-const TOP_LEVEL_LIST = VALID_TOP_LEVELS.join(', ')
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -18,6 +15,9 @@ export const POST = withAuth(async (request, user) => {
   }
 
   try {
+    const VALID_TOP_LEVELS = await getTopLevelKeys()
+    const TOP_LEVEL_LIST = VALID_TOP_LEVELS.join(', ')
+
     const { images } = await request.json() as { images: string[] }
 
     if (!images || !Array.isArray(images) || images.length === 0) {

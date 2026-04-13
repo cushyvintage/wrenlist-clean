@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getCategoryNode, getTopLevelCategory } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import { WRENLIST_CONDITIONS } from '@/data/marketplace-conditions'
 
 export interface AIAutoFillData {
@@ -35,16 +35,6 @@ interface AIAutoFillBannerProps {
   onDismiss: () => void
 }
 
-function formatCategory(value: string): string {
-  const node = getCategoryNode(value)
-  if (node) {
-    const topLevel = getTopLevelCategory(value)
-    const topLabel = topLevel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    return node.label !== topLabel ? `${topLabel} > ${node.label}` : node.label
-  }
-  return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
 function formatCondition(value: string): string {
   return WRENLIST_CONDITIONS.find(c => c.value === value)?.label ?? value
 }
@@ -59,6 +49,18 @@ export default function AIAutoFillBanner({
   onApply,
   onDismiss,
 }: AIAutoFillBannerProps) {
+  const { getNode, getTopLevel } = useCategoryTree()
+
+  const formatCategory = (value: string): string => {
+    const node = getNode(value)
+    if (node) {
+      const topLevel = getTopLevel(value)
+      const topLabel = topLevel.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      return node.label !== topLabel ? `${topLabel} > ${node.label}` : node.label
+    }
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
   const [applyTitle, setApplyTitle] = useState(!hasTitle)
   const [applyDescription, setApplyDescription] = useState(!hasDescription)
   const [applyCategory, setApplyCategory] = useState(!hasCategory)

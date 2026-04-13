@@ -4,7 +4,7 @@ import PhotoUpload from '@/components/listing/PhotoUpload'
 import TemplatePickerPopover from '@/components/templates/TemplatePickerPopover'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import { UNIFIED_COLOURS } from '@/data/unified-colours'
-import { CATEGORY_MAP, getCategoryNode } from '@/data/marketplace-category-map'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useMemo } from 'react'
@@ -44,9 +44,7 @@ const CONDITIONS: { value: FindCondition; label: string }[] = [
   { value: 'poor', label: 'Poor' },
 ]
 
-const CANONICAL_CATEGORIES = Object.keys(CATEGORY_MAP)
-  .sort()
-  .map((key) => ({ value: key, label: key.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }))
+// CANONICAL_CATEGORIES is derived from useCategoryTree() inside the component
 
 const inputStyle = {
   borderWidth: '1px',
@@ -109,6 +107,12 @@ export function FindEditMode({
   onShowSaveAsTemplate,
   formDataToListingFormData,
 }: FindEditModeProps) {
+  const { flat, getNode } = useCategoryTree()
+  const CANONICAL_CATEGORIES = useMemo(
+    () => flat.map((c) => ({ value: c.value, label: c.label })).sort((a, b) => a.value.localeCompare(b.value)),
+    [flat],
+  )
+
   const titleCharLimit = useMemo(() => {
     if (formData.selectedPlatforms.includes('ebay')) return 80
     return 255
@@ -116,13 +120,13 @@ export function FindEditMode({
 
   const categoryInfo = useMemo(() => {
     if (!formData.category) return null
-    const node = getCategoryNode(formData.category)
+    const node = getNode(formData.category)
     if (!node) return null
     const platforms = []
     if (node.platforms.vinted) platforms.push('Vinted')
     if (node.platforms.ebay) platforms.push('eBay')
     return platforms
-  }, [formData.category])
+  }, [formData.category, getNode])
 
   return (
     <div className="space-y-6">

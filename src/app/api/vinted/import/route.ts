@@ -3,8 +3,9 @@ import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
-import { getLeafCategoryByVintedId } from '@/data/marketplace-category-map'
+import { getLeafCategoryByVintedIdFromDb } from '@/lib/category-db'
 import { findColourByVintedId } from '@/data/unified-colours'
+import { findPotentialDuplicates, type DedupMatch } from '@/lib/dedup-check.server'
 
 // Map Vinted status string → Wrenlist condition
 const CONDITION_MAP: Record<string, string> = {
@@ -34,6 +35,7 @@ export const POST = withAuth(async (req, user) => {
   const startTime = Date.now()
   let imported = 0, skipped = 0, errors = 0
   const itemErrors: Array<{ listingId: string; title: string; error: string }> = []
+  const potentialDuplicates: Array<{ listingId: string; title: string; matches: DedupMatch[] }> = []
 
   for (const item of items) {
     try {
@@ -52,7 +54,8 @@ export const POST = withAuth(async (req, user) => {
       // catalog_id may be absent in wardrobe list response
       // Prefer leaf category from reverse map, fall back to top-level lookup
       const catalogIdStr = item.catalog_id ? String(item.catalog_id) : undefined
-      const category = (catalogIdStr && getLeafCategoryByVintedId(catalogIdStr)) || lookupVintedCategory(item.catalog_id)
+      const leafFromDb = catalogIdStr ? await getLeafCategoryByVintedIdFromDb(catalogIdStr) : undefined
+      const category = leafFromDb || await lookupVintedCategory(item.catalog_id)
       // Wardrobe endpoint uses `brand` field, catalog endpoint uses `brand_title`
       const brand = item.brand_title || item.brand || null
       // Generate SKU early — needed for photo filenames
@@ -62,6 +65,16 @@ export const POST = withAuth(async (req, user) => {
       // Store raw Vinted URLs now — photo mirroring to Supabase Storage
       // happens via separate backfill endpoint to avoid import timeout
       const photos: string[] = item.photos?.map((p: { full_size_url?: string; url?: string }) => p.full_size_url || p.url).filter(Boolean).slice(0, 5) || []
+      // Advisory dedup check — warns but does NOT block import.
+      // Matches are returned in the response for the caller to surface in UI.
+      // Actual merging happens via /duplicates review page.
+      if (item.title) {
+        const dupeMatches = await findPotentialDuplicates(supabase, user.id, item.title)
+        if (dupeMatches.length > 0) {
+          potentialDuplicates.push({ listingId: String(item.id), title: item.title, matches: dupeMatches })
+        }
+      }
+
       // Create find
       const { data: find, error: findError } = await supabase
         .from('finds')
@@ -131,7 +144,11 @@ export const POST = withAuth(async (req, user) => {
   }
 
   const durationMs = Date.now() - startTime
-  return ApiResponseHelper.success({ imported, skipped, errors, total: items.length, durationMs, itemErrors: itemErrors.length > 0 ? itemErrors : undefined })
+  return ApiResponseHelper.success({
+    imported, skipped, errors, total: items.length, durationMs,
+    itemErrors: itemErrors.length > 0 ? itemErrors : undefined,
+    potentialDuplicates: potentialDuplicates.length > 0 ? potentialDuplicates : undefined,
+  })
 })
 
 /**

@@ -7,7 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { createClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
-import { getPlatformCategoryId } from '@/data/marketplace-category-map'
+import { getPlatformCategoryIdFromDb } from '@/lib/category-db'
 import { PLAN_LIMITS, getPlan, type PlanId } from '@/config/plans'
 import type { Platform } from '@/types'
 
@@ -204,7 +204,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
             platformCategoryId = String(vintedMeta.catalog_id)
           }
           if (!platformCategoryId && find.category && ['vinted', 'depop', 'etsy', 'shopify'].includes(marketplace)) {
-            const mapped = getPlatformCategoryId(find.category, marketplace as 'vinted' | 'depop' | 'etsy' | 'shopify')
+            const mapped = await getPlatformCategoryIdFromDb(find.category, marketplace)
             if (mapped) platformCategoryId = mapped
           }
 
