@@ -1,6 +1,6 @@
 import type { Platform } from '@/types'
 
-export type ListingStatus = 'active' | 'draft' | 'sold' | 'hidden' | 'reserved'
+export type ListingStatus = 'active' | 'draft' | 'sold' | 'hidden' | 'reserved' | 'expired'
 
 export interface ImportableItem {
   id: string

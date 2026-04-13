@@ -44,6 +44,7 @@ interface RawEtsyOrder {
   payment?: RawEtsyPayment;
   is_canceled?: boolean; order_url?: string;
   shipping_address?: Record<string, unknown>;
+  fulfillment?: Record<string, unknown>;
 }
 
 /** Parsed Etsy order for use in Wrenlist sync */
@@ -246,7 +247,7 @@ export class EtsyClient {
     limit = 40,
   ): Promise<MarketplaceListingResult> {
     const allProducts: MarketplaceListingResult["products"] = [];
-    const states = ["active", "sold_out", "draft"] as const;
+    const states = ["active", "sold_out", "draft", "expired"] as const;
 
     for (const state of states) {
       let offset = 0;
@@ -268,6 +269,7 @@ export class EtsyClient {
             marketplaceUrl: l.url ?? this.getProductUrl(l.listing_id),
             isSold: state === "sold_out",
             isHidden: state === "draft",
+            isExpired: state === "expired",
           });
         }
 
@@ -307,19 +309,9 @@ export class EtsyClient {
 
     const html = await resp.text();
 
-    // Extract total pages — look for pagination patterns
-    // The page text shows "Page 1 [select] of 9 [nav arrows]"
-    // In HTML this renders as an input/select + "of N"
-    const totalPagesJson = html.match(/"total_pages"\s*:\s*(\d+)/);
-    const totalPagesHtml =
-      html.match(/>\s*of\s+(\d+)\s*</) ||        // ">of 9<" in pagination
-      html.match(/page_count["\s:]+(\d+)/) ||     // page_count in JSON
-      html.match(/total_page[s]?["\s:]+(\d+)/);   // total_pages in JSON
-    const totalPages = totalPagesJson
-      ? parseInt(totalPagesJson[1], 10)
-      : totalPagesHtml
-        ? parseInt(totalPagesHtml[1], 10)
-        : 1;
+    // totalPages is computed below after parsing the SSR JSON (search.total_count).
+    // We declare it here so the early-return paths can reference it.
+    let totalPages = 1;
 
     // Find the largest script tag containing order data
     const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
@@ -353,6 +345,27 @@ export class EtsyClient {
 
     if (!search) return { orders: [], totalPages, page };
 
+    // Compute totalPages from total_count (20 orders per page on Etsy)
+    const ORDERS_PER_PAGE = 20;
+    const totalCount =
+      (search.total_count as number | undefined) ??
+      (search.total_search_hit_count as number | undefined);
+    if (totalCount != null && totalCount > 0) {
+      totalPages = Math.ceil(totalCount / ORDERS_PER_PAGE);
+    } else {
+      // HTML fallback: look for "of N" in pagination or JSON fields
+      const totalPagesJson = html.match(/"total_pages"\s*:\s*(\d+)/);
+      const totalPagesHtml =
+        html.match(/>\s*of\s+(\d+)\s*</) ||
+        html.match(/page_count["\s:]+(\d+)/) ||
+        html.match(/total_page[s]?["\s:]+(\d+)/);
+      if (totalPagesJson) {
+        totalPages = parseInt(totalPagesJson[1], 10);
+      } else if (totalPagesHtml) {
+        totalPages = parseInt(totalPagesHtml[1], 10);
+      }
+    }
+
     const rawOrders = (search.orders || []) as RawEtsyOrder[];
     const rawBuyers = (search.buyers || []) as RawEtsyBuyer[];
     const rawPackages = (search.packages || []) as RawEtsyPackage[];
@@ -379,6 +392,19 @@ export class EtsyClient {
       const payment = o.payment as RawEtsyPayment | undefined;
       const costBreakdown = payment?.cost_breakdown as RawEtsyCostBreakdown | undefined;
 
+      // Extract tracking/carrier from fulfillment object (fallback to package)
+      const ful = o.fulfillment as Record<string, unknown> | undefined;
+      const physicalStatus = ful?.physical_status as Record<string, unknown> | undefined;
+      const tracking = physicalStatus?.tracking as Record<string, unknown> | undefined;
+      const fulTrackingCode = (tracking?.tracking_code ?? tracking?.tracking_number) as string | undefined;
+      const fulCarrier = (tracking?.carrier_name ?? tracking?.carrier) as string | undefined;
+
+      // Extract shipping address: try order-level first, then fulfillment
+      const addrSource =
+        o.shipping_address ??
+        (ful?.shipping_address as Record<string, unknown> | undefined) ??
+        null;
+
       return {
         orderId: o.order_id,
         orderDate: o.order_date ? new Date(o.order_date * 1000).toISOString() : null,
@@ -402,14 +428,14 @@ export class EtsyClient {
         currency: costBreakdown?.items_cost?.currency_code || "GBP",
         paymentMethod: payment?.payment_method || null,
         shippingMethod: pkg?.shipping_method_name || null,
-        trackingNumber: pkg?.tracking_code || null,
-        carrier: pkg?.carrier_name || null,
-        shippingAddress: o.shipping_address ? {
-          name: (o.shipping_address).name as string || null,
-          city: (o.shipping_address).city as string || null,
-          state: (o.shipping_address).state as string || null,
-          country: (o.shipping_address).country_name as string || null,
-          zip: (o.shipping_address).zip as string || null,
+        trackingNumber: fulTrackingCode || pkg?.tracking_code || null,
+        carrier: fulCarrier || pkg?.carrier_name || null,
+        shippingAddress: addrSource ? {
+          name: (addrSource as Record<string, unknown>).name as string || null,
+          city: (addrSource as Record<string, unknown>).city as string || null,
+          state: (addrSource as Record<string, unknown>).state as string || null,
+          country: ((addrSource as Record<string, unknown>).country_name ?? (addrSource as Record<string, unknown>).country) as string || null,
+          zip: ((addrSource as Record<string, unknown>).zip ?? (addrSource as Record<string, unknown>).zip_code) as string || null,
         } : null,
         itemCount: o.transactions?.length || o.transaction_ids?.length || 0,
         listingIds: (o.transactions || [])

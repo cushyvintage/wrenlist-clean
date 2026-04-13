@@ -129,6 +129,11 @@ export function ImportItemList({
                     hidden
                   </span>
                 )}
+                {item.listingStatus === 'expired' && (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    expired
+                  </span>
+                )}
                 {item.alreadyImported ? (
                   <span className="text-xs text-ink-lt bg-cream-dk px-2 py-1 rounded">
                     already in wren

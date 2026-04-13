@@ -388,6 +388,7 @@ export default function ImportPage() {
           marketplaceUrl: string | null
           isSold?: boolean
           isHidden?: boolean
+          isExpired?: boolean
         }>
         nextPage?: string | null
         message?: string
@@ -427,7 +428,10 @@ export default function ImportPage() {
       for (const p of response.products) {
         const id = String(p.marketplaceId)
         const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price ?? null)
-        const status = p.isSold ? 'sold' as const : p.isHidden ? 'draft' as const : 'active' as const
+        const status = p.isSold ? 'sold' as const
+          : p.isExpired ? 'expired' as const
+          : p.isHidden ? 'draft' as const
+          : 'active' as const
         allItems.push({
           id,
           platform: 'etsy',
@@ -437,6 +441,7 @@ export default function ImportPage() {
           listingId: id,
           listingUrl: p.marketplaceUrl,
           alreadyImported: importedSet.has(id),
+          // Expired items unchecked by default — user must opt in
           checked: !importedSet.has(id) && status === 'active',
           listingStatus: status,
         })

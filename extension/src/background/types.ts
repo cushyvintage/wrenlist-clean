@@ -164,6 +164,7 @@ export interface MarketplaceListingSummary {
   isSold?: boolean;
   isReserved?: boolean;
   isHidden?: boolean;
+  isExpired?: boolean;
 }
 
 export interface MarketplaceListingResult {
