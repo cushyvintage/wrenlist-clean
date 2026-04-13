@@ -708,7 +708,97 @@ type ExternalMessage = Record<string, unknown>;
       }
     }
 
-    console.log(`[StatsRefresh] Done — etsy=${etsyOk}, vinted=${vintedOk}`);
+    // --- Depop ---
+    let depopOk = false;
+    try {
+      const isLoggedIn = await checkMarketplaceLogin("depop");
+      if (isLoggedIn) {
+        // Read auth cookies
+        const depopCookies = await new Promise<chrome.cookies.Cookie[]>((resolve, reject) => {
+          chrome.cookies.getAll({ domain: "depop.com" }, (c) => {
+            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+            else resolve(c);
+          });
+        });
+        let depopToken = "";
+        let depopUserId = "";
+        for (const c of depopCookies) {
+          if (c.name === "access_token") depopToken = c.value;
+          if (c.name === "user_id") depopUserId = c.value;
+        }
+
+        if (depopToken && depopUserId) {
+          const depopHeaders: Record<string, string> = {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${depopToken}`,
+            "Depop-UserId": depopUserId,
+          };
+
+          const depopFetch = async (url: string): Promise<Record<string, unknown> | null> => {
+            try {
+              const resp = await fetch(url, {
+                method: "GET",
+                credentials: "include",
+                headers: depopHeaders,
+              });
+              if (!resp.ok) return null;
+              return await resp.json() as Record<string, unknown>;
+            } catch {
+              return null;
+            }
+          };
+
+          const now = Math.floor(Date.now() / 1000);
+          const thirtyDaysAgo = now - 30 * 24 * 60 * 60;
+
+          // 1. User profile
+          const profileData = await depopFetch("https://webapi.depop.com/api/v1/users/me/");
+
+          // 2. Analytics: net earnings (30d)
+          const netGmvData = await depopFetch(
+            `https://webapi.depop.com/presentation/api/v1/analytics/sellers/historical/net_gmv/?window=monthly&from=${thirtyDaysAgo}&to=${now}`
+          );
+
+          // 3. Analytics: gross sales (30d)
+          const gmvData = await depopFetch(
+            `https://webapi.depop.com/presentation/api/v1/analytics/sellers/historical/gmv/?window=monthly&from=${thirtyDaysAgo}&to=${now}`
+          );
+
+          // 4. Analytics: items sold (30d)
+          const itemsSoldData = await depopFetch(
+            `https://webapi.depop.com/presentation/api/v1/analytics/sellers/historical/items_sold/?window=monthly&from=${thirtyDaysAgo}&to=${now}`
+          );
+
+          // Extract totals
+          const netTotals = (netGmvData?.totals as Array<Record<string, unknown>> | undefined)?.[0];
+          const gmvTotals = (gmvData?.totals as Array<Record<string, unknown>> | undefined)?.[0];
+          const soldTotals = (itemsSoldData?.totals as Array<Record<string, unknown>> | undefined)?.[0];
+
+          const payload = {
+            netEarnings30d: netTotals?.value as number | undefined,
+            grossSales30d: gmvTotals?.value as number | undefined,
+            itemsSold30d: soldTotals?.value as number | undefined,
+            username: profileData?.username as string | undefined,
+            verified: profileData?.verified as boolean | undefined,
+            rawJson: { profileData, netGmvData, gmvData, itemsSoldData },
+          };
+
+          const res = await queueFetch(`${baseUrl}/api/depop/shop-stats`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          depopOk = res.ok;
+        }
+      } else {
+        console.debug("[StatsRefresh] Not logged into Depop, skipping");
+      }
+    } catch (e) {
+      console.warn("[StatsRefresh] Depop stats failed:", e);
+    }
+
+    console.log(`[StatsRefresh] Done — etsy=${etsyOk}, vinted=${vintedOk}, depop=${depopOk}`);
   }
 
   // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
@@ -1847,6 +1937,9 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     case "fetch_vinted_api":
     case "fetchvintedapi":
       return handleFetchVintedApi(message);
+    case "fetch_depop_api":
+    case "fetchdepopapi":
+      return handleFetchDepopApi(message);
     case "get_vinted_listings":
     case "getvintedlistings":
       return handleGetVintedListings(message);
@@ -3627,6 +3720,74 @@ async function handleFetchVintedApi(message: ExternalMessage) {
       method: "GET",
       credentials: "include",
       headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return withExtensionVersion({
+        success: false,
+        error: errorText || "Request failed",
+        results: { status: response.status },
+      });
+    }
+
+    const data = await response.json();
+    return withExtensionVersion({
+      success: true,
+      results: data,
+    });
+  } catch (error) {
+    return withExtensionVersion({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+async function handleFetchDepopApi(message: ExternalMessage) {
+  const url = message.url as string | undefined;
+
+  // Validate URL
+  if (!url) {
+    throw new Error("URL is required");
+  }
+
+  if (!url.startsWith("https://webapi.depop.com/") && !url.startsWith("https://www.depop.com/")) {
+    throw new Error("Only Depop URLs (https://webapi.depop.com/ or https://www.depop.com/) are allowed");
+  }
+
+  // Read auth from depop.com cookies (same pattern as DepopClient.ensureSession)
+  const cookies = await new Promise<chrome.cookies.Cookie[]>((resolve, reject) => {
+    chrome.cookies.getAll({ domain: "depop.com" }, (c) => {
+      if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+      else resolve(c);
+    });
+  });
+
+  let bearerToken = "";
+  let userId = "";
+  for (const cookie of cookies) {
+    if (cookie.name === "access_token") bearerToken = cookie.value;
+    if (cookie.name === "user_id") userId = cookie.value;
+  }
+
+  if (!bearerToken || !userId) {
+    return withExtensionVersion({
+      success: false,
+      error: "Not logged in to Depop — missing access_token or user_id cookie",
+    });
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${bearerToken}`,
+        "Depop-UserId": userId,
+      },
     });
 
     if (!response.ok) {
