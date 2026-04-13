@@ -71,23 +71,17 @@ export default function PlatformMappingEditor({
 
   // Auto-suggest: fetch best match for unmapped platforms
   const [suggestions, setSuggestions] = useState<Record<string, { id: string; name: string; path: string; is_leaf: boolean } | null>>({})
-  const suggestFetchedRef = useRef<string | null>(null)
+  const platformsRef = useRef(platforms)
+  platformsRef.current = platforms
 
   useEffect(() => {
-    if (!categoryLabel || suggestFetchedRef.current === categoryLabel) return
-    suggestFetchedRef.current = categoryLabel
-    setSuggestions({})
+    if (!categoryLabel) return
+    let cancelled = false
 
-    const unmapped = PLATFORM_LIST.filter((p) => !platforms[p]?.id)
-    if (unmapped.length === 0) return
-
-    // Build search queries: try full label, then pairs, then individual words
-    // "Antique books & incunabulas" -> ["Antique books & incunabulas", "Antique books", "incunabulas", "books", "Antique"]
     const STOP_WORDS = new Set(['and', 'the', 'of', 'for', 'in', 'on', 'at', 'to', 'a', 'an', 'other', 'general', 'misc'])
     const words = categoryLabel.replace(/[&,()]/g, '').split(/\s+/).filter(Boolean)
     const queries = [categoryLabel]
     if (words.length > 2) queries.push(words.slice(0, 2).join(' '))
-    // Add each individual word (longest first, skip stop words)
     const individualWords = [...words]
       .sort((a, b) => b.length - a.length)
       .filter((w) => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()))
@@ -95,14 +89,17 @@ export default function PlatformMappingEditor({
       if (!queries.includes(w)) queries.push(w)
     }
 
+    const unmapped = PLATFORM_LIST.filter((p) => !platformsRef.current[p]?.id)
+    if (unmapped.length === 0) return
+
     async function fetchSuggestion(platform: string) {
       for (const q of queries) {
-        if (q.length < 2) continue
+        if (q.length < 2 || cancelled) continue
         try {
           const res = await fetch(`/api/admin/categories/taxonomy-search?platform=${platform}&q=${encodeURIComponent(q)}`)
           const data = await res.json()
           const best = (data.results ?? [])[0]
-          if (best) {
+          if (best && !cancelled) {
             setSuggestions((prev) => ({ ...prev, [platform]: best }))
             return
           }
@@ -110,10 +107,13 @@ export default function PlatformMappingEditor({
       }
     }
 
+    setSuggestions({})
     for (const platform of unmapped) {
       fetchSuggestion(platform)
     }
-  }, [categoryLabel, platforms])
+
+    return () => { cancelled = true }
+  }, [categoryLabel]) // only re-run when label changes, not on every platforms object change
 
   const handleApplySuggestion = (platform: string) => {
     const suggestion = suggestions[platform]
