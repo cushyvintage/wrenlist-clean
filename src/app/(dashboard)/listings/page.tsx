@@ -11,6 +11,7 @@ import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { formatPlatformName, CROSSLIST_BLOCKED_STATUSES } from '@/lib/crosslist'
 import { formatCategory } from '@/lib/format-category'
+import { useEtsyBulkOperations } from '@/hooks/useEtsyBulkOperations'
 import type { ProductMarketplaceData, Platform, MarketplaceDataStatus } from '@/types'
 
 type FilterType = 'all' | 'listed' | 'sold' | 'hidden' | 'delisted'
@@ -49,6 +50,7 @@ interface GroupedListing {
     error_message: string | null
     listing_price: number | null
     platform_listing_url: string | null
+    platform_listing_id: string | null
     fields: Record<string, unknown> | null
     id: string
   }[]
@@ -84,11 +86,17 @@ export default function ListingsPage() {
   const [bulkDelisting, setBulkDelisting] = useState(false)
   const [bulkDelistResult, setBulkDelistResult] = useState<string | null>(null)
   const [bulkDelistProgress, setBulkDelistProgress] = useState<{ current: number; total: number; currentName: string } | null>(null)
+  const [autoRenewToggling, setAutoRenewToggling] = useState<string | null>(null) // platform_listing_id currently toggling
 
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, PlatformStatusEntry>>({})
   const [bulkScheduleEnabled, setBulkScheduleEnabled] = useState(false)
   const [bulkScheduleTime, setBulkScheduleTime] = useState('')
   const [bulkStaggerMinutes, setBulkStaggerMinutes] = useState(0)
+
+  // Etsy bulk operations
+  const etsyBulk = useEtsyBulkOperations()
+  const [showEtsyBulkMenu, setShowEtsyBulkMenu] = useState(false)
+  const [etsyBulkToast, setEtsyBulkToast] = useState<string | null>(null)
 
   // Load listings from API
   const loadListings = useCallback(async (silent = false) => {
@@ -147,6 +155,7 @@ export default function ListingsPage() {
         error_message: listing.error_message,
         listing_price: listing.listing_price,
         platform_listing_url: listing.platform_listing_url,
+        platform_listing_id: (listing as unknown as { platform_listing_id: string | null }).platform_listing_id ?? null,
         fields: (listing.fields as Record<string, string> | null) ?? null,
         id: listing.id,
       }
@@ -281,6 +290,73 @@ export default function ListingsPage() {
     const err = failed > 0 ? `${failed} failed` : ''
     setBulkDelistResult([msg, err].filter(Boolean).join(', '))
     setTimeout(() => setBulkDelistResult(null), 5000)
+  }
+
+  /** Collect Etsy platform_listing_ids from the current selection */
+  const getSelectedEtsyListingIds = useCallback((): string[] => {
+    const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
+    const ids: string[] = []
+    for (const group of selectedGroups) {
+      for (const mp of group.marketplaces) {
+        if (mp.marketplace === 'etsy' && mp.platform_listing_id && (mp.status === 'listed' || mp.status === 'draft')) {
+          ids.push(mp.platform_listing_id)
+        }
+      }
+    }
+    return ids
+  }, [grouped, selectedItems])
+
+  const handleEtsyBulkRenew = async () => {
+    const ids = getSelectedEtsyListingIds()
+    if (ids.length === 0) return
+    setShowEtsyBulkMenu(false)
+    try {
+      const result = await etsyBulk.bulkRenew(ids)
+      setEtsyBulkToast(`Renewed ${result.renewed} listing${result.renewed !== 1 ? 's' : ''}${result.failed > 0 ? `, ${result.failed} failed` : ''}`)
+      loadListings(true)
+    } catch (err) {
+      setEtsyBulkToast(`Renew failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+    setTimeout(() => setEtsyBulkToast(null), 5000)
+  }
+
+  const handleEtsyBulkDeactivate = async () => {
+    const ids = getSelectedEtsyListingIds()
+    if (ids.length === 0) return
+    setShowEtsyBulkMenu(false)
+    try {
+      const result = await etsyBulk.bulkDeactivate(ids)
+      setEtsyBulkToast(`Deactivated ${result.deactivated} listing${result.deactivated !== 1 ? 's' : ''}${result.failed > 0 ? `, ${result.failed} failed` : ''}`)
+      loadListings(true)
+    } catch (err) {
+      setEtsyBulkToast(`Deactivate failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+    setTimeout(() => setEtsyBulkToast(null), 5000)
+  }
+
+  const handleEtsyBulkPriceUpdate = async (percentChange: number) => {
+    const selectedGroups = grouped.filter((g) => selectedItems.has(g.find_id))
+    const items: Array<{ listingId: string; price: number }> = []
+    for (const group of selectedGroups) {
+      for (const mp of group.marketplaces) {
+        if (mp.marketplace === 'etsy' && mp.platform_listing_id && mp.listing_price && (mp.status === 'listed' || mp.status === 'draft')) {
+          const newPrice = Math.round(mp.listing_price * (1 + percentChange / 100) * 100) / 100
+          if (newPrice > 0) {
+            items.push({ listingId: mp.platform_listing_id, price: newPrice })
+          }
+        }
+      }
+    }
+    if (items.length === 0) return
+    setShowEtsyBulkMenu(false)
+    try {
+      const result = await etsyBulk.bulkUpdatePrice(items)
+      setEtsyBulkToast(`Updated ${result.updated} price${result.updated !== 1 ? 's' : ''}${result.failed > 0 ? `, ${result.failed} failed` : ''}`)
+      loadListings(true)
+    } catch (err) {
+      setEtsyBulkToast(`Price update failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+    setTimeout(() => setEtsyBulkToast(null), 5000)
   }
 
   const handleBulkCrosslist = async (retryPlatforms?: Platform[]) => {
@@ -474,6 +550,68 @@ export default function ListingsPage() {
       accessories: 'AC', other: '—',
     }
     return labelMap[category || 'other'] || '—'
+  }
+
+  const handleAutoRenewToggle = async (pmdId: string, listingId: string, currentValue: boolean) => {
+    setAutoRenewToggling(listingId)
+    try {
+      // 1. Tell extension to PATCH Etsy (uses chrome.runtime.sendMessage with extension ID)
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const extResp = await new Promise<{ success?: boolean; message?: string }>((resolve) => {
+            const timeout = setTimeout(() => resolve({}), 8000)
+            chrome.runtime.sendMessage(
+              'nblnainobllgbjkdkpeodjpopkgnpfgb',
+              { action: 'set_etsy_auto_renew', listingId, autoRenew: !currentValue },
+              (resp) => {
+                clearTimeout(timeout)
+                if (chrome.runtime.lastError) resolve({})
+                else resolve(resp || {})
+              }
+            )
+          })
+          if (extResp && !extResp.success && extResp.message) {
+            console.warn('[AutoRenew] Extension toggle failed:', extResp.message)
+          }
+        } catch {
+          // Extension not available — still update PMD
+        }
+      }
+
+      // 2. Persist to PMD fields
+      await fetch('/api/etsy/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inventory: [{
+            listingId,
+            sku: null,
+            quantity: 0,
+            price: null,
+            channels: [],
+            shouldAutoRenew: !currentValue,
+          }],
+        }),
+      })
+
+      // 3. Optimistic update in local state
+      setListings(prev => prev.map(l => {
+        if (l.id !== pmdId) return l
+        const fields = (l.fields as Record<string, unknown>) ?? {}
+        const inv = (fields.inventory as Record<string, unknown>) ?? {}
+        return {
+          ...l,
+          fields: {
+            ...fields,
+            inventory: { ...inv, shouldAutoRenew: !currentValue, lastSyncedAt: new Date().toISOString() },
+          },
+        } as ListingWithFind
+      }))
+    } catch (err) {
+      console.error('[AutoRenew] Toggle failed:', err)
+    } finally {
+      setAutoRenewToggling(null)
+    }
   }
 
   return (
@@ -678,6 +816,81 @@ export default function ListingsPage() {
                 <span>Delisting {bulkDelistProgress.current}/{bulkDelistProgress.total}: {bulkDelistProgress.currentName}</span>
               </div>
             )}
+            {/* Etsy bulk operations dropdown */}
+            {(() => {
+              const etsyCount = getSelectedEtsyListingIds().length
+              if (etsyCount === 0) return null
+              return (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowEtsyBulkMenu((prev) => !prev)}
+                    disabled={etsyBulk.status === 'running'}
+                    className="px-4 py-2 text-sm font-medium rounded transition-colors flex items-center gap-1.5"
+                    style={{ backgroundColor: 'transparent', borderWidth: '1px', borderColor: '#F56040', color: '#F56040' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(245,96,64,.06)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <MarketplaceIcon platform="etsy" size="sm" />
+                    {etsyBulk.status === 'running' ? (
+                      <>
+                        <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>Etsy ({etsyCount})</>
+                    )}
+                  </button>
+                  {showEtsyBulkMenu && etsyBulk.status !== 'running' && (
+                    <div
+                      className="absolute bottom-full mb-1 right-0 w-52 rounded shadow-lg border text-sm z-20"
+                      style={{ backgroundColor: '#F5F0E8', borderColor: '#3D5C3A' }}
+                    >
+                      <button
+                        onClick={handleEtsyBulkRenew}
+                        className="w-full text-left px-3 py-2 hover:bg-sage-pale transition-colors rounded-t"
+                        style={{ color: '#1E2E1C' }}
+                      >
+                        Renew all ({etsyCount})
+                      </button>
+                      <button
+                        onClick={handleEtsyBulkDeactivate}
+                        className="w-full text-left px-3 py-2 hover:bg-sage-pale transition-colors"
+                        style={{ color: '#1E2E1C' }}
+                      >
+                        Deactivate all ({etsyCount})
+                      </button>
+                      <button
+                        onClick={() => handleEtsyBulkPriceUpdate(-10)}
+                        className="w-full text-left px-3 py-2 hover:bg-sage-pale transition-colors"
+                        style={{ color: '#1E2E1C' }}
+                      >
+                        Drop prices 10%
+                      </button>
+                      <button
+                        onClick={() => handleEtsyBulkPriceUpdate(-20)}
+                        className="w-full text-left px-3 py-2 hover:bg-sage-pale transition-colors"
+                        style={{ color: '#1E2E1C' }}
+                      >
+                        Drop prices 20%
+                      </button>
+                      <button
+                        onClick={() => handleEtsyBulkPriceUpdate(10)}
+                        className="w-full text-left px-3 py-2 hover:bg-sage-pale transition-colors rounded-b"
+                        style={{ color: '#1E2E1C' }}
+                      >
+                        Raise prices 10%
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+            {etsyBulk.status === 'running' && (
+              <div className="flex items-center gap-2 px-3 py-2 text-sm" style={{ color: '#F56040' }}>
+                <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span>Etsy bulk operation running...</span>
+              </div>
+            )}
             <button
               onClick={() => setSelectedItems(new Set())}
               className="px-4 py-2 text-sm font-medium rounded transition-colors"
@@ -702,6 +915,13 @@ export default function ListingsPage() {
       {bulkDelistResult && (
         <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-sm font-medium" style={{ backgroundColor: '#C0392B', color: '#fff' }}>
           {bulkDelistResult}
+        </div>
+      )}
+
+      {/* Etsy bulk operation toast */}
+      {etsyBulkToast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-sm font-medium" style={{ backgroundColor: '#F56040', color: '#fff' }}>
+          {etsyBulkToast}
         </div>
       )}
 
@@ -1100,6 +1320,11 @@ export default function ListingsPage() {
                       const isConfirming = delistConfirm === delistKey
                       const isDelisting = delisting === delistKey
                       const mpVisits = (mp.fields?.stats as Record<string, unknown> | undefined)?.visits as number | undefined
+                      const mpInventory = mp.marketplace === 'etsy'
+                        ? (mp.fields?.inventory as { quantity?: number; shouldAutoRenew?: boolean; sku?: string | null } | undefined)
+                        : undefined
+                      const mpListingId = (mp.fields as Record<string, unknown> | null)?.platform_listing_id as string | undefined
+                        ?? mp.platform_listing_url?.match(/listing\/(\d+)/)?.[1]
                       return (
                         <span key={mp.id} className="inline-flex items-center gap-1">
                           <PlatformTag
@@ -1109,6 +1334,47 @@ export default function ListingsPage() {
                             href={mp.platform_listing_url}
                             collection={mp.fields?.collection_name as string | undefined}
                           />
+                          {/* Etsy inventory quantity badge */}
+                          {mpInventory?.quantity != null && (
+                            <span
+                              className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                mpInventory.quantity === 0
+                                  ? 'bg-red-50 text-red-600'
+                                  : mpInventory.quantity <= 2
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-sage/10 text-sage-dk'
+                              }`}
+                              title={`${mpInventory.quantity} in stock on Etsy${mpInventory.sku ? ` (SKU: ${mpInventory.sku})` : ''}`}
+                            >
+                              qty {mpInventory.quantity}
+                            </span>
+                          )}
+                          {/* Etsy auto-renew toggle */}
+                          {mp.marketplace === 'etsy' && mpInventory && mpListingId && mp.status === 'listed' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleAutoRenewToggle(mp.id, mpListingId, mpInventory.shouldAutoRenew === true)
+                              }}
+                              disabled={autoRenewToggling === mpListingId}
+                              className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${
+                                mpInventory.shouldAutoRenew
+                                  ? 'bg-sage/10 text-sage-dk hover:bg-sage/20'
+                                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              } disabled:opacity-50`}
+                              title={mpInventory.shouldAutoRenew ? 'Auto-renew ON (click to disable, saves 0.20/renewal)' : 'Auto-renew OFF (click to enable)'}
+                            >
+                              {autoRenewToggling === mpListingId ? (
+                                <span className="inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="opacity-70">
+                                  <path d="M13.5 8c0 3-2.5 5.5-5.5 5.5S2.5 11 2.5 8 5 2.5 8 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                  <path d="M10.5 2.5L8 5h5L10.5 2.5z" fill="currentColor" opacity="0.6"/>
+                                </svg>
+                              )}
+                              {mpInventory.shouldAutoRenew ? 'renew' : 'no renew'}
+                            </button>
+                          )}
                           {mpVisits != null && mpVisits > 0 && (
                             <span
                               className="inline-flex items-center gap-0.5 text-[10px] text-ink-lt"
