@@ -5,6 +5,9 @@ import { StatCard } from '@/components/wren/StatCard'
 import { Panel } from '@/components/wren/Panel'
 import { InsightCard } from '@/components/wren/InsightCard'
 import { Button } from '@/components/wren/Button'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import type { Platform } from '@/types'
+import { fetchApi } from '@/lib/api-utils'
 
 type TimePeriod = 'month' | '3months' | 'all'
 
@@ -55,6 +58,26 @@ interface MarketplaceData {
   total_revenue: number
 }
 
+interface EtsyShopStats {
+  connected: boolean
+  shopName?: string
+  starSeller?: {
+    isStarSeller: boolean
+    responseRate: number | null
+    shippingOnTime: number | null
+    reviewScore: number | null
+    caseRate: number | null
+  }
+  stats?: {
+    visits: number | null
+    orders: number | null
+    revenue: number | null
+    conversionRate: number | null
+    dateRange: string | null
+  }
+  updatedAt?: string | null
+}
+
 interface AgingData {
   aged_30: number
   aged_60: number
@@ -81,6 +104,7 @@ export default function AnalyticsPage() {
   const [monthly, setMonthly] = useState<MonthlyData[]>([])
   const [marketplaces, setMarketplaces] = useState<MarketplaceData[]>([])
   const [aging, setAging] = useState<AgingData | null>(null)
+  const [etsyStats, setEtsyStats] = useState<EtsyShopStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -91,13 +115,14 @@ export default function AnalyticsPage() {
         setIsLoading(true)
         setError(null)
 
-        const [summaryRes, categoriesRes, monthlyRes, marketplaceRes, agingRes] =
+        const [summaryRes, categoriesRes, monthlyRes, marketplaceRes, agingRes, etsyStatsData] =
           await Promise.all([
             fetch(`/api/analytics/summary?period=${timePeriod}`),
             fetch('/api/analytics/by-category'),
             fetch('/api/analytics/monthly'),
             fetch('/api/analytics/by-marketplace'),
             fetch('/api/analytics/aging'),
+            fetchApi<EtsyShopStats>('/api/etsy/shop-stats').catch(() => null),
           ])
 
         if (!summaryRes.ok) throw new Error('Failed to fetch summary')
@@ -109,6 +134,7 @@ export default function AnalyticsPage() {
         if (monthlyRes.ok) setMonthly(await monthlyRes.json())
         if (marketplaceRes.ok) setMarketplaces(await marketplaceRes.json())
         if (agingRes.ok) setAging(await agingRes.json())
+        if (etsyStatsData) setEtsyStats(etsyStatsData)
       } catch (err) {
         console.error('Error fetching analytics:', err)
         setError(err instanceof Error ? err.message : 'Failed to load analytics')
@@ -409,6 +435,139 @@ export default function AnalyticsPage() {
             )}
           </Panel>
         </div>
+      )}
+
+      {/* Marketplace performance comparison */}
+      {!isLoading && summary && marketplaces.length > 0 && (
+        <Panel title="marketplace performance">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase tracking-widest text-sage-dim font-medium border-b border-sage/14">
+                <tr>
+                  <th className="text-left py-3 px-3">marketplace</th>
+                  <th className="text-right py-3 px-3">listed</th>
+                  <th className="text-right py-3 px-3">sold</th>
+                  <th className="text-right py-3 px-3">revenue</th>
+                  <th className="text-right py-3 px-3">avg sale</th>
+                  <th className="text-right py-3 px-3">% of sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {marketplaces.map((mp, idx) => {
+                  const totalRev = marketplaces.reduce((s, m) => s + m.total_revenue, 0)
+                  const revShare = totalRev > 0
+                    ? Math.round((mp.total_revenue / totalRev) * 100)
+                    : 0
+                  const avgSale = mp.sold_count > 0
+                    ? mp.total_revenue / mp.sold_count
+                    : 0
+                  const platformKey = mp.marketplace.toLowerCase() as Platform
+                  return (
+                    <tr
+                      key={mp.marketplace}
+                      className={`border-b border-sage/14 ${
+                        idx === marketplaces.length - 1 && !(etsyStats?.connected && etsyStats.stats)
+                          ? 'border-0'
+                          : ''
+                      }`}
+                    >
+                      <td className="py-3 px-3 text-ink-md">
+                        <span className="inline-flex items-center gap-2">
+                          <MarketplaceIcon platform={platformKey} size="sm" />
+                          {mp.marketplace}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">{mp.listed_count}</td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">{mp.sold_count}</td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">
+                        {mp.total_revenue > 0 ? `£${mp.total_revenue.toFixed(0)}` : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">
+                        {avgSale > 0 ? `£${avgSale.toFixed(0)}` : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">
+                        {revShare > 0 ? `${revShare}%` : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {/* Totals row */}
+                {marketplaces.length > 1 && (
+                  <tr className={`font-medium ${!(etsyStats?.connected && etsyStats.stats) ? 'border-0' : 'border-b border-sage/14'}`}>
+                    <td className="py-3 px-3 text-ink text-xs uppercase tracking-widest">Total</td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      {marketplaces.reduce((s, m) => s + m.listed_count, 0)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      {marketplaces.reduce((s, m) => s + m.sold_count, 0)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">
+                      £{marketplaces.reduce((s, m) => s + m.total_revenue, 0).toFixed(0)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">—</td>
+                    <td className="py-3 px-3 text-right font-mono text-xs">100%</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Etsy shop stats (platform-specific enrichment) */}
+          {etsyStats?.connected && etsyStats.stats && (
+            <div className="border-t border-sage/14 mt-1 pt-4 px-1">
+              <div className="flex items-center gap-2 mb-3">
+                <MarketplaceIcon platform="etsy" size="sm" />
+                <span className="text-xs uppercase tracking-widest text-sage-dim font-medium">
+                  Etsy shop insights
+                </span>
+                {etsyStats.starSeller?.isStarSeller && (
+                  <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
+                    Star Seller
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {etsyStats.stats.visits != null && (
+                  <div>
+                    <div className="text-[11px] text-ink-lt mb-0.5">Shop visits</div>
+                    <div className="font-mono text-sm font-medium text-ink">
+                      {etsyStats.stats.visits.toLocaleString()}
+                    </div>
+                  </div>
+                )}
+                {etsyStats.stats.orders != null && (
+                  <div>
+                    <div className="text-[11px] text-ink-lt mb-0.5">Orders</div>
+                    <div className="font-mono text-sm font-medium text-ink">
+                      {etsyStats.stats.orders}
+                    </div>
+                  </div>
+                )}
+                {etsyStats.stats.revenue != null && (
+                  <div>
+                    <div className="text-[11px] text-ink-lt mb-0.5">Revenue (Etsy)</div>
+                    <div className="font-mono text-sm font-medium text-ink">
+                      £{etsyStats.stats.revenue.toFixed(0)}
+                    </div>
+                  </div>
+                )}
+                {etsyStats.stats.conversionRate != null && (
+                  <div>
+                    <div className="text-[11px] text-ink-lt mb-0.5">Conversion rate</div>
+                    <div className="font-mono text-sm font-medium text-ink">
+                      {etsyStats.stats.conversionRate.toFixed(1)}%
+                    </div>
+                  </div>
+                )}
+              </div>
+              {etsyStats.stats.dateRange && (
+                <div className="text-[10px] text-ink-lt mt-2">
+                  Period: {etsyStats.stats.dateRange}
+                </div>
+              )}
+            </div>
+          )}
+        </Panel>
       )}
 
       {/* Category breakdown table */}
