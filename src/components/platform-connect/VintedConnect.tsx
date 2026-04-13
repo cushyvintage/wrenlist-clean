@@ -101,12 +101,13 @@ export function VintedConnect({
         const t = setTimeout(() => resolve({}), 15000)
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'fetch_vinted_api', params: { endpoint: '/api/v2/users/current' } },
+          { action: 'fetch_vinted_api', url: 'https://www.vinted.co.uk/api/v2/users/current' },
           (resp) => { clearTimeout(t); resolve(resp && typeof resp === 'object' ? resp as Record<string, unknown> : {}) }
         )
       })
 
-      const userData = (userResp as Record<string, unknown>).data as Record<string, unknown> | undefined
+      // Extension returns { success, results: <api json> }
+      const userData = (userResp as Record<string, unknown>).results as Record<string, unknown> | undefined
       const userId = userData?.id as number | undefined
 
       // 2. Fetch wallet balance (needs user ID)
@@ -116,11 +117,11 @@ export function VintedConnect({
           const t = setTimeout(() => resolve({}), 15000)
           chrome.runtime.sendMessage(
             EXTENSION_ID,
-            { action: 'fetch_vinted_api', params: { endpoint: `/api/v2/users/${userId}/balance` } },
+            { action: 'fetch_vinted_api', url: `https://www.vinted.co.uk/api/v2/users/${userId}/balance` },
             (resp) => { clearTimeout(t); resolve(resp && typeof resp === 'object' ? resp as Record<string, unknown> : {}) }
           )
         })
-        walletData = (walletResp as Record<string, unknown>).data as Record<string, unknown> | undefined
+        walletData = (walletResp as Record<string, unknown>).results as Record<string, unknown> | undefined
       }
 
       // 3. Fetch completed sales count
@@ -128,11 +129,11 @@ export function VintedConnect({
         const t = setTimeout(() => resolve({}), 15000)
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'fetch_vinted_api', params: { endpoint: '/api/v2/my_orders?type=sold&status=completed' } },
+          { action: 'fetch_vinted_api', url: 'https://www.vinted.co.uk/api/v2/my_orders?type=sold&status=completed' },
           (resp) => { clearTimeout(t); resolve(resp && typeof resp === 'object' ? resp as Record<string, unknown> : {}) }
         )
       })
-      const ordersData = (ordersResp as Record<string, unknown>).data as Record<string, unknown> | undefined
+      const ordersData = (ordersResp as Record<string, unknown>).results as Record<string, unknown> | undefined
       const pagination = ordersData?.pagination as Record<string, unknown> | undefined
 
       // Extract wallet amounts
