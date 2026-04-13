@@ -13,6 +13,7 @@ import {
   CREATE_PRODUCT_MUTATION,
   GET_LOCATION_QUERY,
   GET_METAFIELD_DEFINITIONS_QUERY,
+  ORDERS_QUERY,
   PRODUCT_INDEX_QUERY,
   PRODUCT_SAVE_UPDATE_MUTATION,
   SHOPIFY_UPLOAD_IMAGE_URL,
@@ -34,6 +35,57 @@ interface ListingActionResult {
   needsLogin?: boolean;
   product?: { id: string; url: string };
   internalErrors?: string;
+}
+
+export interface ShopifyOrder {
+  orderId: string;
+  orderName: string;
+  orderDate: string;
+  financialStatus: string;
+  fulfillmentStatus: string;
+  customer: {
+    id: string | null;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  shippingAddress: {
+    name: string | null;
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    province: string | null;
+    postcode: string | null;
+    country: string | null;
+    countryCode: string | null;
+    phone: string | null;
+  } | null;
+  lineItems: Array<{
+    productId: string;
+    title: string;
+    quantity: number;
+    price: number;
+    currency: string;
+    image: string | null;
+  }>;
+  financials: {
+    subtotal: number;
+    shipping: number;
+    tax: number;
+    total: number;
+    currency: string;
+  };
+  fulfillments: Array<{
+    trackingNumber: string | null;
+    trackingCompany: string | null;
+    trackingUrl: string | null;
+    status: string;
+  }>;
+}
+
+export interface ShopifyOrdersResult {
+  orders: ShopifyOrder[];
+  nextPage: string | null;
 }
 
 interface StagedUploadTarget {
@@ -583,6 +635,103 @@ export class ShopifyClient {
       products,
       nextPage: hasNextPage ? nextCursor : null,
       username: this.shopId,
+    };
+  }
+
+  public async getOrders(cursor?: string): Promise<ShopifyOrdersResult> {
+    await this.startSession();
+    const response = await fetch(
+      `${this.graphqlUrl}?operation=OrderIndex`,
+      {
+        method: "POST",
+        headers: this.getHeaders({ requiresAuth: true, isJson: true }),
+        credentials: "include",
+        body: JSON.stringify({
+          operationName: "OrderIndex",
+          variables: { cursor: cursor || null },
+          query: ORDERS_QUERY,
+        }),
+      },
+    );
+
+    if (response.status !== 200) {
+      throw new Error(
+        "Please enter a valid Shopify admin shop URL in your Wrenlist settings.",
+      );
+    }
+
+    const json = await response.json();
+    const edges = json?.data?.orders?.edges ?? [];
+
+    const orders: ShopifyOrder[] = edges.map((edge: any) => {
+      const node = edge.node;
+      const totalMoney = node.totalPriceSet?.shopMoney;
+      const subtotalMoney = node.subtotalPriceSet?.shopMoney;
+      const shippingMoney = node.totalShippingPriceSet?.shopMoney;
+      const taxMoney = node.totalTaxSet?.shopMoney;
+      const addr = node.shippingAddress;
+
+      return {
+        orderId: node.id.split("/").pop() ?? node.id,
+        orderName: node.name ?? "",
+        orderDate: node.createdAt ?? "",
+        financialStatus: node.displayFinancialStatus ?? "",
+        fulfillmentStatus: node.displayFulfillmentStatus ?? "",
+        customer: node.customer
+          ? {
+              id: node.customer.id?.split("/").pop() ?? null,
+              email: node.customer.email ?? null,
+              firstName: node.customer.firstName ?? null,
+              lastName: node.customer.lastName ?? null,
+            }
+          : null,
+        shippingAddress: addr
+          ? {
+              name: addr.name ?? null,
+              line1: addr.address1 ?? null,
+              line2: addr.address2 ?? null,
+              city: addr.city ?? null,
+              province: addr.province ?? null,
+              postcode: addr.zip ?? null,
+              country: addr.country ?? null,
+              countryCode: addr.countryCodeV2 ?? null,
+              phone: addr.phone ?? null,
+            }
+          : null,
+        lineItems: (node.lineItems?.edges ?? []).map((li: any) => {
+          const liNode = li.node;
+          const priceMoney = liNode.originalUnitPriceSet?.shopMoney;
+          return {
+            productId: liNode.product?.id?.split("/").pop() ?? "",
+            title: liNode.title ?? "",
+            quantity: liNode.quantity ?? 1,
+            price: parseFloat(priceMoney?.amount ?? "0"),
+            currency: priceMoney?.currencyCode ?? "GBP",
+            image: liNode.product?.featuredImage?.url ?? null,
+          };
+        }),
+        financials: {
+          subtotal: parseFloat(subtotalMoney?.amount ?? "0"),
+          shipping: parseFloat(shippingMoney?.amount ?? "0"),
+          tax: parseFloat(taxMoney?.amount ?? "0"),
+          total: parseFloat(totalMoney?.amount ?? "0"),
+          currency: totalMoney?.currencyCode ?? "GBP",
+        },
+        fulfillments: (node.fulfillments ?? []).map((f: any) => ({
+          trackingNumber: f.trackingInfo?.[0]?.number ?? null,
+          trackingCompany: f.trackingInfo?.[0]?.company ?? null,
+          trackingUrl: f.trackingInfo?.[0]?.url ?? null,
+          status: f.status ?? "",
+        })),
+      };
+    });
+
+    const hasNextPage = json?.data?.orders?.pageInfo?.hasNextPage;
+    const nextCursor = json?.data?.orders?.pageInfo?.endCursor ?? null;
+
+    return {
+      orders,
+      nextPage: hasNextPage ? nextCursor : null,
     };
   }
 

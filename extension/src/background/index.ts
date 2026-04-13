@@ -11,7 +11,7 @@ import {
   updateMarketplaceListing,
 } from "./orchestrator/marketplaceActions.js";
 import type { ListingActionResult, SupportedMarketplace } from "./orchestrator/types.js";
-import { normalizeError } from "./orchestrator/utils.js";
+import { normalizeError, resolveShopifyUrl } from "./orchestrator/utils.js";
 import { createVintedServices } from "./marketplaces/vinted/index.js";
 import { createEtsyServices } from "./marketplaces/etsy/index.js";
 import {
@@ -1879,6 +1879,8 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     case "getlistingfrommarketplace":
     case "get_marketplace_listing":
       return handleGetListing(message);
+    case "get_shopify_orders":
+      return handleGetShopifyOrders(message);
     case "opentab":
       return openTab(String(message.url ?? ""), Boolean(message.focusTab));
     case "requestupdate":
@@ -2293,7 +2295,7 @@ async function handleGetListings(message: ExternalMessage) {
 
     const marketplace = rawMarketplace as SupportedMarketplace;
 
-    return await fetchMarketplaceListings({
+    const result = await fetchMarketplaceListings({
       marketplace,
       page: (params.page as string | undefined) ?? (message.page as string | undefined),
       perPage:
@@ -2309,6 +2311,42 @@ async function handleGetListings(message: ExternalMessage) {
         (message.status as 'all' | 'active' | 'sold' | undefined),
       settings: (params.userSettings as Record<string, unknown>) ?? resolveSettings(message),
       tld: (params.tld as string | undefined) ?? resolveTldFromMessage(message, marketplace),
+    });
+    return { success: true, ...result };
+  } catch (error) {
+    return withError(error);
+  }
+}
+
+async function handleGetShopifyOrders(message: ExternalMessage) {
+  try {
+    const params = (message.params as Record<string, unknown>) ?? {};
+    const settings = (params.userSettings as Record<string, unknown>) ?? {};
+    const shopUrl = resolveShopifyUrl(settings);
+    if (!shopUrl) {
+      throw new Error("Shopify shop URL is missing.");
+    }
+
+    const client = new ShopifyClient(shopUrl);
+    let cursor: string | undefined = (params.cursor as string | undefined) ?? undefined;
+    const allOrders: Array<unknown> = [];
+    const maxPages = 10; // Safety limit
+
+    for (let page = 0; page < maxPages; page++) {
+      // Keep service worker alive during long fetches
+      try { chrome.storage.local.set({ _keepAlive: Date.now() }); } catch { /* noop */ }
+
+      const result = await client.getOrders(cursor);
+      allOrders.push(...result.orders);
+
+      if (!result.nextPage) break;
+      cursor = result.nextPage;
+    }
+
+    return withExtensionVersion({
+      success: true,
+      orders: allOrders,
+      username: shopUrl,
     });
   } catch (error) {
     return withError(error);

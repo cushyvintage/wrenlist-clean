@@ -36,6 +36,8 @@ export default function ImportPage() {
   const [isFetching, setIsFetching] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const shopifyRetriedRef = useRef(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shopifyOrdersRef = useRef<any[]>([])
   const [fetchedCount, setFetchedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
@@ -72,7 +74,7 @@ export default function ImportPage() {
     } else if (selectedPlatform === 'vinted') {
       loadVintedListings()
     } else if (selectedPlatform === 'shopify') {
-      loadShopifyListings()
+      loadShopifyListings().then(() => loadShopifyOrders())
     } else if (selectedPlatform === 'etsy') {
       loadEtsyListings()
     } else if (selectedPlatform === 'facebook') {
@@ -362,7 +364,9 @@ export default function ImportPage() {
             listingUrl: p.marketplaceUrl,
             alreadyImported: importedSet.has(id),
             checked: !importedSet.has(id),
-            listingStatus: p.status === 'draft' ? 'draft' : 'active',
+            listingStatus: p.status === 'DRAFT' || p.status === 'draft' ? 'draft'
+              : p.status === 'ARCHIVED' || p.status === 'archived' ? 'hidden'
+              : 'active',
             platformListedAt: p.created || null,
           })
         }
@@ -381,6 +385,118 @@ export default function ImportPage() {
       setFetchError(err instanceof Error ? err.message : 'Failed to fetch Shopify listings')
     } finally {
       setIsFetching(false)
+    }
+  }
+
+  // --- Shopify Orders (sold items via extension) ---
+  async function loadShopifyOrders() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+
+    // Fetch store domain
+    let storeDomain: string | undefined
+    try {
+      const res = await fetch('/api/shopify/connect')
+      if (res.ok) {
+        const data = await res.json()
+        storeDomain = data.data?.storeDomain || undefined
+      }
+    } catch { /* fall through */ }
+    if (!storeDomain) return
+
+    try {
+      const response = await new Promise<{
+        success: boolean
+        orders?: Array<{
+          orderId: string
+          orderName: string
+          orderDate: string
+          financialStatus: string
+          fulfillmentStatus: string
+          customer: { id: string | null; email: string | null; firstName: string | null; lastName: string | null } | null
+          shippingAddress: Record<string, unknown> | null
+          lineItems: Array<{ productId: string; title: string; quantity: number; price: number; currency: string; image: string | null }>
+          financials: { subtotal: number; shipping: number; tax: number; total: number; currency: string }
+          fulfillments: Array<{ trackingNumber: string | null; trackingCompany: string | null; trackingUrl: string | null; status: string }>
+        }>
+        message?: string
+      }>((resolve) => {
+        const timeout = setTimeout(
+          () => resolve({ success: false, message: 'Timed out fetching Shopify orders' }),
+          60000
+        )
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          {
+            action: 'get_shopify_orders',
+            params: {
+              userSettings: { shopifyShopUrl: storeDomain },
+            },
+          },
+          (resp) => {
+            clearTimeout(timeout)
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, message: chrome.runtime.lastError.message })
+            } else {
+              resolve(resp || { success: false, message: 'No response' })
+            }
+          }
+        )
+      })
+
+      if (!response.success || !response.orders?.length) return
+
+      // Store raw orders for use during sold import
+      shopifyOrdersRef.current = response.orders
+
+      // Get already-imported Shopify product IDs that are sold
+      const importedData = await fetchApi<{ importedIds: string[] }>(
+        '/api/import/marketplace-imported?marketplace=shopify'
+      )
+      const importedSet = new Set(importedData.importedIds)
+
+      // Also exclude product IDs already in the active listings
+      const existingProductIds = new Set(items.map(i => i.listingId).filter(Boolean))
+
+      // Flatten orders into individual line items as ImportableItems
+      const soldItems: ImportableItem[] = []
+      const seenProductIds = new Set<string>()
+
+      for (const order of response.orders) {
+        // Skip non-paid orders
+        if (order.financialStatus === 'PENDING' || order.financialStatus === 'VOIDED') continue
+
+        for (const li of order.lineItems) {
+          if (!li.productId || seenProductIds.has(li.productId)) continue
+          // Skip if this product is already shown as an active/draft listing
+          if (existingProductIds.has(li.productId)) continue
+          seenProductIds.add(li.productId)
+
+          const lineTotal = li.price * li.quantity
+
+          soldItems.push({
+            id: `order-${order.orderId}-${li.productId}`,
+            platform: 'shopify',
+            title: li.title || 'Untitled',
+            price: lineTotal,
+            photo: li.image,
+            listingId: li.productId,
+            listingUrl: null,
+            alreadyImported: importedSet.has(li.productId),
+            checked: !importedSet.has(li.productId),
+            listingStatus: 'sold',
+            platformListedAt: order.orderDate || null,
+          })
+        }
+      }
+
+      if (soldItems.length > 0) {
+        setItems(prev => [...prev, ...soldItems])
+        setTotalCount(prev => prev + soldItems.length)
+        setFetchedCount(prev => prev + soldItems.length)
+      }
+    } catch (err) {
+      // Don't fail the whole import if orders fail — products already loaded
+      console.error('Failed to fetch Shopify orders:', err)
     }
   }
 
@@ -802,7 +918,12 @@ export default function ImportPage() {
         await handleVintedImport()
       }
     } else if (selectedPlatform === 'shopify') {
-      await handleShopifyImport()
+      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
+      const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
+
+      if (hasActiveItems) await handleShopifyImport()
+      if (hasSoldItems) await handleShopifySoldImport()
     } else if (selectedPlatform === 'etsy') {
       const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
@@ -1407,6 +1528,47 @@ export default function ImportPage() {
     }
   }
 
+  async function handleShopifySoldImport() {
+    const selected = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing Shopify sold items...')
+
+    try {
+      // Find orders that contain the selected product IDs
+      const selectedProductIds = new Set(selected.map(i => i.listingId).filter(Boolean))
+      const relevantOrders = shopifyOrdersRef.current.filter((order: { lineItems?: Array<{ productId?: string }> }) =>
+        order.lineItems?.some((li: { productId?: string }) => selectedProductIds.has(li.productId || ''))
+      )
+
+      if (relevantOrders.length === 0) {
+        vintedImport.setDone(0, 0, 0, selected.length)
+        return
+      }
+
+      const result = await fetchApi<{
+        synced: number; created: number; skipped: number; errors: number
+        autoCreatedItems?: Array<{ title: string; price: string }>
+        message?: string
+      }>(
+        '/api/shopify/sync-orders',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orders: relevantOrders }),
+        }
+      )
+
+      const total = (result.synced || 0) + (result.created || 0)
+      vintedImport.setDone(total, result.skipped || 0, result.errors || 0, selected.length)
+
+      // Refresh list
+      await loadShopifyListings().then(() => loadShopifyOrders())
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
   async function handleDepopImport() {
     const selected = items.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
@@ -1685,7 +1847,7 @@ export default function ImportPage() {
                 // Re-fetch to show updated imported status
                 if (selectedPlatform === 'ebay') loadEbayInventory()
                 else if (selectedPlatform === 'vinted') loadVintedListings()
-                else if (selectedPlatform === 'shopify') loadShopifyListings()
+                else if (selectedPlatform === 'shopify') { loadShopifyListings().then(() => loadShopifyOrders()) }
                 else if (selectedPlatform === 'etsy') loadEtsyListings()
                 else if (selectedPlatform === 'facebook') loadFacebookListings()
                 else if (selectedPlatform === 'depop') loadDepopListings()

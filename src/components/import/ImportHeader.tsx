@@ -114,6 +114,8 @@ export function ImportHeader({
             ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['hidden', 'Hidden']] as const
             : platform === 'etsy' || platform === 'depop'
             ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['draft', 'Draft'], ['expired', 'Expired']] as const
+            : platform === 'shopify'
+            ? [['all', 'All'], ['active', 'Active'], ['sold', 'Sold'], ['draft', 'Draft']] as const
             : [['all', 'All'], ['active', 'Active'], ['draft', 'Draft']] as const
           ).map(([value, label]) => (
             <button

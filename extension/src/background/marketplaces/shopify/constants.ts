@@ -236,7 +236,77 @@ export const COLLECTION_CREATE_MUTATION = `
   }
 `;
 
-
-
+export const ORDERS_QUERY = `
+  query OrderIndex($cursor: String) {
+    orders(first: 50, after: $cursor, sortKey: CREATED_AT, reverse: true) {
+      edges {
+        node {
+          id
+          name
+          createdAt
+          displayFinancialStatus
+          displayFulfillmentStatus
+          totalPriceSet {
+            shopMoney { amount currencyCode }
+          }
+          subtotalPriceSet {
+            shopMoney { amount currencyCode }
+          }
+          totalShippingPriceSet {
+            shopMoney { amount currencyCode }
+          }
+          totalTaxSet {
+            shopMoney { amount currencyCode }
+          }
+          customer {
+            id
+            email
+            firstName
+            lastName
+          }
+          shippingAddress {
+            name
+            address1
+            address2
+            city
+            province
+            zip
+            country
+            countryCodeV2
+            phone
+          }
+          lineItems(first: 50) {
+            edges {
+              node {
+                id
+                title
+                quantity
+                originalUnitPriceSet {
+                  shopMoney { amount currencyCode }
+                }
+                product {
+                  id
+                  featuredImage { url }
+                }
+              }
+            }
+          }
+          fulfillments {
+            trackingInfo {
+              number
+              company
+              url
+            }
+            status
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
 
 
