@@ -55,7 +55,9 @@ export const GET = withAuth(async (req, user, params) => {
       platformListingId: soldPmd?.platform_listing_id ?? null,
       platformListingUrl: soldPmd?.platform_listing_url ?? null,
       listingPrice: soldPmd?.listing_price ?? null,
-      buyer: ((sale?.buyer as Record<string, unknown>)?.username as string) ?? null,
+      buyer: ((sale?.buyer as Record<string, unknown>)?.username as string)
+        ?? ((sale?.buyer as Record<string, unknown>)?.name as string)
+        ?? null,
       shipmentStatus: (sale?.shipmentStatus as string) ?? (sale?.deliveryStatus as string) ?? null,
       grossAmount: (sale?.grossAmount as number) ?? null,
       serviceFee: (sale?.serviceFee as number) ?? null,

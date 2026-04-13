@@ -437,8 +437,8 @@ export default function SoldDetailPage() {
           </Panel>
         )}
 
-        {/* Shipping address (when no customer record but sale has address) */}
-        {!data.customer && sale.shippingAddress && (sale.shippingAddress.firstLine || sale.shippingAddress.city) && (
+        {/* Shipping address from sale data (when customer has no address stored) */}
+        {!data.customer?.address_line1 && sale.shippingAddress && (sale.shippingAddress.firstLine || sale.shippingAddress.city) && (
           <Panel title="shipping address">
             <div className="text-xs text-ink leading-relaxed">
               {sale.shippingAddress.name && <p className="font-medium">{sale.shippingAddress.name}</p>}
