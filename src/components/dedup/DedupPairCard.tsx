@@ -14,39 +14,29 @@ interface DedupPairCardProps {
   onDismiss: (findIdA: string, findIdB: string) => Promise<void>
 }
 
-function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 'duplicate' | null }) {
+function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 'duplicate' }) {
   const photo = find.photos?.[0]
   const marketplaces = find.selectedMarketplaces || []
 
   return (
-    <div className={`flex-1 rounded border p-3 ${
-      role === 'keeper' ? 'border-sage bg-sage-pale/30' :
-      role === 'duplicate' ? 'border-red-dk/20 bg-red-lt/20' :
-      'border-border'
+    <div className={`flex-1 min-w-0 rounded-lg p-3 ${
+      role === 'keeper' ? 'bg-sage/5 border border-sage/15' : 'bg-cream-dk/30 border border-border'
     }`}>
-      {role && (
-        <div className={`text-[10px] font-medium uppercase mb-2 ${
-          role === 'keeper' ? 'text-sage' : 'text-red-dk'
-        }`}>
-          {role === 'keeper' ? 'Keep' : 'Delete'}
-        </div>
-      )}
       <div className="flex gap-3">
         {photo ? (
           <img
             src={photo}
             alt={find.name}
-            className="w-16 h-16 rounded object-cover flex-shrink-0"
+            className="w-14 h-14 rounded-md object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-16 h-16 rounded bg-cream-dk flex items-center justify-center text-ink-lt text-xs flex-shrink-0">
+          <div className="w-14 h-14 rounded-md bg-cream-dk flex items-center justify-center text-ink-lt text-[10px] flex-shrink-0">
             No photo
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-ink truncate">{find.name}</p>
-          {find.brand && <p className="text-xs text-ink-lt mt-0.5">{find.brand}</p>}
-          <div className="flex items-center gap-1.5 mt-1.5">
+          <p className="text-sm font-medium text-ink truncate leading-tight">{find.name}</p>
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
             {marketplaces.map(mp => (
               <MarketplaceIcon key={mp} platform={mp as Platform} size="sm" />
             ))}
@@ -54,12 +44,12 @@ function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 
               <Badge status={find.status as 'listed' | 'draft' | 'sold' | 'on_hold' | 'hidden'} />
             )}
           </div>
-          {find.description && (
-            <p className="text-xs text-ink-lt mt-1 line-clamp-2">{find.description}</p>
-          )}
-          <p className="text-[10px] text-ink-lt/60 mt-1">
-            {find.photos?.length || 0} photo{(find.photos?.length || 0) !== 1 ? 's' : ''}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            {find.brand && <span className="text-[11px] text-ink-lt">{find.brand}</span>}
+            <span className="text-[10px] text-ink-lt/50">
+              {find.photos?.length || 0} photo{(find.photos?.length || 0) !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -102,10 +92,17 @@ export function DedupPairCard({ candidate, onMerge, onDismiss }: DedupPairCardPr
 
   return (
     <div className="rounded-lg border border-border bg-white p-4">
+      {/* Header row */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-ink-lt">
-          {similarityPct}% title match
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+            similarityPct === 100
+              ? 'bg-sage/10 text-sage'
+              : 'bg-amber/10 text-amber-dark'
+          }`}>
+            {similarityPct}% match
+          </span>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -125,9 +122,17 @@ export function DedupPairCard({ candidate, onMerge, onDismiss }: DedupPairCardPr
           </Button>
         </div>
       </div>
-      <div className="flex gap-3">
+
+      {/* Side by side comparison */}
+      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-stretch">
         <FindSummary find={keeper} role="keeper" />
-        <div className="flex items-center text-ink-lt text-xs font-medium px-1">=</div>
+        <div className="flex flex-col items-center justify-center px-1">
+          <div className="w-6 h-6 rounded-full bg-cream-dk flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-ink-lt">
+              <path d="M1 6h4M7 6h4M4 3l3 3-3 3M8 3l-3 3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
         <FindSummary find={duplicate} role="duplicate" />
       </div>
     </div>

@@ -13,6 +13,7 @@ interface CandidatesResponse {
 
 export default function DuplicatesPage() {
   const { data, isLoading, error, call, setData } = useApiCall<CandidatesResponse>(null)
+  const [resolved, setResolved] = useState(0)
 
   const loadCandidates = useCallback(() => {
     call(() => fetchApi<CandidatesResponse>('/api/dedup/candidates?threshold=0.35&limit=30'))
@@ -21,6 +22,7 @@ export default function DuplicatesPage() {
   useEffect(() => { loadCandidates() }, [loadCandidates])
 
   const candidates = data?.candidates ?? []
+  const totalFound = (data?.count ?? 0) + resolved
   const [actionError, setActionError] = useState<string | null>(null)
 
   const handleMerge = async (keeperId: string, duplicateId: string) => {
@@ -31,7 +33,6 @@ export default function DuplicatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keeperId, duplicateId }),
       })
-      // Only remove from list on success
       if (data) {
         setData({
           ...data,
@@ -40,6 +41,7 @@ export default function DuplicatesPage() {
           ),
           count: data.count - 1,
         })
+        setResolved(r => r + 1)
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Merge failed')
@@ -54,7 +56,6 @@ export default function DuplicatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ findIdA, findIdB }),
       })
-      // Only remove from list on success
       if (data) {
         setData({
           ...data,
@@ -66,6 +67,7 @@ export default function DuplicatesPage() {
           ),
           count: data.count - 1,
         })
+        setResolved(r => r + 1)
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Dismiss failed')
@@ -73,45 +75,67 @@ export default function DuplicatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <div>
-          <p className="text-xs text-ink-lt">
-            Same item imported from different marketplaces? Review and merge duplicates.
-          </p>
-        </div>
-        {candidates.length > 0 && (
-          <span className="text-xs font-medium text-ink-lt bg-cream-dk px-2 py-1 rounded">
-            {candidates.length} pair{candidates.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+    <div className="space-y-4">
+      <p className="text-xs text-ink-lt">
+        Same item imported from different marketplaces? Review and merge duplicates.
+      </p>
 
       {(error || actionError) && (
-        <div className="bg-red-lt border border-red-dk/20 rounded p-3 text-sm text-red-dk">{error || actionError}</div>
+        <div className="bg-red-lt border border-red-dk/20 rounded-lg p-3 text-sm text-red-dk">{error || actionError}</div>
       )}
 
-      {isLoading && <div className="text-center py-8 text-ink-lt">Scanning for duplicates...</div>}
+      {isLoading && (
+        <div className="space-y-3 pt-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-28 bg-cream-dk/50 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      )}
 
       {!isLoading && candidates.length === 0 && !error && (
-        <div className="text-center py-12">
-          <p className="text-ink-lt text-sm">No potential duplicates found.</p>
+        <div className="text-center py-16">
+          <div className="text-3xl mb-2">&#10003;</div>
+          <p className="text-ink font-medium text-sm">All clear</p>
           <p className="text-ink-lt/60 text-xs mt-1">
-            Duplicates are detected when the same item is imported from different marketplaces with similar titles.
+            No potential duplicates found across your marketplaces.
           </p>
         </div>
       )}
 
-      <div className="space-y-4">
-        {candidates.map((candidate, i) => (
-          <DedupPairCard
-            key={`${candidate.findA.id}-${candidate.findB.id}`}
-            candidate={candidate}
-            onMerge={handleMerge}
-            onDismiss={handleDismiss}
-          />
-        ))}
-      </div>
+      {!isLoading && candidates.length > 0 && (
+        <>
+          {/* Progress bar */}
+          <div className="rounded-lg border border-border bg-white p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-ink">
+                {resolved > 0 ? `${resolved} resolved` : `${candidates.length} pair${candidates.length !== 1 ? 's' : ''} to review`}
+              </span>
+              {resolved > 0 && (
+                <span className="text-[10px] text-ink-lt">
+                  {candidates.length} remaining
+                </span>
+              )}
+            </div>
+            <div className="w-full h-1.5 bg-sage/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-sage rounded-full transition-all duration-500 ease-out"
+                style={{ width: totalFound > 0 ? `${(resolved / totalFound) * 100}%` : '0%' }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {candidates.map((candidate) => (
+              <DedupPairCard
+                key={`${candidate.findA.id}-${candidate.findB.id}`}
+                candidate={candidate}
+                onMerge={handleMerge}
+                onDismiss={handleDismiss}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
