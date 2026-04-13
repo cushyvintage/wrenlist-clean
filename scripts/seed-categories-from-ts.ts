@@ -29,8 +29,8 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 })
 
 // Import the TS data
-import { CATEGORY_TREE, LEGACY_CATEGORY_MAP } from '../src/data/marketplace-category-map'
-import { CATEGORY_FIELD_REQUIREMENTS } from '../src/data/marketplace/category-field-requirements'
+import { CATEGORY_TREE, LEGACY_CATEGORY_MAP } from '../.archive/category-constants/marketplace-category-map'
+import { CATEGORY_FIELD_REQUIREMENTS } from '../.archive/category-constants/category-field-requirements'
 
 interface CategoryRow {
   value: string
