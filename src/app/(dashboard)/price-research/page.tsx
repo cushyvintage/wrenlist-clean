@@ -7,6 +7,7 @@ import { fetchApi } from '@/lib/api-utils'
 import type { PriceResearchRecord } from '@/types'
 import SearchForm from '@/components/price-research/SearchForm'
 import PlatformCard from '@/components/price-research/PlatformCard'
+import EtsyPlatformCard from '@/components/price-research/EtsyPlatformCard'
 import RecommendationCard from '@/components/price-research/RecommendationCard'
 import RecentSearches from '@/components/price-research/RecentSearches'
 import AICaveatBanner from '@/components/price-research/AICaveatBanner'
@@ -196,7 +197,7 @@ export default function PriceResearchPage() {
         <div className="flex items-center justify-center py-16">
           <div className="text-center space-y-4">
             <Loader2 className="w-8 h-8 text-sage animate-spin mx-auto" />
-            <p className="text-sm text-ink-lt">Searching eBay sold listings...</p>
+            <p className="text-sm text-ink-lt">Searching eBay, Etsy &amp; Vinted...</p>
           </div>
         </div>
       )}
@@ -213,9 +214,10 @@ export default function PriceResearchPage() {
         <>
           <AICaveatBanner />
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className={`grid gap-6 ${results.etsy ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <PlatformCard name="vinted" data={results.vinted} />
             <PlatformCard name="ebay uk" data={results.ebay} />
+            {results.etsy && <EtsyPlatformCard data={results.etsy} />}
           </div>
 
           <RecommendationCard
