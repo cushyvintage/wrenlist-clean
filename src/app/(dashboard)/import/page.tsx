@@ -1058,12 +1058,21 @@ export default function ImportPage() {
         id: string; name: string | null; email: string | null; username: string | null
       } | null;
       grossAmount: number | null; shippingCost: number | null; netAmount: number | null;
+      taxAmount: number | null; discount: number | null; refundAmount: number | null;
+      buyerPaid: number | null;
       currency: string; paymentMethod: string | null; shippingMethod: string | null;
       trackingNumber: string | null; carrier: string | null; deliveryStatus: string | null;
+      isGift: boolean; giftMessage: string | null;
       shippingAddress: {
         name: string | null; firstLine: string | null; secondLine: string | null;
         city: string | null; state: string | null; country: string | null; zip: string | null;
       } | null;
+      items: Array<{
+        transactionId: string; listingId: string; title: string | null;
+        imageUrl: string | null; cost: number | null; quantity: number;
+        isCancelled: boolean;
+        review: { rating: number; text: string | null; date: string | null; url: string | null } | null;
+      }>;
       isCanceled: boolean; listingIds: string[]; transactionIds: number[]
     }
     const matchedReceipts = new Map<string, EtsyReceipt>() // listingId → receipt
@@ -1118,10 +1127,16 @@ export default function ImportPage() {
             receiptId: receipt ? String(receipt.orderId) : `import_${item.id}`,
             grossAmount: receipt?.grossAmount ?? item.price ?? 0,
             shippingCost: receipt?.shippingCost ?? null,
+            taxAmount: receipt?.taxAmount ?? null,
+            discount: receipt?.discount ?? null,
+            refundAmount: receipt?.refundAmount ?? null,
+            buyerPaid: receipt?.buyerPaid ?? null,
             netAmount: receipt?.netAmount ?? item.price ?? 0,
             currency: receipt?.currency || 'GBP',
             buyer: receipt?.buyer || null,
             orderDate: receipt?.orderDate || null,
+            isGift: receipt?.isGift || false,
+            giftMessage: receipt?.giftMessage || null,
             items: [{
               itemId: item.id,
               title: item.title,
@@ -1129,6 +1144,8 @@ export default function ImportPage() {
               thumbnailUrl: item.photo,
               itemUrl: item.listingUrl,
             }],
+            // Rich per-item data from receipt (reviews, per-item costs)
+            receiptItems: receipt?.items || [],
             trackingNumber: receipt?.trackingNumber || null,
             carrier: receipt?.carrier || null,
             deliveryStatus: receipt?.deliveryStatus || null,

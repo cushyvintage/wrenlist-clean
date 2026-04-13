@@ -44,6 +44,17 @@ interface SoldDetail {
     trackingNumber: string | null
     carrier: string | null
     shippingCost: number | null
+    taxAmount: number | null
+    discount: number | null
+    refundAmount: number | null
+    buyerPaid: number | null
+    isGift: boolean
+    giftMessage: string | null
+    receiptItems: Array<{
+      transactionId?: string; listingId?: string; title?: string
+      imageUrl?: string; cost?: number; quantity?: number; isCancelled?: boolean
+      review?: { rating: number; text?: string; date?: string; url?: string }
+    }> | null
     shippingAddress: {
       name?: string | null; firstLine?: string | null; secondLine?: string | null;
       city?: string | null; state?: string | null; country?: string | null; zip?: string | null;
@@ -341,9 +352,11 @@ export default function SoldDetailPage() {
           {sale.carrier && (
             <DetailRow label="carrier">{sale.carrier}</DetailRow>
           )}
-          {sale.shippingCost != null && sale.shippingCost > 0 && (
-            <DetailRow label="shipping cost">
-              <span className="font-mono">£{sale.shippingCost.toFixed(2)}</span>
+          {sale.isGift && (
+            <DetailRow label="gift">
+              <span className="text-xs">
+                {sale.giftMessage ? `"${sale.giftMessage}"` : 'Yes'}
+              </span>
             </DetailRow>
           )}
         </Panel>
@@ -363,6 +376,26 @@ export default function SoldDetailPage() {
           {sale.serviceFee != null && sale.serviceFee > 0 && sale.grossAmount != null && sale.netAmount != null && sale.grossAmount !== sale.netAmount && (
             <DetailRow label="service fee">
               <span className="font-mono text-red-600">-£{sale.serviceFee.toFixed(2)}</span>
+            </DetailRow>
+          )}
+          {sale.shippingCost != null && sale.shippingCost > 0 && (
+            <DetailRow label="shipping">
+              <span className="font-mono">+£{sale.shippingCost.toFixed(2)}</span>
+            </DetailRow>
+          )}
+          {sale.taxAmount != null && sale.taxAmount > 0 && (
+            <DetailRow label="tax">
+              <span className="font-mono text-ink-lt">£{sale.taxAmount.toFixed(2)}</span>
+            </DetailRow>
+          )}
+          {sale.discount != null && sale.discount > 0 && (
+            <DetailRow label="discount">
+              <span className="font-mono text-amber-600">-£{sale.discount.toFixed(2)}</span>
+            </DetailRow>
+          )}
+          {sale.refundAmount != null && sale.refundAmount > 0 && (
+            <DetailRow label="refund">
+              <span className="font-mono text-red-600">-£{sale.refundAmount.toFixed(2)}</span>
             </DetailRow>
           )}
           {sale.netAmount != null && (
@@ -479,6 +512,30 @@ export default function SoldDetailPage() {
           </Panel>
         )}
       </div>
+
+      {/* Reviews from receipt items (full width) */}
+      {sale.receiptItems?.some((i) => i.review) && (
+        <Panel title="buyer review">
+          {sale.receiptItems!.filter((i) => i.review).map((item, idx) => (
+            <div key={idx} className="py-2 border-b border-border last:border-0">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-500 text-sm">
+                  {'★'.repeat(item.review!.rating)}{'☆'.repeat(5 - item.review!.rating)}
+                </span>
+                <span className="text-xs text-ink-lt">
+                  {item.review!.date ? formatDate(item.review!.date) : ''}
+                </span>
+              </div>
+              {item.review!.text && (
+                <p className="text-sm text-ink mt-1 italic">&ldquo;{item.review!.text}&rdquo;</p>
+              )}
+              {item.title && sale.receiptItems!.filter((i) => i.review).length > 1 && (
+                <p className="text-xs text-ink-lt mt-1">Re: {item.title}</p>
+              )}
+            </div>
+          ))}
+        </Panel>
+      )}
 
       {/* Description (full width) */}
       {data.description && (

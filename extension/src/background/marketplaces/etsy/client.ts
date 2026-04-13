@@ -19,6 +19,7 @@ interface RawEtsyCostBreakdown {
   shipping_cost?: RawEtsyMoney; total_cost?: RawEtsyMoney;
   tax_cost?: RawEtsyMoney; discount?: RawEtsyMoney;
   refund?: RawEtsyMoney; buyer_cost?: RawEtsyMoney;
+  gift_wrap_cost?: RawEtsyMoney; adjusted_total_cost?: RawEtsyMoney;
 }
 interface RawEtsyPayment {
   payment_method?: string; cost_breakdown?: RawEtsyCostBreakdown;
@@ -32,17 +33,24 @@ interface RawEtsyPackage {
   shipping_method_name?: string; tracking_code?: string; carrier_name?: string;
   shipping_cost?: RawEtsyMoney; package_items?: RawEtsyPackageItem[];
 }
+interface RawEtsyTransactionReview {
+  type?: string; rating?: number; message?: string;
+  create_date?: number; url?: string; image_url?: string | null;
+}
 interface RawEtsyOrderTransaction {
-  transaction_id: number; listing_id: number;
+  transaction_id: number; listing_id: number; quantity?: number;
   cost?: RawEtsyMoney;
-  product?: { title?: string; image_url_75x75?: string; is_sold_out?: boolean };
-  status?: { is_cancelled?: boolean };
+  product?: { title?: string; image_url_75x75?: string; is_sold_out?: boolean; product_refund_amount?: RawEtsyMoney };
+  status?: { is_cancelled?: boolean; has_pending_cancellation?: boolean };
+  review?: RawEtsyTransactionReview;
+  variations?: Array<{ formatted_name?: string; formatted_value?: string }>;
 }
 interface RawEtsyOrder {
   order_id: number; order_date: number; buyer_id: number;
   transaction_ids?: number[]; transactions?: RawEtsyOrderTransaction[];
   payment?: RawEtsyPayment;
   is_canceled?: boolean; order_url?: string;
+  is_gift?: boolean; is_gift_wrapped?: boolean; gift_message?: string;
   shipping_address?: Record<string, unknown>;
   fulfillment?: Record<string, unknown>;
 }
@@ -60,9 +68,10 @@ export interface EtsyOrder {
   } | null;
   grossAmount: number | null;
   shippingCost: number | null;
-  transactionFee: number | null;
-  processingFee: number | null;
-  listingFee: number | null;
+  taxAmount: number | null;
+  discount: number | null;
+  refundAmount: number | null;
+  buyerPaid: number | null;
   netAmount: number | null;
   currency: string;
   paymentMethod: string | null;
@@ -70,11 +79,19 @@ export interface EtsyOrder {
   trackingNumber: string | null;
   carrier: string | null;
   deliveryStatus: string | null;
+  isGift: boolean;
+  giftMessage: string | null;
   shippingAddress: {
     name: string | null; firstLine: string | null; secondLine: string | null;
     city: string | null; state: string | null;
     country: string | null; zip: string | null;
   } | null;
+  items: Array<{
+    transactionId: string; listingId: string; title: string | null;
+    imageUrl: string | null; cost: number | null; quantity: number;
+    isCancelled: boolean;
+    review: { rating: number; text: string | null; date: string | null; url: string | null } | null;
+  }>;
   itemCount: number;
   /** Listing IDs resolved from transaction_id → listing_id mapping */
   listingIds: string[];
@@ -371,6 +388,7 @@ export class EtsyClient {
     const rawOrders = (search.orders || []) as RawEtsyOrder[];
     const rawBuyers = (search.buyers || []) as RawEtsyBuyer[];
     const rawPackages = (search.packages || []) as RawEtsyPackage[];
+
     // Index buyers by buyer_id
     const buyerMap = new Map<number, RawEtsyBuyer>();
     for (const b of rawBuyers) {
@@ -409,6 +427,23 @@ export class EtsyClient {
       // Shipping address from fulfillment.to_address
       const toAddress = ful?.to_address as Record<string, unknown> | undefined;
 
+      // Per-transaction items with reviews
+      const items = (o.transactions || []).map((t) => ({
+        transactionId: String(t.transaction_id),
+        listingId: String(t.listing_id),
+        title: t.product?.title || null,
+        imageUrl: t.product?.image_url_75x75 || null,
+        cost: moneyToPounds(t.cost),
+        quantity: t.quantity ?? 1,
+        isCancelled: t.status?.is_cancelled || false,
+        review: t.review?.rating != null ? {
+          rating: t.review.rating,
+          text: t.review.message || null,
+          date: t.review.create_date ? new Date(t.review.create_date * 1000).toISOString() : null,
+          url: t.review.url || null,
+        } : null,
+      }));
+
       return {
         orderId: o.order_id,
         orderDate: o.order_date ? new Date(o.order_date * 1000).toISOString() : null,
@@ -425,16 +460,19 @@ export class EtsyClient {
         } : null,
         grossAmount: moneyToPounds(costBreakdown?.items_cost),
         shippingCost: moneyToPounds(costBreakdown?.shipping_cost),
-        transactionFee: null, // Etsy fees not in buyer-facing cost_breakdown
-        processingFee: null,
-        listingFee: null,
+        taxAmount: moneyToPounds(costBreakdown?.tax_cost),
+        discount: moneyToPounds(costBreakdown?.discount),
+        refundAmount: moneyToPounds(costBreakdown?.refund),
+        buyerPaid: moneyToPounds(costBreakdown?.buyer_cost),
         netAmount: moneyToPounds(costBreakdown?.total_cost),
         currency: costBreakdown?.items_cost?.currency_code || "GBP",
         paymentMethod: payment?.payment_method || null,
         shippingMethod: (ful?.shipping_method as string) || pkg?.shipping_method_name || null,
-        trackingNumber: pkg?.tracking_code || null, // Not available in list view
+        trackingNumber: pkg?.tracking_code || null,
         carrier: pkg?.carrier_name || null,
-        deliveryStatus: deliverySummary || null, // "Delivered", "In Transit", etc.
+        deliveryStatus: deliverySummary || null,
+        isGift: o.is_gift || false,
+        giftMessage: o.gift_message || null,
         shippingAddress: toAddress ? {
           name: (toAddress.name as string) || null,
           firstLine: (toAddress.first_line as string) || null,
@@ -444,11 +482,11 @@ export class EtsyClient {
           country: (toAddress.country as string) || null,
           zip: (toAddress.zip as string) || null,
         } : null,
-        itemCount: o.transactions?.length || o.transaction_ids?.length || 0,
-        listingIds: (o.transactions || [])
-          .map((t) => t.listing_id)
-          .filter((id): id is number => id != null)
-          .map(String),
+        items,
+        itemCount: items.length || o.transaction_ids?.length || 0,
+        listingIds: items
+          .map((i) => i.listingId)
+          .filter((id) => id !== "undefined" && id !== "null"),
       };
     });
 

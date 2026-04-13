@@ -69,20 +69,34 @@ interface EtsySaleItem {
   itemUrl?: string
 }
 
+interface EtsyReceiptItem {
+  transactionId?: string; listingId?: string; title?: string
+  imageUrl?: string; cost?: number; quantity?: number
+  isCancelled?: boolean
+  review?: { rating: number; text?: string; date?: string; url?: string }
+}
+
 interface EtsySalePayload {
   receiptId?: string
   items?: EtsySaleItem[]
-  buyer?: { id?: string; username?: string; email?: string }
+  receiptItems?: EtsyReceiptItem[]
+  buyer?: { id?: string; username?: string; name?: string; email?: string }
   grossAmount?: number
   transactionFee?: number
   processingFee?: number
   shippingCost?: number
+  taxAmount?: number
+  discount?: number
+  refundAmount?: number
+  buyerPaid?: number
   netAmount?: number
   currency?: string
   shippingAddress?: Record<string, unknown>
   trackingNumber?: string
   carrier?: string
   deliveryStatus?: string
+  isGift?: boolean
+  giftMessage?: string
   orderDate?: string
   paidDate?: string
   isBundle?: boolean
@@ -95,7 +109,7 @@ async function upsertEtsyCustomer(
   sale: EtsySalePayload
 ): Promise<string | null> {
   const buyer = sale.buyer
-  if (!buyer?.id && !buyer?.username) return null
+  if (!buyer?.id && !buyer?.username && !buyer?.name) return null
 
   const marketplaceUserId = buyer.id ? String(buyer.id) : null
   const username = buyer.username || null
@@ -251,12 +265,19 @@ export const POST = withAuth(async (req, user) => {
           transactionFee: sale.transactionFee,
           processingFee: sale.processingFee,
           shippingCost: sale.shippingCost,
+          taxAmount: sale.taxAmount ?? null,
+          discount: sale.discount ?? null,
+          refundAmount: sale.refundAmount ?? null,
+          buyerPaid: sale.buyerPaid ?? null,
           netAmount: sale.netAmount,
           currency: sale.currency || 'GBP',
           shippingAddress: sale.shippingAddress || null,
           trackingNumber: sale.trackingNumber || null,
           carrier: sale.carrier || null,
           shipmentStatus: sale.deliveryStatus || null,
+          isGift: sale.isGift ?? false,
+          giftMessage: sale.giftMessage || null,
+          receiptItems: sale.receiptItems || null,
           orderDate: sale.orderDate || null,
           paidDate: sale.paidDate || null,
           isBundle: sale.isBundle || false,
