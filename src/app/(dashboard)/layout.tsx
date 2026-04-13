@@ -200,9 +200,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content area */}
       <div className="md:ml-[210px] flex flex-col h-full">
-        {/* Beta banner */}
-        <BetaBanner />
-
         {/* Top bar with user menu */}
         <AppTopbar
           title={pageTitle}
@@ -280,8 +277,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
 
         {/* Page content */}
-        <main className="flex-1 min-h-0 mt-[60px] p-4 sm:p-5 md:p-7 overflow-y-auto" style={{ backgroundColor: '#F5F0E8' }}>
+        <main className="flex-1 min-h-0 mt-[60px] overflow-y-auto" style={{ backgroundColor: '#F5F0E8' }}>
+          <BetaBanner />
+          <div className="p-4 sm:p-5 md:p-7">
           {children}
+          </div>
         </main>
       </div>
     </div>

@@ -10,7 +10,7 @@ export function BetaBanner() {
   if (dismissed) return null
 
   return (
-    <div className="bg-sage/10 border-b border-sage/20 px-4 py-2.5 flex items-center justify-center gap-3 text-sm">
+    <div className="sticky top-0 z-10 bg-sage/10 border-b border-sage/20 px-4 py-2.5 flex items-center justify-center gap-3 text-sm">
       <span className="w-2 h-2 rounded-full bg-sage animate-pulse flex-shrink-0" />
       <span className="text-ink-md">
         <span className="font-medium text-ink">Beta access</span>
