@@ -66,10 +66,10 @@ export const POST = withAuth(async (req, user) => {
       return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect.')
     }
 
-    // Fetch orders — include COMPLETED to re-enrich already-sold items
+    // Fetch orders — include FULFILLED to re-enrich already-sold items
     const ordersResponse = await ebayClient.getOrders({
       limit: 50,
-      filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|COMPLETED}',
+      filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|FULFILLED}',
     })
 
     const orders = ordersResponse.orders || []

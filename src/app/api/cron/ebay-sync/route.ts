@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
         const ordersResponse = await ebayClient.getOrders({
           limit: 100,
-          filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|COMPLETED}',
+          filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|FULFILLED}',
         })
 
         const orders = ordersResponse.orders || []
