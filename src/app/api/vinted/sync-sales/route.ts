@@ -18,7 +18,7 @@ interface VintedSalePayload {
   transactionId?: string
   shipmentId?: string
   items?: VintedSaleItem[]
-  buyer?: { id?: string; username?: string; profileUrl?: string; location?: string }
+  buyer?: { id?: string; username?: string; profileUrl?: string; location?: string; realName?: string; countryCode?: string }
   grossAmount?: number
   serviceFee?: number
   netAmount?: number
@@ -27,10 +27,13 @@ interface VintedSalePayload {
   trackingNumber?: string
   carrier?: string
   shipmentStatusTitle?: string
+  statusCode?: number
+  labelUrl?: string
   orderDate?: string
   completedDate?: string
   isBundle?: boolean
   itemCount?: number
+  conversationId?: string
 }
 
 /**
@@ -212,6 +215,7 @@ export const POST = withAuth(async (req, user) => {
         // Sale metadata to store in PMD fields
         const saleData = {
           transactionId,
+          conversationId: sale.conversationId || null,
           shipmentId: sale.shipmentId || null,
           buyer: sale.buyer || null,
           grossAmount: sale.grossAmount,
@@ -222,6 +226,8 @@ export const POST = withAuth(async (req, user) => {
           trackingNumber: sale.trackingNumber || null,
           carrier: sale.carrier || null,
           shipmentStatus: sale.shipmentStatusTitle || null,
+          statusCode: sale.statusCode || null,
+          labelUrl: sale.labelUrl || null,
           orderDate: sale.orderDate || null,
           completedDate: sale.completedDate || null,
           isBundle: sale.isBundle || false,
