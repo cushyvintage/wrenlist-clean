@@ -54,9 +54,10 @@ export async function GET(request: NextRequest) {
       try {
         const ebayClient = await getEbayClientForUser(userId, supabaseAdmin, 'EBAY_GB')
 
+        const since = new Date(Date.now() - 30 * 86400000).toISOString()
         const ordersResponse = await ebayClient.getOrders({
           limit: 100,
-          filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|FULFILLED}',
+          filter: `creationdate:[${since}..]`,
         })
 
         const orders = ordersResponse.orders || []

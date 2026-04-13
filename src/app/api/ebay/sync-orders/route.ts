@@ -66,10 +66,12 @@ export const POST = withAuth(async (req, user) => {
       return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect.')
     }
 
-    // Fetch orders — include FULFILLED to re-enrich already-sold items
+    // Fetch recent orders (last 30 days) — no fulfillment status filter
+    // because eBay only allows specific 2-value combos, not all 3
+    const since = new Date(Date.now() - 30 * 86400000).toISOString()
     const ordersResponse = await ebayClient.getOrders({
       limit: 50,
-      filter: 'orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|FULFILLED}',
+      filter: `creationdate:[${since}..]`,
     })
 
     const orders = ordersResponse.orders || []
