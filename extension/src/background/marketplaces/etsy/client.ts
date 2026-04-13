@@ -1209,16 +1209,8 @@ export class EtsyClient {
         await remoteLog("warn", "etsy.api-publish", `Failed to get shop config: ${msg}`);
       }
 
-      // 3a. Resolve category / taxonomy_id
+      // 3a. Resolve category
       const rawCategory = product.category?.[0]?.toLowerCase() || "";
-      const categorySearch = WRENLIST_TO_ETSY_CATEGORY[rawCategory] || (() => {
-        const parts = rawCategory.split("_");
-        for (let i = parts.length - 1; i >= 1; i--) {
-          const prefix = parts.slice(0, i).join("_");
-          if (WRENLIST_TO_ETSY_CATEGORY[prefix]) return WRENLIST_TO_ETSY_CATEGORY[prefix];
-        }
-        return "";
-      })();
 
       // Determine when_made
       const categoryRoot = rawCategory.split("_")[0];
