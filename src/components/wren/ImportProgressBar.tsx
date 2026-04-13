@@ -89,12 +89,18 @@ export function ImportProgressBar({ state }: ImportProgressBarProps) {
             {state.phase === 'error' && 'Import failed'}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-ink-lt">
+        <div className="flex items-center gap-2 text-xs text-ink-lt">
           {state.phase === 'importing' && (
             <>
-              <span>{percentage}%</span>
-              {eta !== null && eta > 0 && <span>~{formatTime(eta)} left</span>}
-              <span>{formatTime(elapsed)}</span>
+              <span className="font-mono font-medium text-ink">{percentage}%</span>
+              <span className="text-ink-lt/50">·</span>
+              <span>{formatTime(elapsed)} elapsed</span>
+              {eta !== null && eta > 0 && (
+                <>
+                  <span className="text-ink-lt/50">·</span>
+                  <span>~{formatTime(eta)} left</span>
+                </>
+              )}
             </>
           )}
           {state.phase === 'done' && elapsed > 0 && (
