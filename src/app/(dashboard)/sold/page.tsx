@@ -61,7 +61,7 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   'in transit': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'In Transit' },
   'awaiting collection': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Awaiting Collection' },
   'label sent': { bg: 'bg-status-info-bg', text: 'text-status-info', label: 'Label Sent' },
-  'not sent': { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Not Sent' },
+  'not sent': { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Not Sent' },
   shipped: { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Shipped' },
   returning: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Returning' },
   refunded: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Refunded' },
@@ -69,10 +69,10 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
 }
 
 /** Statuses where the seller still needs to take action */
-const NEEDS_ACTION_STATUSES = new Set(['label sent', 'not sent'])
+const NEEDS_ACTION_STATUSES = new Set(['label sent'])
 
 /** Statuses that are definitively resolved — never show as "needs action" */
-const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled'])
+const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled', 'not sent'])
 
 /** How many days after sale before we stop treating null-status as "needs action" */
 const NEEDS_ACTION_WINDOW_DAYS = 5
