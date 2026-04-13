@@ -81,12 +81,19 @@ export default function PlatformMappingEditor({
     const unmapped = PLATFORM_LIST.filter((p) => !platforms[p]?.id)
     if (unmapped.length === 0) return
 
-    // Build search queries: try full label first, then progressively shorter
-    // "Antique books & incunabulas" -> ["Antique books & incunabulas", "Antique books", "books"]
-    const words = categoryLabel.replace(/[&]/g, '').split(/\s+/).filter(Boolean)
+    // Build search queries: try full label, then pairs, then individual words
+    // "Antique books & incunabulas" -> ["Antique books & incunabulas", "Antique books", "incunabulas", "books", "Antique"]
+    const STOP_WORDS = new Set(['and', 'the', 'of', 'for', 'in', 'on', 'at', 'to', 'a', 'an', 'other', 'general', 'misc'])
+    const words = categoryLabel.replace(/[&,()]/g, '').split(/\s+/).filter(Boolean)
     const queries = [categoryLabel]
     if (words.length > 2) queries.push(words.slice(0, 2).join(' '))
-    if (words.length > 1) queries.push(words[words.length - 1]!)
+    // Add each individual word (longest first, skip stop words)
+    const individualWords = [...words]
+      .sort((a, b) => b.length - a.length)
+      .filter((w) => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()))
+    for (const w of individualWords) {
+      if (!queries.includes(w)) queries.push(w)
+    }
 
     async function fetchSuggestion(platform: string) {
       for (const q of queries) {
