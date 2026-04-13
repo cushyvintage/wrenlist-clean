@@ -1,12 +1,19 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, RefreshCw, Star } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Megaphone, RefreshCw, Star } from 'lucide-react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { Badge } from '@/components/wren/Badge'
 import { fetchApi } from '@/lib/api-utils'
 
 const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+
+interface QualityIssue {
+  component: string
+  listingCount: number
+  listingIds: number[]
+  ranking: number
+}
 
 interface ShopStats {
   connected: boolean
@@ -25,6 +32,15 @@ interface ShopStats {
     conversionRate: number | null
     dateRange: string | null
   }
+  ads?: {
+    offsiteAdsStatus: string | null
+    offsiteFeeRate: number | null
+  }
+  listingQuality?: {
+    issues: QualityIssue[] | null
+    totalOpportunities: number | null
+  }
+  customerInsights?: Record<string, unknown> | null
   updatedAt?: string | null
 }
 
@@ -65,25 +81,38 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
     fetchApi<ShopStats>('/api/etsy/shop-stats').then(setShopStats).catch(() => {})
   }, [etsyConnected])
 
+  // Helper: send extension message with timeout
+  const sendExtMsg = useCallback((action: string, params?: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return Promise.resolve({})
+    return new Promise<Record<string, unknown>>((resolve) => {
+      const t = setTimeout(() => resolve({}), 30000)
+      chrome.runtime.sendMessage(EXTENSION_ID, { action, ...params }, (resp) => {
+        clearTimeout(t)
+        if (chrome.runtime.lastError) resolve({})
+        else resolve(resp || {})
+      })
+    })
+  }, [])
+
   // Refresh: scrape via extension then save to API
   const handleRefresh = useCallback(async () => {
     if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
     setRefreshing(true)
     try {
-      const data = await new Promise<Record<string, unknown>>((resolve) => {
-        const t = setTimeout(() => resolve({}), 30000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'get_etsy_shop_stats' }, (resp) => {
-          clearTimeout(t)
-          if (chrome.runtime.lastError) resolve({})
-          else resolve(resp || {})
-        })
-      })
+      // Fetch shop stats and listing quality in parallel
+      const [statsData, qualityData] = await Promise.all([
+        sendExtMsg('get_etsy_shop_stats'),
+        sendExtMsg('get_etsy_listing_quality'),
+      ])
+
+      // Merge quality data into the payload
+      const payload = { ...statsData, listingQuality: qualityData }
 
       // POST to API
       await fetch('/api/etsy/shop-stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
 
       // Refresh cached stats
@@ -92,10 +121,12 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
     } finally {
       setRefreshing(false)
     }
-  }, [])
+  }, [sendExtMsg])
 
   const ss = shopStats?.starSeller
   const st = shopStats?.stats
+  const lq = shopStats?.listingQuality
+  const ad = shopStats?.ads
 
   return (
     <div>
@@ -172,6 +203,48 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
                 <StatCard label="Response" value={ss.responseRate} suffix="%" />
                 <StatCard label="Shipping" value={ss.shippingOnTime} suffix="%" />
                 <StatCard label="Reviews" value={ss.reviewScore} suffix="%" />
+              </div>
+            </div>
+          )}
+
+          {/* Listing quality */}
+          {lq && (lq.totalOpportunities ?? 0) > 0 && (
+            <div>
+              <div className="text-[10px] text-ink-lt uppercase tracking-wide mb-2">Listing Quality</div>
+              <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 text-xs text-amber-800">
+                <div className="flex items-center gap-1.5 font-medium mb-1">
+                  <AlertTriangle size={12} className="text-amber-500" />
+                  {lq.totalOpportunities} improvement{lq.totalOpportunities === 1 ? '' : 's'} found
+                </div>
+                {lq.issues && lq.issues.length > 0 && (
+                  <ul className="space-y-0.5 mt-1">
+                    {lq.issues.map((issue) => (
+                      <li key={issue.component} className="flex justify-between">
+                        <span className="capitalize">{issue.component.replace(/_/g, ' ')}</span>
+                        <span className="text-amber-600 font-mono">{issue.listingCount} listing{issue.listingCount === 1 ? '' : 's'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Offsite ads */}
+          {ad && ad.offsiteAdsStatus && (
+            <div>
+              <div className="text-[10px] text-ink-lt uppercase tracking-wide mb-2">Offsite Ads</div>
+              <div className="flex gap-2 flex-wrap">
+                <div className="bg-cream-md rounded px-3 py-2 text-center min-w-[80px]">
+                  <div className="flex items-center justify-center gap-1 text-sm font-medium text-ink">
+                    <Megaphone size={12} />
+                    <span className="capitalize">{ad.offsiteAdsStatus.replace(/_/g, ' ')}</span>
+                  </div>
+                  <div className="text-[10px] text-ink-lt uppercase tracking-wide">Status</div>
+                </div>
+                {ad.offsiteFeeRate != null && (
+                  <StatCard label="Fee Rate" value={ad.offsiteFeeRate} suffix="%" />
+                )}
               </div>
             </div>
           )}

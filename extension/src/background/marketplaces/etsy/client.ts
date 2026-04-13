@@ -116,9 +116,26 @@ export interface EtsyShopStats {
     startDate: string | null;
     endDate: string | null;
   } | null;
+  ads: {
+    offsiteAdsStatus: string | null;
+    offsiteFeeRate: number | null;
+    shareAndSaveStats: Record<string, unknown> | null;
+  } | null;
+  customerInsights: Record<string, unknown> | null;
   scrapedAt: string;
   rawStats: unknown;
   rawStarSeller: unknown;
+}
+
+export interface EtsyListingQuality {
+  totalOpportunities: number;
+  listingsWithIssues: number;
+  issues: Array<{
+    component: string;
+    listingCount: number;
+    listingIds: number[];
+    ranking: number;
+  }>;
 }
 
 /** Convert Etsy money (pence/cents) to pounds/dollars */
@@ -168,6 +185,35 @@ export type ListingActionResult = {
   /** Etsy only: whether the listing was saved as draft or published live. */
   publishMode?: "draft" | "publish";
 };
+
+// ─── Shop config types (cached from listing-editor SSR) ──────────
+export interface EtsyFrequentCategory {
+  id: number;
+  fullPathNames: string[];
+  attributeIds?: number[];
+}
+
+export interface EtsyShippingProfile {
+  shipping_profile_id: number;
+  title: string;
+  is_default?: boolean;
+}
+
+export interface EtsyReturnPolicy {
+  return_policy_id: number;
+  accepts_returns: boolean;
+  accepts_exchanges: boolean;
+}
+
+export interface EtsyShopConfig {
+  frequentCategories: EtsyFrequentCategory[];
+  shippingProfiles: EtsyShippingProfile[];
+  returnPolicies: EtsyReturnPolicy[];
+  fetchedAt: number; // epoch ms
+}
+
+const SHOP_CONFIG_CACHE_KEY = "wrenlist_etsy_shop_config";
+const SHOP_CONFIG_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /** Data passed into the injected form-fill script */
 interface EtsyFormFillData {
@@ -542,6 +588,7 @@ export class EtsyClient {
     const result: EtsyShopStats = {
       shopName: null, shopId: null,
       starSeller: null, stats: null,
+      ads: null, customerInsights: null,
       scrapedAt: new Date().toISOString(),
       rawStats: null, rawStarSeller: null,
     };
@@ -587,6 +634,16 @@ export class EtsyClient {
             endDate: statsData.end_date as string || null,
           };
         }
+        // Extract ads + customer insights from same stats page
+        result.ads = {
+          offsiteAdsStatus: (statsData.offsite_ads_status as string) ?? null,
+          offsiteFeeRate: (statsData.offsite_fee_rate as number) ?? null,
+          shareAndSaveStats: (statsData.share_and_save_stats_summary as Record<string, unknown>) ?? null,
+        };
+        const ci = statsData.customer_insights_stats as Record<string, unknown> | undefined;
+        if (ci && statsData.is_customer_insights_enabled) {
+          result.customerInsights = ci;
+        }
       }
     } catch { /* ignore stats errors */ }
 
@@ -622,6 +679,37 @@ export class EtsyClient {
       }
     } catch { /* ignore star seller errors */ }
 
+    return result;
+  }
+
+  /**
+   * Scrape listing quality data from the Etsy promotions/sales-and-discounts page.
+   * Returns quality issues that can help sellers improve their listings.
+   */
+  public async getListingQuality(): Promise<EtsyListingQuality> {
+    const result: EtsyListingQuality = { totalOpportunities: 0, listingsWithIssues: 0, issues: [] };
+    try {
+      const probeResult = await this.probePageData("/your/shops/me/tools/sales-and-discounts");
+      const data = probeResult.data as Record<string, unknown> | undefined;
+      if (!data) return result;
+
+      const lmd = data.listingManagerData as Record<string, unknown> | undefined;
+      const summary = lmd?.shop_summary as Record<string, unknown> | undefined;
+      if (!summary) return result;
+
+      result.totalOpportunities = (summary.total_quality_opportunities as number) ?? 0;
+      result.listingsWithIssues = (summary.number_of_listings_with_quality_opportunities as number) ?? 0;
+
+      const rawIssues = summary.listing_quality_issues as Array<Record<string, unknown>> | undefined;
+      if (rawIssues) {
+        result.issues = rawIssues.map((issue) => ({
+          component: (issue.component_name as string) ?? "unknown",
+          listingCount: (issue.listing_count as number) ?? 0,
+          listingIds: (issue.listing_ids as number[]) ?? [],
+          ranking: (issue.ranking as number) ?? 0,
+        }));
+      }
+    } catch { /* ignore quality errors */ }
     return result;
   }
 
@@ -854,6 +942,151 @@ export class EtsyClient {
     throw new Error("Could not extract Etsy CSRF nonce from any source");
   }
 
+  // ─── Shop config (cached, from listing-editor SSR) ──────────────
+
+  /**
+   * Fetch shop config from listing-editor SSR data (frequent categories,
+   * shipping profiles, return policies). Cached in chrome.storage.local
+   * with a 24h TTL.
+   */
+  public async getShopConfig(forceRefresh = false): Promise<EtsyShopConfig> {
+    if (!forceRefresh) {
+      try {
+        const stored = await chrome.storage.local.get(SHOP_CONFIG_CACHE_KEY);
+        const cached = stored[SHOP_CONFIG_CACHE_KEY] as EtsyShopConfig | undefined;
+        if (cached && Date.now() - cached.fetchedAt < SHOP_CONFIG_TTL_MS) {
+          return cached;
+        }
+      } catch { /* cache miss */ }
+    }
+
+    await remoteLog("info", "etsy.shop-config", "Fetching shop config from listing-editor SSR");
+    const probeResult = await this.probePageData("/your/shops/me/listing-editor");
+    const data = probeResult.data as Record<string, unknown> | undefined;
+
+    const config: EtsyShopConfig = {
+      frequentCategories: [],
+      shippingProfiles: [],
+      returnPolicies: [],
+      fetchedAt: Date.now(),
+    };
+
+    if (!data) {
+      await remoteLog("warn", "etsy.shop-config", "No SSR data found in listing-editor page");
+      return config;
+    }
+
+    try {
+      const listingEditor = (data.listingEditor ?? data.listing_editor) as Record<string, unknown> | undefined;
+      const listing = listingEditor?.listing as Record<string, unknown> | undefined;
+      const formMetadata = (listing?.formMetadata ?? listing?.form_metadata
+        ?? listingEditor?.formMetadata) as Record<string, unknown> | undefined;
+
+      // Frequent categories
+      const rawCats = (formMetadata?.frequentCategories
+        ?? formMetadata?.frequent_categories) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(rawCats)) {
+        config.frequentCategories = rawCats
+          .filter((c) => typeof c.id === "number" && Array.isArray(c.fullPathNames ?? c.full_path_names))
+          .map((c) => ({
+            id: c.id as number,
+            fullPathNames: ((c.fullPathNames ?? c.full_path_names) as string[]),
+            attributeIds: (c.attributeIds ?? c.attribute_ids) as number[] | undefined,
+          }));
+      }
+
+      // Shipping profiles
+      const rawShipping = (listingEditor?.shippingProfileSummary
+        ?? listingEditor?.shipping_profile_summary
+        ?? data.shippingProfileSummary
+        ?? data.shipping_profile_summary) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(rawShipping)) {
+        config.shippingProfiles = rawShipping
+          .filter((p) => typeof (p.shipping_profile_id ?? p.shippingProfileId) === "number")
+          .map((p) => ({
+            shipping_profile_id: (p.shipping_profile_id ?? p.shippingProfileId) as number,
+            title: (p.title ?? p.name ?? "") as string,
+            is_default: (p.is_default ?? p.isDefault ?? false) as boolean,
+          }));
+      }
+
+      // Return policies
+      const rawReturns = (listingEditor?.returnPolicies
+        ?? listingEditor?.return_policies
+        ?? data.returnPolicies
+        ?? data.return_policies) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(rawReturns)) {
+        config.returnPolicies = rawReturns
+          .filter((r) => typeof (r.return_policy_id ?? r.returnPolicyId) === "number")
+          .map((r) => ({
+            return_policy_id: (r.return_policy_id ?? r.returnPolicyId) as number,
+            accepts_returns: (r.accepts_returns ?? r.acceptsReturns ?? false) as boolean,
+            accepts_exchanges: (r.accepts_exchanges ?? r.acceptsExchanges ?? false) as boolean,
+          }));
+      }
+
+      await remoteLog("info", "etsy.shop-config", "Shop config fetched", {
+        categories: config.frequentCategories.length,
+        shippingProfiles: config.shippingProfiles.length,
+        returnPolicies: config.returnPolicies.length,
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await remoteLog("warn", "etsy.shop-config", `Error parsing shop config: ${errMsg}`);
+    }
+
+    try {
+      await chrome.storage.local.set({ [SHOP_CONFIG_CACHE_KEY]: config });
+    } catch { /* non-fatal */ }
+
+    return config;
+  }
+
+  /**
+   * Match a Wrenlist category to the best taxonomy_id from the shop's
+   * frequent categories. Falls back to undefined if no match.
+   */
+  private matchTaxonomyFromFrequentCategories(
+    wrenlistCategory: string,
+    frequentCategories: EtsyFrequentCategory[],
+  ): number | undefined {
+    if (frequentCategories.length === 0) return undefined;
+
+    const catParts = wrenlistCategory.toLowerCase().replace(/_/g, " ").split(" ").filter(Boolean);
+    let bestMatch: EtsyFrequentCategory | undefined;
+    let bestScore = 0;
+
+    for (const fc of frequentCategories) {
+      const pathWords = fc.fullPathNames
+        .join(" ")
+        .toLowerCase()
+        .split(/[\s&,/]+/)
+        .filter(Boolean);
+
+      let score = 0;
+      for (const part of catParts) {
+        if (pathWords.some((w) => w.includes(part) || part.includes(w))) {
+          score++;
+        }
+      }
+
+      const fullPath = fc.fullPathNames.join(" ").toLowerCase();
+      if (catParts.length > 0 && fullPath.includes(catParts.join(" "))) {
+        score += 3;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = fc;
+      }
+    }
+
+    if (bestScore >= 1 && bestMatch) {
+      return bestMatch.id;
+    }
+    return undefined;
+  }
+
   /**
    * Upload a single image via Etsy's internal v3 AJAX API.
    * Returns the image_id from the response.
@@ -967,19 +1200,25 @@ export class EtsyClient {
         }
       }
 
-      // 3. Resolve category / taxonomy_id
+      // 3. Fetch shop config (cached 24h) for taxonomy, shipping, returns
+      let shopConfig: EtsyShopConfig | undefined;
+      try {
+        shopConfig = await this.getShopConfig();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await remoteLog("warn", "etsy.api-publish", `Failed to get shop config: ${msg}`);
+      }
+
+      // 3a. Resolve category / taxonomy_id
       const rawCategory = product.category?.[0]?.toLowerCase() || "";
-      let categorySearch = WRENLIST_TO_ETSY_CATEGORY[rawCategory] || "";
-      if (!categorySearch) {
+      const categorySearch = WRENLIST_TO_ETSY_CATEGORY[rawCategory] || (() => {
         const parts = rawCategory.split("_");
         for (let i = parts.length - 1; i >= 1; i--) {
           const prefix = parts.slice(0, i).join("_");
-          if (WRENLIST_TO_ETSY_CATEGORY[prefix]) {
-            categorySearch = WRENLIST_TO_ETSY_CATEGORY[prefix];
-            break;
-          }
+          if (WRENLIST_TO_ETSY_CATEGORY[prefix]) return WRENLIST_TO_ETSY_CATEGORY[prefix];
         }
-      }
+        return "";
+      })();
 
       // Determine when_made
       const categoryRoot = rawCategory.split("_")[0];
@@ -1000,10 +1239,23 @@ export class EtsyClient {
       const whoMade = (product.dynamicProperties?.whoMade as string) ||
         (isLikelyVintage ? "someone_else" : "i_did");
 
+      // 3b. Resolve taxonomy_id: explicit > frequent categories match > fallback 69
+      let taxonomyId = 69; // fallback: Home & Living
+      if (product.dynamicProperties?.etsyTaxonomyId) {
+        taxonomyId = Number(product.dynamicProperties.etsyTaxonomyId);
+      } else if (rawCategory && shopConfig?.frequentCategories.length) {
+        const matched = this.matchTaxonomyFromFrequentCategories(
+          rawCategory,
+          shopConfig.frequentCategories,
+        );
+        if (matched) {
+          taxonomyId = matched;
+          await remoteLog("info", "etsy.api-publish",
+            `Matched taxonomy_id=${matched} from frequent categories for "${rawCategory}"`);
+        }
+      }
+
       // 4. Create draft listing via API
-      // Etsy's internal API expects taxonomy_id. We pass the category search
-      // string as a hint — if taxonomy_id is not available, the API may accept
-      // title-based auto-categorization (taxonomy_id=0 or omitted).
       const createBody: Record<string, unknown> = {
         title: product.title?.slice(0, 140) || "",
         price: product.price,
@@ -1011,13 +1263,13 @@ export class EtsyClient {
         who_made: whoMade,
         when_made: whenMade,
         is_supply: false,
-        // taxonomy_id must be >= 1. Fallback: 69 = "Home & Living" (broad Etsy category)
-        taxonomy_id: product.dynamicProperties?.etsyTaxonomyId || 69,
+        taxonomy_id: taxonomyId,
       };
 
       await remoteLog("info", "etsy.api-publish", "Creating draft listing", {
         title: createBody.title,
         price: createBody.price,
+        taxonomy_id: taxonomyId,
       });
 
       const createResp = await fetch(
@@ -1089,10 +1341,26 @@ export class EtsyClient {
         patchBody.sku = product.sku;
       }
 
-      // Shipping profile — try to get from product dynamicProperties
+      // Shipping profile — explicit > shop config default > first available
       const shippingProfileId = product.dynamicProperties?.etsyShippingProfileId;
       if (shippingProfileId) {
         patchBody.shipping_profile_id = Number(shippingProfileId);
+      } else if (shopConfig?.shippingProfiles.length) {
+        const defaultProfile = shopConfig.shippingProfiles.find((p) => p.is_default)
+          ?? shopConfig.shippingProfiles[0];
+        patchBody.shipping_profile_id = defaultProfile.shipping_profile_id;
+        await remoteLog("info", "etsy.api-publish",
+          `Auto-selected shipping profile: ${defaultProfile.title} (${defaultProfile.shipping_profile_id})`);
+      }
+
+      // Return policy — explicit > first available from shop config
+      const returnPolicyId = product.dynamicProperties?.etsyReturnPolicyId;
+      if (returnPolicyId) {
+        patchBody.return_policy_id = Number(returnPolicyId);
+      } else if (shopConfig?.returnPolicies.length) {
+        patchBody.return_policy_id = shopConfig.returnPolicies[0].return_policy_id;
+        await remoteLog("info", "etsy.api-publish",
+          `Auto-selected return policy: ${shopConfig.returnPolicies[0].return_policy_id}`);
       }
 
       if (Object.keys(patchBody).length > 0) {
@@ -1182,6 +1450,143 @@ export class EtsyClient {
       });
       throw error; // Re-throw so the caller (publishProduct) can catch and fall back
     }
+  }
+
+  // ─── Inventory & Auto-Renew ─────────────────────────────────────
+
+  /** Fetch inventory data for a single listing via Etsy's internal inventory endpoint */
+  public async getListingInventory(listingId: string): Promise<{
+    sku: string | null;
+    quantity: number;
+    price: number | null;
+    channels: string[];
+    shouldAutoRenew: boolean;
+  }> {
+    const shopId = await this.getShopId();
+    const resp = await fetch(
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}/inventory`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+
+    if (!resp.ok) {
+      throw new Error(`Etsy inventory API returned ${resp.status}`);
+    }
+
+    const data = (await resp.json()) as Record<string, unknown>;
+    // Etsy returns { products: [{ offerings: [{ price, quantity }], sku }], ...listing fields }
+    const products = Array.isArray(data.products) ? data.products : [];
+    const firstProduct = (products[0] ?? {}) as Record<string, unknown>;
+    const offerings = Array.isArray(firstProduct.offerings) ? firstProduct.offerings : [];
+    const firstOffering = (offerings[0] ?? {}) as Record<string, unknown>;
+
+    const priceObj = firstOffering.price as Record<string, unknown> | undefined;
+    const priceAmount = priceObj?.amount as number | undefined;
+    const priceDivisor = (priceObj?.divisor as number) || 100;
+
+    const channels: string[] = [];
+    if (data.channelRetail) channels.push("retail");
+    if (data.channelWholesale) channels.push("wholesale");
+
+    return {
+      sku: (firstProduct.sku as string) || null,
+      quantity: (firstOffering.quantity as number) ?? 0,
+      price: priceAmount != null ? priceAmount / priceDivisor : null,
+      channels,
+      shouldAutoRenew: data.should_auto_renew === true,
+    };
+  }
+
+  /**
+   * Fetch inventory for multiple listings. Returns an array with inventory data per listing.
+   * Includes rate limiting (~5/sec) and MV3 keepalive.
+   */
+  public async syncInventory(listingIds: string[]): Promise<Array<{
+    listingId: string;
+    sku: string | null;
+    quantity: number;
+    price: number | null;
+    channels: string[];
+    shouldAutoRenew: boolean;
+    error?: string;
+  }>> {
+    const results: Array<{
+      listingId: string;
+      sku: string | null;
+      quantity: number;
+      price: number | null;
+      channels: string[];
+      shouldAutoRenew: boolean;
+      error?: string;
+    }> = [];
+
+    for (const id of listingIds) {
+      chrome.storage.local.set({ _keepAlive: Date.now() });
+      try {
+        const inv = await this.getListingInventory(id);
+        results.push({ listingId: id, ...inv });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push({
+          listingId: id,
+          sku: null,
+          quantity: 0,
+          price: null,
+          channels: [],
+          shouldAutoRenew: false,
+          error: msg,
+        });
+      }
+      // Rate limit: ~5/sec max
+      if (listingIds.indexOf(id) < listingIds.length - 1) {
+        await wait(200);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Set the auto-renew flag on a listing via Etsy's internal PATCH API.
+   * When auto-renew is off, Etsy won't charge the 0.20 renewal fee when it expires.
+   */
+  public async setAutoRenew(
+    listingId: string,
+    autoRenew: boolean,
+  ): Promise<{ success: boolean; message: string }> {
+    const isLoggedIn = await this.checkLogin();
+    if (!isLoggedIn) {
+      return { success: false, message: "Not logged into Etsy. Please log in first." };
+    }
+
+    const shopId = await this.getShopId();
+    const csrfNonce = await this.getCsrfNonce();
+
+    const resp = await fetch(
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfNonce,
+        },
+        body: JSON.stringify({ should_auto_renew: autoRenew }),
+      },
+    );
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      throw new Error(`Etsy auto-renew PATCH returned ${resp.status}: ${errText.substring(0, 200)}`);
+    }
+
+    await remoteLog("info", "etsy.auto-renew", `Set auto_renew=${autoRenew} for listing ${listingId}`);
+    return {
+      success: true,
+      message: `Auto-renew ${autoRenew ? "enabled" : "disabled"} for listing ${listingId}.`,
+    };
   }
 
   /**
@@ -2238,6 +2643,186 @@ export class EtsyClient {
       console.error("[Etsy] Tag fill failed:", msg);
       await remoteLog("error", "etsy.tags", `Tag fill error: ${msg}`);
     }
+  }
+
+  // ─── Bulk operations via internal AJAX API ──────────────────────
+
+  /** Result summary from bulk operations */
+  public static readonly BULK_DELAY_MS = 200;
+
+  /**
+   * Generic bulk PATCH — sends a PATCH for each item with the given fields.
+   * Gets CSRF nonce once, then processes sequentially with rate-limiting delay.
+   */
+  public async bulkPatchListings(
+    items: Array<{ listingId: string; fields: Record<string, unknown> }>,
+  ): Promise<{ updated: number; failed: number; errors: string[] }> {
+    const shopId = await this.getShopId();
+    const csrfNonce = await this.getCsrfNonce();
+
+    let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    await remoteLog("info", "etsy.bulk-patch", `Starting bulk PATCH for ${items.length} listings`);
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      // MV3 keepalive
+      void chrome.storage.local.set({ _keepAlive: Date.now() });
+
+      try {
+        const resp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${item.listingId}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "x-csrf-token": csrfNonce,
+            },
+            body: JSON.stringify(item.fields),
+          },
+        );
+
+        if (resp.ok) {
+          updated++;
+        } else {
+          const errText = await resp.text().catch(() => "");
+          const msg = `Listing ${item.listingId}: ${resp.status} ${errText.substring(0, 150)}`;
+          errors.push(msg);
+          failed++;
+        }
+      } catch (err) {
+        const msg = `Listing ${item.listingId}: ${err instanceof Error ? err.message : String(err)}`;
+        errors.push(msg);
+        failed++;
+      }
+
+      if (i < items.length - 1) {
+        await wait(EtsyClient.BULK_DELAY_MS);
+      }
+
+      // Log progress every 10 items
+      if ((i + 1) % 10 === 0) {
+        await remoteLog("info", "etsy.bulk-patch", `Progress: ${i + 1}/${items.length} (${updated} ok, ${failed} err)`);
+      }
+    }
+
+    await remoteLog("info", "etsy.bulk-patch", `Complete: ${updated} updated, ${failed} failed`);
+    return { updated, failed, errors };
+  }
+
+  /**
+   * Bulk update prices on Etsy listings.
+   */
+  public async bulkUpdatePrice(
+    items: Array<{ listingId: string; price: number }>,
+  ): Promise<{ updated: number; failed: number; errors: string[] }> {
+    return this.bulkPatchListings(
+      items.map((item) => ({
+        listingId: item.listingId,
+        fields: { price: item.price },
+      })),
+    );
+  }
+
+  /**
+   * Bulk renew (reactivate) expired/inactive Etsy listings.
+   */
+  public async bulkRenew(
+    listingIds: string[],
+  ): Promise<{ renewed: number; failed: number; errors: string[] }> {
+    const result = await this.bulkPatchListings(
+      listingIds.map((id) => ({
+        listingId: id,
+        fields: { state: "active" },
+      })),
+    );
+    return { renewed: result.updated, failed: result.failed, errors: result.errors };
+  }
+
+  /**
+   * Bulk deactivate Etsy listings.
+   */
+  public async bulkDeactivate(
+    listingIds: string[],
+  ): Promise<{ deactivated: number; failed: number; errors: string[] }> {
+    const result = await this.bulkPatchListings(
+      listingIds.map((id) => ({
+        listingId: id,
+        fields: { state: "inactive" },
+      })),
+    );
+    return { deactivated: result.updated, failed: result.failed, errors: result.errors };
+  }
+
+  /**
+   * Bulk update tags on Etsy listings.
+   */
+  public async bulkUpdateTags(
+    items: Array<{ listingId: string; tags: string[] }>,
+  ): Promise<{ updated: number; failed: number; errors: string[] }> {
+    return this.bulkPatchListings(
+      items.map((item) => ({
+        listingId: item.listingId,
+        fields: { tags: item.tags },
+      })),
+    );
+  }
+
+  /**
+   * Bulk delete Etsy listings (permanent removal).
+   */
+  public async bulkDelete(
+    listingIds: string[],
+  ): Promise<{ deleted: number; failed: number; errors: string[] }> {
+    const shopId = await this.getShopId();
+    const csrfNonce = await this.getCsrfNonce();
+
+    let deleted = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    await remoteLog("info", "etsy.bulk-delete", `Starting bulk DELETE for ${listingIds.length} listings`);
+
+    for (let i = 0; i < listingIds.length; i++) {
+      const listingId = listingIds[i];
+      void chrome.storage.local.set({ _keepAlive: Date.now() });
+
+      try {
+        const resp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+            headers: { "x-csrf-token": csrfNonce },
+          },
+        );
+
+        if (resp.ok) {
+          deleted++;
+        } else {
+          const errText = await resp.text().catch(() => "");
+          errors.push(`Listing ${listingId}: ${resp.status} ${errText.substring(0, 150)}`);
+          failed++;
+        }
+      } catch (err) {
+        errors.push(`Listing ${listingId}: ${err instanceof Error ? err.message : String(err)}`);
+        failed++;
+      }
+
+      if (i < listingIds.length - 1) {
+        await wait(EtsyClient.BULK_DELAY_MS);
+      }
+
+      if ((i + 1) % 10 === 0) {
+        await remoteLog("info", "etsy.bulk-delete", `Progress: ${i + 1}/${listingIds.length} (${deleted} ok, ${failed} err)`);
+      }
+    }
+
+    await remoteLog("info", "etsy.bulk-delete", `Complete: ${deleted} deleted, ${failed} failed`);
+    return { deleted, failed, errors };
   }
 }
 

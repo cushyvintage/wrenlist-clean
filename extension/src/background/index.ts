@@ -1957,6 +1957,8 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     }
     case "get_etsy_shop_stats":
       return createEtsyServices().client.getShopStats();
+    case "get_etsy_listing_quality":
+      return createEtsyServices().client.getListingQuality();
     case "probe_etsy_page": {
       const pp = (message.params as Record<string, unknown>) ?? {};
       const path = (pp.path as string) || (message.path as string) || "/your/account/payment";
@@ -1970,6 +1972,71 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       if (listingIds.length === 0) throw new Error("listingIds required");
       return createEtsyServices().client.getListingStatsBatch(listingIds);
     }
+    case "get_etsy_inventory": {
+      const ip = (message.params as Record<string, unknown>) ?? {};
+      const listingIds = (ip.listingIds as string[] | undefined)
+        ?? (message.listingIds as string[] | undefined)
+        ?? [];
+      if (listingIds.length === 0) throw new Error("listingIds required");
+      return createEtsyServices().client.syncInventory(listingIds);
+    }
+    case "set_etsy_auto_renew": {
+      const arp = (message.params as Record<string, unknown>) ?? {};
+      const listingId = (arp.listingId as string | undefined)
+        ?? (message.listingId as string | undefined);
+      const autoRenew = (arp.autoRenew as boolean | undefined)
+        ?? (message.autoRenew as boolean | undefined);
+      if (!listingId) throw new Error("listingId required");
+      if (typeof autoRenew !== "boolean") throw new Error("autoRenew (boolean) required");
+      return createEtsyServices().client.setAutoRenew(listingId, autoRenew);
+    }
+
+    // ── Etsy bulk operations ──────────────────────────────────────────
+    case "etsy_bulk_update_price": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const items = (bp.items as Array<{ listingId: string; price: number }>) ?? [];
+      if (items.length === 0) throw new Error("items required");
+      return createEtsyServices().client.bulkUpdatePrice(items);
+    }
+    case "etsy_bulk_renew": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const ids = (bp.listingIds as string[]) ?? [];
+      if (ids.length === 0) throw new Error("listingIds required");
+      return createEtsyServices().client.bulkRenew(ids);
+    }
+    case "etsy_bulk_deactivate": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const ids = (bp.listingIds as string[]) ?? [];
+      if (ids.length === 0) throw new Error("listingIds required");
+      return createEtsyServices().client.bulkDeactivate(ids);
+    }
+    case "etsy_bulk_update_tags": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const items = (bp.items as Array<{ listingId: string; tags: string[] }>) ?? [];
+      if (items.length === 0) throw new Error("items required");
+      return createEtsyServices().client.bulkUpdateTags(items);
+    }
+    case "etsy_bulk_patch": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const items = (bp.items as Array<{ listingId: string; fields: Record<string, unknown> }>) ?? [];
+      if (items.length === 0) throw new Error("items required");
+      return createEtsyServices().client.bulkPatchListings(items);
+    }
+    case "etsy_bulk_delete": {
+      const bp = (message.params as Record<string, unknown>) ?? message;
+      const ids = (bp.listingIds as string[]) ?? [];
+      if (ids.length === 0) throw new Error("listingIds required");
+      return createEtsyServices().client.bulkDelete(ids);
+    }
+
+    case "get_etsy_shop_config": {
+      const sp = (message.params as Record<string, unknown>) ?? {};
+      const forceRefresh = (sp.forceRefresh as boolean | undefined)
+        ?? (message.forceRefresh as boolean | undefined)
+        ?? false;
+      return createEtsyServices().client.getShopConfig(forceRefresh);
+    }
+
     default:
       throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);
   }
