@@ -71,11 +71,12 @@ export default function PlatformMappingEditor({
 
   // Auto-suggest: fetch best match for unmapped platforms
   const [suggestions, setSuggestions] = useState<Record<string, { id: string; name: string; path: string; is_leaf: boolean } | null>>({})
-  const suggestFetchedRef = useRef(false)
+  const suggestFetchedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!categoryLabel || suggestFetchedRef.current) return
-    suggestFetchedRef.current = true
+    if (!categoryLabel || suggestFetchedRef.current === categoryLabel) return
+    suggestFetchedRef.current = categoryLabel
+    setSuggestions({})
 
     const unmapped = PLATFORM_LIST.filter((p) => !platforms[p]?.id)
     if (unmapped.length === 0) return
