@@ -186,7 +186,9 @@ export const GET = withAdminAuth(async (req) => {
 
   // Summary stats
   const totalIssues = results.reduce((sum, r) => sum + r.issues.length, 0)
-  const healthyCount = results.filter((r) => r.issues.length === 0).length
+  const withIssuesCount = results.filter((r) => r.issues.length > 0).length
+  const totalCategories = categories?.length ?? 0
+  const healthyCount = totalCategories - withIssuesCount
   const issuesByType: Record<string, number> = {}
   for (const r of results) {
     for (const issue of r.issues) {
@@ -197,7 +199,7 @@ export const GET = withAdminAuth(async (req) => {
   return NextResponse.json({
     total: categories?.length ?? 0,
     healthy: healthyCount,
-    withIssues: results.filter((r) => r.issues.length > 0).length,
+    withIssues: withIssuesCount,
     totalIssues,
     issuesByType,
     categories: issuesOnly ? results.filter((r) => r.issues.length > 0) : results,
