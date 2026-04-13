@@ -133,6 +133,70 @@ export default function AdminCategoriesPage() {
     setIsCreating(false)
   }
 
+  // Bulk action handler
+  const handleBulkAction = useCallback(async (values: string[], action: string) => {
+    if (action === 'import_fields') {
+      alert('Coming soon')
+      return
+    }
+
+    if (action === 'delete') {
+      if (!window.confirm(`Delete ${values.length} categories? This cannot be undone.`)) return
+      setIsLoading(true)
+      try {
+        for (const value of values) {
+          const res = await fetch('/api/admin/categories', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value }),
+          })
+          if (!res.ok) {
+            const err = await res.json()
+            throw new Error(err.error || `Failed to delete ${value}`)
+          }
+        }
+        await Promise.all([fetchCategories(), fetchStats()])
+      } catch (err) {
+        alert(`Delete failed: ${(err as Error).message}`)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
+    if (action === 'auto_match_vinted' || action === 'auto_match_ebay') {
+      const platform = action === 'auto_match_vinted' ? 'vinted' : 'ebay'
+      setIsLoading(true)
+      try {
+        const res = await fetch('/api/admin/categories/ai-match-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoryValues: values, platform }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Batch AI match failed')
+        }
+        const data = await res.json() as {
+          results: Array<{
+            categoryValue: string
+            suggestion: { id: string; name: string; path: string; confidence: string } | null
+            error?: string
+          }>
+        }
+        const matched = data.results.filter((r) => r.suggestion && !r.error).length
+        const failed = data.results.filter((r) => r.error).length
+        alert(`AI match complete: ${matched} matched, ${data.results.length - matched - failed} no match, ${failed} errors`)
+        await Promise.all([fetchCategories(), fetchStats()])
+      } catch (err) {
+        alert(`AI match failed: ${(err as Error).message}`)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+  }, [fetchCategories, fetchStats])
+
   if (!user || !isAdmin(user.email)) return null
 
   return (
@@ -181,6 +245,7 @@ export default function AdminCategoriesPage() {
               setEditingCategory(null)
               setIsCreating(true)
             }}
+            onBulkAction={handleBulkAction}
           />
         </div>
       </div>

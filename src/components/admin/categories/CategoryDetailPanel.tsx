@@ -217,7 +217,7 @@ export default function CategoryDetailPanel({
         </div>
 
         {/* Platform Mappings */}
-        <PlatformMappingEditor platforms={platforms} categoryLabel={label} onChange={setPlatforms} />
+        <PlatformMappingEditor platforms={platforms} categoryLabel={label} categoryValue={value} topLevel={topLevel} onChange={setPlatforms} />
 
         {/* Field Requirements — only for existing categories */}
         {!isNew && (

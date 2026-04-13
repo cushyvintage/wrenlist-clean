@@ -11,9 +11,22 @@ interface PlatformMapping {
   path?: string
 }
 
+interface AiMatchResult {
+  suggestion: {
+    id: string
+    name: string
+    path: string
+    is_leaf: boolean
+    confidence: 'high' | 'medium' | 'low'
+  } | null
+  reasoning: string
+}
+
 interface PlatformMappingEditorProps {
   platforms: Record<string, PlatformMapping>
   categoryLabel: string
+  categoryValue: string
+  topLevel: string
   onChange: (platforms: Record<string, PlatformMapping>) => void
 }
 
@@ -77,10 +90,53 @@ function isSuspiciousMismatch(categoryLabel: string, mappingName: string): boole
 export default function PlatformMappingEditor({
   platforms,
   categoryLabel,
+  categoryValue,
+  topLevel,
   onChange,
 }: PlatformMappingEditorProps) {
   const [searchPlatform, setSearchPlatform] = useState<Platform | null>(null)
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null)
+  const [aiMatchLoading, setAiMatchLoading] = useState<Record<string, boolean>>({})
+  const [aiMatchResults, setAiMatchResults] = useState<Record<string, AiMatchResult>>({})
+
+  const handleAiMatch = async (platform: string) => {
+    if (!categoryLabel || !categoryValue || !topLevel) return
+    setAiMatchLoading((prev) => ({ ...prev, [platform]: true }))
+    try {
+      const res = await fetch('/api/admin/categories/ai-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryLabel, categoryValue, topLevel, platform }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setAiMatchResults((prev) => ({
+          ...prev,
+          [platform]: { suggestion: null, reasoning: (err as { error?: string }).error ?? 'Request failed' },
+        }))
+        return
+      }
+      const data = (await res.json()) as AiMatchResult
+      setAiMatchResults((prev) => ({ ...prev, [platform]: data }))
+    } catch (err) {
+      setAiMatchResults((prev) => ({
+        ...prev,
+        [platform]: { suggestion: null, reasoning: (err as Error).message },
+      }))
+    } finally {
+      setAiMatchLoading((prev) => ({ ...prev, [platform]: false }))
+    }
+  }
+
+  const handleApplyAiMatch = (platform: string) => {
+    const result = aiMatchResults[platform]
+    if (!result?.suggestion) return
+    onChange({
+      ...platforms,
+      [platform]: { id: result.suggestion.id, name: result.suggestion.name, path: result.suggestion.path },
+    })
+    setAiMatchResults((prev) => ({ ...prev, [platform]: undefined as unknown as AiMatchResult }))
+  }
 
   const handleSearchSelect = (result: { id: string; name: string; path: string }) => {
     if (!searchPlatform) return
@@ -242,6 +298,38 @@ export default function PlatformMappingEditor({
                       Apply suggestion
                     </button>
                   </div>
+                ) : aiMatchResults[platform]?.suggestion ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-indigo-500 font-medium">AI Match:</span>
+                      <span className="text-sm font-medium text-ink">{aiMatchResults[platform]!.suggestion!.name}</span>
+                      <span className={`px-1 py-0.5 text-[9px] font-medium rounded ${
+                        aiMatchResults[platform]!.suggestion!.confidence === 'high'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : aiMatchResults[platform]!.suggestion!.confidence === 'medium'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        {aiMatchResults[platform]!.suggestion!.confidence}
+                      </span>
+                      {aiMatchResults[platform]!.suggestion!.is_leaf && (
+                        <span className="px-1 py-0.5 text-[9px] font-medium bg-emerald-50 text-emerald-700 rounded">leaf</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-sage-dim mt-0.5">{aiMatchResults[platform]!.suggestion!.path}</p>
+                    <p className="text-[11px] text-sage-dim/70 mt-0.5 italic">{aiMatchResults[platform]!.reasoning}</p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleApplyAiMatch(platform) }}
+                      className="mt-1 px-2 py-0.5 text-[11px] font-medium text-white bg-indigo-500 rounded hover:bg-indigo-600 transition-colors"
+                    >
+                      Apply AI match
+                    </button>
+                  </div>
+                ) : aiMatchResults[platform] && !aiMatchResults[platform]!.suggestion ? (
+                  <div>
+                    <span className="text-xs text-sage-dim italic">No AI match found</span>
+                    <p className="text-[11px] text-sage-dim/70 mt-0.5 italic">{aiMatchResults[platform]!.reasoning}</p>
+                  </div>
                 ) : (
                   <span className="text-xs text-sage-dim italic">Not mapped</span>
                 )}
@@ -255,6 +343,15 @@ export default function PlatformMappingEditor({
                 >
                   {isMapped ? 'Change' : 'Search'}
                 </button>
+                {!isMapped && !suggestions[platform] && categoryValue && (
+                  <button
+                    onClick={() => handleAiMatch(platform)}
+                    disabled={!!aiMatchLoading[platform]}
+                    className="px-2 py-1 text-[11px] font-medium text-indigo-500 hover:text-indigo-700 border border-indigo-200 rounded hover:border-indigo-400 transition-colors disabled:opacity-50"
+                  >
+                    {aiMatchLoading[platform] ? 'Matching...' : 'AI Match'}
+                  </button>
+                )}
                 {isMapped && (
                   <button
                     onClick={() => setEditingPlatform(isEditing ? null : platform)}
