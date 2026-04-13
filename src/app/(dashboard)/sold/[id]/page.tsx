@@ -42,6 +42,13 @@ interface SoldDetail {
     serviceFee: number | null
     netAmount: number | null
     trackingNumber: string | null
+    carrier: string | null
+    shippingCost: number | null
+    shippingAddress: {
+      name?: string | null; firstLine?: string | null; secondLine?: string | null;
+      city?: string | null; state?: string | null; country?: string | null; zip?: string | null;
+    } | null
+    orderDate: string | null
   }
   customer: Customer | null
 }
@@ -331,6 +338,14 @@ export default function SoldDetailPage() {
               <span className="font-mono text-xs">{sale.trackingNumber}</span>
             </DetailRow>
           )}
+          {sale.carrier && (
+            <DetailRow label="carrier">{sale.carrier}</DetailRow>
+          )}
+          {sale.shippingCost != null && sale.shippingCost > 0 && (
+            <DetailRow label="shipping cost">
+              <span className="font-mono">£{sale.shippingCost.toFixed(2)}</span>
+            </DetailRow>
+          )}
         </Panel>
 
         {/* Financials */}
@@ -418,6 +433,19 @@ export default function SoldDetailPage() {
               <Link href={`/customers/${data.customer.id}`} className="text-xs text-sage hover:underline">
                 view customer &rarr;
               </Link>
+            </div>
+          </Panel>
+        )}
+
+        {/* Shipping address (when no customer record but sale has address) */}
+        {!data.customer && sale.shippingAddress && (sale.shippingAddress.firstLine || sale.shippingAddress.city) && (
+          <Panel title="shipping address">
+            <div className="text-xs text-ink leading-relaxed">
+              {sale.shippingAddress.name && <p className="font-medium">{sale.shippingAddress.name}</p>}
+              {sale.shippingAddress.firstLine && <p>{sale.shippingAddress.firstLine}</p>}
+              {sale.shippingAddress.secondLine && <p>{sale.shippingAddress.secondLine}</p>}
+              <p>{[sale.shippingAddress.city, sale.shippingAddress.state, sale.shippingAddress.zip].filter(Boolean).join(', ')}</p>
+              {sale.shippingAddress.country && <p>{sale.shippingAddress.country}</p>}
             </div>
           </Panel>
         )}

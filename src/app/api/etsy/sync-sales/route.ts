@@ -256,7 +256,7 @@ export const POST = withAuth(async (req, user) => {
           shippingAddress: sale.shippingAddress || null,
           trackingNumber: sale.trackingNumber || null,
           carrier: sale.carrier || null,
-          deliveryStatus: sale.deliveryStatus || null,
+          shipmentStatus: sale.deliveryStatus || null,
           orderDate: sale.orderDate || null,
           paidDate: sale.paidDate || null,
           isBundle: sale.isBundle || false,
