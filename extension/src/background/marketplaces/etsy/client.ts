@@ -650,6 +650,86 @@ export class EtsyClient {
     } catch (e) { return { error: `JSON parse failed: ${String(e)}`, url }; }
   }
 
+  // ─── Per-listing stats ──────────────────────────────────────────────
+
+  /**
+   * Fetch visit stats for a single Etsy listing.
+   * Uses the SSR-embedded JSON at /your/shops/me/stats/listings/{id}.
+   */
+  public async getListingStats(listingId: string): Promise<{
+    listingId: string;
+    visits: number;
+    title: string | null;
+    imageUrl: string | null;
+  }> {
+    const probeResult = await this.probePageData(
+      `/your/shops/me/stats/listings/${listingId}`,
+    );
+
+    const result = { listingId, visits: 0, title: null as string | null, imageUrl: null as string | null };
+
+    const data = probeResult.data as Record<string, unknown> | undefined;
+    if (!data) return result;
+
+    try {
+      const payload = data.stats_listing_payload as Record<string, unknown> | undefined;
+      const pages = payload?.pages as Array<Record<string, unknown>> | undefined;
+      const firstPage = pages?.[0];
+      const list = firstPage?.list as Array<Record<string, unknown>> | undefined;
+      const firstItem = list?.[0];
+      const stackedGraphs = firstItem?.stacked_graphs_view as Array<Record<string, unknown>> | undefined;
+      const firstGraph = stackedGraphs?.[0];
+      const inventoryDetail = firstGraph?.inventory_detail as Record<string, unknown> | undefined;
+
+      if (inventoryDetail) {
+        result.visits = (inventoryDetail.total as number) ?? 0;
+
+        // Extract listing metadata from the daily entries
+        const datasets = inventoryDetail.datasets as Array<Record<string, unknown>> | undefined;
+        const entries = datasets?.[0]?.entries as Array<Record<string, unknown>> | undefined;
+        const firstEntry = entries?.[0];
+        const listing = firstEntry?.listing as Record<string, unknown> | undefined;
+        if (listing) {
+          result.title = (listing.title as string) ?? null;
+          result.imageUrl = (listing.image as string) ?? null;
+        }
+      }
+    } catch {
+      // Graceful fallback — return zeros if SSR structure changed
+    }
+
+    return result;
+  }
+
+  /**
+   * Fetch visit stats for multiple listings sequentially.
+   * Includes MV3 keepalive pings and rate-limiting (~200ms between requests).
+   */
+  public async getListingStatsBatch(listingIds: string[]): Promise<Array<{
+    listingId: string;
+    visits: number;
+    title: string | null;
+    imageUrl: string | null;
+  }>> {
+    const results: Array<{ listingId: string; visits: number; title: string | null; imageUrl: string | null }> = [];
+
+    for (const id of listingIds) {
+      chrome.storage.local.set({ _keepAlive: Date.now() });
+      try {
+        const stat = await this.getListingStats(id);
+        results.push(stat);
+      } catch {
+        results.push({ listingId: id, visits: 0, title: null, imageUrl: null });
+      }
+      // Rate limit: ~5/sec max
+      if (listingIds.indexOf(id) < listingIds.length - 1) {
+        await wait(200);
+      }
+    }
+
+    return results;
+  }
+
   public async getListing(id: string): Promise<Product | null> {
     const shopId = await this.getShopId();
 

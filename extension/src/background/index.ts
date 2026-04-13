@@ -579,6 +579,138 @@ type ExternalMessage = Record<string, unknown>;
     }
   }
 
+  // --- Shop stats auto-refresh: daily refresh for Etsy + Vinted stats ---
+  const STATS_REFRESH_ALARM = "wrenlist_stats_refresh";
+  const STATS_REFRESH_INTERVAL_MINUTES = 60 * 24; // every 24 hours
+  const STATS_LAST_RUN_KEY = "statsRefreshLastRun";
+
+  chrome.alarms.create(STATS_REFRESH_ALARM, {
+    delayInMinutes: 5, // first run ~5 min after startup
+    periodInMinutes: STATS_REFRESH_INTERVAL_MINUTES,
+  });
+
+  async function runStatsRefresh(): Promise<void> {
+    // Deduplicate: skip if ran in the last 12 hours (protects against
+    // service worker restarts creating a fresh alarm each time)
+    const stored = await chrome.storage.local.get([STATS_LAST_RUN_KEY]);
+    const lastRun = stored[STATS_LAST_RUN_KEY] as number | undefined;
+    if (lastRun && Date.now() - lastRun < 12 * 60 * 60 * 1000) {
+      console.debug("[StatsRefresh] Skipping — last ran", new Date(lastRun).toISOString());
+      return;
+    }
+    await chrome.storage.local.set({ [STATS_LAST_RUN_KEY]: Date.now() });
+
+    console.log("[StatsRefresh] Starting daily stats refresh...");
+    const baseUrl = await getWrenlistBaseUrl();
+    let etsyOk = false;
+    let vintedOk = false;
+
+    // --- Etsy ---
+    try {
+      const isLoggedIn = await checkMarketplaceLogin("etsy");
+      if (isLoggedIn) {
+        const etsyStats = await createEtsyServices().client.getShopStats();
+        if (etsyStats) {
+          const res = await queueFetch(`${baseUrl}/api/etsy/shop-stats`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(etsyStats),
+          });
+          etsyOk = res.ok;
+        }
+      } else {
+        console.debug("[StatsRefresh] Not logged into Etsy, skipping");
+      }
+    } catch (e) {
+      console.warn("[StatsRefresh] Etsy stats failed:", e);
+    }
+
+    // --- Vinted ---
+    try {
+      const isLoggedIn = await checkMarketplaceLogin("vinted");
+      if (isLoggedIn) {
+        const { client } = createVintedServices({ tld: "co.uk" });
+        await client.bootstrap();
+        const csrfToken = client.getCsrfToken();
+        const anonId = client.getAnonId();
+
+        const vintedHeaders: Record<string, string> = {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json",
+        };
+        if (csrfToken) vintedHeaders["X-Csrf-Token"] = csrfToken;
+        if (anonId) vintedHeaders["X-Anon-Id"] = anonId;
+
+        const vintedFetch = async (path: string): Promise<Record<string, unknown> | null> => {
+          try {
+            const resp = await fetch(`https://www.vinted.co.uk${path}`, {
+              method: "GET",
+              credentials: "include",
+              headers: vintedHeaders,
+            });
+            if (!resp.ok) return null;
+            return await resp.json() as Record<string, unknown>;
+          } catch {
+            return null;
+          }
+        };
+
+        // 1. User profile
+        const userData = await vintedFetch("/api/v2/users/current");
+        const user = (userData?.user as Record<string, unknown>) ?? userData;
+        const userId = user?.id as number | undefined;
+
+        // 2. Wallet balance
+        let walletData: Record<string, unknown> | null = null;
+        if (userId) {
+          walletData = await vintedFetch(`/api/v2/users/${userId}/balance`);
+        }
+
+        // 3. Completed sales count
+        const ordersData = await vintedFetch("/api/v2/my_orders?type=sold&status=completed");
+        const pagination = (ordersData?.pagination as Record<string, unknown>) ?? {};
+
+        const userBalance = (walletData?.user_balance as Record<string, unknown>) ?? {};
+        const availableAmount = (userBalance?.available_amount as Record<string, unknown>) ?? {};
+        const escrowAmount = (userBalance?.escrow_amount as Record<string, unknown>) ?? {};
+
+        const payload = {
+          feedbackScore: user?.feedback_reputation as number | undefined,
+          positiveReviews: user?.positive_feedback_count as number | undefined,
+          negativeReviews: user?.negative_feedback_count as number | undefined,
+          totalReviews: user?.feedback_count as number | undefined,
+          activeListings: user?.item_count as number | undefined,
+          totalItems: user?.total_items_count as number | undefined,
+          followers: user?.followers_count as number | undefined,
+          completedSales: pagination?.total_entries as number | undefined,
+          walletAvailable: availableAmount?.amount as number | undefined,
+          walletEscrow: escrowAmount?.amount as number | undefined,
+          walletCurrency: (availableAmount?.currency_code ?? escrowAmount?.currency_code) as string | undefined,
+          rawJson: { userData, walletData, ordersData },
+        };
+
+        const res = await queueFetch(`${baseUrl}/api/vinted/shop-stats`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        vintedOk = res.ok;
+      } else {
+        console.debug("[StatsRefresh] Not logged into Vinted, skipping");
+      }
+    } catch (e) {
+      if (e instanceof VintedCooldownError || e instanceof VintedRetryLaterError) {
+        console.info("[StatsRefresh] Vinted deferred:", e instanceof Error ? e.message : String(e));
+      } else if (e instanceof VintedLoggedOutError) {
+        console.warn("[StatsRefresh] Vinted logged out");
+      } else {
+        console.warn("[StatsRefresh] Vinted stats failed:", e);
+      }
+    }
+
+    console.log(`[StatsRefresh] Done — etsy=${etsyOk}, vinted=${vintedOk}`);
+  }
+
   // --- Queue polling: publish-queue + delist-queue (chrome.alarms, MV3-safe) ---
   const QUEUE_POLL_ALARM = "queue_poll";
   const QUEUE_POLL_INTERVAL_MINUTES = 1;
@@ -1406,6 +1538,8 @@ type ExternalMessage = Record<string, unknown>;
       }
     } else if (alarm.name === VINTED_SALES_SYNC_ALARM) {
       await runVintedSalesSync();
+    } else if (alarm.name === STATS_REFRESH_ALARM) {
+      await runStatsRefresh();
     }
   });
 
@@ -1734,6 +1868,14 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       const pp = (message.params as Record<string, unknown>) ?? {};
       const path = (pp.path as string) || (message.path as string) || "/your/account/payment";
       return createEtsyServices().client.probePageData(path);
+    }
+    case "get_etsy_listing_stats": {
+      const sp = (message.params as Record<string, unknown>) ?? {};
+      const listingIds = (sp.listingIds as string[] | undefined)
+        ?? (message.listingIds as string[] | undefined)
+        ?? [];
+      if (listingIds.length === 0) throw new Error("listingIds required");
+      return createEtsyServices().client.getListingStatsBatch(listingIds);
     }
     default:
       throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);

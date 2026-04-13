@@ -49,7 +49,7 @@ interface GroupedListing {
     error_message: string | null
     listing_price: number | null
     platform_listing_url: string | null
-    fields: Record<string, string> | null
+    fields: Record<string, unknown> | null
     id: string
   }[]
 }
@@ -1099,6 +1099,7 @@ export default function ListingsPage() {
                       const delistKey = `${group.find_id}:${mp.marketplace}`
                       const isConfirming = delistConfirm === delistKey
                       const isDelisting = delisting === delistKey
+                      const mpVisits = (mp.fields?.stats as Record<string, unknown> | undefined)?.visits as number | undefined
                       return (
                         <span key={mp.id} className="inline-flex items-center gap-1">
                           <PlatformTag
@@ -1106,8 +1107,20 @@ export default function ListingsPage() {
                             status={mp.status as MarketplaceDataStatus}
                             errorMessage={mp.error_message}
                             href={mp.platform_listing_url}
-                            collection={mp.fields?.collection_name}
+                            collection={mp.fields?.collection_name as string | undefined}
                           />
+                          {mpVisits != null && mpVisits > 0 && (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[10px] text-ink-lt"
+                              title={`${mpVisits} views on ${mp.marketplace}`}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="opacity-60">
+                                <path d="M8 3C4 3 1.5 8 1.5 8s2.5 5 6.5 5 6.5-5 6.5-5-2.5-5-6.5-5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                              </svg>
+                              {mpVisits}
+                            </span>
+                          )}
                           {(mp.status === 'listed' || mp.status === 'draft') && !isConfirming && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setDelistConfirm(delistKey) }}
