@@ -490,13 +490,22 @@ export class EtsyClient {
           profileUrl: buyer.profile_url || null,
           isRepeatBuyer: buyer.is_repeat_buyer || false,
         } : null,
+        // grossAmount = items_cost (what seller listed at, before discount)
+        // netAmount = grossAmount - discount (seller receives before Etsy fees)
+        // buyerPaid = total_cost (items + shipping + tax — what buyer paid)
         grossAmount: moneyToPounds(costBreakdown?.items_cost),
         shippingCost: moneyToPounds(costBreakdown?.shipping_cost),
         taxAmount: moneyToPounds(costBreakdown?.tax_cost),
         discount: moneyToPounds(costBreakdown?.discount),
         refundAmount: moneyToPounds(costBreakdown?.refund),
-        buyerPaid: moneyToPounds(costBreakdown?.buyer_cost),
-        netAmount: moneyToPounds(costBreakdown?.total_cost),
+        buyerPaid: moneyToPounds(costBreakdown?.buyer_cost ?? costBreakdown?.total_cost),
+        netAmount: (() => {
+          const gross = moneyToPounds(costBreakdown?.items_cost);
+          const disc = moneyToPounds(costBreakdown?.discount);
+          const refund = moneyToPounds(costBreakdown?.refund);
+          if (gross == null) return null;
+          return Math.round((gross - (disc ?? 0) - (refund ?? 0)) * 100) / 100;
+        })(),
         currency: costBreakdown?.items_cost?.currency_code || "GBP",
         paymentMethod: payment?.payment_method || null,
         shippingMethod: (ful?.shipping_method as string) || pkg?.shipping_method_name || null,

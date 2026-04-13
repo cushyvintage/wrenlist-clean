@@ -119,19 +119,20 @@ export async function enrichEbaySoldItem(
   const realFee = parseFloat(order.totalMarketplaceFee?.value || '')
   const realNet = parseFloat(order.paymentSummary?.totalDueSeller?.value || '')
 
+  const orderTotal = parseFloat(order.pricingSummary?.total?.value || '0')
+
   if (!isNaN(realFee) && realFee > 0) {
     // Real fee available — split proportionally across line items if multi-item order
-    serviceFee = lineItemCount > 1
-      ? Math.round((realFee * (grossAmount / parseFloat(order.pricingSummary?.total?.value || '1'))) * 100) / 100
+    serviceFee = (lineItemCount > 1 && orderTotal > 0)
+      ? Math.round((realFee * (grossAmount / orderTotal)) * 100) / 100
       : realFee
     netAmount = Math.round((grossAmount - serviceFee) * 100) / 100
     feeSource = 'actual'
-  } else if (!isNaN(realNet) && realNet > 0) {
+  } else if (!isNaN(realNet) && realNet > 0 && orderTotal > 0) {
     // No explicit fee but we have net payout — derive fee from gross minus net
-    const orderTotal = parseFloat(order.pricingSummary?.total?.value || '0')
     const totalFee = orderTotal - realNet
     serviceFee = lineItemCount > 1
-      ? Math.round((totalFee * (grossAmount / (orderTotal || 1))) * 100) / 100
+      ? Math.round((totalFee * (grossAmount / orderTotal)) * 100) / 100
       : Math.round(totalFee * 100) / 100
     netAmount = Math.round((grossAmount - serviceFee) * 100) / 100
     feeSource = 'actual'

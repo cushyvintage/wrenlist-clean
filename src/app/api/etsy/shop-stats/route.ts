@@ -76,10 +76,10 @@ export const POST = withAuth(async (req, user) => {
     updateData.star_seller_case_rate = starSeller.caseRate
   }
 
+  // Upsert: update if exists, insert if not (user may refresh stats before connecting)
   const { error } = await supabase
     .from('etsy_connections')
-    .update(updateData)
-    .eq('user_id', user.id)
+    .upsert({ user_id: user.id, ...updateData }, { onConflict: 'user_id' })
 
   if (error) return ApiResponseHelper.internalError(error.message)
 
