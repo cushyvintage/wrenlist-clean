@@ -596,7 +596,7 @@ export class eBayClient {
     const since = new Date(Date.now() - days * 86400000).toISOString()
     const ordersResponse = await this.getOrders({
       limit: 200,
-      filter: `creationdate:[${since}..],orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS|FULFILLED}`,
+      filter: `creationdate:[${since}..]`,
     })
     const orders = (ordersResponse.orders || []) as Array<{
       pricingSummary?: { total?: { value?: string; currency?: string } }
