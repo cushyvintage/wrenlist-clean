@@ -45,6 +45,7 @@ export default function AddFindPage() {
     setError: form.setError,
     setUploadProgress: form.setUploadProgress,
     setPublishProgress: form.setPublishProgress,
+    setIncompleteRequiredFields: form.setIncompleteRequiredFields,
   })
 
   return (

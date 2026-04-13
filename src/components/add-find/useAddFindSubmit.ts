@@ -89,10 +89,11 @@ interface SubmitDeps {
   setError: Dispatch<SetStateAction<string | null>>
   setUploadProgress: Dispatch<SetStateAction<number>>
   setPublishProgress: Dispatch<SetStateAction<PublishProgress | null>>
+  setIncompleteRequiredFields: Dispatch<SetStateAction<Set<string>>>
 }
 
 export function useAddFindSubmit(deps: SubmitDeps) {
-  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress } = deps
+  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress, setIncompleteRequiredFields } = deps
   const { getPlatformId } = useCategoryTree()
 
   const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
@@ -263,20 +264,53 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       setError('Loading field requirements — please try again'); return
     }
 
-    // Check marketplace-specific required fields — warn but don't block.
-    // Missing fields are auto-filled at publish time (e.g. eBay aspects).
-    // Colour is the only truly blocking field for Vinted.
+    // Check marketplace-specific required fields — block publish if any are empty.
     if (fieldConfig) {
-      const hasColour = !!(
-        (formData.selectedPlatforms.includes('vinted') && formData.platformFields.vinted?.primaryColor) ||
-        (formData.platformFields.shared?.colour && String(formData.platformFields.shared.colour).trim())
-      )
-      // Only block on colour if Vinted is selected and colour is required
-      const colourRequired = fieldConfig['colour']?.required && formData.selectedPlatforms.includes('vinted')
-      if (colourRequired && !hasColour) {
-        setError('Colour is required for Vinted — please select a colour')
+      const missing = new Set<string>()
+
+      // Check all fields marked required + shown in fieldConfig
+      for (const [key, cfg] of Object.entries(fieldConfig)) {
+        if (!cfg.required || !cfg.show) continue
+        const value = formData.platformFields.shared?.[key]
+        const isEmpty = value === undefined || value === null || value === '' ||
+          (Array.isArray(value) && value.length === 0)
+        if (isEmpty) missing.add(key)
+      }
+
+      // Colour has a special case: Vinted primaryColor picker counts as filled
+      if (missing.has('colour')) {
+        const hasColour = !!(
+          (formData.selectedPlatforms.includes('vinted') && formData.platformFields.vinted?.primaryColor) ||
+          (formData.platformFields.shared?.colour && String(formData.platformFields.shared.colour).trim())
+        )
+        if (hasColour) missing.delete('colour')
+      }
+
+      // Etsy-specific: whoMade and whenMade are always required
+      if (formData.selectedPlatforms.includes('etsy')) {
+        const whoMade = formData.platformFields.shared?.whoMade
+        if (!whoMade || !String(whoMade).trim()) missing.add('whoMade')
+        const whenMade = formData.platformFields.shared?.whenMade
+        if (!whenMade || !String(whenMade).trim()) missing.add('whenMade')
+      }
+
+      // Vinted clothing: size is required
+      if (formData.selectedPlatforms.includes('vinted') && formData.category?.startsWith('clothing_')) {
+        const size = formData.platformFields.shared?.size
+        if (!size || !String(size).trim()) missing.add('size')
+      }
+
+      if (missing.size > 0) {
+        setIncompleteRequiredFields(missing)
+        const fieldNames = Array.from(missing).map(k =>
+          k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())
+        )
+        setError(`Required fields missing: ${fieldNames.join(', ')}`)
         return
       }
+
+      // Clear any previously flagged fields
+      setIncompleteRequiredFields(new Set())
     }
 
     setIsLoading(true)
