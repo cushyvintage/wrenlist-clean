@@ -61,14 +61,18 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   'in transit': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'In Transit' },
   'awaiting collection': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Awaiting Collection' },
   'label sent': { bg: 'bg-status-info-bg', text: 'text-status-info', label: 'Label Sent' },
+  'not sent': { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Not Sent' },
   shipped: { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Shipped' },
   returning: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Returning' },
   refunded: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Refunded' },
   cancelled: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Cancelled' },
 }
 
-/** Statuses that genuinely need seller action (ship it or add tracking) */
-const NEEDS_ACTION_STATUSES = new Set(['label sent', ''])
+/** Statuses where the seller still needs to take action */
+const NEEDS_ACTION_STATUSES = new Set(['label sent', 'not sent'])
+
+/** Statuses that are definitively resolved — never show as "needs action" */
+const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled'])
 
 /** How many days after sale before we stop treating null-status as "needs action" */
 const NEEDS_ACTION_WINDOW_DAYS = 5
@@ -90,6 +94,8 @@ function normalizeStatus(raw: string | null | undefined): string | null {
 
 function needsAction(item: SoldItem): boolean {
   const status = normalizeStatus(item.shipmentStatus)
+  // Resolved statuses never need action
+  if (status !== null && RESOLVED_STATUSES.has(status)) return false
   // Known actionable statuses
   if (status !== null) return NEEDS_ACTION_STATUSES.has(status)
   // Null status: only needs action if sold recently (within window)
@@ -100,11 +106,16 @@ function needsAction(item: SoldItem): boolean {
 
 function ShipmentBadge({ status, soldAt }: { status: string | null | undefined; soldAt?: string | null }) {
   if (!status) {
-    // No shipment data — if recent sale, likely awaiting shipment; otherwise unknown
+    // No shipment data — if recent sale, show "Not Sent"; otherwise "No tracking"
     if (soldAt) {
       const daysSinceSale = (Date.now() - new Date(soldAt).getTime()) / (1000 * 60 * 60 * 24)
       if (daysSinceSale <= NEEDS_ACTION_WINDOW_DAYS) {
-        return <span className="text-ink-lt text-xs">Awaiting shipment</span>
+        const style = SHIPMENT_STYLES['not sent']!
+        return (
+          <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${style.bg} ${style.text}`}>
+            {style.label}
+          </span>
+        )
       }
     }
     return (

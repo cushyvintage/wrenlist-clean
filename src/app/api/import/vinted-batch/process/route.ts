@@ -181,6 +181,9 @@ export async function POST(request: NextRequest) {
           ? item.price
           : parseFloat(String(item.price ?? 0))
 
+        // For sold items, set sold_price_gbp from the asking price
+        const soldPrice = findStatus === 'sold' ? (isNaN(askingPrice) ? null : askingPrice) : null
+
         const { data: find, error: findError } = await supabase
           .from('finds')
           .insert({
@@ -191,6 +194,7 @@ export async function POST(request: NextRequest) {
             brand: brand && brand !== 'no brand' ? brand : null,
             condition,
             asking_price_gbp: isNaN(askingPrice) ? null : askingPrice,
+            sold_price_gbp: soldPrice,
             photos,
             sku,
             status: findStatus,
