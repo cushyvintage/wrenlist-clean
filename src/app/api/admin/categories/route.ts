@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/admin/categories
@@ -19,7 +12,7 @@ export const GET = withAdminAuth(async (req) => {
   const search = params.get('search')
   const unmapped = params.get('unmapped') // platform name — filter to categories missing this platform
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   let query = supabase
     .from('categories')
     .select('*')
@@ -84,7 +77,7 @@ export const POST = withAdminAuth(async (req) => {
     )
   }
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('categories')
     .insert({
@@ -129,7 +122,7 @@ export const PATCH = withAdminAuth(async (req) => {
   if (sort_order !== undefined) safeUpdates.sort_order = sort_order
   if (legacy_values !== undefined) safeUpdates.legacy_values = legacy_values
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('categories')
     .update(safeUpdates)
@@ -161,7 +154,7 @@ export const DELETE = withAdminAuth(async (req) => {
     return NextResponse.json({ error: 'value is required' }, { status: 400 })
   }
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('categories')
     .delete()

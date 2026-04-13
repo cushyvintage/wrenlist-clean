@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/admin/categories/[value]/fields
@@ -21,7 +14,7 @@ export const GET = withAdminAuth(async (req, _user, params) => {
   }
 
   const platform = req.nextUrl.searchParams.get('platform')
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   let query = supabase
     .from('category_field_requirements')
@@ -59,7 +52,7 @@ export const PUT = withAdminAuth(async (req, _user, params) => {
     return NextResponse.json({ error: 'platform and fields[] are required' }, { status: 400 })
   }
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('category_field_requirements')
     .upsert(
@@ -99,7 +92,7 @@ export const DELETE = withAdminAuth(async (req, _user, params) => {
     return NextResponse.json({ error: 'platform is required' }, { status: 400 })
   }
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('category_field_requirements')
     .delete()

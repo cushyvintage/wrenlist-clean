@@ -1,22 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
-const PLATFORMS = ['ebay', 'vinted', 'shopify', 'etsy', 'depop'] as const
+import { getAdminClient } from '@/lib/supabase-admin'
+import { CATEGORY_PLATFORMS } from '@/lib/platforms'
 
 /**
  * GET /api/admin/categories/freshness
  * Returns per-platform taxonomy freshness info.
  */
 export const GET = withAdminAuth(async () => {
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   // Get latest version record per platform
   const { data, error } = await supabase
@@ -38,7 +30,7 @@ export const GET = withAdminAuth(async () => {
     checksum: string | null
   }> = {}
 
-  for (const platform of PLATFORMS) {
+  for (const platform of CATEGORY_PLATFORMS) {
     const latest = (data ?? []).find((r) => r.platform === platform)
     if (!latest) {
       result[platform] = {

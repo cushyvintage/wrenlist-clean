@@ -11,19 +11,20 @@ interface CategoryData {
 
 type CategoryTree = Record<string, CategoryData[]>
 
-let _cache: { tree: CategoryTree; flat: CategoryData[] } | null = null
+let _cache: { tree: CategoryTree; flat: CategoryData[]; fetchedAt: number } | null = null
+const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
 /**
  * Fetches the category tree from /api/categories?format=tree
- * with aggressive client-side caching (categories rarely change).
+ * with client-side caching (TTL: 10 minutes).
  */
 export function useCategoryTree() {
   const [tree, setTree] = useState<CategoryTree>(_cache?.tree ?? {})
   const [flat, setFlat] = useState<CategoryData[]>(_cache?.flat ?? [])
-  const [isLoading, setIsLoading] = useState(!_cache)
+  const [isLoading, setIsLoading] = useState(!_cache || Date.now() - _cache.fetchedAt >= CACHE_TTL_MS)
 
   useEffect(() => {
-    if (_cache) return
+    if (_cache && Date.now() - _cache.fetchedAt < CACHE_TTL_MS) return
 
     const fetchTree = async () => {
       try {
@@ -31,7 +32,7 @@ export function useCategoryTree() {
         if (!res.ok) throw new Error('Failed to fetch categories')
         const data: CategoryTree = await res.json()
         const flatList = Object.values(data).flat()
-        _cache = { tree: data, flat: flatList }
+        _cache = { tree: data, flat: flatList, fetchedAt: Date.now() }
         setTree(data)
         setFlat(flatList)
       } catch {

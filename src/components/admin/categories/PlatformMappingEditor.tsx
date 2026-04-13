@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import TaxonomySearchModal from './TaxonomySearchModal'
 import type { Platform } from '@/types'
+import { CATEGORY_PLATFORMS } from '@/lib/platforms'
 
 interface PlatformMapping {
   id: string
@@ -30,7 +31,7 @@ interface PlatformMappingEditorProps {
   onChange: (platforms: Record<string, PlatformMapping>) => void
 }
 
-const PLATFORM_LIST: Platform[] = ['ebay', 'vinted', 'shopify', 'etsy', 'depop']
+const PLATFORM_LIST = CATEGORY_PLATFORMS as readonly Platform[]
 
 // Platforms that require leaf node IDs for publishing
 const LEAF_REQUIRED: Set<string> = new Set(['vinted'])

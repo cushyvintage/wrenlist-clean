@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 /**
  * GET /api/admin/categories/outcomes?min_attempts=5
@@ -18,7 +11,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
   const params = req.nextUrl.searchParams
   const minAttempts = parseInt(params.get('min_attempts') || '5', 10)
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   const { data, error } = await supabase.rpc('get_category_publish_outcomes', {
     min_attempts: minAttempts,

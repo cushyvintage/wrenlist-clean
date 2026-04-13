@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 interface StaleListing {
   pmdId: string
@@ -34,7 +27,7 @@ export const GET = withAdminAuth(async (req) => {
   const params = req.nextUrl.searchParams
   const platformFilter = params.get('platform')
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   // 1. Fetch all listed PMD rows that have a platform_category_id
   let pmdQuery = supabase

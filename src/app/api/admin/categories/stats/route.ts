@@ -1,22 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-const PLATFORMS = ['ebay', 'vinted', 'shopify', 'etsy', 'depop'] as const
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
+import { CATEGORY_PLATFORMS } from '@/lib/platforms'
 
 /**
  * GET /api/admin/categories/stats
  * Returns coverage stats: total categories, per-platform coverage, top-level breakdown.
  */
 export const GET = withAdminAuth(async () => {
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   const { data: categories, error } = await supabase
     .from('categories')
@@ -30,7 +22,7 @@ export const GET = withAdminAuth(async () => {
 
   // Per-platform coverage
   const platformCoverage: Record<string, { mapped: number; total: number; pct: number }> = {}
-  for (const p of PLATFORMS) {
+  for (const p of CATEGORY_PLATFORMS) {
     const mapped = (categories ?? []).filter(
       (c) => !!(c.platforms as Record<string, unknown>)?.[p]
     ).length

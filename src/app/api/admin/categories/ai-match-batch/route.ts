@@ -3,6 +3,7 @@ import { withAdminAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getAllCategories, type CategoryRow } from '@/lib/category-db'
 import { loadTaxonomy, preFilterCandidates, callOpenAI, type AiMatchSuggestion } from '@/lib/ai-category-match'
+import { CATEGORY_PLATFORMS } from '@/lib/platforms'
 
 // ------------------------------------------------------------------
 // Types
@@ -26,7 +27,6 @@ interface BatchResultItem {
 // Helpers
 // ------------------------------------------------------------------
 
-const VALID_PLATFORMS = ['vinted', 'ebay', 'shopify', 'depop', 'etsy']
 const MAX_BATCH_SIZE = 20
 
 /** Resolve a canonical category value to its label and top-level key from pre-loaded rows */
@@ -75,9 +75,9 @@ export const POST = withAdminAuth(async (req, user) => {
       { status: 400 }
     )
   }
-  if (!platform || !VALID_PLATFORMS.includes(platform)) {
+  if (!platform || !(CATEGORY_PLATFORMS as readonly string[]).includes(platform)) {
     return NextResponse.json(
-      { error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}` },
+      { error: `Invalid platform. Must be one of: ${CATEGORY_PLATFORMS.join(', ')}` },
       { status: 400 }
     )
   }

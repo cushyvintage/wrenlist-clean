@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 interface FieldDef {
   name: string
@@ -34,7 +27,7 @@ export const POST = withAdminAuth(async (req) => {
     )
   }
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   // 1. Read the override from marketplace_category_config
   const { data: override, error: overrideErr } = await supabase

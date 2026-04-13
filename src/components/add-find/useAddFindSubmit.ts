@@ -8,75 +8,26 @@ import { useCategoryTree } from '@/hooks/useCategoryTree'
 import { showError } from '@/lib/toast-error'
 import type { PublishProgress, MarketplaceStatus } from '@/components/publish/PublishProgressPanel'
 
-/** Resolve Vinted catalog ID — prefer category tree, fall back to known working leaf IDs */
+/** Resolve Vinted catalog ID from category tree DB mappings, walking up the category hierarchy */
 function getVintedCatalogId(category: string, getPlatformId: (value: string, platform: string) => string | undefined): number | null {
-  // Try category tree first
+  // Try exact category match
   const mapped = getPlatformId(category, 'vinted')
   if (mapped) return Number(mapped)
 
-  // Fallback: known working Vinted leaf IDs for common stock categories
-  // (from dom_stock_mapping + verified against Vinted UK API 2026-04-08)
-  const VINTED_LEAF_FALLBACKS: Record<string, number> = {
-    // Books & Media
-    books_media: 2997,
-    books_media_books: 2997,
-    books_media_music: 2994,
-    books_media_movies: 2993,
-    books_media_video_games: 2995,
-    // Home & Garden
-    home_garden: 1934,
-    home_garden_home_decor: 3822, // Sculptures & figurines
-    home_garden_kitchen_dining: 1920, // Dinnerware (plates 1960, bowls 1959)
-    home_garden_furniture: 3154,
-    home_garden_bedding: 3816,
-    home_garden_bath: 3832,
-    home_garden_appliances: 3512,
-    // Collectibles
-    collectibles: 3823, // Decorative accessories
-    collectibles_general: 3823,
-    collectibles_general_collectibles: 3823,
-    collectibles_militaria: 3823,
-    collectibles_coins: 3823,
-    collectibles_stamps: 3823,
-    // Clothing
-    clothing: 4, // Women's clothing (default)
-    clothing_womenswear: 4,
-    clothing_menswear: 2050,
-    // Jewellery & Accessories
-    craft_supplies: 1187, // Accessories
-    // Electronics
-    electronics: 2994,
-    electronics_portable_audio: 2994,
-    electronics_computers: 2994,
-    // Toys & Games
-    toys_games: 1499,
-    // Antiques
-    antiques: 1934, // Home accessories
-    antiques_antique_decor: 1934,
-    antiques_antique_furniture: 3154,
-    // Art
-    art: 3847, // Paintings
-    art_paintings: 3847,
-    art_prints: 3849,
-    art_sculptures: 3822,
-    // Sports
-    sports_outdoors: 1499, // Use toys as fallback
-    // Baby
-    baby_toddler: 1193, // Kids
-    // Pet supplies
-    pet_supplies: 5196,
-    // Vehicles & Parts
-    vehicles_parts: 3512, // Hobby & DIY
-    // Other / Misc
-    other: 1934, // Home accessories
-    other_other: 1934,
+  // Try parent segment (e.g. clothing_womenswear_womens_dresses -> clothing_womenswear)
+  const parts = category.split('_')
+  if (parts.length > 2) {
+    const parent = parts.slice(0, 2).join('_')
+    const parentId = getPlatformId(parent, 'vinted')
+    if (parentId) return Number(parentId)
   }
-  // Try exact match, then try parent segments
-  if (VINTED_LEAF_FALLBACKS[category]) return VINTED_LEAF_FALLBACKS[category]
-  const parent = category.split('_').slice(0, 2).join('_')
-  if (VINTED_LEAF_FALLBACKS[parent]) return VINTED_LEAF_FALLBACKS[parent]
-  const topLevel = category.split('_')[0] ?? ''
-  if (topLevel && VINTED_LEAF_FALLBACKS[topLevel]) return VINTED_LEAF_FALLBACKS[topLevel]
+
+  // Try top-level (e.g. clothing)
+  const topLevel = parts[0]
+  if (parts.length > 1 && topLevel) {
+    const topId = getPlatformId(topLevel, 'vinted')
+    if (topId) return Number(topId)
+  }
 
   return null
 }

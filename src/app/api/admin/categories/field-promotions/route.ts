@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { getAdminClient } from '@/lib/supabase-admin'
 
 interface FieldDef {
   name: string
@@ -30,7 +23,7 @@ interface Promotion {
  * don't yet exist in canonical category_field_requirements.
  */
 export const GET = withAdminAuth(async () => {
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
 
   // 1. Fetch config overrides from extension API sources
   const { data: overrides, error: overrideErr } = await supabase

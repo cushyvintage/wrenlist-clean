@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { loadTaxonomy, preFilterCandidates, callOpenAI } from '@/lib/ai-category-match'
+import { CATEGORY_PLATFORMS } from '@/lib/platforms'
 
 // ------------------------------------------------------------------
 // Types
@@ -13,12 +14,6 @@ interface AiMatchRequest {
   topLevel: string
   platform: string
 }
-
-// ------------------------------------------------------------------
-// Route handler
-// ------------------------------------------------------------------
-
-const VALID_PLATFORMS = ['vinted', 'ebay', 'shopify', 'depop', 'etsy']
 
 /**
  * POST /api/admin/categories/ai-match
@@ -50,9 +45,9 @@ export const POST = withAdminAuth(async (req, user) => {
     )
   }
 
-  if (!VALID_PLATFORMS.includes(platform)) {
+  if (!(CATEGORY_PLATFORMS as readonly string[]).includes(platform)) {
     return NextResponse.json(
-      { error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}` },
+      { error: `Invalid platform. Must be one of: ${CATEGORY_PLATFORMS.join(', ')}` },
       { status: 400 }
     )
   }

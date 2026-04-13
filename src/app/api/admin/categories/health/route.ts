@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { withAdminAuth } from '@/lib/with-auth'
+import { getAdminClient } from '@/lib/supabase-admin'
+import { PUBLISH_PLATFORMS } from '@/lib/platforms'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 // Load Vinted leaf set (cached in memory)
 interface VintedCatNode { id: number; is_leaf?: boolean; children?: VintedCatNode[] }
@@ -50,8 +44,6 @@ type HealthResult = {
   priority?: Priority
 }
 
-const PUBLISH_PLATFORMS = ['ebay', 'vinted', 'shopify', 'depop'] as const
-
 /**
  * GET /api/admin/categories/health
  * Returns publish-readiness health check for all categories.
@@ -62,7 +54,7 @@ export const GET = withAdminAuth(async (req) => {
   const topLevel = params.get('top_level')
   const issuesOnly = params.get('issues_only') === 'true'
 
-  const supabase = getServiceClient()
+  const supabase = getAdminClient()
   const leafIds = getVintedLeafIds()
 
   // Fetch categories
