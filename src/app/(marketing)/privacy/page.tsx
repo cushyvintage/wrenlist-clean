@@ -16,7 +16,7 @@ export default function PrivacyPage() {
             <h2 className="font-serif text-xl font-normal text-[#1e2e1c] mb-3">Who we are (data controller)</h2>
             <p>Wrenlist is operated by Dominic Cushnan, a sole trader based in the United Kingdom, trading as Wrenlist. Dominic Cushnan is the data controller for personal data processed through the Wrenlist service.</p>
             <p className="mt-2"><strong className="text-[#1e2e1c]">Contact:</strong> <a href="mailto:admin@wrenlist.com" className="text-[#5a7a57] underline">admin@wrenlist.com</a></p>
-            <p className="mt-2"><strong className="text-[#1e2e1c]">ICO registration:</strong> Registered with the UK Information Commissioner&apos;s Office (registration number C1906785).</p>
+            <p className="mt-2"><strong className="text-[#1e2e1c]">ICO registration:</strong> Registered with the UK Information Commissioner&apos;s Office (registration number ZC121275).</p>
             <p className="mt-2">We process your personal data in accordance with the UK General Data Protection Regulation and the Data Protection Act 2018.</p>
           </section>
 

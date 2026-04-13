@@ -169,6 +169,11 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `extension_heartbeats` | Extension last-seen timestamps | ON (user read, service-role write) |
 | `extension_logs` | Extension debug logs (Chrome MV3 service worker) | ON (user read, service-role write) |
 
+**Dedup**
+| Table | Purpose | RLS |
+|---|---|---|
+| `dedup_dismissed_pairs` | User-dismissed duplicate pairs (prevents re-surfacing) | ON |
+
 **Insights & email**
 | Table | Purpose | RLS |
 |---|---|---|
