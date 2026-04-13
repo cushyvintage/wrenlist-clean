@@ -136,6 +136,11 @@ export class VintedClient {
   private username = "";
   public uploadSessionId = "";
 
+  /** Whether this client instance is allowed to open background tabs for
+   *  token refresh. Set by `bootstrap()` and inherited by all subsequent
+   *  `setTokens()` calls on this instance. Default false (silent). */
+  private tabFallbackAllowed = false;
+
   /** Read-only accessors for sync operations */
   public getUsername(): string { return this.username; }
   public getCsrfToken(): string { return this.csrfToken; }
@@ -177,11 +182,15 @@ export class VintedClient {
   }
 
   public async bootstrap(force = false, allowTabFallback = false): Promise<void> {
+    // Persist tab-fallback preference for this instance so subsequent
+    // setTokens() calls (from getListings, getSales, etc.) inherit it.
+    this.tabFallbackAllowed = allowTabFallback;
     // Check if we can use cached global tokens (same TLD, not expired, not forced)
     if (
       !force &&
       VintedClient.globalTokens &&
       VintedClient.globalTokens.tld === this.tld &&
+      /^\d+$/.test(VintedClient.globalTokens.username) && // must be numeric ID
       Date.now() - VintedClient.globalTokens.lastRefresh < VintedClient.TOKEN_TTL_MS
     ) {
       // Use cached tokens from previous bootstrap
@@ -202,6 +211,7 @@ export class VintedClient {
       if (
         VintedClient.globalTokens &&
         VintedClient.globalTokens.tld === this.tld &&
+        /^\d+$/.test(VintedClient.globalTokens.username) &&
         Date.now() - VintedClient.globalTokens.lastRefresh < VintedClient.TOKEN_TTL_MS
       ) {
         this.csrfToken = VintedClient.globalTokens.csrfToken;
@@ -214,7 +224,7 @@ export class VintedClient {
     }
 
     // Perform actual bootstrap and cache the promise
-    VintedClient.bootstrapPromise = this.doBootstrap(force, allowTabFallback);
+    VintedClient.bootstrapPromise = this.doBootstrap(force);
     try {
       await VintedClient.bootstrapPromise;
     } finally {
@@ -222,8 +232,8 @@ export class VintedClient {
     }
   }
 
-  private async doBootstrap(force: boolean, allowTabFallback: boolean): Promise<void> {
-    await this.setTokens(force, allowTabFallback);
+  private async doBootstrap(force: boolean): Promise<void> {
+    await this.setTokens(force);
     // After setting tokens, detect the actual TLD from cookies and update URLs if needed
     await this.detectAndUpdateTldFromCookies();
     
@@ -684,7 +694,8 @@ export class VintedClient {
     });
   }
 
-  private async setTokens(force = false, allowTabFallback = false): Promise<void> {
+  private async setTokens(force = false): Promise<void> {
+    const allowTabFallback = this.tabFallbackAllowed;
     try {
       console.log("[Vinted] Debug: setTokens called, force:", force, "allowTabFallback:", allowTabFallback);
       
@@ -695,6 +706,7 @@ export class VintedClient {
         VintedClient.globalTokens.tld === this.tld &&
         VintedClient.globalTokens.csrfToken &&
         VintedClient.globalTokens.anonId &&
+        /^\d+$/.test(VintedClient.globalTokens.username) && // must be numeric ID
         Date.now() - VintedClient.globalTokens.lastRefresh < VintedClient.TOKEN_TTL_MS
       ) {
         this.csrfToken = VintedClient.globalTokens.csrfToken;
@@ -718,7 +730,11 @@ export class VintedClient {
         !force &&
         storageKeys.vintedCsrfToken &&
         storageKeys.vintedAnonId &&
-        storageKeys.vintedUsername
+        storageKeys.vintedUsername &&
+        // Storage username must be a numeric ID for the wardrobe API.
+        // If it's a login name (e.g. "cushycotton"), skip the cache and
+        // re-bootstrap to resolve the numeric ID.
+        /^\d+$/.test(storageKeys.vintedUsername)
       ) {
         this.csrfToken = storageKeys.vintedCsrfToken;
         this.anonId = storageKeys.vintedAnonId;
@@ -1044,23 +1060,30 @@ export class VintedClient {
         }
       }
       
-      // Try public API to resolve numeric user ID to actual login name
+      // The wardrobe API requires the numeric user ID, but the v_uid cookie
+      // now returns the login name (e.g. "cushycotton" not "67094636").
+      // Resolve login → numeric ID via the users API so wardrobe calls work.
       const usernameIsNumericId = this.username && /^\d+$/.test(this.username);
-      if (usernameIsNumericId) {
-        console.log("[Vinted] Debug: Resolving numeric ID to login via public API");
+      if (this.username && !usernameIsNumericId) {
+        console.log("[Vinted] Debug: Resolving login name to numeric ID via API:", this.username);
         try {
           const userResponse = await fetch(`${this.apiUrl}/users/${this.username}`, {
-            headers: { Accept: "application/json" },
+            headers: {
+              Accept: "application/json",
+              "X-Csrf-Token": this.csrfToken,
+              "X-Anon-Id": this.anonId,
+            },
+            credentials: "include",
           });
           if (userResponse.ok) {
             const userData = await userResponse.json();
-            if (userData?.user?.login) {
-              console.log("[Vinted] Debug: Resolved login:", userData.user.login);
-              this.username = userData.user.login;
+            if (userData?.user?.id) {
+              console.log("[Vinted] Debug: Resolved numeric ID:", userData.user.id);
+              this.username = String(userData.user.id);
             }
           }
         } catch (apiError) {
-          console.log("[Vinted] Debug: Public user API failed:", apiError);
+          console.log("[Vinted] Debug: User API failed:", apiError);
         }
       }
       
@@ -1888,8 +1911,10 @@ export class VintedClient {
       is_closed: item.is_closed,
       is_draft: item.is_draft,
 
-      // Timestamps
-      created_at_ts: item.created_at_ts,
+      // Timestamps — item_upload endpoint doesn't return created_at_ts directly,
+      // so fall back to earliest photo timestamp as a proxy for listing creation
+      created_at_ts: item.created_at_ts
+        ?? (item.photos?.length ? Math.min(...item.photos.map((p: any) => p.timestamp).filter(Boolean)) : undefined),
       updated_at_ts: item.updated_at_ts,
 
       // Seller info
