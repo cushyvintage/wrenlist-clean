@@ -93,6 +93,8 @@ export const GET = withAuth(async (req, user, params) => {
       receiptItems: (sale?.receiptItems as unknown[]) ?? null,
       feeSource: (sale?.feeSource as string) ?? null,
       transactionId: (sale?.transactionId as string) ?? null,
+      conversationId: (sale?.conversationId as string) ?? null,
+      labelUrl: (sale?.labelUrl as string) ?? null,
       shippingAddress: sale?.shippingAddress ? normaliseAddress(sale.shippingAddress as Record<string, unknown>) : null,
       orderDate: (sale?.orderDate as string) ?? null,
     },

@@ -12,6 +12,7 @@ import { fetchApi, parseApiError } from '@/lib/api-utils'
 import { showSuccess } from '@/lib/toast-error'
 import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { Platform, FindCondition, Customer } from '@/types'
+import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 
 interface SoldDetail {
   id: string
@@ -58,6 +59,8 @@ interface SoldDetail {
     }> | null
     feeSource: string | null
     transactionId: string | null
+    conversationId: string | null
+    labelUrl: string | null
     shippingAddress: {
       name?: string | null; firstLine?: string | null; secondLine?: string | null;
       city?: string | null; state?: string | null; country?: string | null; zip?: string | null;
@@ -128,6 +131,90 @@ function formatDate(dateString: string | null): string {
     month: 'short',
     year: 'numeric',
   })
+}
+
+interface ConversationMessage {
+  type: 'user' | 'status' | 'action'
+  body?: string
+  title?: string
+  subtitle?: string
+  userId?: number
+  photos?: string[]
+  createdAt: number
+}
+
+function BuyerMessages({ conversationId, buyerUsername }: { conversationId: string; buyerUsername: string | null }) {
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadMessages = () => {
+    if (loading || messages.length > 0) { setExpanded(!expanded); return }
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      setError('Extension required')
+      return
+    }
+    setLoading(true)
+    chrome.runtime.sendMessage(
+      EXTENSION_ID,
+      { action: 'get_vinted_conversation_messages', conversationId },
+      (resp: { success?: boolean; messages?: ConversationMessage[]; message?: string } | undefined) => {
+        setLoading(false)
+        if (chrome.runtime.lastError) { setError('Extension not responding'); return }
+        if (!resp?.success) { setError(resp?.message || 'Failed to load'); return }
+        setMessages(resp.messages || [])
+        setExpanded(true)
+      }
+    )
+  }
+
+  const userMessages = messages.filter(m => m.type === 'user' && m.body)
+  const formatTime = (ts: number) => {
+    if (!ts) return ''
+    const d = new Date(ts * 1000)
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
+      d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <Panel title={
+      <button onClick={loadMessages} className="flex items-center justify-between w-full text-left">
+        <span>buyer messages</span>
+        <span className="text-[10px] font-normal text-sage">
+          {loading ? 'loading...' : expanded ? 'hide' : 'show'}
+        </span>
+      </button>
+    }>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      {expanded && userMessages.length === 0 && !loading && (
+        <p className="text-xs text-ink-lt">No messages in this conversation</p>
+      )}
+      {expanded && userMessages.length > 0 && (
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {userMessages.map((msg, i) => {
+            const isBuyer = buyerUsername && msg.userId !== undefined
+            return (
+              <div key={i} className="text-xs">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-medium text-ink">{isBuyer ? buyerUsername : 'You'}</span>
+                  <span className="text-ink-lt text-[10px]">{formatTime(msg.createdAt)}</span>
+                </div>
+                <p className="text-ink-lt mt-0.5 whitespace-pre-wrap">{msg.body}</p>
+                {msg.photos && msg.photos.length > 0 && (
+                  <div className="flex gap-1 mt-1">
+                    {msg.photos.map((url, j) => (
+                      <img key={j} src={url} alt="" className="w-12 h-12 rounded object-cover" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Panel>
+  )
 }
 
 export default function SoldDetailPage() {
@@ -531,6 +618,11 @@ export default function SoldDetailPage() {
             </Panel>
           )
         })()}
+
+        {/* Buyer Messages (Vinted only) */}
+        {sale.marketplace === 'vinted' && sale.conversationId && (
+          <BuyerMessages conversationId={sale.conversationId} buyerUsername={sale.buyer} />
+        )}
 
         {/* Item Details */}
         {hasItemDetails && (
