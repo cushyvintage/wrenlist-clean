@@ -26,6 +26,8 @@ interface SidebarItemProps {
   active?: boolean
   /** Click handler */
   onClick?: () => void
+  /** Optional notification badge count */
+  badge?: number
 }
 
 export function SidebarItem({
@@ -33,6 +35,7 @@ export function SidebarItem({
   label,
   active = false,
   onClick,
+  badge,
 }: SidebarItemProps) {
   return (
     <button
@@ -48,7 +51,14 @@ export function SidebarItem({
       </div>
 
       {/* Label: 13px */}
-      <span className="text-[13px] font-normal">{label}</span>
+      <span className="text-[13px] font-normal flex-1 text-left">{label}</span>
+
+      {/* Badge */}
+      {badge != null && badge > 0 && (
+        <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   )
 }

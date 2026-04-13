@@ -14,8 +14,8 @@
 import React from 'react'
 
 interface PanelProps {
-  /** Optional panel title (uppercase label) */
-  title?: string
+  /** Optional panel title (uppercase label) — string or ReactNode for custom headers */
+  title?: React.ReactNode
   /** Optional action link text + handler */
   action?: {
     text: string

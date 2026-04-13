@@ -9,6 +9,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import DeleteConfirmModal from '@/components/inventory/DeleteConfirmModal'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi, parseApiError } from '@/lib/api-utils'
+import { showSuccess } from '@/lib/toast-error'
 import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { Platform, FindCondition, Customer } from '@/types'
 
@@ -459,6 +460,11 @@ export default function SoldDetailPage() {
               {daysListed} {daysListed === 1 ? 'day' : 'days'}
             </DetailRow>
           )}
+          {sale.feeSource === 'estimated' && (
+            <p className="text-[10px] text-ink-lt mt-2 px-1">
+              Fees typically settle in 1–2 days. Sync again to update.
+            </p>
+          )}
         </Panel>
 
         {/* Customer */}
@@ -500,17 +506,31 @@ export default function SoldDetailPage() {
         )}
 
         {/* Shipping address from sale data (when customer has no address stored) */}
-        {!data.customer?.address_line1 && sale.shippingAddress && (sale.shippingAddress.firstLine || sale.shippingAddress.city) && (
-          <Panel title="shipping address">
-            <div className="text-xs text-ink leading-relaxed">
-              {sale.shippingAddress.name && <p className="font-medium">{sale.shippingAddress.name}</p>}
-              {sale.shippingAddress.firstLine && <p>{sale.shippingAddress.firstLine}</p>}
-              {sale.shippingAddress.secondLine && <p>{sale.shippingAddress.secondLine}</p>}
-              <p>{[sale.shippingAddress.city, sale.shippingAddress.state, sale.shippingAddress.zip].filter(Boolean).join(', ')}</p>
-              {sale.shippingAddress.country && <p>{sale.shippingAddress.country}</p>}
-            </div>
-          </Panel>
-        )}
+        {!data.customer?.address_line1 && sale.shippingAddress && (sale.shippingAddress.firstLine || sale.shippingAddress.city) && (() => {
+          const addr = sale.shippingAddress!
+          const copyText = [addr.name, addr.firstLine, addr.secondLine, [addr.city, addr.state, addr.zip].filter(Boolean).join(', '), addr.country].filter(Boolean).join('\n')
+          return (
+            <Panel title={
+              <span className="flex items-center justify-between w-full">
+                <span>shipping address</span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(copyText); showSuccess('Address copied') }}
+                  className="text-[10px] font-normal text-sage hover:underline"
+                >
+                  copy
+                </button>
+              </span>
+            }>
+              <div className="text-xs text-ink leading-relaxed">
+                {addr.name && <p className="font-medium">{addr.name}</p>}
+                {addr.firstLine && <p>{addr.firstLine}</p>}
+                {addr.secondLine && <p>{addr.secondLine}</p>}
+                <p>{[addr.city, addr.state, addr.zip].filter(Boolean).join(', ')}</p>
+                {addr.country && <p>{addr.country}</p>}
+              </div>
+            </Panel>
+          )
+        })()}
 
         {/* Item Details */}
         {hasItemDetails && (
