@@ -17,6 +17,7 @@ interface FindWithMarketplaceJoin {
     marketplace: string
     status: string
     fields: Record<string, unknown> | null
+    platform_listed_at: string | null
   }>
 }
 
@@ -33,7 +34,7 @@ interface SoldItem {
   stashName?: string | null
   marketplace?: string
   margin_percent?: number | null
-  days_listed?: number
+  days_listed?: number | null
   shipmentStatus?: string | null
   buyer?: string | null
   grossAmount?: number | null
@@ -112,7 +113,8 @@ export const GET = withAuth(async (req, user) => {
           product_marketplace_data (
             marketplace,
             status,
-            fields
+            fields,
+            platform_listed_at
           )
           `
         )
@@ -146,13 +148,17 @@ export const GET = withAuth(async (req, user) => {
           ? Math.round(((find.sold_price_gbp - find.cost_gbp) / find.sold_price_gbp) * 100)
           : null
 
+      // Use sourced_at if available, fall back to platform_listed_at from PMD
+      const listedDate = find.sourced_at
+        || find.product_marketplace_data?.find((m) => m.platform_listed_at)?.platform_listed_at
+        || null
       const daysListed =
-        find.sourced_at && find.sold_at
-          ? Math.round(
-              (new Date(find.sold_at).getTime() - new Date(find.sourced_at).getTime()) /
+        listedDate && find.sold_at
+          ? Math.max(0, Math.round(
+              (new Date(find.sold_at).getTime() - new Date(listedDate).getTime()) /
                 (1000 * 60 * 60 * 24)
-            )
-          : 0
+            ))
+          : null
 
       // Get marketplace where item was sold + sale metadata
       const soldPmd = find.product_marketplace_data?.find((m) => m.status === 'sold')
