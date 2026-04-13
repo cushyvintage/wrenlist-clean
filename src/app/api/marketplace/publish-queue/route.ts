@@ -229,5 +229,29 @@ export const POST = withAuth(async (req: NextRequest, user) => {
       .in('status', ['pending', 'claimed', 'running'])
   }
 
+  // Fire-and-forget: log publish outcome for category feedback loop
+  if (targetStatus === 'listed' || targetStatus === 'error') {
+    const outcome = targetStatus === 'listed' ? 'success' : 'failure'
+    const category = find.category as string | null
+    if (category) {
+      // Look up the platform_category_id from the categories table
+      getPlatformCategoryIdFromDb(category, marketplace).then((platformCatId) => {
+        supabaseAdmin
+          .from('category_publish_outcomes')
+          .insert({
+            category_value: category,
+            platform: marketplace,
+            platform_category_id: platformCatId || null,
+            outcome,
+            error_message: outcome === 'failure' ? (errorMessage || null) : null,
+            find_id: findId,
+          })
+          .then(({ error: outcomeErr }) => {
+            if (outcomeErr) console.error('[PublishQueue] category_publish_outcomes insert failed:', outcomeErr.message)
+          })
+      }).catch(() => { /* silently ignore */ })
+    }
+  }
+
   return ApiResponseHelper.success({ message: `Status updated to ${targetStatus}` })
 })

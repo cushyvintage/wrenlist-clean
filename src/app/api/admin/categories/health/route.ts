@@ -31,10 +31,12 @@ function getVintedLeafIds(): Set<string> {
 }
 
 type Issue = {
-  type: 'missing_mapping' | 'non_leaf' | 'missing_required_fields' | 'no_field_requirements'
+  type: 'missing_mapping' | 'non_leaf' | 'missing_required_fields' | 'no_field_requirements' | 'low_success_rate'
   platform: string
   detail: string
 }
+
+type Priority = 'critical' | 'high' | 'medium' | 'low'
 
 type HealthResult = {
   value: string
@@ -42,6 +44,8 @@ type HealthResult = {
   top_level: string
   issues: Issue[]
   score: number // 0-100, higher = healthier
+  usage_count: number
+  priority?: Priority
 }
 
 const PUBLISH_PLATFORMS = ['ebay', 'vinted', 'shopify', 'depop'] as const
@@ -65,6 +69,18 @@ export const GET = withAdminAuth(async (req) => {
   const { data: categories, error: catErr } = await catQuery
   if (catErr) return NextResponse.json({ error: catErr.message }, { status: 500 })
 
+  // Fetch usage counts per category
+  const { data: usageRows } = await supabase
+    .from('finds')
+    .select('category')
+    .not('category', 'is', null)
+  const usageMap: Record<string, number> = {}
+  for (const row of usageRows ?? []) {
+    if (row.category) {
+      usageMap[row.category] = (usageMap[row.category] ?? 0) + 1
+    }
+  }
+
   // Fetch field requirements
   const { data: fieldReqs } = await supabase
     .from('category_field_requirements')
@@ -75,6 +91,26 @@ export const GET = withAdminAuth(async (req) => {
   for (const row of fieldReqs ?? []) {
     if (!fieldMap[row.category_value]) fieldMap[row.category_value] = {}
     fieldMap[row.category_value]![row.platform] = row.fields ?? []
+  }
+
+  // Fetch publish outcomes for success-rate checking
+  const { data: outcomeRows } = await supabase
+    .from('category_publish_outcomes')
+    .select('category_value, platform, outcome, error_message, created_at')
+
+  // Aggregate outcomes: category_value -> platform -> { success, failure, total, last_error }
+  const outcomeMap: Record<string, Record<string, { success: number; failure: number; total: number; last_error: string | null }>> = {}
+  for (const row of outcomeRows ?? []) {
+    if (!outcomeMap[row.category_value]) outcomeMap[row.category_value] = {}
+    const pm = outcomeMap[row.category_value]!
+    if (!pm[row.platform]) pm[row.platform] = { success: 0, failure: 0, total: 0, last_error: null }
+    const g = pm[row.platform]!
+    g.total++
+    if (row.outcome === 'success') g.success++
+    else {
+      g.failure++
+      if (row.error_message) g.last_error = row.error_message
+    }
   }
 
   const results: HealthResult[] = []
@@ -163,6 +199,24 @@ export const GET = withAdminAuth(async (req) => {
       }
     }
 
+    // Check: low publish success rate (>= 5 attempts, < 80% success)
+    const catOutcomes = outcomeMap[cat.value]
+    if (catOutcomes) {
+      for (const platform of PUBLISH_PLATFORMS) {
+        const stats = catOutcomes[platform]
+        if (stats && stats.total >= 5) {
+          const rate = Math.round((stats.success / stats.total) * 100)
+          if (rate < 80) {
+            issues.push({
+              type: 'low_success_rate',
+              platform,
+              detail: `${rate}% success rate (${stats.success}/${stats.total})${stats.last_error ? ` — last error: ${stats.last_error}` : ''}`,
+            })
+          }
+        }
+      }
+    }
+
     // Score: weighted penalties — missing mappings are critical, missing fields are minor
     let penalty = 0
     for (const issue of issues) {
@@ -170,8 +224,20 @@ export const GET = withAdminAuth(async (req) => {
       else if (issue.type === 'non_leaf') penalty += 15
       else if (issue.type === 'no_field_requirements') penalty += 10
       else if (issue.type === 'missing_required_fields') penalty += 5
+      else if (issue.type === 'low_success_rate') penalty += 20
     }
     const score = Math.max(0, 100 - penalty)
+
+    const usage_count = usageMap[cat.value] ?? 0
+
+    // Assign priority based on usage + issues
+    let priority: Priority | undefined
+    if (issues.length > 0) {
+      if (usage_count >= 10) priority = 'critical'
+      else if (usage_count >= 3) priority = 'high'
+      else if (usage_count >= 1) priority = 'medium'
+      else priority = 'low'
+    }
 
     if (!issuesOnly || issues.length > 0) {
       results.push({
@@ -180,9 +246,20 @@ export const GET = withAdminAuth(async (req) => {
         top_level: cat.top_level,
         issues,
         score,
+        usage_count,
+        priority,
       })
     }
   }
+
+  // Sort: critical first (by usage desc), then high, medium, low
+  const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  results.sort((a, b) => {
+    const pa = a.priority ? (priorityOrder[a.priority] ?? 4) : 4
+    const pb = b.priority ? (priorityOrder[b.priority] ?? 4) : 4
+    if (pa !== pb) return pa - pb
+    return b.usage_count - a.usage_count
+  })
 
   // Summary stats
   const totalIssues = results.reduce((sum, r) => sum + r.issues.length, 0)
@@ -196,12 +273,22 @@ export const GET = withAdminAuth(async (req) => {
     }
   }
 
+  // Priority breakdown
+  const criticalIssues = results.filter((r) => r.priority === 'critical').length
+  const highPriorityIssues = results.filter((r) => r.priority === 'high').length
+  const unusedWithIssues = results.filter((r) => r.priority === 'low').length
+  const totalUsedCategories = new Set(Object.keys(usageMap)).size
+
   return NextResponse.json({
     total: categories?.length ?? 0,
     healthy: healthyCount,
     withIssues: withIssuesCount,
     totalIssues,
     issuesByType,
+    criticalIssues,
+    highPriorityIssues,
+    unusedWithIssues,
+    totalUsedCategories,
     categories: issuesOnly ? results.filter((r) => r.issues.length > 0) : results,
   })
 })

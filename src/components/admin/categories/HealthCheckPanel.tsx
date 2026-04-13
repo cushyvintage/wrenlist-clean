@@ -10,12 +10,16 @@ interface Issue {
   detail: string
 }
 
+type Priority = 'critical' | 'high' | 'medium' | 'low'
+
 interface HealthCategory {
   value: string
   label: string
   top_level: string
   issues: Issue[]
   score: number
+  usage_count: number
+  priority?: Priority
 }
 
 interface HealthData {
@@ -24,11 +28,22 @@ interface HealthData {
   withIssues: number
   totalIssues: number
   issuesByType: Record<string, number>
+  criticalIssues: number
+  highPriorityIssues: number
+  unusedWithIssues: number
+  totalUsedCategories: number
   categories: HealthCategory[]
 }
 
 interface HealthCheckPanelProps {
   onSelectCategory: (value: string) => void
+}
+
+const PRIORITY_BADGES: Record<Priority, { label: string; className: string }> = {
+  critical: { label: 'CRITICAL', className: 'px-1.5 py-0.5 text-[10px] bg-red-100 text-red-800 rounded' },
+  high: { label: 'HIGH', className: 'px-1.5 py-0.5 text-[10px] bg-amber-100 text-amber-800 rounded' },
+  medium: { label: 'MEDIUM', className: 'px-1.5 py-0.5 text-[10px] bg-yellow-100 text-yellow-800 rounded' },
+  low: { label: 'LOW', className: 'px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-600 rounded' },
 }
 
 const ISSUE_LABELS: Record<string, { label: string; color: string }> = {
@@ -94,7 +109,12 @@ export default function HealthCheckPanel({ onSelectCategory }: HealthCheckPanelP
           </div>
         </div>
         <span className="text-xs text-sage-dim">
-          {data.withIssues} categories with {data.totalIssues} issues
+          {data.criticalIssues > 0 && <span className="text-red-700 font-medium">{data.criticalIssues} critical</span>}
+          {data.criticalIssues > 0 && data.highPriorityIssues > 0 && ' \u00b7 '}
+          {data.highPriorityIssues > 0 && <span className="text-amber-700 font-medium">{data.highPriorityIssues} high</span>}
+          {(data.criticalIssues > 0 || data.highPriorityIssues > 0) && data.unusedWithIssues > 0 && ' \u00b7 '}
+          {data.unusedWithIssues > 0 && `${data.unusedWithIssues} low`}
+          {data.criticalIssues === 0 && data.highPriorityIssues === 0 && data.unusedWithIssues === 0 && `${data.withIssues} categories with ${data.totalIssues} issues`}
         </span>
       </div>
 
@@ -152,6 +172,11 @@ export default function HealthCheckPanel({ onSelectCategory }: HealthCheckPanelP
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm font-medium text-ink truncate">{cat.label}</span>
+                  {cat.priority && (
+                    <span className={PRIORITY_BADGES[cat.priority].className}>
+                      {PRIORITY_BADGES[cat.priority].label}
+                    </span>
+                  )}
                   <span className="text-xs text-sage-dim font-mono truncate">{cat.top_level}</span>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">

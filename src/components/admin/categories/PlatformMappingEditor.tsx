@@ -87,6 +87,24 @@ function isSuspiciousMismatch(categoryLabel: string, mappingName: string): boole
   return similarity < 0.4
 }
 
+/** Fire-and-forget POST to suggestion log — never blocks UI */
+function logSuggestion(payload: {
+  categoryValue: string
+  platform: string
+  suggestedId?: string
+  suggestedName?: string
+  action: 'accepted' | 'rejected' | 'changed'
+  finalId?: string
+  finalName?: string
+  source?: string
+}) {
+  fetch('/api/admin/categories/suggestion-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => {/* silent */})
+}
+
 export default function PlatformMappingEditor({
   platforms,
   categoryLabel,
@@ -135,6 +153,14 @@ export default function PlatformMappingEditor({
       ...platforms,
       [platform]: { id: result.suggestion.id, name: result.suggestion.name, path: result.suggestion.path },
     })
+    logSuggestion({
+      categoryValue,
+      platform,
+      suggestedId: result.suggestion.id,
+      suggestedName: result.suggestion.name,
+      action: 'accepted',
+      source: 'ai_match',
+    })
     setAiMatchResults((prev) => ({ ...prev, [platform]: undefined as unknown as AiMatchResult }))
   }
 
@@ -144,6 +170,34 @@ export default function PlatformMappingEditor({
       ...platforms,
       [searchPlatform]: { id: result.id, name: result.name, path: result.path },
     })
+
+    // Log as 'changed' if there was a pending suggestion or AI match for this platform
+    const pendingSuggestion = suggestions[searchPlatform]
+    const pendingAi = aiMatchResults[searchPlatform]?.suggestion
+    if (pendingSuggestion) {
+      logSuggestion({
+        categoryValue,
+        platform: searchPlatform,
+        suggestedId: pendingSuggestion.id,
+        suggestedName: pendingSuggestion.name,
+        action: 'changed',
+        finalId: result.id,
+        finalName: result.name,
+        source: 'auto_suggest',
+      })
+    } else if (pendingAi) {
+      logSuggestion({
+        categoryValue,
+        platform: searchPlatform,
+        suggestedId: pendingAi.id,
+        suggestedName: pendingAi.name,
+        action: 'changed',
+        finalId: result.id,
+        finalName: result.name,
+        source: 'ai_match',
+      })
+    }
+
     setSearchPlatform(null)
   }
 
@@ -211,6 +265,14 @@ export default function PlatformMappingEditor({
     onChange({
       ...platforms,
       [platform]: { id: suggestion.id, name: suggestion.name, path: suggestion.path },
+    })
+    logSuggestion({
+      categoryValue,
+      platform,
+      suggestedId: suggestion.id,
+      suggestedName: suggestion.name,
+      action: 'accepted',
+      source: 'auto_suggest',
     })
     setSuggestions((prev) => ({ ...prev, [platform]: null }))
   }
