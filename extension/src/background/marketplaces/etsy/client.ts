@@ -789,24 +789,68 @@ export class EtsyClient {
    * Required as `x-csrf-token` header for all v3 AJAX API calls.
    */
   private async getCsrfNonce(): Promise<string> {
+    // Strategy 1: Execute script in an existing Etsy tab to get the live nonce
+    try {
+      const tabs = await chrome.tabs.query({ url: "https://www.etsy.com/*" });
+      if (tabs.length > 0 && tabs[0].id) {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          func: () => (window as unknown as Record<string, unknown>).Etsy &&
+            ((window as unknown as Record<string, unknown>).Etsy as Record<string, unknown>).csrf_nonce as string,
+        });
+        const nonce = results?.[0]?.result;
+        if (typeof nonce === "string" && nonce.length > 10) {
+          return nonce;
+        }
+      }
+    } catch { /* tab script failed, fall through */ }
+
+    // Strategy 2: Open a lightweight Etsy page in background, extract nonce, close
+    try {
+      const tab = await chrome.tabs.create({ url: `${this.baseUrl}/your/shops/me/tools/listings`, active: false });
+      // Wait for page to load
+      await new Promise<void>((resolve) => {
+        const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
+          if (tabId === tab.id && info.status === "complete") {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+        // Timeout after 15s
+        setTimeout(() => { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 15000);
+      });
+      if (tab.id) {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => (window as unknown as Record<string, unknown>).Etsy &&
+            ((window as unknown as Record<string, unknown>).Etsy as Record<string, unknown>).csrf_nonce as string,
+        });
+        const nonce = results?.[0]?.result;
+        chrome.tabs.remove(tab.id).catch(() => {});
+        if (typeof nonce === "string" && nonce.length > 10) {
+          return nonce;
+        }
+      }
+    } catch { /* tab creation failed, fall through */ }
+
+    // Strategy 3: Fallback to HTML regex extraction from service worker fetch
     const html = await fetch(ETSY_LISTINGS_MANAGER_URL, {
       credentials: "include",
     }).then((r) => r.text());
 
-    // Etsy embeds the nonce in multiple formats — try them all
     const patterns = [
-      /csrf_nonce.*?"([^"]+)"/,
       /"csrf_nonce"\s*:\s*"([^"]+)"/,
+      /csrf_nonce.*?"([^"]+)"/,
       /name="csrf_nonce"[^>]*value="([^"]+)"/,
-      /window\.Etsy\s*=\s*\{[^}]*csrf_nonce\s*:\s*"([^"]+)"/,
     ];
 
     for (const pattern of patterns) {
       const match = html.match(pattern);
-      if (match?.[1]) return match[1];
+      if (match?.[1] && match[1].length > 10) return match[1];
     }
 
-    throw new Error("Could not extract Etsy CSRF nonce");
+    throw new Error("Could not extract Etsy CSRF nonce from any source");
   }
 
   /**
