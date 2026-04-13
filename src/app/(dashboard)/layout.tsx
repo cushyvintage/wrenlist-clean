@@ -13,7 +13,7 @@ import { NavIcons } from '@/components/layout/NavIcons'
 import { isAdmin } from '@/lib/admin'
 
 // IDs that support nested routes (e.g. /finds/123 highlights Finds)
-const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'platform-connect', 'admin-category-config', 'admin-import', 'admin-ops']
+const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'duplicates', 'platform-connect', 'admin-category-config', 'admin-import', 'admin-ops']
 
 const ADMIN_NAV_ITEMS = [
   { id: 'admin-ops', label: 'Ops Dashboard', icon: NavIcons.admin, path: '/admin/ops', section: 'ADMIN', pageTitle: 'Admin — Ops Dashboard' },
@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { id: 'import', label: 'Import', icon: NavIcons.import, path: '/import', section: 'WORKSPACE', pageTitle: 'Import' },
   { id: 'scanner', label: 'Scanner', icon: NavIcons.scanner, path: '/scanner', section: 'WORKSPACE', pageTitle: 'Barcode & ISBN Scanner' },
   { id: 'listings', label: 'Listings', icon: NavIcons.listings, path: '/listings', section: 'WORKSPACE', pageTitle: 'Listings' },
+  { id: 'duplicates', label: 'Duplicates', icon: NavIcons.finds, path: '/duplicates', section: 'WORKSPACE', pageTitle: 'Duplicates' },
   { id: 'jobs', label: 'Jobs', icon: NavIcons.jobs, path: '/jobs', section: 'WORKSPACE', pageTitle: 'Jobs' },
   { id: 'templates', label: 'Templates', icon: NavIcons.templates, path: '/templates', section: 'WORKSPACE', pageTitle: 'Templates' },
   // INSIGHTS
@@ -112,7 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ConfirmProvider>
-    <div className="min-h-screen" style={{ backgroundColor: '#F5F0E8' }}>
+    <div className="h-screen overflow-hidden" style={{ backgroundColor: '#F5F0E8' }}>
       {/* Sidebar */}
       <Sidebar
         userInfo={{
@@ -197,7 +198,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </MobileSidebar>
 
       {/* Main content area */}
-      <div className="md:ml-[210px] flex flex-col">
+      <div className="md:ml-[210px] flex flex-col h-full">
         {/* Beta banner */}
         <BetaBanner />
 
@@ -278,7 +279,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
 
         {/* Page content */}
-        <main className="flex-1 mt-[60px] p-4 sm:p-5 md:p-7" style={{ backgroundColor: '#F5F0E8' }}>
+        <main className="flex-1 min-h-0 mt-[60px] p-4 sm:p-5 md:p-7 overflow-y-auto" style={{ backgroundColor: '#F5F0E8' }}>
           {children}
         </main>
       </div>

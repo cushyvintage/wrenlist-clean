@@ -1730,6 +1730,11 @@ async function dispatchExternalMessage(message: ExternalMessage) {
     }
     case "get_etsy_shop_stats":
       return createEtsyServices().client.getShopStats();
+    case "probe_etsy_page": {
+      const pp = (message.params as Record<string, unknown>) ?? {};
+      const path = (pp.path as string) || (message.path as string) || "/your/account/payment";
+      return createEtsyServices().client.probePageData(path);
+    }
     default:
       throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);
   }

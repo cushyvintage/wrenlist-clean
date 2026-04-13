@@ -616,6 +616,31 @@ export class EtsyClient {
     return result;
   }
 
+  /**
+   * Generic SSR data probe — extract embedded JSON from any Etsy page.
+   * Useful for discovering data structure of payments, promotions, listing stats pages.
+   */
+  public async probePageData(path: string): Promise<Record<string, unknown>> {
+    const url = path.startsWith("http") ? path : `${this.baseUrl}${path}`;
+    chrome.storage.local.set({ _keepAlive: Date.now() });
+    const resp = await fetch(url, { credentials: "include", headers: { Accept: "text/html" } });
+    if (!resp.ok) return { error: `HTTP ${resp.status}`, url };
+    const html = await resp.text();
+    const scripts = html.match(/<script[^>]*>[\s\S]*?<\/script>/gi) || [];
+    const dataScript = scripts.find((s) => s.includes("initial_data"));
+    if (!dataScript) return { error: "no initial_data script found", url, scriptCount: scripts.length };
+    const inner = dataScript.replace(/<\/?script[^>]*>/gi, "").trim();
+    const jsonMatch = inner.match(/=\s*(\{[\s\S]+\})\s*;?\s*$/);
+    if (!jsonMatch?.[1]) return { error: "no JSON match in script", url };
+    try {
+      const parsed = JSON.parse(jsonMatch[1]) as Record<string, unknown>;
+      const data = parsed.data as Record<string, unknown> | undefined;
+      const initialData = data?.initial_data as Record<string, unknown> | undefined;
+      const target = initialData || parsed;
+      return { keys: Object.keys(target), data: target, url };
+    } catch (e) { return { error: `JSON parse failed: ${String(e)}`, url }; }
+  }
+
   public async getListing(id: string): Promise<Product | null> {
     const shopId = await this.getShopId();
 
