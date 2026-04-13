@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import TaxonomySearchModal from './TaxonomySearchModal'
 import type { Platform } from '@/types'
 
 interface PlatformMapping {
@@ -11,70 +13,193 @@ interface PlatformMapping {
 
 interface PlatformMappingEditorProps {
   platforms: Record<string, PlatformMapping>
+  categoryLabel: string
   onChange: (platforms: Record<string, PlatformMapping>) => void
 }
 
 const PLATFORM_LIST: Platform[] = ['ebay', 'vinted', 'shopify', 'etsy', 'depop']
 
-export default function PlatformMappingEditor({ platforms, onChange }: PlatformMappingEditorProps) {
-  const handleChange = (platform: string, field: keyof PlatformMapping, value: string) => {
-    const current = platforms[platform] ?? { id: '', name: '' }
-    const updated = { ...current, [field]: value }
+// Platforms that require leaf node IDs for publishing
+const LEAF_REQUIRED: Set<string> = new Set(['vinted'])
 
-    // If all fields are empty, remove the platform mapping
-    if (!updated.id && !updated.name && !updated.path) {
-      const next = { ...platforms }
-      delete next[platform]
-      onChange(next)
-    } else {
-      onChange({ ...platforms, [platform]: updated })
-    }
+// Simple similarity check — flags obvious mismatches like "Brass" vs "Bras"
+function isSuspiciousMismatch(categoryLabel: string, mappingName: string): boolean {
+  if (!categoryLabel || !mappingName) return false
+  const a = categoryLabel.toLowerCase().replace(/[^a-z]/g, '')
+  const b = mappingName.toLowerCase().replace(/[^a-z]/g, '')
+  if (a === b) return false
+  // Check if one is a substring of the other (ok) or very different (suspicious)
+  if (a.includes(b) || b.includes(a)) return false
+  // Check first 3 chars match — if so, likely a prefix issue not a mismatch
+  if (a.slice(0, 3) === b.slice(0, 3) && Math.abs(a.length - b.length) <= 2) return false
+  // Simple Levenshtein-ish: if names share < 40% of characters, flag it
+  const setA = new Set(a.split(''))
+  const setB = new Set(b.split(''))
+  const intersection = [...setA].filter(c => setB.has(c)).length
+  const similarity = intersection / Math.max(setA.size, setB.size)
+  return similarity < 0.4
+}
+
+export default function PlatformMappingEditor({
+  platforms,
+  categoryLabel,
+  onChange,
+}: PlatformMappingEditorProps) {
+  const [searchPlatform, setSearchPlatform] = useState<Platform | null>(null)
+  const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null)
+
+  const handleSearchSelect = (result: { id: string; name: string; path: string }) => {
+    if (!searchPlatform) return
+    onChange({
+      ...platforms,
+      [searchPlatform]: { id: result.id, name: result.name, path: result.path },
+    })
+    setSearchPlatform(null)
+  }
+
+  const handleClear = (platform: string) => {
+    const next = { ...platforms }
+    delete next[platform]
+    onChange(next)
+    setEditingPlatform(null)
+  }
+
+  const handleManualChange = (platform: string, field: keyof PlatformMapping, value: string) => {
+    const current = platforms[platform] ?? { id: '', name: '' }
+    onChange({ ...platforms, [platform]: { ...current, [field]: value } })
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <h4 className="text-sm font-semibold text-ink">Platform Mappings</h4>
-      <div className="space-y-2">
-        {PLATFORM_LIST.map((platform) => {
-          const mapping = platforms[platform]
-          return (
-            <div key={platform} className="flex items-start gap-3 p-3 rounded border border-sage/10 bg-cream/30">
-              <div className="flex items-center gap-1.5 w-20 flex-shrink-0 pt-1.5">
+
+      {PLATFORM_LIST.map((platform) => {
+        const mapping = platforms[platform]
+        const isMapped = !!(mapping?.id)
+        const isEditing = editingPlatform === platform
+        const mismatch = isMapped && isSuspiciousMismatch(categoryLabel, mapping!.name)
+
+        // Status
+        let statusColor = 'bg-sage/20'
+        let statusLabel = 'Not mapped'
+        if (isMapped) {
+          if (LEAF_REQUIRED.has(platform) && mapping!.path && !mapping!.path.includes('>')) {
+            statusColor = 'bg-amber-400'
+            statusLabel = 'Mapped (check leaf)'
+          } else {
+            statusColor = 'bg-emerald-500'
+            statusLabel = 'Mapped'
+          }
+        }
+
+        return (
+          <div
+            key={platform}
+            className={`rounded-lg border transition-colors ${
+              mismatch ? 'border-red-300 bg-red-50/30' : 'border-sage/10 bg-cream/30'
+            }`}
+          >
+            {/* Card header */}
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
                 <MarketplaceIcon platform={platform} size="sm" />
                 <span className="text-xs font-medium text-ink capitalize">{platform}</span>
               </div>
-              <div className="flex-1 grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Platform ID"
-                  value={mapping?.id ?? ''}
-                  onChange={(e) => handleChange(platform, 'id', e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
-                />
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={mapping?.name ?? ''}
-                  onChange={(e) => handleChange(platform, 'name', e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
-                />
-                <input
-                  type="text"
-                  placeholder="Path (optional)"
-                  value={mapping?.path ?? ''}
-                  onChange={(e) => handleChange(platform, 'path', e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
-                />
+
+              <div className="flex-1 min-w-0">
+                {isMapped ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-ink">{mapping!.name}</span>
+                      <span className="text-xs text-sage-dim font-mono">{mapping!.id}</span>
+                    </div>
+                    {mapping!.path && (
+                      <p className="text-xs text-sage-dim mt-0.5 break-words leading-relaxed">
+                        {mapping!.path}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-sage-dim italic">Not mapped</span>
+                )}
               </div>
-              {mapping?.id ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 flex-shrink-0" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-sage/20 mt-2.5 flex-shrink-0" />
-              )}
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={`w-2 h-2 rounded-full ${statusColor}`} title={statusLabel} />
+                <button
+                  onClick={() => setSearchPlatform(platform)}
+                  className="px-2 py-1 text-[11px] font-medium text-sage hover:text-ink border border-sage/20 rounded hover:border-sage/40 transition-colors"
+                >
+                  {isMapped ? 'Change' : 'Search'}
+                </button>
+                {isMapped && (
+                  <button
+                    onClick={() => setEditingPlatform(isEditing ? null : platform)}
+                    className="text-[11px] text-sage-dim hover:text-ink transition-colors"
+                    title="Edit manually"
+                  >
+                    {isEditing ? '▲' : '▼'}
+                  </button>
+                )}
+              </div>
             </div>
-          )
-        })}
-      </div>
+
+            {/* Warnings */}
+            {mismatch && (
+              <div className="px-3 pb-2 -mt-1">
+                <p className="text-[11px] text-red-600 flex items-center gap-1">
+                  <span>⚠</span>
+                  Name mismatch: &ldquo;{categoryLabel}&rdquo; mapped to &ldquo;{mapping!.name}&rdquo; — check this is correct
+                </p>
+              </div>
+            )}
+
+            {/* Expand to manual edit */}
+            {isEditing && (
+              <div className="px-3 pb-3 border-t border-sage/7 pt-2 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Platform ID"
+                    value={mapping?.id ?? ''}
+                    onChange={(e) => handleManualChange(platform, 'id', e.target.value)}
+                    className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={mapping?.name ?? ''}
+                    onChange={(e) => handleManualChange(platform, 'name', e.target.value)}
+                    className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Path"
+                    value={mapping?.path ?? ''}
+                    onChange={(e) => handleManualChange(platform, 'path', e.target.value)}
+                    className="px-2 py-1.5 text-xs border border-sage/14 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sage/30"
+                  />
+                </div>
+                <button
+                  onClick={() => handleClear(platform)}
+                  className="text-[11px] text-red-400 hover:text-red-600 transition-colors"
+                >
+                  Remove mapping
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Taxonomy search modal */}
+      {searchPlatform && (
+        <TaxonomySearchModal
+          platform={searchPlatform}
+          onSelect={handleSearchSelect}
+          onClose={() => setSearchPlatform(null)}
+        />
+      )}
     </div>
   )
 }

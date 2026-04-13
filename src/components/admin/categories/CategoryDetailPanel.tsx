@@ -19,6 +19,10 @@ const TOP_LEVELS = [
   'other', 'pet_supplies', 'sports_outdoors', 'toys_games', 'vehicles_parts',
 ]
 
+function formatLabel(key: string) {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function slugify(label: string, topLevel: string): string {
   const slug = label
     .toLowerCase()
@@ -41,6 +45,7 @@ export default function CategoryDetailPanel({
   const [topLevel, setTopLevel] = useState(category?.top_level ?? 'other')
   const [parentGroup, setParentGroup] = useState(category?.parent_group ?? '')
   const [platforms, setPlatforms] = useState<Record<string, { id: string; name: string; path?: string }>>(category?.platforms ?? {})
+  const [generalExpanded, setGeneralExpanded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -134,65 +139,85 @@ export default function CategoryDetailPanel({
           <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>
         )}
 
-        {/* General */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-ink">General</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-sage-dim mb-1">Label</label>
-              <input
-                type="text"
-                value={label}
-                onChange={(e) => handleLabelChange(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
-                placeholder="Women's Dresses"
-              />
+        {/* General — compact summary, expandable */}
+        <div className="rounded-lg border border-sage/10 bg-cream/30">
+          <button
+            type="button"
+            onClick={() => setGeneralExpanded(!generalExpanded)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <h4 className="text-xs font-semibold text-sage-dim uppercase tracking-wide">General</h4>
+              {!isNew && !generalExpanded && (
+                <span className="text-xs text-sage-dim truncate">
+                  {formatLabel(topLevel)} &middot; <span className="font-mono">{value}</span>
+                  {parentGroup && <> &middot; group: {parentGroup}</>}
+                </span>
+              )}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-sage-dim mb-1">Top-level</label>
-              <select
-                value={topLevel}
-                onChange={(e) => handleTopLevelChange(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
-              >
-                {TOP_LEVELS.map((tl) => (
-                  <option key={tl} value={tl}>
-                    {tl.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </option>
-                ))}
-              </select>
+            <span className="text-sage-dim text-xs flex-shrink-0">{generalExpanded ? '▲' : '▼'}</span>
+          </button>
+
+          {(generalExpanded || isNew) && (
+            <div className="px-3 pb-3 space-y-3 border-t border-sage/7 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-sage-dim mb-1">Label</label>
+                  <input
+                    type="text"
+                    value={label}
+                    onChange={(e) => handleLabelChange(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="Women's Dresses"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-sage-dim mb-1">Top-level</label>
+                  <select
+                    value={topLevel}
+                    onChange={(e) => handleTopLevelChange(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
+                  >
+                    {TOP_LEVELS.map((tl) => (
+                      <option key={tl} value={tl}>
+                        {tl.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-sage-dim mb-1">
+                    Value (slug){!isNew && <span className="text-sage-dim/60"> — read-only</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => isNew && setValue(e.target.value)}
+                    readOnly={!isNew}
+                    className={`w-full px-2 py-1.5 text-sm border border-sage/14 rounded font-mono ${
+                      !isNew ? 'bg-cream-md text-sage-dim cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-sage/30'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-sage-dim mb-1">Parent group</label>
+                  <input
+                    type="text"
+                    value={parentGroup}
+                    onChange={(e) => setParentGroup(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
+                    placeholder="e.g. womenswear"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-sage-dim mb-1">
-                Value (slug){!isNew && <span className="text-sage-dim/60"> — read-only</span>}
-              </label>
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => isNew && setValue(e.target.value)}
-                readOnly={!isNew}
-                className={`w-full px-2 py-1.5 text-sm border border-sage/14 rounded font-mono ${
-                  !isNew ? 'bg-cream-md text-sage-dim cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-sage/30'
-                }`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-sage-dim mb-1">Parent group</label>
-              <input
-                type="text"
-                value={parentGroup}
-                onChange={(e) => setParentGroup(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-sage/14 rounded focus:outline-none focus:ring-2 focus:ring-sage/30"
-                placeholder="e.g. womenswear"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Platform Mappings */}
-        <PlatformMappingEditor platforms={platforms} onChange={setPlatforms} />
+        <PlatformMappingEditor platforms={platforms} categoryLabel={label} onChange={setPlatforms} />
 
         {/* Field Requirements — only for existing categories */}
         {!isNew && (

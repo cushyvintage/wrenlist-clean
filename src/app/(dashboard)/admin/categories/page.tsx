@@ -9,6 +9,7 @@ import CategoryStats from '@/components/admin/categories/CategoryStats'
 import CategorySidebar from '@/components/admin/categories/CategorySidebar'
 import CategoryTable from '@/components/admin/categories/CategoryTable'
 import CategoryDetailPanel from '@/components/admin/categories/CategoryDetailPanel'
+import FreshnessBanner from '@/components/admin/categories/FreshnessBanner'
 
 interface StatsData {
   total: number
@@ -141,6 +142,9 @@ export default function AdminCategoriesPage() {
           <h1 className="text-xl font-semibold text-ink">Category Management</h1>
           <span className="text-xs text-sage-dim">Admin</span>
         </div>
+
+        {/* Freshness banner */}
+        <FreshnessBanner />
 
         {/* Stats */}
         <CategoryStats stats={stats} isLoading={statsLoading} />
