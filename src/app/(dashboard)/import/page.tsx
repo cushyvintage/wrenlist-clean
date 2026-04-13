@@ -286,7 +286,7 @@ export default function ImportPage() {
         }>((resolve) => {
           const timeout = setTimeout(
             () => resolve({ success: false, message: 'Timed out fetching Shopify listings' }),
-            30000
+            60000
           )
           chrome.runtime.sendMessage(
             EXTENSION_ID,
