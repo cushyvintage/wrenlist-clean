@@ -13,11 +13,15 @@ interface ShopifyOrderPayload {
   orderDate: string
   financialStatus: string
   fulfillmentStatus: string
+  note?: string | null
+  discountCode?: string | null
   customer: {
     id: string | null
     email: string | null
     firstName: string | null
     lastName: string | null
+    numberOfOrders?: string | null
+    note?: string | null
   } | null
   shippingAddress: {
     name: string | null
@@ -35,6 +39,7 @@ interface ShopifyOrderPayload {
     title: string
     quantity: number
     price: number
+    discountedPrice?: number | null
     currency: string
     image: string | null
   }>
@@ -43,13 +48,22 @@ interface ShopifyOrderPayload {
     shipping: number
     tax: number
     total: number
+    discount: number
+    refunded: number
+    currentTotal: number
     currency: string
+    transactionFees?: number | null
   }
   fulfillments: Array<{
     trackingNumber: string | null
     trackingCompany: string | null
     trackingUrl: string | null
     status: string
+  }>
+  refunds?: Array<{
+    amount: number
+    note: string | null
+    createdAt: string
   }>
 }
 
@@ -206,20 +220,32 @@ export const POST = withAuth(async (req, user) => {
 
         const customerId = await upsertShopifyCustomer(supabase, user.id, order)
 
-        // Compute per-order fee estimate (Shopify doesn't expose fees in admin GraphQL)
-        // Shopify Payments: 1.5-2.5% + £0.25 per transaction
-        // We'll estimate at 2.5% + £0.25 for now
         const orderTotal = order.financials.total
-        const estimatedFee = Math.round((orderTotal * 0.025 + 0.25) * 100) / 100
+        const actualFees = order.financials.transactionFees
 
         for (const lineItem of order.lineItems) {
           const productId = lineItem.productId
           if (!productId) continue
 
-          // Build sale data
-          const lineItemTotal = lineItem.price * lineItem.quantity
+          // Build sale data — use discounted price if available
+          const unitPrice = lineItem.discountedPrice ?? lineItem.price
+          const lineItemTotal = unitPrice * lineItem.quantity
           const lineItemRatio = orderTotal > 0 ? lineItemTotal / orderTotal : 1
-          const lineItemFee = Math.round(estimatedFee * lineItemRatio * 100) / 100
+
+          // Use actual transaction fees if available, else estimate 2.5% + £0.25
+          let serviceFee: number
+          let feeSource: 'actual' | 'estimated'
+          if (actualFees != null && actualFees > 0) {
+            serviceFee = Math.round(actualFees * lineItemRatio * 100) / 100
+            feeSource = 'actual'
+          } else {
+            serviceFee = Math.round((orderTotal * 0.025 + 0.25) * lineItemRatio * 100) / 100
+            feeSource = 'estimated'
+          }
+
+          const refundAmount = order.financials.refunded > 0
+            ? Math.round(order.financials.refunded * lineItemRatio * 100) / 100
+            : 0
 
           const saleData = {
             transactionId: order.orderId,
@@ -228,19 +254,28 @@ export const POST = withAuth(async (req, user) => {
               id: order.customer.id,
               email: order.customer.email,
               name: [order.customer.firstName, order.customer.lastName].filter(Boolean).join(' ') || null,
+              numberOfOrders: order.customer.numberOfOrders || null,
+              note: order.customer.note || null,
             } : null,
             grossAmount: lineItemTotal,
-            serviceFee: lineItemFee,
-            feeSource: 'estimated' as const,
-            netAmount: Math.round((lineItemTotal - lineItemFee) * 100) / 100,
+            serviceFee,
+            feeSource,
+            netAmount: Math.round((lineItemTotal - serviceFee) * 100) / 100,
             currency: order.financials.currency || 'GBP',
             shippingAddress: order.shippingAddress,
-            trackingNumber: order.fulfillments[0]?.trackingNumber || null,
-            carrier: order.fulfillments[0]?.trackingCompany || null,
-            trackingUrl: order.fulfillments[0]?.trackingUrl || null,
+            trackingNumber: order.fulfillments?.[0]?.trackingNumber || null,
+            carrier: order.fulfillments?.[0]?.trackingCompany || null,
+            trackingUrl: order.fulfillments?.[0]?.trackingUrl || null,
             shipmentStatus: mapFulfillmentStatus(order.fulfillmentStatus),
             orderDate: order.orderDate,
             financialStatus: order.financialStatus,
+            note: order.note || null,
+            discountCode: order.discountCode || null,
+            discount: order.financials.discount > 0
+              ? Math.round(order.financials.discount * lineItemRatio * 100) / 100
+              : 0,
+            refundAmount,
+            refunds: order.refunds?.length ? order.refunds : null,
             isBundle: order.lineItems.length > 1,
             itemCount: order.lineItems.length,
             deliveryCost: order.financials.shipping > 0

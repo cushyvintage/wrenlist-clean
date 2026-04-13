@@ -43,11 +43,15 @@ export interface ShopifyOrder {
   orderDate: string;
   financialStatus: string;
   fulfillmentStatus: string;
+  note: string | null;
+  discountCode: string | null;
   customer: {
     id: string | null;
     email: string | null;
     firstName: string | null;
     lastName: string | null;
+    numberOfOrders: string | null;
+    note: string | null;
   } | null;
   shippingAddress: {
     name: string | null;
@@ -65,6 +69,7 @@ export interface ShopifyOrder {
     title: string;
     quantity: number;
     price: number;
+    discountedPrice: number | null;
     currency: string;
     image: string | null;
   }>;
@@ -73,13 +78,23 @@ export interface ShopifyOrder {
     shipping: number;
     tax: number;
     total: number;
+    discount: number;
+    refunded: number;
+    currentTotal: number;
     currency: string;
+    /** Actual transaction fees from Shopify Payments (if available) */
+    transactionFees: number | null;
   };
   fulfillments: Array<{
     trackingNumber: string | null;
     trackingCompany: string | null;
     trackingUrl: string | null;
     status: string;
+  }>;
+  refunds: Array<{
+    amount: number;
+    note: string | null;
+    createdAt: string;
   }>;
 }
 
@@ -669,7 +684,22 @@ export class ShopifyClient {
       const subtotalMoney = node.subtotalPriceSet?.shopMoney;
       const shippingMoney = node.totalShippingPriceSet?.shopMoney;
       const taxMoney = node.totalTaxSet?.shopMoney;
+      const discountMoney = node.totalDiscountsSet?.shopMoney;
+      const refundedMoney = node.totalRefundedSet?.shopMoney;
+      const currentTotalMoney = node.currentTotalPriceSet?.shopMoney;
       const addr = node.shippingAddress;
+
+      // Extract actual transaction fees from Shopify Payments
+      let transactionFees: number | null = null;
+      const transactions = node.transactions ?? [];
+      for (const txn of transactions) {
+        if (txn.status === "SUCCESS" && txn.fees?.length) {
+          for (const fee of txn.fees) {
+            const amt = parseFloat(fee.amount?.amount ?? "0");
+            if (amt > 0) transactionFees = (transactionFees ?? 0) + amt;
+          }
+        }
+      }
 
       return {
         orderId: node.id.split("/").pop() ?? node.id,
@@ -677,12 +707,16 @@ export class ShopifyClient {
         orderDate: node.createdAt ?? "",
         financialStatus: node.displayFinancialStatus ?? "",
         fulfillmentStatus: node.displayFulfillmentStatus ?? "",
+        note: node.note ?? null,
+        discountCode: node.discountCode ?? null,
         customer: node.customer
           ? {
               id: node.customer.id?.split("/").pop() ?? null,
               email: node.customer.email ?? null,
               firstName: node.customer.firstName ?? null,
               lastName: node.customer.lastName ?? null,
+              numberOfOrders: node.customer.numberOfOrders ?? null,
+              note: node.customer.note ?? null,
             }
           : null,
         shippingAddress: addr
@@ -701,11 +735,13 @@ export class ShopifyClient {
         lineItems: (node.lineItems?.edges ?? []).map((li: any) => {
           const liNode = li.node;
           const priceMoney = liNode.originalUnitPriceSet?.shopMoney;
+          const discountedMoney = liNode.discountedUnitPriceSet?.shopMoney;
           return {
             productId: liNode.product?.id?.split("/").pop() ?? "",
             title: liNode.title ?? "",
             quantity: liNode.quantity ?? 1,
             price: parseFloat(priceMoney?.amount ?? "0"),
+            discountedPrice: discountedMoney ? parseFloat(discountedMoney.amount) : null,
             currency: priceMoney?.currencyCode ?? "GBP",
             image: liNode.product?.featuredImage?.url ?? null,
           };
@@ -715,13 +751,22 @@ export class ShopifyClient {
           shipping: parseFloat(shippingMoney?.amount ?? "0"),
           tax: parseFloat(taxMoney?.amount ?? "0"),
           total: parseFloat(totalMoney?.amount ?? "0"),
+          discount: parseFloat(discountMoney?.amount ?? "0"),
+          refunded: parseFloat(refundedMoney?.amount ?? "0"),
+          currentTotal: parseFloat(currentTotalMoney?.amount ?? "0"),
           currency: totalMoney?.currencyCode ?? "GBP",
+          transactionFees,
         },
         fulfillments: (node.fulfillments ?? []).map((f: any) => ({
           trackingNumber: f.trackingInfo?.[0]?.number ?? null,
           trackingCompany: f.trackingInfo?.[0]?.company ?? null,
           trackingUrl: f.trackingInfo?.[0]?.url ?? null,
           status: f.status ?? "",
+        })),
+        refunds: (node.refunds ?? []).map((r: any) => ({
+          amount: parseFloat(r.totalRefundedSet?.shopMoney?.amount ?? "0"),
+          note: r.note ?? null,
+          createdAt: r.createdAt ?? "",
         })),
       };
     });

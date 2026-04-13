@@ -246,6 +246,7 @@ export const ORDERS_QUERY = `
           createdAt
           displayFinancialStatus
           displayFulfillmentStatus
+          note
           totalPriceSet {
             shopMoney { amount currencyCode }
           }
@@ -258,11 +259,23 @@ export const ORDERS_QUERY = `
           totalTaxSet {
             shopMoney { amount currencyCode }
           }
+          totalDiscountsSet {
+            shopMoney { amount currencyCode }
+          }
+          totalRefundedSet {
+            shopMoney { amount currencyCode }
+          }
+          currentTotalPriceSet {
+            shopMoney { amount currencyCode }
+          }
+          discountCode
           customer {
             id
             email
             firstName
             lastName
+            numberOfOrders
+            note
           }
           shippingAddress {
             name
@@ -284,6 +297,9 @@ export const ORDERS_QUERY = `
                 originalUnitPriceSet {
                   shopMoney { amount currencyCode }
                 }
+                discountedUnitPriceSet {
+                  shopMoney { amount currencyCode }
+                }
                 product {
                   id
                   featuredImage { url }
@@ -298,6 +314,26 @@ export const ORDERS_QUERY = `
               url
             }
             status
+          }
+          refunds {
+            totalRefundedSet {
+              shopMoney { amount currencyCode }
+            }
+            note
+            createdAt
+          }
+          transactions {
+            kind
+            status
+            amountSet {
+              shopMoney { amount currencyCode }
+            }
+            fees {
+              amount {
+                amount currencyCode
+              }
+              type
+            }
           }
         }
       }
