@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import type { CategoryRow, Platform } from '@/types'
 
@@ -9,13 +10,10 @@ interface CategoryTableProps {
   onSearchChange: (s: string) => void
   onSelect: (cat: CategoryRow) => void
   onAdd: () => void
+  onBulkAction?: (values: string[], action: string) => void
 }
 
 const PLATFORMS: Platform[] = ['ebay', 'vinted', 'shopify', 'etsy', 'depop']
-
-function formatLabel(key: string) {
-  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
 
 export default function CategoryTable({
   categories,
@@ -23,7 +21,35 @@ export default function CategoryTable({
   onSearchChange,
   onSelect,
   onAdd,
+  onBulkAction,
 }: CategoryTableProps) {
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  const toggleSelect = (value: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selected.size === categories.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(categories.map((c) => c.value)))
+    }
+  }
+
+  const handleBulk = (action: string) => {
+    if (onBulkAction && selected.size > 0) {
+      onBulkAction([...selected], action)
+      setSelected(new Set())
+    }
+  }
+
   return (
     <div className="flex-1 min-w-0">
       {/* Search + Add */}
@@ -43,12 +69,58 @@ export default function CategoryTable({
         </button>
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="mb-2 px-3 py-2 bg-sage/5 border border-sage/14 rounded-lg flex items-center gap-3 text-xs">
+          <span className="font-medium text-ink">{selected.size} selected</span>
+          <button
+            onClick={() => handleBulk('auto_match_vinted')}
+            className="px-2 py-1 bg-white border border-sage/20 rounded hover:bg-cream transition-colors"
+          >
+            Auto-match Vinted
+          </button>
+          <button
+            onClick={() => handleBulk('auto_match_ebay')}
+            className="px-2 py-1 bg-white border border-sage/20 rounded hover:bg-cream transition-colors"
+          >
+            Auto-match eBay
+          </button>
+          <button
+            onClick={() => handleBulk('import_fields')}
+            className="px-2 py-1 bg-white border border-sage/20 rounded hover:bg-cream transition-colors"
+          >
+            Import field requirements
+          </button>
+          <button
+            onClick={() => handleBulk('delete')}
+            className="px-2 py-1 bg-white border border-red-200 rounded text-red-500 hover:bg-red-50 transition-colors"
+          >
+            Delete
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-sage-dim hover:text-ink transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-lg border border-sage/14 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-cream-md border-b border-sage/14">
+                <th className="text-center px-2 py-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={categories.length > 0 && selected.size === categories.length}
+                    onChange={toggleAll}
+                    className="w-3.5 h-3.5 rounded border-sage/30 text-sage focus:ring-sage/30"
+                  />
+                </th>
                 <th className="text-left px-3 py-2 font-medium text-sage-dim">Label</th>
                 <th className="text-left px-3 py-2 font-medium text-sage-dim">Value</th>
                 {PLATFORMS.map((p) => (
@@ -62,7 +134,7 @@ export default function CategoryTable({
             <tbody>
               {categories.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-sage-dim">
+                  <td colSpan={9} className="text-center py-8 text-sage-dim">
                     {search ? 'No categories match your search.' : 'No categories found.'}
                   </td>
                 </tr>
@@ -71,8 +143,19 @@ export default function CategoryTable({
                   <tr
                     key={cat.value}
                     onClick={() => onSelect(cat)}
-                    className="border-b border-sage/7 hover:bg-cream/50 cursor-pointer transition-colors"
+                    className={`border-b border-sage/7 hover:bg-cream/50 cursor-pointer transition-colors ${
+                      selected.has(cat.value) ? 'bg-sage/5' : ''
+                    }`}
                   >
+                    <td className="text-center px-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(cat.value)}
+                        onClick={(e) => toggleSelect(cat.value, e)}
+                        onChange={() => {}} // controlled by onClick
+                        className="w-3.5 h-3.5 rounded border-sage/30 text-sage focus:ring-sage/30"
+                      />
+                    </td>
                     <td className="px-3 py-2 font-medium text-ink max-w-[200px] truncate">
                       {cat.label}
                     </td>
@@ -91,9 +174,23 @@ export default function CategoryTable({
                         </td>
                       )
                     })}
-                    <td className="text-center px-2 py-2 text-xs text-sage-dim">
-                      {/* Field count will be populated when we have that data */}
-                      &mdash;
+                    <td className="text-center px-2 py-2 text-xs">
+                      {(() => {
+                        const fc = (cat as any).field_counts as Record<string, { total: number; required: number }> | undefined
+                        if (!fc || Object.keys(fc).length === 0) {
+                          return <span className="text-sage/30">&mdash;</span>
+                        }
+                        const ebay = fc.ebay
+                        const vinted = fc.vinted
+                        const parts: string[] = []
+                        if (ebay) parts.push(`E:${ebay.total}${ebay.required > 0 ? `(${ebay.required}*)` : ''}`)
+                        if (vinted) parts.push(`V:${vinted.total}${vinted.required > 0 ? `(${vinted.required}*)` : ''}`)
+                        return (
+                          <span className="text-sage-dim" title="E=eBay, V=Vinted, *=required fields">
+                            {parts.join(' ')}
+                          </span>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))

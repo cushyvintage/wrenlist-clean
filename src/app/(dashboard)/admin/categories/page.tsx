@@ -10,6 +10,7 @@ import CategorySidebar from '@/components/admin/categories/CategorySidebar'
 import CategoryTable from '@/components/admin/categories/CategoryTable'
 import CategoryDetailPanel from '@/components/admin/categories/CategoryDetailPanel'
 import FreshnessBanner from '@/components/admin/categories/FreshnessBanner'
+import HealthCheckPanel from '@/components/admin/categories/HealthCheckPanel'
 
 interface StatsData {
   total: number
@@ -148,6 +149,18 @@ export default function AdminCategoriesPage() {
 
         {/* Stats */}
         <CategoryStats stats={stats} isLoading={statsLoading} />
+
+        {/* Health check */}
+        <HealthCheckPanel
+          onSelectCategory={(value) => {
+            // Find the category in loaded data and open it
+            const cat = categories.find((c) => c.value === value)
+            if (cat) {
+              setEditingCategory(cat)
+              setIsCreating(false)
+            }
+          }}
+        />
 
         {/* Main layout: sidebar + table */}
         <div className="flex gap-4">

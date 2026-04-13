@@ -39,8 +39,26 @@ export const GET = withAdminAuth(async (req) => {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Fetch field requirement counts per category
+  const { data: fieldReqs } = await supabase
+    .from('category_field_requirements')
+    .select('category_value, platform, fields')
+
+  const fieldCounts: Record<string, Record<string, { total: number; required: number }>> = {}
+  for (const row of fieldReqs ?? []) {
+    if (!fieldCounts[row.category_value]) fieldCounts[row.category_value] = {}
+    const fields = (row.fields ?? []) as Array<{ required?: boolean }>
+    fieldCounts[row.category_value]![row.platform] = {
+      total: fields.length,
+      required: fields.filter((f) => f.required).length,
+    }
+  }
+
   // Post-filter for unmapped platform (jsonb path filter is complex, easier in JS)
-  let results = data ?? []
+  let results = (data ?? []).map((cat) => ({
+    ...cat,
+    field_counts: fieldCounts[cat.value] ?? {},
+  }))
   if (unmapped) {
     results = results.filter((cat) => {
       const platforms = cat.platforms as Record<string, unknown>
