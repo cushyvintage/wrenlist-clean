@@ -7,8 +7,9 @@ import { AppTopbar } from '@/components/layout/AppTopbar'
 import { BetaBanner } from '@/components/layout/BetaBanner'
 import { SidebarItem } from '@/components/wren/SidebarItem'
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { createBrowserClient } from '@supabase/ssr'
 import { NavIcons } from '@/components/layout/NavIcons'
 import { isAdmin } from '@/lib/admin'
 
@@ -91,6 +92,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname])
 
+  // Sold items needing action — lightweight count for nav badge
+  const [soldBadge, setSoldBadge] = useState(0)
+  const soldBadgeRef = useRef(false)
+
+  useEffect(() => {
+    if (soldBadgeRef.current || !user) return
+    soldBadgeRef.current = true
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    supabase
+      .from('finds')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'sold')
+      .gte('sold_at', cutoff)
+      .then(({ count }) => {
+        if (count != null && count > 0) setSoldBadge(count)
+      })
+  }, [user])
+
   const handleNavClick = (id: string, path: string) => {
     setMobileMenuOpen(false)
     router.push(path)
@@ -142,6 +167,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       label={item.label}
                       active={activeNav === item.id}
                       onClick={() => handleNavClick(item.id, item.path)}
+                      badge={item.id === 'sold' ? soldBadge : undefined}
                     />
                   ))}
                 {section !== 'ADMIN' && (
@@ -184,6 +210,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       label={item.label}
                       active={activeNav === item.id}
                       onClick={() => handleNavClick(item.id, item.path)}
+                      badge={item.id === 'sold' ? soldBadge : undefined}
                     />
                   ))}
                 {section !== 'ADMIN' && (
