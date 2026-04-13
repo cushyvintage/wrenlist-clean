@@ -184,14 +184,21 @@ export function useAddFindForm() {
         if (controller.signal.aborted) return
 
         const merged: Record<string, FieldConfig> = {}
-        for (const fields of results) {
+        for (let i = 0; i < results.length; i++) {
+          const fields = results[i]
+          const platform = formData.selectedPlatforms[i]
           if (!fields) continue
           for (const [key, val] of Object.entries(fields)) {
             if (!merged[key]) {
-              merged[key] = { ...val }
+              merged[key] = { ...val, requiredBy: val.required && platform ? [platform] : [] }
             } else {
               if (val.show) merged[key].show = true
-              if (val.required) merged[key].required = true
+              if (val.required) {
+                merged[key].required = true
+                if (platform) {
+                  merged[key].requiredBy = [...(merged[key].requiredBy ?? []), platform]
+                }
+              }
               if (val.options && !merged[key].options) merged[key].options = val.options
             }
           }

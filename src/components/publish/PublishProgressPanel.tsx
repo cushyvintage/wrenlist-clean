@@ -1,9 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import type { Platform } from '@/types'
 import { fetchApi } from '@/lib/api-utils'
 import { friendlyError } from '@/lib/friendly-errors'
+import { isAdmin } from '@/lib/admin'
+import { useAuthContext } from '@/contexts/AuthContext'
+
+const CATEGORY_ERROR_KEYWORDS = ['category', 'taxonomy', 'not found', 'invalid category']
+
+function isCategoryError(error: string | undefined): boolean {
+  if (!error) return false
+  const lower = error.toLowerCase()
+  return CATEGORY_ERROR_KEYWORDS.some(kw => lower.includes(kw))
+}
 
 export type PublishStep = 'saving' | 'uploading' | 'publishing' | 'polling' | 'done'
 
@@ -53,7 +64,7 @@ function StepIndicator({ label, status }: { label: string; status: 'done' | 'act
   )
 }
 
-function MarketplaceRow({ ms, onRetry }: { ms: MarketplaceStatus; onRetry?: () => void }) {
+function MarketplaceRow({ ms, onRetry, showAdminLink }: { ms: MarketplaceStatus; onRetry?: () => void; showAdminLink?: boolean }) {
   const platformLabels: Record<string, string> = {
     ebay: 'eBay UK', vinted: 'Vinted', etsy: 'Etsy', depop: 'Depop',
     shopify: 'Shopify', facebook: 'Facebook', poshmark: 'Poshmark',
@@ -89,12 +100,19 @@ function MarketplaceRow({ ms, onRetry }: { ms: MarketplaceStatus; onRetry?: () =
           <span className="text-xs text-sage animate-pulse">Extension publishing...</span>
         )}
         {ms.status === 'error' && (
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-red-500 max-w-[150px] truncate">{ms.error ? friendlyError(ms.marketplace, ms.error) : 'Failed'}</span>
-            {onRetry && (
-              <button onClick={onRetry} className="text-xs text-sage underline hover:text-sage-dark">
-                Retry
-              </button>
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-red-500 max-w-[150px] truncate">{ms.error ? friendlyError(ms.marketplace, ms.error) : 'Failed'}</span>
+              {onRetry && (
+                <button onClick={onRetry} className="text-xs text-sage underline hover:text-sage-dark">
+                  Retry
+                </button>
+              )}
+            </div>
+            {showAdminLink && isCategoryError(ms.error) && (
+              <Link href="/admin/categories" className="text-[10px] text-sage underline hover:text-sage-dark">
+                Fix category mapping
+              </Link>
             )}
           </div>
         )}
@@ -107,6 +125,8 @@ function MarketplaceRow({ ms, onRetry }: { ms: MarketplaceStatus; onRetry?: () =
 }
 
 export default function PublishProgressPanel({ progress, onClose, onRetry }: Props) {
+  const { user } = useAuthContext()
+  const userIsAdmin = isAdmin(user?.email)
   const [polledStatuses, setPolledStatuses] = useState<MarketplaceStatus[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -208,6 +228,7 @@ export default function PublishProgressPanel({ progress, onClose, onRetry }: Pro
                   key={ms.marketplace}
                   ms={ms}
                   onRetry={ms.status === 'error' && onRetry ? () => onRetry(ms.marketplace) : undefined}
+                  showAdminLink={userIsAdmin}
                 />
               ))}
             </div>

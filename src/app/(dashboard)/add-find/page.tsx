@@ -16,6 +16,7 @@ import StashSection from '@/components/add-find/StashSection'
 import { useAddFindForm } from '@/components/add-find/useAddFindForm'
 import { useAddFindHandlers } from '@/components/add-find/useAddFindHandlers'
 import { useAddFindSubmit } from '@/components/add-find/useAddFindSubmit'
+import PublishReadinessChecklist from '@/components/add-find/PublishReadinessChecklist'
 import PublishProgressPanel from '@/components/publish/PublishProgressPanel'
 import CategoryPlatformStatus from '@/components/add-find/CategoryPlatformStatus'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
@@ -274,6 +275,16 @@ export default function AddFindPage() {
           <button onClick={() => form.router.back()} className="text-sm text-sage-lt hover:text-sage transition-colors">
             ← Back
           </button>
+          <PublishReadinessChecklist
+            selectedPlatforms={form.formData.selectedPlatforms}
+            category={form.formData.category}
+            fieldConfig={form.fieldConfig}
+            platformFields={form.formData.platformFields}
+            title={form.formData.title}
+            price={form.formData.price}
+            photoCount={form.formData.photos.length}
+            platformPrices={form.formData.platformPrices}
+          />
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleSaveDraft}

@@ -31,6 +31,61 @@ export function useAddFindHandlers(deps: HandlerDeps) {
     setClassifyingPhotoIndex,
   } = deps
 
+  /** Apply smart defaults to shared platform fields when a category is selected.
+   *  Only fills EMPTY fields — never overwrites user input. */
+  const applyCategoryDefaults = useCallback((category: string) => {
+    setFormData((prev) => {
+      const shared = (prev.platformFields.shared ?? {}) as Record<string, string | boolean | string[] | undefined>
+      const platforms = prev.selectedPlatforms
+
+      // Helper: set a shared field only if currently empty/undefined
+      const patch: Record<string, string | boolean> = {}
+      const setIfEmpty = (key: string, value: string | boolean) => {
+        if (!shared[key] && shared[key] !== false) {
+          patch[key] = value
+        }
+      }
+
+      // ── Depop defaults (all categories) ──
+      if (platforms.includes('depop') && !shared['depopSource']) {
+        patch['depopSource'] = 'Thrifted/Secondhand'
+      }
+
+      // ── Category-specific defaults ──
+      if (category.startsWith('books_media')) {
+        setIfEmpty('whoMade', 'someone_else')
+        setIfEmpty('whenMade', '2020_2025')
+        setIfEmpty('isSupply', false)
+      } else if (category.startsWith('clothing')) {
+        setIfEmpty('whoMade', 'someone_else')
+        setIfEmpty('whenMade', '2020_2025')
+        if (platforms.includes('depop')) {
+          setIfEmpty('depopSource', 'Thrifted/Secondhand')
+        }
+      } else if (category.startsWith('art')) {
+        setIfEmpty('whoMade', 'someone_else')
+        setIfEmpty('whenMade', 'before_2000')
+      } else if (category.startsWith('craft_supplies')) {
+        setIfEmpty('whoMade', 'someone_else')
+        setIfEmpty('isSupply', true)
+      } else if (category.startsWith('antiques')) {
+        setIfEmpty('whoMade', 'someone_else')
+        setIfEmpty('whenMade', 'before_2000')
+      }
+
+      // Nothing to patch — return unchanged reference
+      if (Object.keys(patch).length === 0) return prev
+
+      return {
+        ...prev,
+        platformFields: {
+          ...prev.platformFields,
+          shared: { ...shared, ...patch },
+        },
+      }
+    })
+  }, [])
+
   const handleInputChange = useCallback(
     (field: keyof FormData, value: unknown) => {
       setFormData((prev) => ({ ...prev, [field]: value }))
@@ -39,8 +94,12 @@ export function useAddFindHandlers(deps: HandlerDeps) {
         updated.delete(field)
         return updated
       })
+      // Auto-populate sensible defaults when category changes
+      if (field === 'category' && typeof value === 'string' && value) {
+        applyCategoryDefaults(value)
+      }
     },
-    []
+    [applyCategoryDefaults]
   )
 
   const handleApplyTemplate = useCallback((template: ListingTemplate) => {

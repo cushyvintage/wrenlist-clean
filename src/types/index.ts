@@ -534,6 +534,8 @@ export interface MarketplaceListing {
 export interface FieldConfig {
   show: boolean
   required?: boolean
+  /** Which platforms require this field (e.g. ['vinted', 'ebay']) */
+  requiredBy?: string[]
   max?: number
   options?: string[]
   type?: 'text' | 'select' | 'multiselect'
