@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react'
 import { Platform, FieldConfig } from '@/types'
 import type { PlatformFieldsData } from '@/types/listing-form'
-import { UNIFIED_COLOURS, findColourByLabel, ETSY_WHO_MADE, ETSY_WHEN_MADE, DEPOP_SOURCES, DEPOP_AGES, DEPOP_STYLE_TAGS, VINTED_MATERIALS } from '@/data/unified-colours'
+import { UNIFIED_COLOURS, findColourByLabel, VINTED_MATERIALS } from '@/data/unified-colours'
 import DynamicFieldRenderer from './DynamicFieldRenderer'
 import SizePicker from './SizePicker'
+import { PLATFORM_FIELD_RENDERERS } from './platforms/PlatformFieldsRegistry'
+import type { PlatformFieldProps } from './platforms/types'
 
 interface MarketplaceFieldsSectionProps {
   selectedPlatforms: Platform[]
@@ -83,8 +85,9 @@ export default function MarketplaceFieldsSection({
   const currentTab = activeTab && selectedPlatforms.includes(activeTab) ? activeTab : platformsWithTabs[0] || null
 
   if (selectedPlatforms.length === 0) return null
-  // If fieldConfig is null but we have Etsy or Depop, those still have hardcoded fields to show
-  if (!fieldConfig && !hasEtsy && !hasDepop) return null
+  // If fieldConfig is null but a registered platform has fields to show, don't bail
+  const hasAnyRegisteredPlatform = selectedPlatforms.some(p => PLATFORM_FIELD_RENDERERS[p] != null)
+  if (!fieldConfig && !hasAnyRegisteredPlatform) return null
 
   const dynamicFields = fieldConfig ? Object.entries(fieldConfig).filter(
     ([key, val]) => !CUSTOM_HANDLED_KEYS.has(key) && val.show
@@ -94,12 +97,11 @@ export default function MarketplaceFieldsSection({
   const showColour = fieldConfig?.colour?.show || hasVinted
   const showSecondaryColour = hasVinted || hasEtsy || hasDepop
   const showTags = hasEtsy || hasFacebook || hasShopify
-  const showEtsyFields = hasEtsy
-  const showDepopFields = hasDepop
+  const hasRegisteredPlatformFields = selectedPlatforms.some(p => PLATFORM_FIELD_RENDERERS[p] != null)
 
   // Determine if we have anything to render at all
   const showSize = fieldConfig?.size?.show || (hasVinted && category.startsWith('clothing'))
-  const hasAnyContent = showColour || showSecondaryColour || showTags || showEtsyFields || showDepopFields || showSize ||
+  const hasAnyContent = showColour || showSecondaryColour || showTags || hasRegisteredPlatformFields || showSize ||
     fieldConfig?.condition_description?.show || (fieldConfig?.material?.show || fieldConfig?.materialvinted?.show) ||
     fieldConfig?.author?.show || fieldConfig?.isbn?.show || fieldConfig?.language?.show ||
     dynamicFields.length > 0 || platformsWithTabs.length > 0
@@ -449,118 +451,20 @@ export default function MarketplaceFieldsSection({
         )}
       </div>
 
-      {/* ── Etsy-Specific Fields ── */}
-      {showEtsyFields && (
-        <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-5">
-          <h3 className="text-xs font-medium text-sage border-b border-sage/14 pb-2 -mt-1">Etsy</h3>
-          <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
-              Who made<span className="text-red-500"> *</span>
-              <span className="ml-1.5 text-[10px] font-normal text-amber-600">Required by Etsy</span>
-            </label>
-            <select
-              value={(platformFields.shared?.whoMade as string) ?? ''}
-              onChange={(e) => onSharedFieldChange('whoMade', e.target.value)}
-              className={`w-full px-3 py-2 border ${requiredBorderClass(true, platformFields.shared?.whoMade as string)} rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30`}
-            >
-              <option value="">Select</option>
-              {ETSY_WHO_MADE.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
-              When made<span className="text-red-500"> *</span>
-              <span className="ml-1.5 text-[10px] font-normal text-amber-600">Required by Etsy</span>
-            </label>
-            <select
-              value={(platformFields.shared?.whenMade as string) ?? ''}
-              onChange={(e) => onSharedFieldChange('whenMade', e.target.value)}
-              className={`w-full px-3 py-2 border ${requiredBorderClass(true, platformFields.shared?.whenMade as string)} rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30`}
-            >
-              <option value="">Select</option>
-              {ETSY_WHEN_MADE.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* ── Depop-Specific Fields ── */}
-      {showDepopFields && (
-        <div className="bg-white rounded-lg border border-sage/14 p-6 space-y-5">
-          <h3 className="text-xs font-medium text-sage border-b border-sage/14 pb-2 -mt-1">Depop</h3>
-          <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
-              Source <span className="text-xs text-sage-dim font-normal">(optional, max 2)</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {DEPOP_SOURCES.map((s) => {
-                const selected = ((platformFields.shared?.depopSource as string) ?? '').split(',').filter(Boolean).includes(s.value)
-                return (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => {
-                      const current = ((platformFields.shared?.depopSource as string) ?? '').split(',').filter(Boolean)
-                      const next = selected ? current.filter(v => v !== s.value) : [...current, s.value].slice(0, 2)
-                      onSharedFieldChange('depopSource', next.join(','))
-                    }}
-                    className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
-                      selected ? 'border-sage bg-sage/10 text-sage font-medium' : 'border-sage/20 text-sage-dim hover:border-sage/40'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
-              Age / era <span className="text-xs text-sage-dim font-normal">(optional)</span>
-            </label>
-            <select
-              value={(platformFields.shared?.depopAge as string) ?? ''}
-              onChange={(e) => onSharedFieldChange('depopAge', e.target.value)}
-              className="w-full px-3 py-2 border border-sage/14 rounded text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
-            >
-              <option value="">Select</option>
-              {DEPOP_AGES.map((a) => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-ink mb-2">
-              Style tags <span className="text-xs text-sage-dim font-normal">(optional, max 3)</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {DEPOP_STYLE_TAGS.map((tag) => {
-                const selected = ((platformFields.shared?.depopStyleTags as string) ?? '').split(',').filter(Boolean).includes(tag)
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      const current = ((platformFields.shared?.depopStyleTags as string) ?? '').split(',').filter(Boolean)
-                      const next = selected ? current.filter(v => v !== tag) : [...current, tag].slice(0, 3)
-                      onSharedFieldChange('depopStyleTags', next.join(','))
-                    }}
-                    className={`px-2 py-1 rounded border text-xs transition-colors ${
-                      selected ? 'border-sage bg-sage/10 text-sage font-medium' : 'border-sage/14 text-sage-dim hover:border-sage/30'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Per-Platform Field Sections (from registry) ── */}
+      {selectedPlatforms.map((platform) => {
+        const Renderer = PLATFORM_FIELD_RENDERERS[platform]
+        if (!Renderer) return null
+        const props: PlatformFieldProps = {
+          category,
+          fieldConfig,
+          platformFields,
+          onSharedFieldChange,
+          onPlatformFieldChange,
+          hasAnyData,
+        }
+        return <Renderer key={platform} {...props} />
+      })}
 
       {/* ── Platform-Specific Tabs (eBay, Facebook, Shopify) ── */}
       {platformsWithTabs.length > 0 && (
