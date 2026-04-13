@@ -795,8 +795,8 @@ export class EtsyClient {
       if (tabs.length > 0 && tabs[0].id) {
         const results = await chrome.scripting.executeScript({
           target: { tabId: tabs[0].id },
-          func: () => (window as unknown as Record<string, unknown>).Etsy &&
-            ((window as unknown as Record<string, unknown>).Etsy as Record<string, unknown>).csrf_nonce as string,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          func: () => (window as any).Etsy?.csrf_nonce,
         });
         const nonce = results?.[0]?.result;
         if (typeof nonce === "string" && nonce.length > 10) {
@@ -823,8 +823,8 @@ export class EtsyClient {
       if (tab.id) {
         const results = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          func: () => (window as unknown as Record<string, unknown>).Etsy &&
-            ((window as unknown as Record<string, unknown>).Etsy as Record<string, unknown>).csrf_nonce as string,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          func: () => (window as any).Etsy?.csrf_nonce,
         });
         const nonce = results?.[0]?.result;
         chrome.tabs.remove(tab.id).catch(() => {});
