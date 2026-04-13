@@ -436,7 +436,7 @@ export default function SoldHistoryPage() {
         }
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { pages: 20, perPage: 100, enrich: true } },
+          { action: 'get_vinted_sales', params: { pages: 4, perPage: 100, enrich: true } },
           (response: Record<string, unknown> | undefined) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
@@ -489,7 +489,7 @@ export default function SoldHistoryPage() {
         }
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { pages: 20, perPage: 100, enrich: true } },
+          { action: 'get_vinted_sales', params: { pages: 4, perPage: 100, enrich: true } },
           (response: Record<string, unknown> | undefined) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
