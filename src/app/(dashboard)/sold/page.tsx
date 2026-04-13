@@ -443,7 +443,7 @@ export default function SoldHistoryPage() {
               return
             }
             if (!response?.success) {
-              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
+              reject(new Error((response?.message as string) || (response?.error as string) || 'Failed to fetch sales'))
               return
             }
             resolve((response.sales as unknown[]) || [])
@@ -496,7 +496,7 @@ export default function SoldHistoryPage() {
               return
             }
             if (!response?.success) {
-              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
+              reject(new Error((response?.message as string) || (response?.error as string) || 'Failed to fetch sales'))
               return
             }
             resolve((response.sales as unknown[]) || [])
