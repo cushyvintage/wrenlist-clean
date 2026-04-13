@@ -55,6 +55,8 @@ interface SoldDetail {
       imageUrl?: string; cost?: number; quantity?: number; isCancelled?: boolean
       review?: { rating: number; text?: string; date?: string; url?: string }
     }> | null
+    feeSource: string | null
+    transactionId: string | null
     shippingAddress: {
       name?: string | null; firstLine?: string | null; secondLine?: string | null;
       city?: string | null; state?: string | null; country?: string | null; zip?: string | null;
@@ -357,6 +359,18 @@ export default function SoldDetailPage() {
           {sale.carrier && (
             <DetailRow label="carrier">{sale.carrier}</DetailRow>
           )}
+          {sale.marketplace === 'ebay' && sale.transactionId && (
+            <DetailRow label="ship">
+              <a
+                href={`https://www.ebay.co.uk/mesh/ord/details?orderid=${encodeURIComponent(sale.transactionId)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sage hover:underline"
+              >
+                ship via eBay &rarr;
+              </a>
+            </DetailRow>
+          )}
           {sale.isGift && (
             <DetailRow label="gift">
               <span className="text-xs">
@@ -378,9 +392,14 @@ export default function SoldDetailPage() {
               <span className="font-mono">£{sale.grossAmount.toFixed(2)}</span>
             </DetailRow>
           )}
-          {sale.serviceFee != null && sale.serviceFee > 0 && sale.grossAmount != null && sale.netAmount != null && sale.grossAmount !== sale.netAmount && (
+          {sale.serviceFee != null && (sale.serviceFee > 0 || sale.feeSource === 'estimated') && (
             <DetailRow label="service fee">
-              <span className="font-mono text-red-600">-£{sale.serviceFee.toFixed(2)}</span>
+              <span className="font-mono text-red-600">
+                -£{sale.serviceFee.toFixed(2)}
+                {sale.feeSource === 'estimated' && (
+                  <span className="text-ink-lt font-sans text-[10px] ml-1">(estimated)</span>
+                )}
+              </span>
             </DetailRow>
           )}
           {sale.shippingCost != null && sale.shippingCost > 0 && (
@@ -405,7 +424,12 @@ export default function SoldDetailPage() {
           )}
           {sale.netAmount != null && (
             <DetailRow label="net received">
-              <span className="font-mono font-medium">£{sale.netAmount.toFixed(2)}</span>
+              <span className="font-mono font-medium">
+                £{sale.netAmount.toFixed(2)}
+                {sale.feeSource === 'estimated' && (
+                  <span className="text-ink-lt font-sans text-[10px] font-normal ml-1">(estimated)</span>
+                )}
+              </span>
             </DetailRow>
           )}
           <DetailRow label="cost price">

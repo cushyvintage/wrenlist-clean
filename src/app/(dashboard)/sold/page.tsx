@@ -13,6 +13,7 @@ import type { Platform } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { ShippingLabelModal } from '@/components/sold/ShippingLabelModal'
 import { useConfirm } from '@/components/wren/ConfirmProvider'
+import { showSuccess, showError } from '@/lib/toast-error'
 
 interface SoldItem {
   id: string
@@ -295,6 +296,37 @@ function OrderCard({
   )
 }
 
+/* ── Extension message helper with timeout ───────────────────── */
+
+function sendExtensionMessage(action: string, params: Record<string, unknown>, timeoutMs = 10000): Promise<unknown[]> {
+  return Promise.race([
+    new Promise<unknown[]>((resolve, reject) => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        reject(new Error('Extension not available'))
+        return
+      }
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        { action, params },
+        (response: Record<string, unknown> | undefined) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+            return
+          }
+          if (!response?.success) {
+            reject(new Error((response?.error as string) || 'Extension request failed'))
+            return
+          }
+          resolve((response.sales as unknown[]) || [])
+        }
+      )
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Extension timed out — is it installed and active?')), timeoutMs)
+    ),
+  ])
+}
+
 /* ── Chunked sync helper (avoids Vercel 413 on large payloads) ── */
 
 const SYNC_CHUNK_SIZE = 50
@@ -333,7 +365,6 @@ export default function SoldHistoryPage() {
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [showAllAction, setShowAllAction] = useState(false)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [actionView, setActionView] = useState<'cards' | 'picklist'>('cards')
@@ -426,33 +457,12 @@ export default function SoldHistoryPage() {
   const handleSyncSales = useCallback(async () => {
     if (isSyncing) return
     setIsSyncing(true)
-    setSyncMessage(null)
 
     try {
-      const sales = await new Promise<unknown[]>((resolve, reject) => {
-        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-          reject(new Error('Extension not available'))
-          return
-        }
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { perPage: 100, enrich: true } },
-          (response: Record<string, unknown> | undefined) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message))
-              return
-            }
-            if (!response?.success) {
-              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
-              return
-            }
-            resolve((response.sales as unknown[]) || [])
-          }
-        )
-      })
+      const sales = await sendExtensionMessage('get_vinted_sales', { perPage: 100, enrich: true })
 
       if (!Array.isArray(sales) || sales.length === 0) {
-        setSyncMessage('No new sales found')
+        showSuccess('Vinted: no new sales found')
         return
       }
 
@@ -466,11 +476,10 @@ export default function SoldHistoryPage() {
         })
       }
 
-      setSyncMessage(`Synced ${syncData.synced} items, created ${syncData.created} new`)
+      showSuccess(`Vinted: synced ${syncData.synced} items, created ${syncData.created} new`)
       loadSoldItems()
     } catch (err) {
-      console.error('Sync failed:', err)
-      setSyncMessage(err instanceof Error ? err.message : 'Sync failed')
+      showError(err)
     } finally {
       setIsSyncing(false)
     }
@@ -479,42 +488,21 @@ export default function SoldHistoryPage() {
   const handleBackfillAddresses = useCallback(async () => {
     if (isBackfilling) return
     setIsBackfilling(true)
-    setSyncMessage(null)
 
     try {
-      const sales = await new Promise<unknown[]>((resolve, reject) => {
-        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-          reject(new Error('Extension not available'))
-          return
-        }
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { pages: 10, perPage: 100, enrich: true } },
-          (response: Record<string, unknown> | undefined) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message))
-              return
-            }
-            if (!response?.success) {
-              reject(new Error((response?.error as string) || 'Failed to fetch sales'))
-              return
-            }
-            resolve((response.sales as unknown[]) || [])
-          }
-        )
-      })
+      const sales = await sendExtensionMessage('get_vinted_sales', { pages: 10, perPage: 100, enrich: true }, 30000)
 
       if (!Array.isArray(sales) || sales.length === 0) {
-        setSyncMessage('No sales found to backfill')
+        showSuccess('No sales found to backfill')
         return
       }
 
       const syncData = await syncSalesInChunks(sales)
 
-      setSyncMessage(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
+      showSuccess(`Backfilled ${sales.length} sales — ${syncData.synced} updated, ${syncData.created} new`)
       loadSoldItems()
     } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : 'Backfill failed')
+      showError(err)
     } finally {
       setIsBackfilling(false)
     }
@@ -527,22 +515,25 @@ export default function SoldHistoryPage() {
   const handleEbaySync = useCallback(async () => {
     if (isEbaySyncing) return
     setIsEbaySyncing(true)
-    setSyncMessage(null)
 
     try {
       const result = await fetchApi<{
         ordersChecked: number
         itemsSold: number
         enriched: number
+        delistedFrom: string[]
         message: string
       }>('/api/ebay/sync-orders', { method: 'POST' })
 
-      setSyncMessage(result.message || `Checked ${result.ordersChecked} orders, ${result.itemsSold} new sales`)
+      showSuccess(`eBay: ${result.message}`)
+      if (result.delistedFrom?.length > 0) {
+        showSuccess(`Sold on eBay — auto-delisting from ${result.delistedFrom.join(', ')}`)
+      }
       if (result.itemsSold > 0 || result.enriched > 0) {
         loadSoldItems()
       }
     } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : 'eBay sync failed')
+      showError(err)
     } finally {
       setIsEbaySyncing(false)
     }
@@ -594,9 +585,6 @@ export default function SoldHistoryPage() {
           >
             {isBackfilling ? 'Backfilling...' : 'Backfill addresses'}
           </button>
-          {syncMessage && (
-            <span className="text-xs text-ink-lt">{syncMessage}</span>
-          )}
         </div>
       </div>
 

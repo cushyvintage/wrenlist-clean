@@ -77,6 +77,7 @@ export const POST = withAuth(async (req, user) => {
     const orders = ordersResponse.orders || []
     let itemsSold = 0
     let enriched = 0
+    const allDelistedFrom: string[] = []
 
     for (const order of orders) {
       if (!order.lineItems || order.lineItems.length === 0) continue
@@ -104,6 +105,9 @@ export const POST = withAuth(async (req, user) => {
           if (result.isNewSale) itemsSold++
           else enriched++
         }
+        if (result.delistedFrom.length > 0) {
+          allDelistedFrom.push(...result.delistedFrom)
+        }
       }
     }
 
@@ -121,6 +125,7 @@ export const POST = withAuth(async (req, user) => {
       ordersChecked: orders.length,
       itemsSold,
       enriched,
+      delistedFrom: [...new Set(allDelistedFrom)],
       message: `Synced ${orders.length} orders, found ${itemsSold} new sold items, enriched ${enriched} existing`,
     })
   } catch (error) {
