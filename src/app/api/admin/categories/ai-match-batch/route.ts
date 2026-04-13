@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getAllCategories, type CategoryRow } from '@/lib/category-db'
+import { loadTaxonomy, preFilterCandidates, callOpenAI, type AiMatchSuggestion } from '@/lib/ai-category-match'
 
 // ------------------------------------------------------------------
 // Types
@@ -16,13 +17,7 @@ interface BatchResultItem {
   categoryValue: string
   categoryLabel: string
   topLevel: string
-  suggestion: {
-    id: string
-    name: string
-    path: string
-    is_leaf: boolean
-    confidence: 'high' | 'medium' | 'low'
-  } | null
+  suggestion: AiMatchSuggestion | null
   reasoning: string
   error?: string
 }
@@ -47,7 +42,7 @@ function resolveCategory(
 /**
  * POST /api/admin/categories/ai-match-batch
  * Batch AI-match: resolves category details from the tree, then calls the
- * single ai-match logic for each. Max 20 per request.
+ * shared AI matching logic directly for each. Max 20 per request.
  *
  * Body: { categoryValues: string[], platform: string }
  * Returns: { results: BatchResultItem[] }
@@ -90,8 +85,11 @@ export const POST = withAdminAuth(async (req, user) => {
   // Load categories from DB once for the batch
   const allCategories = await getAllCategories()
 
-  // Build the internal URL for the single ai-match endpoint
-  const origin = req.nextUrl.origin
+  // Load taxonomy once for the platform
+  const taxonomy = loadTaxonomy(platform)
+  if (!taxonomy.length) {
+    return NextResponse.json({ error: `No taxonomy data for ${platform}` }, { status: 404 })
+  }
 
   const results: BatchResultItem[] = []
 
@@ -111,45 +109,26 @@ export const POST = withAdminAuth(async (req, user) => {
     }
 
     try {
-      const response = await fetch(`${origin}/api/admin/categories/ai-match`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Forward auth headers so withAdminAuth passes
-          'Cookie': req.headers.get('cookie') ?? '',
-          'Authorization': req.headers.get('authorization') ?? '',
-        },
-        body: JSON.stringify({
-          categoryLabel: resolved.label,
-          categoryValue,
-          topLevel: resolved.topLevel,
-          platform,
-        }),
-      })
+      const candidates = preFilterCandidates(taxonomy, resolved.label, resolved.topLevel, 50)
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+      if (candidates.length === 0) {
         results.push({
           categoryValue,
           categoryLabel: resolved.label,
           topLevel: resolved.topLevel,
           suggestion: null,
-          reasoning: '',
-          error: (errData as { error?: string }).error ?? `HTTP ${response.status}`,
+          reasoning: `No text-based candidates found in ${platform} taxonomy for "${resolved.label}"`,
         })
         continue
       }
 
-      const data = await response.json() as {
-        suggestion: BatchResultItem['suggestion']
-        reasoning: string
-      }
+      const result = await callOpenAI(resolved.label, categoryValue, resolved.topLevel, platform, candidates)
       results.push({
         categoryValue,
         categoryLabel: resolved.label,
         topLevel: resolved.topLevel,
-        suggestion: data.suggestion,
-        reasoning: data.reasoning,
+        suggestion: result.suggestion,
+        reasoning: result.reasoning,
       })
     } catch (error) {
       results.push({
