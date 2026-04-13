@@ -80,15 +80,17 @@ const NEEDS_ACTION_WINDOW_DAYS = 5
 function normalizeStatus(raw: string | null | undefined): string | null {
   if (!raw) return null
   const lower = raw.toLowerCase()
-  // Vinted sends verbose strings like "Package delivered.", "Returning to sender."
+  // Vinted sends verbose strings like "Package delivered.", "Not sent. Buyer refunded."
+  // Order matters — check compound statuses first before single-word matches
+  if (lower.includes('not sent')) return 'not sent'
   if (lower.includes('delivered')) return 'delivered'
-  if (lower.includes('transit')) return 'in transit'
-  if (lower.includes('post office') || lower.includes('collection')) return 'awaiting collection'
+  if (lower.includes('cancel')) return 'cancelled'
+  if (lower.includes('refund')) return 'refunded'
   if (lower.includes('return')) return 'returning'
+  if (lower.includes('transit') || lower.includes('on its way')) return 'in transit'
+  if (lower.includes('post office') || lower.includes('collection')) return 'awaiting collection'
   if (lower.includes('label')) return 'label sent'
   if (lower.includes('shipped') || lower.includes('sent')) return 'shipped'
-  if (lower.includes('refund')) return 'refunded'
-  if (lower.includes('cancel')) return 'cancelled'
   return lower
 }
 

@@ -2397,10 +2397,13 @@ export class VintedClient {
         trackingNumber: tx.shipment?.tracking_code || tx.tracking_number,
         carrier: tx.shipment?.carrier?.name || tx.carrier,
         
+        // Status title from /my_orders (e.g. "Not sent. Buyer refunded.", "Package delivered.")
+        shipmentStatusTitle: tx.shipment?.status_title || tx.status_title || null,
+
         // Timestamps
         orderDate: tx.created_at || tx.date,
         completedDate: tx.completed_at,
-        
+
         // Raw data for debugging
         rawData: tx,
       });
