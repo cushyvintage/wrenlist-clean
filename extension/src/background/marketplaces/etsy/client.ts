@@ -69,8 +69,10 @@ export interface EtsyOrder {
   shippingMethod: string | null;
   trackingNumber: string | null;
   carrier: string | null;
+  deliveryStatus: string | null;
   shippingAddress: {
-    name: string | null; city: string | null; state: string | null;
+    name: string | null; firstLine: string | null; secondLine: string | null;
+    city: string | null; state: string | null;
     country: string | null; zip: string | null;
   } | null;
   itemCount: number;
@@ -392,18 +394,20 @@ export class EtsyClient {
       const payment = o.payment as RawEtsyPayment | undefined;
       const costBreakdown = payment?.cost_breakdown as RawEtsyCostBreakdown | undefined;
 
-      // Extract tracking/carrier from fulfillment object (fallback to package)
+      // Extract fulfillment data — actual paths from Etsy SSR JSON:
+      // fulfillment.to_address = shipping address
+      // fulfillment.status.physical_status.shipping_status = ship date + delivery status
+      // fulfillment.shipping_method = method name
+      // NOTE: tracking codes are NOT in the list view — only on individual order pages
       const ful = o.fulfillment as Record<string, unknown> | undefined;
-      const physicalStatus = ful?.physical_status as Record<string, unknown> | undefined;
-      const tracking = physicalStatus?.tracking as Record<string, unknown> | undefined;
-      const fulTrackingCode = (tracking?.tracking_code ?? tracking?.tracking_number) as string | undefined;
-      const fulCarrier = (tracking?.carrier_name ?? tracking?.carrier) as string | undefined;
+      const fulStatus = ful?.status as Record<string, unknown> | undefined;
+      const physicalStatus = fulStatus?.physical_status as Record<string, unknown> | undefined;
+      const shippingStatus = physicalStatus?.shipping_status as Record<string, unknown> | undefined;
+      const trackingStatus = shippingStatus?.tracking_status as Record<string, unknown> | undefined;
+      const deliverySummary = trackingStatus?.summary as string | undefined; // e.g. "Delivered"
 
-      // Extract shipping address: try order-level first, then fulfillment
-      const addrSource =
-        o.shipping_address ??
-        (ful?.shipping_address as Record<string, unknown> | undefined) ??
-        null;
+      // Shipping address from fulfillment.to_address
+      const toAddress = ful?.to_address as Record<string, unknown> | undefined;
 
       return {
         orderId: o.order_id,
@@ -427,15 +431,18 @@ export class EtsyClient {
         netAmount: moneyToPounds(costBreakdown?.total_cost),
         currency: costBreakdown?.items_cost?.currency_code || "GBP",
         paymentMethod: payment?.payment_method || null,
-        shippingMethod: pkg?.shipping_method_name || null,
-        trackingNumber: fulTrackingCode || pkg?.tracking_code || null,
-        carrier: fulCarrier || pkg?.carrier_name || null,
-        shippingAddress: addrSource ? {
-          name: (addrSource as Record<string, unknown>).name as string || null,
-          city: (addrSource as Record<string, unknown>).city as string || null,
-          state: (addrSource as Record<string, unknown>).state as string || null,
-          country: ((addrSource as Record<string, unknown>).country_name ?? (addrSource as Record<string, unknown>).country) as string || null,
-          zip: ((addrSource as Record<string, unknown>).zip ?? (addrSource as Record<string, unknown>).zip_code) as string || null,
+        shippingMethod: (ful?.shipping_method as string) || pkg?.shipping_method_name || null,
+        trackingNumber: pkg?.tracking_code || null, // Not available in list view
+        carrier: pkg?.carrier_name || null,
+        deliveryStatus: deliverySummary || null, // "Delivered", "In Transit", etc.
+        shippingAddress: toAddress ? {
+          name: (toAddress.name as string) || null,
+          firstLine: (toAddress.first_line as string) || null,
+          secondLine: (toAddress.second_line as string) || null,
+          city: (toAddress.city as string) || null,
+          state: (toAddress.state as string) || null,
+          country: (toAddress.country as string) || null,
+          zip: (toAddress.zip as string) || null,
         } : null,
         itemCount: o.transactions?.length || o.transaction_ids?.length || 0,
         listingIds: (o.transactions || [])

@@ -1059,6 +1059,11 @@ export default function ImportPage() {
       } | null;
       grossAmount: number | null; shippingCost: number | null; netAmount: number | null;
       currency: string; paymentMethod: string | null; shippingMethod: string | null;
+      trackingNumber: string | null; carrier: string | null; deliveryStatus: string | null;
+      shippingAddress: {
+        name: string | null; firstLine: string | null; secondLine: string | null;
+        city: string | null; state: string | null; country: string | null; zip: string | null;
+      } | null;
       isCanceled: boolean; listingIds: string[]; transactionIds: number[]
     }
     const matchedReceipts = new Map<string, EtsyReceipt>() // listingId → receipt
@@ -1124,6 +1129,10 @@ export default function ImportPage() {
               thumbnailUrl: item.photo,
               itemUrl: item.listingUrl,
             }],
+            trackingNumber: receipt?.trackingNumber || null,
+            carrier: receipt?.carrier || null,
+            deliveryStatus: receipt?.deliveryStatus || null,
+            shippingAddress: receipt?.shippingAddress || null,
             isBundle: (receipt?.listingIds?.length || 1) > 1,
             itemCount: receipt?.listingIds?.length || 1,
           }

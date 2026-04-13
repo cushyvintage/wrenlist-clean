@@ -82,6 +82,7 @@ interface EtsySalePayload {
   shippingAddress?: Record<string, unknown>
   trackingNumber?: string
   carrier?: string
+  deliveryStatus?: string
   orderDate?: string
   paidDate?: string
   isBundle?: boolean
@@ -123,11 +124,12 @@ async function upsertEtsyCustomer(
 
   const addr = sale.shippingAddress || {}
   const addressFields = {
-    address_line1: (addr.line1 as string) || (addr.street as string) || null,
-    address_line2: (addr.line2 as string) || null,
+    address_line1: (addr.firstLine as string) || (addr.first_line as string) || (addr.line1 as string) || null,
+    address_line2: (addr.secondLine as string) || (addr.second_line as string) || (addr.line2 as string) || null,
     city: (addr.city as string) || null,
     postcode: (addr.zip as string) || (addr.postal_code as string) || null,
     country: (addr.country as string) || null,
+    state: (addr.state as string) || null,
   }
 
   const fullName = (addr.name as string) || (addr.full_name as string) || null
@@ -254,6 +256,7 @@ export const POST = withAuth(async (req, user) => {
           shippingAddress: sale.shippingAddress || null,
           trackingNumber: sale.trackingNumber || null,
           carrier: sale.carrier || null,
+          deliveryStatus: sale.deliveryStatus || null,
           orderDate: sale.orderDate || null,
           paidDate: sale.paidDate || null,
           isBundle: sale.isBundle || false,
