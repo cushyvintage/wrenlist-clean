@@ -135,29 +135,43 @@ export const GET = withAdminAuth(async (req) => {
           detail: 'eBay mapping exists but no field requirements defined',
         })
       }
-      // Check Vinted: mapping exists but no required fields (ISBN, Language etc.)
-      if (platforms.vinted?.id && catFields.vinted) {
-        const vintedRequired = (catFields.vinted as Array<{ required?: boolean; name?: string }>)
-          .filter((f) => f.required)
-        if (vintedRequired.length === 0) {
-          issues.push({
-            type: 'missing_required_fields',
-            platform: 'vinted',
-            detail: 'Vinted mapping exists but no required fields defined',
-          })
+      // Check Vinted: only flag missing required fields for categories that genuinely need them.
+      // books_media → should have ISBN/Language; clothing → should have size.
+      // All other categories → zero required Vinted fields is normal, don't flag.
+      if (platforms.vinted?.id) {
+        const vintedExpectsRequired =
+          cat.top_level === 'books_media' || cat.top_level === 'clothing'
+        if (vintedExpectsRequired) {
+          const vintedFields = catFields.vinted as Array<{ required?: boolean; name?: string }> | undefined
+          if (!vintedFields?.length) {
+            issues.push({
+              type: 'missing_required_fields',
+              platform: 'vinted',
+              detail: `Vinted mapping exists but no field requirements defined (expected for ${cat.top_level})`,
+            })
+          } else {
+            const vintedRequired = vintedFields.filter((f) => f.required)
+            if (vintedRequired.length === 0) {
+              issues.push({
+                type: 'missing_required_fields',
+                platform: 'vinted',
+                detail: `Vinted mapping exists but no required fields (expected for ${cat.top_level})`,
+              })
+            }
+          }
         }
-      }
-      if (platforms.vinted?.id && !catFields.vinted?.length) {
-        issues.push({
-          type: 'missing_required_fields',
-          platform: 'vinted',
-          detail: 'Vinted mapping exists but no field requirements defined',
-        })
       }
     }
 
-    // Score: 100 minus penalties
-    const score = Math.max(0, 100 - issues.length * 20)
+    // Score: weighted penalties — missing mappings are critical, missing fields are minor
+    let penalty = 0
+    for (const issue of issues) {
+      if (issue.type === 'missing_mapping') penalty += 25
+      else if (issue.type === 'non_leaf') penalty += 15
+      else if (issue.type === 'no_field_requirements') penalty += 10
+      else if (issue.type === 'missing_required_fields') penalty += 5
+    }
+    const score = Math.max(0, 100 - penalty)
 
     if (!issuesOnly || issues.length > 0) {
       results.push({
