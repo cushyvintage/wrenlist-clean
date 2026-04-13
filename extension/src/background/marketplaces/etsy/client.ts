@@ -782,14 +782,465 @@ export class EtsyClient {
     };
   }
 
-  // ─── Publish ───────────────────────────────────────────────────────
+  // ─── Internal API methods ──────────────────────────────────────────
 
   /**
-   * Publish a product to Etsy via browser automation.
-   * Opens the listing editor, fills all fields, uploads images,
-   * selects category, and clicks Publish.
+   * Extract CSRF nonce from any Etsy page HTML.
+   * Required as `x-csrf-token` header for all v3 AJAX API calls.
+   */
+  private async getCsrfNonce(): Promise<string> {
+    const html = await fetch(ETSY_LISTINGS_MANAGER_URL, {
+      credentials: "include",
+    }).then((r) => r.text());
+
+    // Etsy embeds the nonce in multiple formats — try them all
+    const patterns = [
+      /csrf_nonce.*?"([^"]+)"/,
+      /"csrf_nonce"\s*:\s*"([^"]+)"/,
+      /name="csrf_nonce"[^>]*value="([^"]+)"/,
+      /window\.Etsy\s*=\s*\{[^}]*csrf_nonce\s*:\s*"([^"]+)"/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return match[1];
+    }
+
+    throw new Error("Could not extract Etsy CSRF nonce");
+  }
+
+  /**
+   * Upload a single image via Etsy's internal v3 AJAX API.
+   * Returns the image_id from the response.
+   */
+  private async uploadImageViaApi(
+    shopId: string,
+    csrfNonce: string,
+    imageUrl: string,
+  ): Promise<number> {
+    // MV3 keepalive
+    chrome.storage.local.set({ _keepAlive: Date.now() });
+
+    // Fetch the image (no CORS in service worker)
+    const imgResp = await fetch(imageUrl);
+    if (!imgResp.ok) {
+      throw new Error(`Image fetch failed (${imgResp.status}): ${imageUrl}`);
+    }
+    const blob = await imgResp.blob();
+    const mimeType = blob.type || "image/jpeg";
+    const ext = mimeType.split("/")[1] || "jpg";
+
+    const formData = new FormData();
+    formData.append("image", new File([blob], `photo.${ext}`, { type: mimeType }));
+
+    const resp = await fetch(
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/images`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "x-csrf-token": csrfNonce,
+        },
+        body: formData,
+      },
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error(`Image upload API returned ${resp.status}: ${text.substring(0, 200)}`);
+    }
+
+    const data = (await resp.json()) as { image_id?: number };
+    if (!data.image_id) {
+      throw new Error("Image upload succeeded but no image_id in response");
+    }
+
+    return data.image_id;
+  }
+
+  /**
+   * Publish a product to Etsy via the internal v3 AJAX API.
+   * Much faster and more reliable than form-fill — no tab needed.
+   *
+   * Flow: get CSRF → upload images → create draft listing → PATCH with
+   * description/tags/images/shipping → optionally set state=active.
+   */
+  public async publishProductViaApi(
+    product: Product,
+    options?: { publishMode?: "draft" | "publish" },
+  ): Promise<ListingActionResult> {
+    const keepAlive = setInterval(() => {
+      void chrome.storage.local.set({ _keepAlive: Date.now() });
+    }, 5000);
+
+    try {
+      const isLoggedIn = await this.checkLogin();
+      if (!isLoggedIn) {
+        clearInterval(keepAlive);
+        return {
+          success: false,
+          message: "Not logged into Etsy. Please log in first.",
+          needsLogin: true,
+        };
+      }
+
+      if (!product.price || product.price <= 0) {
+        clearInterval(keepAlive);
+        return { success: false, message: "Price must be greater than \u00A30" };
+      }
+
+      const mode = options?.publishMode ?? "draft";
+      await remoteLog("info", "etsy.api-publish", `Starting Etsy API ${mode} flow`, {
+        productTitle: product.title?.substring(0, 60),
+      });
+
+      // 1. Get shop ID and CSRF nonce
+      const shopId = await this.getShopId();
+      const csrfNonce = await this.getCsrfNonce();
+      await remoteLog("info", "etsy.api-publish", `Got shopId=${shopId}, CSRF obtained`);
+
+      // 2. Upload images
+      const imageIds: number[] = [];
+      const coverImg = typeof product["cover"] === "string" ? product["cover"] : undefined;
+      const allImageUrls: string[] = [];
+      if (coverImg) allImageUrls.push(coverImg);
+      if (product.images) {
+        for (const img of product.images) {
+          if (!allImageUrls.includes(img)) allImageUrls.push(img);
+        }
+      }
+
+      for (const url of allImageUrls.slice(0, 10)) {
+        try {
+          const imageId = await this.uploadImageViaApi(shopId, csrfNonce, url);
+          imageIds.push(imageId);
+          await remoteLog("info", "etsy.api-publish", `Uploaded image ${imageIds.length}/${allImageUrls.length}`, { imageId });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`[Etsy API] Image upload failed: ${msg}`);
+          await remoteLog("warn", "etsy.api-publish", `Image upload failed: ${msg}`);
+        }
+      }
+
+      // 3. Resolve category / taxonomy_id
+      const rawCategory = product.category?.[0]?.toLowerCase() || "";
+      let categorySearch = WRENLIST_TO_ETSY_CATEGORY[rawCategory] || "";
+      if (!categorySearch) {
+        const parts = rawCategory.split("_");
+        for (let i = parts.length - 1; i >= 1; i--) {
+          const prefix = parts.slice(0, i).join("_");
+          if (WRENLIST_TO_ETSY_CATEGORY[prefix]) {
+            categorySearch = WRENLIST_TO_ETSY_CATEGORY[prefix];
+            break;
+          }
+        }
+      }
+
+      // Determine when_made
+      const categoryRoot = rawCategory.split("_")[0];
+      const VINTAGE_CATEGORIES = new Set([
+        "antiques", "art", "collectibles", "clothing", "electronics",
+        "home", "books", "sports", "toys", "musical", "vehicles",
+        "ceramics", "glassware", "jewellery", "furniture", "homeware",
+        "music", "medals", "teapots", "jugs",
+      ]);
+      const isLikelyVintage =
+        product.dynamicProperties?.is_vintage === "true" ||
+        VINTAGE_CATEGORIES.has(categoryRoot);
+      const whenMade =
+        product.whenMade || product.dynamicProperties?.when_made ||
+        (isLikelyVintage ? ETSY_WHEN_MADE_VINTAGE : ETSY_WHEN_MADE_RECENT);
+
+      // who_made: vintage items are typically "someone_else", handmade = "i_did"
+      const whoMade = (product.dynamicProperties?.whoMade as string) ||
+        (isLikelyVintage ? "someone_else" : "i_did");
+
+      // 4. Create draft listing via API
+      // Etsy's internal API expects taxonomy_id. We pass the category search
+      // string as a hint — if taxonomy_id is not available, the API may accept
+      // title-based auto-categorization (taxonomy_id=0 or omitted).
+      const createBody: Record<string, unknown> = {
+        title: product.title?.slice(0, 140) || "",
+        price: product.price,
+        quantity: product.quantity ?? 1,
+        who_made: whoMade,
+        when_made: whenMade,
+        is_supply: false,
+        // taxonomy_id 0 = let Etsy auto-categorize from title
+        taxonomy_id: product.dynamicProperties?.etsyTaxonomyId || 0,
+      };
+
+      await remoteLog("info", "etsy.api-publish", "Creating draft listing", {
+        title: createBody.title,
+        price: createBody.price,
+      });
+
+      const createResp = await fetch(
+        `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfNonce,
+          },
+          body: JSON.stringify(createBody),
+        },
+      );
+
+      if (!createResp.ok) {
+        const errText = await createResp.text().catch(() => "");
+        clearInterval(keepAlive);
+        throw new Error(`Etsy create listing API returned ${createResp.status}: ${errText.substring(0, 300)}`);
+      }
+
+      const createData = (await createResp.json()) as {
+        listing_id?: number;
+        state?: number;
+      };
+
+      if (!createData.listing_id) {
+        clearInterval(keepAlive);
+        throw new Error("Etsy create listing succeeded but no listing_id in response");
+      }
+
+      const listingId = String(createData.listing_id);
+      await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
+
+      // 5. PATCH with description, tags, materials, images, SKU, shipping
+      const patchBody: Record<string, unknown> = {};
+
+      if (product.description) {
+        patchBody.description = product.description.slice(0, 10000);
+      }
+
+      // Tags
+      const tagList = product.tags
+        ? product.tags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 13).map((t) => t.slice(0, 20))
+        : [];
+      if (tagList.length > 0) {
+        patchBody.tags = tagList;
+      }
+
+      // Materials
+      const materials = product.dynamicProperties?.materials;
+      if (materials) {
+        const matList = typeof materials === "string"
+          ? materials.split(",").map((m: string) => m.trim()).filter(Boolean)
+          : Array.isArray(materials) ? materials : [];
+        if (matList.length > 0) {
+          patchBody.materials = matList;
+        }
+      }
+
+      // Image IDs
+      if (imageIds.length > 0) {
+        patchBody.image_ids = imageIds;
+      }
+
+      // SKU
+      if (product.sku) {
+        patchBody.sku = product.sku;
+      }
+
+      // Shipping profile — try to get from product dynamicProperties
+      const shippingProfileId = product.dynamicProperties?.etsyShippingProfileId;
+      if (shippingProfileId) {
+        patchBody.shipping_profile_id = Number(shippingProfileId);
+      }
+
+      if (Object.keys(patchBody).length > 0) {
+        await remoteLog("info", "etsy.api-publish", "Patching listing with details", {
+          fields: Object.keys(patchBody),
+        });
+
+        const patchResp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "x-csrf-token": csrfNonce,
+            },
+            body: JSON.stringify(patchBody),
+          },
+        );
+
+        if (!patchResp.ok) {
+          const errText = await patchResp.text().catch(() => "");
+          await remoteLog("warn", "etsy.api-publish", `PATCH failed (non-fatal): ${patchResp.status}`, {
+            error: errText.substring(0, 200),
+          });
+          // Non-fatal: listing was created, just missing some fields
+        }
+      }
+
+      // 6. If publishMode is "publish", activate the listing
+      if (mode === "publish") {
+        await remoteLog("info", "etsy.api-publish", "Activating listing (state=active)");
+
+        const activateResp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "x-csrf-token": csrfNonce,
+            },
+            body: JSON.stringify({ state: "active" }),
+          },
+        );
+
+        if (!activateResp.ok) {
+          const errText = await activateResp.text().catch(() => "");
+          await remoteLog("warn", "etsy.api-publish", `Activate failed: ${activateResp.status}`, {
+            error: errText.substring(0, 200),
+          });
+          // Listing exists as draft — still a partial success
+          clearInterval(keepAlive);
+          return {
+            success: true,
+            publishMode: "draft",
+            message: `Listing saved as draft on Etsy (activation failed: ${activateResp.status}). Check your Etsy dashboard.`,
+            product: {
+              id: listingId,
+              url: `${ETSY_EDIT_LISTING_URL}/edit/${listingId}`,
+            },
+          };
+        }
+      }
+
+      clearInterval(keepAlive);
+
+      const modeLabel = mode === "publish" ? "published" : "saved as draft";
+      const listingUrl = mode === "publish"
+        ? this.getProductUrl(listingId)
+        : `${ETSY_EDIT_LISTING_URL}/edit/${listingId}`;
+
+      await remoteLog("info", "etsy.api-publish", `Completed: ${modeLabel}`, { listingId });
+
+      return {
+        success: true,
+        publishMode: mode,
+        message: `Listing ${modeLabel} on Etsy via API.`,
+        product: { id: listingId, url: listingUrl },
+      };
+    } catch (error) {
+      clearInterval(keepAlive);
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("[Etsy API] Publish error:", error);
+      await remoteLog("error", "etsy.api-publish", `API publish failed: ${errMsg}`, {
+        stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+      });
+      throw error; // Re-throw so the caller (publishProduct) can catch and fall back
+    }
+  }
+
+  /**
+   * Deactivate a listing via Etsy's internal v3 AJAX API.
+   * PATCHes the listing with state="inactive". No tab needed.
+   */
+  public async delistProductViaApi(
+    marketplaceId: string,
+  ): Promise<ListingActionResult> {
+    try {
+      const isLoggedIn = await this.checkLogin();
+      if (!isLoggedIn) {
+        return {
+          success: false,
+          message: "Not logged into Etsy. Please log in first.",
+          needsLogin: true,
+        };
+      }
+
+      await remoteLog("info", "etsy.api-delist", `Starting API delist for listing ${marketplaceId}`);
+
+      const shopId = await this.getShopId();
+      const csrfNonce = await this.getCsrfNonce();
+
+      const resp = await fetch(
+        `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${marketplaceId}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfNonce,
+          },
+          body: JSON.stringify({ state: "inactive" }),
+        },
+      );
+
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        throw new Error(`Etsy delist API returned ${resp.status}: ${errText.substring(0, 200)}`);
+      }
+
+      await remoteLog("info", "etsy.api-delist", `Listing ${marketplaceId} deactivated via API`);
+      return { success: true, message: "Listing deactivated on Etsy via API." };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
+      await remoteLog("error", "etsy.api-delist", `API delist failed: ${errMsg}`);
+      throw error; // Re-throw so caller can fall back
+    }
+  }
+
+  // ─── Publish (unified entry points with API-first, form-fill fallback) ───
+
+  /**
+   * Publish a product to Etsy. Tries the internal API first (faster, no tab),
+   * falls back to form-fill automation if the API fails.
    */
   public async publishProduct(
+    product: Product,
+    options?: { publishMode?: "draft" | "publish" },
+  ): Promise<ListingActionResult> {
+    // Try API method first
+    try {
+      const result = await this.publishProductViaApi(product, options);
+      return result;
+    } catch (apiError) {
+      const apiMsg = apiError instanceof Error ? apiError.message : String(apiError);
+      console.warn(`[Etsy] API publish failed, falling back to form-fill: ${apiMsg}`);
+      await remoteLog("warn", "etsy.publish", `API failed, falling back to form-fill: ${apiMsg}`);
+    }
+
+    // Fallback to form-fill
+    return this.publishProductViaForm(product, options);
+  }
+
+  /**
+   * Deactivate a listing on Etsy. Tries the API first, falls back to
+   * browser automation (seller tools bar click).
+   */
+  public async delistProduct(
+    marketplaceId: string,
+  ): Promise<ListingActionResult> {
+    // Try API method first
+    try {
+      const result = await this.delistProductViaApi(marketplaceId);
+      return result;
+    } catch (apiError) {
+      const apiMsg = apiError instanceof Error ? apiError.message : String(apiError);
+      console.warn(`[Etsy] API delist failed, falling back to browser automation: ${apiMsg}`);
+      await remoteLog("warn", "etsy.delist", `API failed, falling back to browser: ${apiMsg}`);
+    }
+
+    // Fallback to browser automation
+    return this.delistProductViaForm(marketplaceId);
+  }
+
+  // ─── Publish via form-fill (fallback) ─────────────────────────────
+
+  /**
+   * Publish a product to Etsy via browser automation (form-fill).
+   * Opens the listing editor, fills all fields, uploads images,
+   * selects category, and clicks Publish.
+   * This is the legacy method — used as fallback when API publish fails.
+   */
+  public async publishProductViaForm(
     product: Product,
     options?: { publishMode?: "draft" | "publish" },
   ): Promise<ListingActionResult> {
@@ -1187,13 +1638,13 @@ export class EtsyClient {
     }
   }
 
-  // ─── Delist ────────────────────────────────────────────────────────
+  // ─── Delist via browser automation (fallback) ──────────────────────
 
   /**
-   * Deactivate a listing via Etsy's internal v3 AJAX API.
-   * This sets the listing state to "inactive" (deactivated), not deleted.
+   * Deactivate a listing via browser automation (seller tools bar).
+   * This is the legacy method — used as fallback when API delist fails.
    */
-  public async delistProduct(
+  public async delistProductViaForm(
     marketplaceId: string,
   ): Promise<ListingActionResult> {
     // MV3 keepalive
