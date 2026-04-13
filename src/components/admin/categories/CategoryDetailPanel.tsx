@@ -36,11 +36,11 @@ export default function CategoryDetailPanel({
   onDelete,
   onClose,
 }: CategoryDetailPanelProps) {
-  const [label, setLabel] = useState('')
-  const [value, setValue] = useState('')
-  const [topLevel, setTopLevel] = useState('other')
-  const [parentGroup, setParentGroup] = useState('')
-  const [platforms, setPlatforms] = useState<Record<string, { id: string; name: string; path?: string }>>({})
+  const [label, setLabel] = useState(category?.label ?? '')
+  const [value, setValue] = useState(category?.value ?? '')
+  const [topLevel, setTopLevel] = useState(category?.top_level ?? 'other')
+  const [parentGroup, setParentGroup] = useState(category?.parent_group ?? '')
+  const [platforms, setPlatforms] = useState<Record<string, { id: string; name: string; path?: string }>>(category?.platforms ?? {})
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)

@@ -28,8 +28,13 @@ export default function FieldRequirementsEditor({ categoryValue }: FieldRequirem
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
+    if (!categoryValue) {
+      setIsLoading(false)
+      return
+    }
     const fetchFields = async () => {
       setIsLoading(true)
+      setError(null)
       try {
         const res = await fetch(`/api/admin/categories/${encodeURIComponent(categoryValue)}/fields`)
         if (!res.ok) throw new Error('Failed to fetch')
