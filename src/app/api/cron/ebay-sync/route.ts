@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 import { enrichEbaySoldItem } from '@/lib/ebay-sale-enrichment'
@@ -21,14 +20,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createSupabaseServerClient()
+    // Cron has no user session — use service role for all DB queries
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     // Get all users with eBay tokens
-    const { data: ebayTokens, error: tokensError } = await supabase
+    const { data: ebayTokens, error: tokensError } = await supabaseAdmin
       .from('ebay_tokens')
       .select('user_id')
       .eq('marketplace_id', 'EBAY_GB')
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
       const userId = tokenRecord.user_id
 
       try {
-        const ebayClient = await getEbayClientForUser(userId, supabase, 'EBAY_GB')
+        const ebayClient = await getEbayClientForUser(userId, supabaseAdmin, 'EBAY_GB')
 
         const ordersResponse = await ebayClient.getOrders({
           limit: 100,
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
         let enrichedForUser = 0
 
         // Fetch user's find IDs once per user (not per line item)
-        const { data: userFinds } = await supabase
+        const { data: userFinds } = await supabaseAdmin
           .from('finds')
           .select('id')
           .eq('user_id', userId)
@@ -80,7 +79,7 @@ export async function GET(request: NextRequest) {
             const legacyItemId = lineItem.legacyItemId
             if (!legacyItemId) continue
 
-            const { data: marketplaceData } = await supabase
+            const { data: marketplaceData } = await supabaseAdmin
               .from('product_marketplace_data')
               .select('find_id')
               .eq('marketplace', 'ebay')
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest) {
             if (!marketplaceData) continue
 
             const result = await enrichEbaySoldItem(
-              supabase, supabaseAdmin, userId,
+              supabaseAdmin, supabaseAdmin, userId,
               marketplaceData.find_id, order, lineItem
             )
 
@@ -104,7 +103,7 @@ export async function GET(request: NextRequest) {
 
         // Log sync completion for this user
         if (orders.length > 0 || itemsSoldForUser > 0) {
-          await supabase
+          await supabaseAdmin
             .from('ebay_sync_log')
             .insert({
               user_id: userId,
