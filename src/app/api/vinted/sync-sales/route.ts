@@ -263,19 +263,32 @@ export const POST = withAuth(async (req, user) => {
 
             if (!find) { skipped++; continue }
 
-            // If already sold AND already enriched with this transaction, skip find update
-            // but still link customer if missing
+            // If already sold AND already enriched with this transaction,
+            // still refresh sold_at + shipmentStatus (may have changed since last sync)
             const existingFields = existingPmd.fields as Record<string, unknown> | null
             const existingSale = existingFields?.sale as Record<string, unknown> | undefined
             if (find.status === 'sold' && existingSale?.transactionId === transactionId) {
-              // Still link customer to PMD if not yet linked
+              // Link customer if missing
               if (customerId) {
                 await supabase.from('product_marketplace_data').update({
                   customer_id: customerId,
                 }).eq('find_id', find.id).eq('marketplace', 'vinted')
                 await recomputeCustomerAggregates(supabase, customerId)
               }
-              skipped++; continue
+              // Refresh sold_at if we have a real orderDate and current sold_at looks like import time
+              if (sale.orderDate) {
+                await supabase.from('finds').update({
+                  sold_at: sale.orderDate,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', find.id).eq('user_id', user.id)
+              }
+              // Refresh shipmentStatus + sale metadata
+              const refreshedSale = { ...existingSale, ...saleData }
+              await supabase.from('product_marketplace_data').update({
+                fields: { ...(existingFields || {}), sale: refreshedSale },
+                updated_at: new Date().toISOString(),
+              }).eq('find_id', find.id).eq('marketplace', 'vinted')
+              synced++; continue
             }
 
             findId = find.id
