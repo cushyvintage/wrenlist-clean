@@ -1059,9 +1059,10 @@ export class EtsyClient {
         patchBody.description = product.description.slice(0, 10000);
       }
 
-      // Tags
+      // Tags — Etsy only allows alphanumeric, spaces, and hyphens
+      const sanitizeTag = (t: string) => t.replace(/[^a-zA-Z0-9\s\-]/g, "").trim();
       const tagList = product.tags
-        ? product.tags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 13).map((t) => t.slice(0, 20))
+        ? product.tags.split(",").map((t) => sanitizeTag(t)).filter(Boolean).slice(0, 13).map((t) => t.slice(0, 20))
         : [];
       if (tagList.length > 0) {
         patchBody.tags = tagList;
