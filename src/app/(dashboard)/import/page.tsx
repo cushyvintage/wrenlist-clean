@@ -313,7 +313,15 @@ export default function ImportPage() {
         if (!response.success) {
           if (allItems.length === 0) {
             const msg = response.message || 'Failed to fetch Shopify listings'
+            const extensionDown = msg.includes('Could not establish connection') || msg.includes('No response')
             const needsLogin = msg.includes('Tokens not found') || msg.includes('Failed to fetch tokens') || msg.includes('valid Shopify')
+
+            if (extensionDown) {
+              setFetchError('Wrenlist extension is not responding. Open the extension popup to wake it up, then try again.')
+              setIsFetching(false)
+              return
+            }
+
             if (needsLogin && !shopifyRetriedRef.current) {
               // Open Shopify admin in background tab so session cookies get set
               shopifyRetriedRef.current = true
