@@ -106,8 +106,9 @@ export function VintedConnect({
         )
       })
 
-      // Extension returns { success, results: <api json> }
-      const userData = (userResp as Record<string, unknown>).results as Record<string, unknown> | undefined
+      // Extension returns { success, results: { user: {...}, code: ... } }
+      const resultsRaw = (userResp as Record<string, unknown>).results as Record<string, unknown> | undefined
+      const userData = (resultsRaw?.user as Record<string, unknown>) ?? resultsRaw
       const userId = userData?.id as number | undefined
 
       // 2. Fetch wallet balance (needs user ID)
