@@ -2,12 +2,18 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
 
+/** Strip eBay anonymised delivery point references like "ebayvqtqkf9" */
+function stripEbayPlaceholder(value: string | null): string | null {
+  if (!value) return null
+  return /^ebay[a-z0-9]+$/i.test(value) ? null : value
+}
+
 /** Normalise address fields from different marketplace shapes into a common format */
 function normaliseAddress(addr: Record<string, unknown>) {
   return {
     name: (addr.name as string) ?? (addr.fullName as string) ?? null,
-    firstLine: (addr.firstLine as string) ?? (addr.line1 as string) ?? (addr.address_line1 as string) ?? null,
-    secondLine: (addr.secondLine as string) ?? (addr.line2 as string) ?? (addr.address_line2 as string) ?? null,
+    firstLine: stripEbayPlaceholder((addr.firstLine as string) ?? (addr.line1 as string) ?? (addr.address_line1 as string) ?? null),
+    secondLine: stripEbayPlaceholder((addr.secondLine as string) ?? (addr.line2 as string) ?? (addr.address_line2 as string) ?? null),
     city: (addr.city as string) ?? null,
     state: (addr.state as string) ?? (addr.stateOrProvince as string) ?? null,
     country: (addr.country as string) ?? (addr.countryCode as string) ?? null,
@@ -85,6 +91,8 @@ export const GET = withAuth(async (req, user, params) => {
       isGift: (sale?.isGift as boolean) ?? false,
       giftMessage: (sale?.giftMessage as string) ?? null,
       receiptItems: (sale?.receiptItems as unknown[]) ?? null,
+      feeSource: (sale?.feeSource as string) ?? null,
+      transactionId: (sale?.transactionId as string) ?? null,
       shippingAddress: sale?.shippingAddress ? normaliseAddress(sale.shippingAddress as Record<string, unknown>) : null,
       orderDate: (sale?.orderDate as string) ?? null,
     },

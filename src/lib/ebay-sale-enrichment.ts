@@ -61,6 +61,7 @@ interface EnrichResult {
   enriched: boolean
   findId: string
   isNewSale: boolean
+  delistedFrom: string[]
 }
 
 /**
@@ -88,7 +89,7 @@ export async function enrichEbaySoldItem(
     .eq('user_id', userId)
     .single()
 
-  if (!find) return { enriched: false, findId, isNewSale: false }
+  if (!find) return { enriched: false, findId, isNewSale: false, delistedFrom: [] }
 
   // Check if already enriched with this order
   const { data: pmd } = await supabase
@@ -101,7 +102,12 @@ export async function enrichEbaySoldItem(
   const existingFields = pmd?.fields as Record<string, unknown> | null
   const existingSale = existingFields?.sale as Record<string, unknown> | undefined
   if (existingSale?.transactionId === order.orderId) {
-    return { enriched: false, findId, isNewSale: false }
+    // Allow re-enrichment if fees are still estimated or zero (eBay settles 1-2 days later)
+    const existingFeeSource = existingSale?.feeSource as string | undefined
+    const existingFee = existingSale?.serviceFee as number | undefined
+    if (existingFeeSource !== 'estimated' && (existingFee ?? 0) > 0) {
+      return { enriched: false, findId, isNewSale: false, delistedFrom: [] }
+    }
   }
 
   const isNewSale = find.status !== 'sold'
@@ -195,6 +201,7 @@ export async function enrichEbaySoldItem(
   }).eq('find_id', findId).eq('marketplace', 'ebay')
 
   // Auto-delist other marketplaces (only for new sales)
+  const delistedFrom: string[] = []
   if (isNewSale) {
     const { data: otherListings } = await supabase
       .from('product_marketplace_data')
@@ -210,6 +217,7 @@ export async function enrichEbaySoldItem(
       }).eq('find_id', findId).neq('marketplace', 'ebay')
 
       for (const listing of otherListings) {
+        delistedFrom.push(listing.marketplace)
         await createPublishJob(supabaseAdmin, {
           user_id: userId,
           find_id: findId,
@@ -221,5 +229,5 @@ export async function enrichEbaySoldItem(
     }
   }
 
-  return { enriched: true, findId, isNewSale }
+  return { enriched: true, findId, isNewSale, delistedFrom }
 }
