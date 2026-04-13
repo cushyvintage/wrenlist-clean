@@ -2641,8 +2641,8 @@ export class VintedClient {
       shipmentStatusUpdatedAt: tx.shipment?.status_updated_at, // Delivery timestamp
       labelUrl: tx.shipment?.label_url || tx.shipping_label_url,  // Shipping label PDF URL
       
-      orderDate: tx.created_at,
-      completedDate: tx.completed_at,
+      orderDate: tx.created_at || tx.debit_processed_at || tx.date,
+      completedDate: tx.completed_at || tx.status_updated_at,
       
       rawData: tx,
     };
