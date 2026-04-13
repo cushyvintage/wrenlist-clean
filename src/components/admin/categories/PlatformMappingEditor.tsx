@@ -77,20 +77,33 @@ export default function PlatformMappingEditor({
     if (!categoryLabel || suggestFetchedRef.current) return
     suggestFetchedRef.current = true
 
-    // Only fetch suggestions for unmapped platforms
     const unmapped = PLATFORM_LIST.filter((p) => !platforms[p]?.id)
     if (unmapped.length === 0) return
 
-    for (const platform of unmapped) {
-      fetch(`/api/admin/categories/taxonomy-search?platform=${platform}&q=${encodeURIComponent(categoryLabel)}`)
-        .then((r) => r.json())
-        .then((data) => {
+    // Build search queries: try full label first, then progressively shorter
+    // "Antique books & incunabulas" -> ["Antique books & incunabulas", "Antique books", "books"]
+    const words = categoryLabel.replace(/[&]/g, '').split(/\s+/).filter(Boolean)
+    const queries = [categoryLabel]
+    if (words.length > 2) queries.push(words.slice(0, 2).join(' '))
+    if (words.length > 1) queries.push(words[words.length - 1]!)
+
+    async function fetchSuggestion(platform: string) {
+      for (const q of queries) {
+        if (q.length < 2) continue
+        try {
+          const res = await fetch(`/api/admin/categories/taxonomy-search?platform=${platform}&q=${encodeURIComponent(q)}`)
+          const data = await res.json()
           const best = (data.results ?? [])[0]
           if (best) {
             setSuggestions((prev) => ({ ...prev, [platform]: best }))
+            return
           }
-        })
-        .catch(() => {})
+        } catch { /* continue to next query */ }
+      }
+    }
+
+    for (const platform of unmapped) {
+      fetchSuggestion(platform)
     }
   }, [categoryLabel, platforms])
 
