@@ -385,6 +385,7 @@ export default function ImportPage() {
           title: string
           price: string | number | null
           coverImage: string | null
+          created?: string | null
           marketplaceUrl: string | null
           isSold?: boolean
           isHidden?: boolean
@@ -444,6 +445,7 @@ export default function ImportPage() {
           // Expired items unchecked by default — user must opt in
           checked: !importedSet.has(id) && status === 'active',
           listingStatus: status,
+          platformListedAt: p.created || null,
         })
       }
 

@@ -97,6 +97,30 @@ export interface EtsyOrder {
   listingIds: string[];
 }
 
+export interface EtsyShopStats {
+  shopName: string | null;
+  shopId: string | null;
+  starSeller: {
+    isStarSeller: boolean;
+    responseRate: number | null;
+    shippingOnTime: number | null;
+    reviewScore: number | null;
+    caseRate: number | null;
+  } | null;
+  stats: {
+    visits: number | null;
+    orders: number | null;
+    revenue: number | null;
+    conversionRate: number | null;
+    dateRange: string | null;
+    startDate: string | null;
+    endDate: string | null;
+  } | null;
+  scrapedAt: string;
+  rawStats: unknown;
+  rawStarSeller: unknown;
+}
+
 /** Convert Etsy money (pence/cents) to pounds/dollars */
 function moneyToPounds(m: RawEtsyMoney | undefined): number | null {
   if (!m || m.value == null) return null;
@@ -111,6 +135,10 @@ interface EtsyListingSummary {
   listing_images: Array<{ url: string }>;
   tags: string[];
   quantity: number;
+  /** Unix timestamp (seconds) when the listing was first created */
+  created_tsz?: number;
+  /** Unix timestamp (seconds) for the original creation (survives relists) */
+  original_creation_tsz?: number;
 }
 
 interface EtsyListingDetail {
@@ -249,7 +277,9 @@ export class EtsyClient {
         title: l.title ?? null,
         price: l.price ? parseFloat(l.price) : null,
         coverImage: l.listing_images?.[0]?.url ?? null,
-        created: null,
+        created: (l.original_creation_tsz || l.created_tsz)
+          ? new Date((l.original_creation_tsz || l.created_tsz)! * 1000).toISOString()
+          : null,
         marketplaceUrl: l.url ?? this.getProductUrl(l.listing_id),
       }),
     );
@@ -284,7 +314,9 @@ export class EtsyClient {
             title: l.title ?? null,
             price: l.price ? parseFloat(l.price) : null,
             coverImage: l.listing_images?.[0]?.url ?? null,
-            created: null,
+            created: (l.original_creation_tsz || l.created_tsz)
+              ? new Date((l.original_creation_tsz || l.created_tsz)! * 1000).toISOString()
+              : null,
             marketplaceUrl: l.url ?? this.getProductUrl(l.listing_id),
             isSold: state === "sold_out",
             isHidden: state === "draft",
@@ -491,6 +523,97 @@ export class EtsyClient {
     });
 
     return { orders, totalPages, page };
+  }
+
+  /**
+   * Scrape shop stats + star seller data from Etsy SSR pages.
+   * Returns parsed metrics for display + raw JSON for ML training.
+   */
+  public async getShopStats(): Promise<EtsyShopStats> {
+    const result: EtsyShopStats = {
+      shopName: null, shopId: null,
+      starSeller: null, stats: null,
+      scrapedAt: new Date().toISOString(),
+      rawStats: null, rawStarSeller: null,
+    };
+
+    // Helper: extract embedded JSON from Etsy SSR page
+    const extractSSR = async (url: string): Promise<Record<string, unknown> | null> => {
+      chrome.storage.local.set({ _keepAlive: Date.now() });
+      const resp = await fetch(url, { credentials: "include", headers: { Accept: "text/html" } });
+      if (!resp.ok) return null;
+      const html = await resp.text();
+      const scripts = html.match(/<script[^>]*>[\s\S]*?<\/script>/gi) || [];
+      const dataScript = scripts.find((s) => s.includes("initial_data"));
+      if (!dataScript) return null;
+      const inner = dataScript.replace(/<\/?script[^>]*>/gi, "").trim();
+      const jsonMatch = inner.match(/=\s*(\{[\s\S]+\})\s*;?\s*$/);
+      if (!jsonMatch?.[1]) return null;
+      try {
+        const parsed = JSON.parse(jsonMatch[1]) as Record<string, unknown>;
+        const data = parsed.data as Record<string, unknown> | undefined;
+        return (data?.initial_data as Record<string, unknown>) || parsed;
+      } catch { return null; }
+    };
+
+    // 1. Shop stats page
+    try {
+      const statsData = await extractSSR(`${this.baseUrl}/your/shops/me/stats`);
+      if (statsData) {
+        result.rawStats = statsData;
+        const ms = statsData.metrics_summary as Record<string, { total?: string }> | undefined;
+        if (ms) {
+          const parseNum = (s?: string): number | null => {
+            if (!s) return null;
+            const n = parseFloat(s.replace(/[^0-9.-]/g, ""));
+            return isNaN(n) ? null : n;
+          };
+          result.stats = {
+            visits: parseNum(ms.visits?.total),
+            orders: parseNum(ms.orders?.total),
+            revenue: parseNum(ms.revenue?.total),
+            conversionRate: parseNum(ms.conversion_rate?.total),
+            dateRange: (statsData.selected_date_range as Record<string, unknown>)?.display_name as string || null,
+            startDate: statsData.start_date as string || null,
+            endDate: statsData.end_date as string || null,
+          };
+        }
+      }
+    } catch { /* ignore stats errors */ }
+
+    // 2. Star seller page
+    try {
+      const starData = await extractSSR(`${this.baseUrl}/your/shops/me/star-seller`);
+      if (starData) {
+        result.rawStarSeller = starData;
+        result.starSeller = {
+          isStarSeller: (starData.isStarSeller as boolean) ?? false,
+          responseRate: null, shippingOnTime: null, reviewScore: null,
+          caseRate: null,
+        };
+
+        const current = starData.currentReviewPeriodData as Record<string, unknown> | undefined;
+        if (current) {
+          // Response rate
+          const convo = current.convoResponseRate as Record<string, unknown> | undefined;
+          result.starSeller.responseRate = (convo?.rawScoreValue as number) ?? null;
+
+          // Shipping on-time
+          const ship = current.shippingPerformance as Record<string, unknown> | undefined;
+          result.starSeller.shippingOnTime = (ship?.rawScoreValue as number) ?? null;
+
+          // Five-star review rating
+          const reviews = current.fiveStarReviewRating as Record<string, unknown> | undefined;
+          result.starSeller.reviewScore = (reviews?.rawScoreValue as number) ?? null;
+
+          // Case rate
+          const cases = current.ssqCaseRate as Record<string, unknown> | undefined;
+          result.starSeller.caseRate = (cases?.caseRate as number) ?? null;
+        }
+      }
+    } catch { /* ignore star seller errors */ }
+
+    return result;
   }
 
   public async getListing(id: string): Promise<Product | null> {

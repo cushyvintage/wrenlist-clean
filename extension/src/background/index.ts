@@ -1728,6 +1728,8 @@ async function dispatchExternalMessage(message: ExternalMessage) {
       const rpStatus = (rp.status as "completed" | "open" | undefined) ?? "completed";
       return createEtsyServices().client.getReceipts(rpPage, rpStatus);
     }
+    case "get_etsy_shop_stats":
+      return createEtsyServices().client.getShopStats();
     default:
       throw new Error(`Unsupported action: ${String(message.action ?? message.type ?? "unknown")}`);
   }
@@ -3195,6 +3197,9 @@ interface BatchListingPayload {
   sku?: string;
   quantity?: number;
 
+  // Vinted creation timestamp (unix seconds) for platform_listed_at
+  created_at_ts?: number;
+
   // Full Vinted metadata for relisting
   vintedMetadata?: VintedImportMetadata;
 
@@ -3415,6 +3420,9 @@ function mapProductToBatch(
     tags: product.tags,
     sku: product.sku,
     quantity: product.quantity ?? 1,
+
+    // Vinted creation timestamp (for platform_listed_at)
+    created_at_ts: product.vintedMetadata?.created_at_ts,
 
     // Full Vinted metadata passthrough
     vintedMetadata: product.vintedMetadata,
