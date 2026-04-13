@@ -32,9 +32,16 @@ interface RawEtsyPackage {
   shipping_method_name?: string; tracking_code?: string; carrier_name?: string;
   shipping_cost?: RawEtsyMoney; package_items?: RawEtsyPackageItem[];
 }
+interface RawEtsyOrderTransaction {
+  transaction_id: number; listing_id: number;
+  cost?: RawEtsyMoney;
+  product?: { title?: string; image_url_75x75?: string; is_sold_out?: boolean };
+  status?: { is_cancelled?: boolean };
+}
 interface RawEtsyOrder {
   order_id: number; order_date: number; buyer_id: number;
-  transaction_ids?: number[]; payment?: RawEtsyPayment;
+  transaction_ids?: number[]; transactions?: RawEtsyOrderTransaction[];
+  payment?: RawEtsyPayment;
   is_canceled?: boolean; order_url?: string;
   shipping_address?: Record<string, unknown>;
 }
@@ -349,18 +356,6 @@ export class EtsyClient {
     const rawOrders = (search.orders || []) as RawEtsyOrder[];
     const rawBuyers = (search.buyers || []) as RawEtsyBuyer[];
     const rawPackages = (search.packages || []) as RawEtsyPackage[];
-    const rawTransactions = (search.transactions || []) as Array<{
-      transaction_id: number; listing_id: number; cost?: RawEtsyMoney;
-    }>;
-
-    // Map transaction_id → listing_id
-    const txnToListing = new Map<number, number>();
-    for (const t of rawTransactions) {
-      if (t.transaction_id && t.listing_id) {
-        txnToListing.set(t.transaction_id, t.listing_id);
-      }
-    }
-
     // Index buyers by buyer_id
     const buyerMap = new Map<number, RawEtsyBuyer>();
     for (const b of rawBuyers) {
@@ -416,9 +411,9 @@ export class EtsyClient {
           country: (o.shipping_address).country_name as string || null,
           zip: (o.shipping_address).zip as string || null,
         } : null,
-        itemCount: o.transaction_ids?.length || 0,
-        listingIds: (o.transaction_ids || [])
-          .map((tid) => txnToListing.get(tid))
+        itemCount: o.transactions?.length || o.transaction_ids?.length || 0,
+        listingIds: (o.transactions || [])
+          .map((t) => t.listing_id)
           .filter((id): id is number => id != null)
           .map(String),
       };
