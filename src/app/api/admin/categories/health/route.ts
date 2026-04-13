@@ -69,15 +69,26 @@ export const GET = withAdminAuth(async (req) => {
   const { data: categories, error: catErr } = await catQuery
   if (catErr) return NextResponse.json({ error: catErr.message }, { status: 500 })
 
-  // Fetch usage counts per category
-  const { data: usageRows } = await supabase
-    .from('finds')
-    .select('category')
-    .not('category', 'is', null)
+  // Fetch usage counts per category (aggregated to avoid fetching all rows)
+  let usageRows: Array<{ category: string; count: number }> | null = null
+  try {
+    const { data } = await supabase.rpc('get_category_usage_counts')
+    usageRows = data as Array<{ category: string; count: number }> | null
+  } catch { /* RPC may not exist yet — fallback below */ }
   const usageMap: Record<string, number> = {}
-  for (const row of usageRows ?? []) {
-    if (row.category) {
-      usageMap[row.category] = (usageMap[row.category] ?? 0) + 1
+  // Fallback: if RPC doesn't exist yet, fetch distinct categories with counts
+  if (!usageRows) {
+    const { data: fallbackRows } = await supabase
+      .from('finds')
+      .select('category')
+      .not('category', 'is', null)
+      .limit(5000)
+    for (const row of fallbackRows ?? []) {
+      if (row.category) usageMap[row.category] = (usageMap[row.category] ?? 0) + 1
+    }
+  } else {
+    for (const row of usageRows) {
+      usageMap[row.category] = row.count
     }
   }
 

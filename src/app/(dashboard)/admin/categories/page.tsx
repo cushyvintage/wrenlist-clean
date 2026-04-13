@@ -11,6 +11,7 @@ import CategoryTable from '@/components/admin/categories/CategoryTable'
 import CategoryDetailPanel from '@/components/admin/categories/CategoryDetailPanel'
 import FreshnessBanner from '@/components/admin/categories/FreshnessBanner'
 import HealthCheckPanel from '@/components/admin/categories/HealthCheckPanel'
+import { useCategoryTree } from '@/hooks/useCategoryTree'
 
 interface StatsData {
   total: number
@@ -22,6 +23,7 @@ interface StatsData {
 export default function AdminCategoriesPage() {
   const router = useRouter()
   const { user } = useAuthContext()
+  const { invalidate: invalidateCategoryCache } = useCategoryTree()
 
   // Data
   const [categories, setCategories] = useState<CategoryRow[]>([])
@@ -111,6 +113,7 @@ export default function AdminCategoriesPage() {
     }
     setEditingCategory(null)
     setIsCreating(false)
+    invalidateCategoryCache()
     await Promise.all([fetchCategories(), fetchStats()])
   }
 
@@ -125,6 +128,7 @@ export default function AdminCategoriesPage() {
       throw new Error(err.error || 'Failed to delete')
     }
     setEditingCategory(null)
+    invalidateCategoryCache()
     await Promise.all([fetchCategories(), fetchStats()])
   }
 

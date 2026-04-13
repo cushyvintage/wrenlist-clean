@@ -114,16 +114,25 @@ export const POST = withAdminAuth(async (req) => {
  */
 export const PATCH = withAdminAuth(async (req) => {
   const body = await req.json()
-  const { value, ...updates } = body
+  const { value, label, top_level, parent_group, platforms, sort_order, legacy_values } = body
 
   if (!value) {
     return NextResponse.json({ error: 'value is required to identify the category' }, { status: 400 })
   }
 
+  // Allowlist updatable fields to prevent mass assignment
+  const safeUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (label !== undefined) safeUpdates.label = label
+  if (top_level !== undefined) safeUpdates.top_level = top_level
+  if (parent_group !== undefined) safeUpdates.parent_group = parent_group
+  if (platforms !== undefined) safeUpdates.platforms = platforms
+  if (sort_order !== undefined) safeUpdates.sort_order = sort_order
+  if (legacy_values !== undefined) safeUpdates.legacy_values = legacy_values
+
   const supabase = getServiceClient()
   const { data, error } = await supabase
     .from('categories')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(safeUpdates)
     .eq('value', value)
     .select()
     .single()

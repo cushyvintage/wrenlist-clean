@@ -69,25 +69,11 @@ export async function GET(req: NextRequest) {
     const { data } = await supabase
       .from('categories')
       .select('*')
-      .eq(`platforms->${platform}->>id`, platformId)
+      .contains('platforms', { [platform]: { id: platformId } })
       .limit(1)
       .single()
 
     if (!data) {
-      // Fallback: fetch all and filter in JS (jsonb path syntax varies)
-      const { data: all } = await supabase
-        .from('categories')
-        .select('*')
-
-      const match = (all ?? []).find((c) => {
-        const p = (c.platforms as Record<string, { id?: string }>)?.[platform]
-        return p?.id === platformId
-      })
-
-      if (match) {
-        return NextResponse.json(match, { headers: CACHE_HEADERS })
-      }
-
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
