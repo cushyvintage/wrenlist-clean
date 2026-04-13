@@ -495,6 +495,34 @@ export default function SoldHistoryPage() {
     }
   }, [isBackfilling, loadSoldItems])
 
+  /* ── eBay sync handler ─────────────────────────────────── */
+
+  const [isEbaySyncing, setIsEbaySyncing] = useState(false)
+
+  const handleEbaySync = useCallback(async () => {
+    if (isEbaySyncing) return
+    setIsEbaySyncing(true)
+    setSyncMessage(null)
+
+    try {
+      const result = await fetchApi<{
+        ordersChecked: number
+        itemsSold: number
+        enriched: number
+        message: string
+      }>('/api/ebay/sync-orders', { method: 'POST' })
+
+      setSyncMessage(result.message || `Checked ${result.ordersChecked} orders, ${result.itemsSold} new sales`)
+      if (result.itemsSold > 0 || result.enriched > 0) {
+        loadSoldItems()
+      }
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'eBay sync failed')
+    } finally {
+      setIsEbaySyncing(false)
+    }
+  }, [isEbaySyncing, loadSoldItems])
+
   /* ── Date formatter ──────────────────────────────────────── */
 
   const formatDate = (dateString: string | null): string => {
@@ -520,6 +548,13 @@ export default function SoldHistoryPage() {
           <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleEbaySync}
+            disabled={isEbaySyncing}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+          >
+            {isEbaySyncing ? 'Syncing...' : 'Sync eBay Sales'}
+          </button>
           <button
             onClick={handleSyncSales}
             disabled={isSyncing}
