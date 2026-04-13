@@ -159,6 +159,7 @@ export default function AdminCategoriesPage() {
             throw new Error(err.error || `Failed to delete ${value}`)
           }
         }
+        invalidateCategoryCache()
         await Promise.all([fetchCategories(), fetchStats()])
       } catch (err) {
         alert(`Delete failed: ${(err as Error).message}`)

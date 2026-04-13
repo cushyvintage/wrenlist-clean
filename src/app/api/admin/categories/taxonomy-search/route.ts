@@ -18,8 +18,9 @@ function loadVinted(): TaxonomyResult[] {
   const data = JSON.parse(
     readFileSync(resolve(process.cwd(), 'src/data/marketplace/vinted-categories.json'), 'utf-8')
   )
+  interface VNode { id: number; name?: string; full_path?: string; is_leaf?: boolean; depth?: number; children?: VNode[] }
   const results: TaxonomyResult[] = []
-  function walk(nodes: any[]) {
+  function walk(nodes: VNode[]) {
     for (const node of nodes) {
       results.push({
         id: String(node.id),
@@ -31,7 +32,7 @@ function loadVinted(): TaxonomyResult[] {
       if (node.children?.length) walk(node.children)
     }
   }
-  walk(data)
+  walk(data as VNode[])
   return results
 }
 

@@ -12,14 +12,16 @@ function getServiceClient() {
 }
 
 // Load Vinted leaf set (cached in memory)
+interface VintedCatNode { id: number; is_leaf?: boolean; children?: VintedCatNode[] }
+
 let vintedLeafIds: Set<string> | null = null
 function getVintedLeafIds(): Set<string> {
   if (vintedLeafIds) return vintedLeafIds
-  const data = JSON.parse(
+  const data: VintedCatNode[] = JSON.parse(
     readFileSync(resolve(process.cwd(), 'src/data/marketplace/vinted-categories.json'), 'utf-8')
   )
   const ids = new Set<string>()
-  function walk(nodes: any[]) {
+  function walk(nodes: VintedCatNode[]) {
     for (const n of nodes) {
       if (n.is_leaf || !n.children?.length) ids.add(String(n.id))
       if (n.children?.length) walk(n.children)
@@ -98,16 +100,19 @@ export const GET = withAdminAuth(async (req) => {
     .select('category_value, platform, fields')
 
   // Build field req lookup: category_value -> { platform -> fields[] }
-  const fieldMap: Record<string, Record<string, any[]>> = {}
+  const fieldMap: Record<string, Record<string, Array<{ required?: boolean; name?: string }>>> = {}
   for (const row of fieldReqs ?? []) {
     if (!fieldMap[row.category_value]) fieldMap[row.category_value] = {}
     fieldMap[row.category_value]![row.platform] = row.fields ?? []
   }
 
-  // Fetch publish outcomes for success-rate checking
+  // Fetch publish outcomes for success-rate checking (bounded to last 90 days)
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const { data: outcomeRows } = await supabase
     .from('category_publish_outcomes')
-    .select('category_value, platform, outcome, error_message, created_at')
+    .select('category_value, platform, outcome, error_message')
+    .gte('created_at', ninetyDaysAgo)
+    .limit(10000)
 
   // Aggregate outcomes: category_value -> platform -> { success, failure, total, last_error }
   const outcomeMap: Record<string, Record<string, { success: number; failure: number; total: number; last_error: string | null }>> = {}

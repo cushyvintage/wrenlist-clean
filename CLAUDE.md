@@ -200,6 +200,15 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `roadmap_items` | Public roadmap feature requests (anon read; writes via service-role API) | ON |
 | `roadmap_votes` | One row per (user, item) upvote; users manage own rows only | ON |
 
+**Category management (DB source of truth)**
+| Table | Purpose | RLS |
+|---|---|---|
+| `categories` | Canonical category tree (570 rows, replaces TypeScript constants) | ON |
+| `category_field_requirements` | Field definitions per category × platform (1140 rows) | ON |
+| `category_taxonomy_versions` | Taxonomy freshness tracking per platform | ON |
+| `category_publish_outcomes` | Publish success/failure tracking per category × platform | ON |
+| `category_suggestion_log` | AI suggestion accept/reject/change decisions | ON |
+
 ### Database Rules
 - **`product_marketplace_data`** is the ONLY table for marketplace listing state — do not create alternatives
 - **`product_marketplace_data.platform_listed_at`** (timestamptz) — when the item was first listed on the platform (from platform data, not our `created_at`)
