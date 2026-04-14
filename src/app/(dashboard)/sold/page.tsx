@@ -94,9 +94,10 @@ function normalizeStatus(raw: string | null | undefined): string | null {
   // Vinted sends verbose strings like "Package delivered.", "Not sent. Buyer refunded."
   // Order matters — check compound statuses first before single-word matches
   if (lower.includes('not sent')) return 'not sent'
-  if (lower.includes('delivered')) return 'delivered'
+  if (lower.includes('sale completed') || lower.includes('delivered')) return 'delivered'
+  if (lower.includes('suspend')) return 'cancelled'
   if (lower.includes('cancel')) return 'cancelled'
-  if (lower.includes('refund')) return 'refunded'
+  if (lower.includes('refund') && !lower.includes('sent')) return 'refunded'
   if (lower.includes('return')) return 'returning'
   if (lower.includes('transit') || lower.includes('on its way')) return 'in transit'
   if (lower.includes('post office') || lower.includes('collection')) return 'awaiting collection'
