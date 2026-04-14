@@ -598,26 +598,35 @@ export default function SoldHistoryPage() {
   /* ── eBay sync handler ─────────────────────────────────── */
 
   const [isEbaySyncing, setIsEbaySyncing] = useState(false)
+  const [ebayDisconnected, setEbayDisconnected] = useState(false)
 
   const handleEbaySync = useCallback(async () => {
     if (isEbaySyncing) return
     setIsEbaySyncing(true)
     setSyncMessage(null)
+    setEbayDisconnected(false)
 
     try {
       const result = await fetchApi<{
         ordersChecked: number
         itemsSold: number
         enriched: number
+        autoCreated: number
         message: string
-      }>('/api/ebay/sync-orders', { method: 'POST' })
+      }>('/api/ebay/sync-orders?days=90', { method: 'POST' })
 
       setSyncMessage(result.message || `Checked ${result.ordersChecked} orders, ${result.itemsSold} new sales`)
-      if (result.itemsSold > 0 || result.enriched > 0) {
+      if (result.itemsSold > 0 || result.enriched > 0 || result.autoCreated > 0) {
         loadSoldItems()
       }
     } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : 'eBay sync failed')
+      const msg = err instanceof Error ? err.message : 'eBay sync failed'
+      if (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('reconnect') || msg.toLowerCase().includes('no ebay connection')) {
+        setEbayDisconnected(true)
+        setSyncMessage(null)
+      } else {
+        setSyncMessage(msg)
+      }
     } finally {
       setIsEbaySyncing(false)
     }
@@ -674,6 +683,21 @@ export default function SoldHistoryPage() {
           )}
         </div>
       </div>
+
+      {/* eBay disconnected banner */}
+      {ebayDisconnected && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-md px-4 py-3">
+          <span className="text-amber-700 text-sm">
+            Your eBay connection has expired — sales won&apos;t sync until you reconnect.
+          </span>
+          <a
+            href="/platform-connect"
+            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition"
+          >
+            Reconnect eBay
+          </a>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (
