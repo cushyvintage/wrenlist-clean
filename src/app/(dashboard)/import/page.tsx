@@ -1580,7 +1580,7 @@ export default function ImportPage() {
   }
 
   async function handleShopifyImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    const selected = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus !== 'sold')
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Shopify listings...')
@@ -1634,7 +1634,7 @@ export default function ImportPage() {
   }
 
   async function handleShopifySoldImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    const selected = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Shopify sold items...')

@@ -5,6 +5,63 @@ import { createPublishJob } from '@/lib/publish-jobs'
 import { withAuth } from '@/lib/with-auth'
 
 /**
+ * Mirror a photo from an external CDN to Supabase Storage.
+ */
+async function mirrorPhotoToStorage(
+  photoUrl: string,
+  index: number,
+  userId: string,
+  marketplace: string,
+  listingId: string
+): Promise<string | null> {
+  try {
+    if (!photoUrl || !photoUrl.startsWith('http')) return null
+
+    const response = await fetch(photoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+      },
+    })
+
+    if (!response.ok) return null
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    let extension = 'jpg'
+    if (contentType.includes('png')) extension = 'png'
+    else if (contentType.includes('webp')) extension = 'webp'
+
+    const filename = `${userId}/${marketplace}-${listingId}-${index}.${extension}`
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('find-photos')
+      .upload(filename, buffer, {
+        contentType,
+        cacheControl: '31536000',
+        upsert: true,
+      })
+
+    if (uploadError) return null
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('find-photos')
+      .getPublicUrl(filename)
+
+    return urlData.publicUrl
+  } catch {
+    return null
+  }
+}
+
+/**
  * Shopify order shape from the extension's ShopifyClient.getOrders()
  */
 interface ShopifyOrderPayload {
@@ -212,11 +269,15 @@ export const POST = withAuth(async (req, user) => {
 
     for (const order of orders) {
       try {
-        // Only process paid orders
+        // Skip unpayable orders
         if (order.financialStatus === 'PENDING' || order.financialStatus === 'VOIDED') {
           skipped++
           continue
         }
+
+        // Determine if this is a refunded order (finds.status constraint only allows sold, not refunded)
+        const isFullRefund = order.financialStatus === 'REFUNDED'
+          || (order.financials.refunded > 0 && order.financials.refunded >= order.financials.total)
 
         const customerId = await upsertShopifyCustomer(supabase, user.id, order)
 
@@ -266,7 +327,7 @@ export const POST = withAuth(async (req, user) => {
             trackingNumber: order.fulfillments?.[0]?.trackingNumber || null,
             carrier: order.fulfillments?.[0]?.trackingCompany || null,
             trackingUrl: order.fulfillments?.[0]?.trackingUrl || null,
-            shipmentStatus: mapFulfillmentStatus(order.fulfillmentStatus),
+            shipmentStatus: isFullRefund ? 'refunded' : mapFulfillmentStatus(order.fulfillmentStatus),
             orderDate: order.orderDate,
             financialStatus: order.financialStatus,
             note: order.note || null,
@@ -334,12 +395,20 @@ export const POST = withAuth(async (req, user) => {
           } else {
             // Auto-create find from unmatched sale
             const sku = `SH-SALE-${Date.now().toString(36).toUpperCase().slice(-6)}`
+
+            // Mirror photo to Supabase Storage
+            let photos: string[] = []
+            if (lineItem.image) {
+              const mirrored = await mirrorPhotoToStorage(lineItem.image, 0, user.id, 'shopify', productId)
+              if (mirrored) photos = [mirrored]
+            }
+
             const { data: newFind } = await supabaseAdmin
               .from('finds')
               .insert({
                 user_id: user.id,
                 name: lineItem.title || 'Untitled Shopify item',
-                photo: lineItem.image || null,
+                photos: photos.length > 0 ? photos : null,
                 asking_price_gbp: lineItemTotal,
                 sold_price_gbp: lineItemTotal,
                 sold_at: order.orderDate || new Date().toISOString(),
