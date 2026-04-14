@@ -715,6 +715,26 @@ export class eBayClient {
   }
 
   /**
+   * Get shipping fulfillment records for an order.
+   * Returns tracking numbers and carrier info if the seller has shipped via eBay.
+   */
+  async getShippingFulfillments(orderId: string): Promise<Array<{
+    fulfillmentId: string
+    trackingNumber?: string
+    shippingCarrierCode?: string
+    shipmentTrackingNumber?: string
+  }>> {
+    try {
+      const data = await this.apiRequest(
+        `/sell/fulfillment/v1/order/${encodeURIComponent(orderId)}/shipping_fulfillment`
+      )
+      return data.fulfillments || []
+    } catch {
+      return []
+    }
+  }
+
+  /**
    * Upload tracking info to eBay for an order.
    * Creates a shipping fulfillment record with tracking number and carrier.
    * Requires sell.fulfillment scope (not readonly).

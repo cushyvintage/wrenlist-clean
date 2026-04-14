@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getEbayClientForUser } from '@/lib/ebay-client'
-import { enrichEbaySoldItem } from '@/lib/ebay-sale-enrichment'
+import { enrichEbaySoldItem, createFindFromEbaySale } from '@/lib/ebay-sale-enrichment'
 
 /**
  * GET /api/cron/ebay-sync
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       totalOrdersChecked: 0,
       totalItemsSold: 0,
       totalEnriched: 0,
+      totalAutoCreated: 0,
       errors: [] as string[],
     }
 
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
         const orders = ordersResponse.orders || []
         let itemsSoldForUser = 0
         let enrichedForUser = 0
+        let autoCreatedForUser = 0
 
         // Fetch user's find IDs once per user (not per line item)
         const { data: userFinds } = await supabaseAdmin
@@ -71,7 +73,6 @@ export async function GET(request: NextRequest) {
           .eq('user_id', userId)
 
         const userFindIds = (userFinds || []).map(f => f.id)
-        if (userFindIds.length === 0) { results.usersProcessed++; continue }
 
         for (const order of orders) {
           if (!order.lineItems || order.lineItems.length === 0) continue
@@ -80,15 +81,37 @@ export async function GET(request: NextRequest) {
             const legacyItemId = lineItem.legacyItemId
             if (!legacyItemId) continue
 
-            const { data: marketplaceData } = await supabaseAdmin
-              .from('product_marketplace_data')
-              .select('find_id')
-              .eq('marketplace', 'ebay')
-              .eq('platform_listing_id', legacyItemId)
-              .in('find_id', userFindIds)
-              .maybeSingle()
+            // Try to match by platform_listing_id
+            const { data: marketplaceData } = userFindIds.length > 0
+              ? await supabaseAdmin
+                  .from('product_marketplace_data')
+                  .select('find_id')
+                  .eq('marketplace', 'ebay')
+                  .eq('platform_listing_id', legacyItemId)
+                  .in('find_id', userFindIds)
+                  .maybeSingle()
+              : { data: null }
 
-            if (!marketplaceData) continue
+            if (!marketplaceData) {
+              // Check if we already auto-created a find for this listing ID
+              const { data: existingPmd } = await supabaseAdmin
+                .from('product_marketplace_data')
+                .select('find_id')
+                .eq('marketplace', 'ebay')
+                .eq('platform_listing_id', legacyItemId)
+                .eq('user_id', userId)
+                .maybeSingle()
+
+              if (existingPmd) {
+                // Already auto-created on a previous run — skip
+                continue
+              }
+
+              // Auto-create find from unmatched sale
+              const autoResult = await createFindFromEbaySale(supabaseAdmin, userId, order, lineItem)
+              if (autoResult.created) autoCreatedForUser++
+              continue
+            }
 
             const result = await enrichEbaySoldItem(
               supabaseAdmin, supabaseAdmin, userId,
@@ -116,6 +139,7 @@ export async function GET(request: NextRequest) {
           results.totalOrdersChecked += orders.length
           results.totalItemsSold += itemsSoldForUser
           results.totalEnriched += enrichedForUser
+          results.totalAutoCreated += autoCreatedForUser
         }
 
         results.usersProcessed++

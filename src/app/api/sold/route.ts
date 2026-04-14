@@ -11,6 +11,7 @@ interface FindWithMarketplaceJoin {
   sourced_at: string | null
   sold_at: string | null
   photos: string[] | null
+  platform_fields: Record<string, unknown> | null
   stash_id: string | null
   stash: { id: string; name: string } | { id: string; name: string }[] | null
   product_marketplace_data: Array<{
@@ -44,6 +45,17 @@ interface SoldItem {
   transactionId?: string | null
   shipmentId?: string | null
   labelUrl?: string | null
+  autoImported?: boolean
+  shippingAddress?: {
+    name?: string | null
+    line1?: string | null
+    line2?: string | null
+    city?: string | null
+    postalCode?: string | null
+    country?: string | null
+  } | null
+  feeSource?: string | null
+  carrier?: string | null
 }
 
 /**
@@ -108,6 +120,7 @@ export const GET = withAuth(async (req, user) => {
           sourced_at,
           sold_at,
           photos,
+          platform_fields,
           stash_id,
           stash:stashes(id, name),
           product_marketplace_data (
@@ -187,6 +200,10 @@ export const GET = withAuth(async (req, user) => {
         transactionId: (sale?.transactionId as string) || null,
         shipmentId: (sale?.shipmentId as string) || null,
         labelUrl: (sale?.labelUrl as string) || null,
+        autoImported: find.platform_fields?.ebay_sale_auto_import === true,
+        shippingAddress: (sale?.shippingAddress as SoldItem['shippingAddress']) || null,
+        feeSource: (sale?.feeSource as string) || null,
+        carrier: (sale?.carrier as string) || null,
       }
     })
 

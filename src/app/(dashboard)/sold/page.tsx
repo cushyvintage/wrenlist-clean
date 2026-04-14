@@ -38,6 +38,16 @@ interface SoldItem {
   shipmentId?: string | null
   labelUrl?: string | null
   autoImported?: boolean
+  shippingAddress?: {
+    name?: string | null
+    line1?: string | null
+    line2?: string | null
+    city?: string | null
+    postalCode?: string | null
+    country?: string | null
+  } | null
+  feeSource?: string | null
+  carrier?: string | null
 }
 
 interface Metrics {
@@ -229,6 +239,18 @@ function OrderCard({
           )}
         </div>
       </div>
+
+      {/* Shipping address (eBay items) */}
+      {item.shippingAddress?.line1 && (
+        <div className="text-[11px] text-ink-lt leading-relaxed border-t border-border/50 pt-2">
+          <span className="font-medium text-ink">Ship to:</span>{' '}
+          {item.shippingAddress.name && <>{item.shippingAddress.name}, </>}
+          {item.shippingAddress.line1}
+          {item.shippingAddress.line2 && <>, {item.shippingAddress.line2}</>}
+          {item.shippingAddress.city && <>, {item.shippingAddress.city}</>}
+          {item.shippingAddress.postalCode && <> {item.shippingAddress.postalCode}</>}
+        </div>
+      )}
 
       {/* Tracking input */}
       {showTracking && (

@@ -1,19 +1,34 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { getEbayClientForUser } from '@/lib/ebay-client'
 import { withAuth } from '@/lib/with-auth'
 
 const VALID_STATUSES = ['label sent', 'shipped', 'in transit', 'delivered', 'refunded', 'cancelled']
 
+/** Map common UK carrier names to eBay shippingCarrierCode values */
+const CARRIER_TO_EBAY: Record<string, string> = {
+  'royal mail': 'ROYAL_MAIL',
+  'evri': 'EVRI',
+  'hermes': 'EVRI',
+  'dpd': 'DPD',
+  'dhl': 'DHL',
+  'yodel': 'YODEL',
+  'ups': 'UPS',
+  'fedex': 'FEDEX',
+  'parcelforce': 'PARCELFORCE',
+}
+
 /**
  * PATCH /api/sold/[id]/shipment
- * Update shipment status and/or tracking number for a sold item
+ * Update shipment status and/or tracking number for a sold item.
+ * For eBay items, also pushes tracking to eBay Fulfillment API.
  */
 export const PATCH = withAuth(async (req, user, params) => {
   const id = (params?.id as string | undefined) || req.url.split('/api/sold/')[1]?.split('/shipment')[0]
   if (!id) return ApiResponseHelper.badRequest('Missing id')
 
-  const body = await req.json() as { shipmentStatus?: string; trackingNumber?: string }
-  const { shipmentStatus, trackingNumber } = body
+  const body = await req.json() as { shipmentStatus?: string; trackingNumber?: string; carrier?: string }
+  const { shipmentStatus, trackingNumber, carrier } = body
 
   if (!shipmentStatus && trackingNumber === undefined) {
     return ApiResponseHelper.badRequest('Provide shipmentStatus or trackingNumber')
@@ -41,7 +56,7 @@ export const PATCH = withAuth(async (req, user, params) => {
   // Get the sold PMD record
   const { data: pmd, error: pmdErr } = await supabase
     .from('product_marketplace_data')
-    .select('id, fields')
+    .select('id, fields, marketplace')
     .eq('find_id', id)
     .eq('status', 'sold')
     .limit(1)
@@ -58,6 +73,7 @@ export const PATCH = withAuth(async (req, user, params) => {
   const updatedSale = { ...existingSale }
   if (shipmentStatus) updatedSale.shipmentStatus = shipmentStatus
   if (trackingNumber !== undefined) updatedSale.trackingNumber = trackingNumber
+  if (carrier) updatedSale.carrier = carrier
 
   const { error: updateErr } = await supabase
     .from('product_marketplace_data')
@@ -68,8 +84,43 @@ export const PATCH = withAuth(async (req, user, params) => {
     return ApiResponseHelper.internalError(updateErr.message)
   }
 
+  // Push tracking to eBay if this is an eBay sale with a tracking number
+  let ebayPushResult: string | null = null
+  if (trackingNumber && pmd.marketplace === 'ebay') {
+    const orderId = existingSale.transactionId as string | undefined
+    if (orderId) {
+      try {
+        const ebayClient = await getEbayClientForUser(user.id, supabase, 'EBAY_GB')
+        const ebayCarrier = CARRIER_TO_EBAY[(carrier || '').toLowerCase()] || 'OTHER'
+
+        // Get line items from the order to include in fulfillment
+        const orderData = await ebayClient.getOrders({
+          limit: 1,
+          filter: `orderId:{${orderId}}`,
+        })
+        const order = orderData.orders?.[0]
+        const lineItems = (order?.lineItems || []).map((li: { lineItemId: string; quantity: number }) => ({
+          lineItemId: li.lineItemId,
+          quantity: li.quantity || 1,
+        }))
+
+        if (lineItems.length > 0) {
+          await ebayClient.createShippingFulfillment(orderId, lineItems, trackingNumber, ebayCarrier)
+          ebayPushResult = 'success'
+        }
+      } catch (err) {
+        // Non-critical — tracking is saved locally even if eBay push fails
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        console.error('[shipment] eBay tracking push failed:', msg)
+        ebayPushResult = `failed: ${msg}`
+      }
+    }
+  }
+
   return ApiResponseHelper.success({
     shipmentStatus: updatedSale.shipmentStatus as string,
     trackingNumber: (updatedSale.trackingNumber as string) || null,
+    carrier: (updatedSale.carrier as string) || null,
+    ebayPushResult,
   })
 })

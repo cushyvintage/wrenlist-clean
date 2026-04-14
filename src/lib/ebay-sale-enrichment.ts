@@ -219,10 +219,15 @@ export async function enrichEbaySoldItem(
   const existingFields = pmd?.fields as Record<string, unknown> | null
   const existingSale = existingFields?.sale as Record<string, unknown> | undefined
   if (existingSale?.transactionId === order.orderId) {
-    // Allow re-enrichment if fees are still estimated or zero (eBay settles 1-2 days later)
+    // Allow re-enrichment if:
+    // - Fees are estimated or zero (eBay settles 1-2 days later)
+    // - Tracking is missing (might have been added via eBay Seller Hub)
     const existingFeeSource = existingSale?.feeSource as string | undefined
     const existingFee = existingSale?.serviceFee as number | undefined
-    if (existingFeeSource !== 'estimated' && (existingFee ?? 0) > 0) {
+    const existingTracking = existingSale?.trackingNumber as string | undefined
+    const needsFeeUpdate = existingFeeSource === 'estimated' || (existingFee ?? 0) === 0
+    const needsTrackingSync = !existingTracking
+    if (!needsFeeUpdate && !needsTrackingSync) {
       return { enriched: false, findId, isNewSale: false, delistedFrom: [] }
     }
   }
@@ -292,14 +297,33 @@ export async function enrichEbaySoldItem(
     feeSource,
     currency: lineItem.total?.currency || 'GBP',
     shippingAddress,
-    trackingNumber: null as string | null,
-    carrier,
-    shipmentStatus: isNewSale ? null : (existingSale?.shipmentStatus as string) || null,
+    trackingNumber: (existingSale?.trackingNumber as string) || null,
+    carrier: (existingSale?.carrier as string) || carrier,
+    shipmentStatus: (existingSale?.shipmentStatus as string) || null,
     orderDate: order.creationDate || null,
     completedDate: null as string | null,
     deliveryCost,
     isBundle: (order.lineItems?.length || 1) > 1,
     itemCount: order.lineItems?.length || 1,
+  }
+
+  // Sync tracking from eBay fulfillments if we don't have it yet
+  if (!saleData.trackingNumber && order.orderId) {
+    try {
+      const ebayClient = await getEbayClientForUser(userId, supabaseAdmin, 'EBAY_GB')
+      const fulfillments = await ebayClient.getShippingFulfillments(order.orderId)
+      const first = fulfillments[0]
+      if (first) {
+        const syncedTracking = first.shipmentTrackingNumber || first.trackingNumber
+        if (syncedTracking) {
+          saleData.trackingNumber = syncedTracking
+          saleData.carrier = first.shippingCarrierCode || saleData.carrier
+          if (!saleData.shipmentStatus) saleData.shipmentStatus = 'shipped'
+        }
+      }
+    } catch {
+      // Non-critical — tracking sync is best-effort
+    }
   }
 
   // Update find
