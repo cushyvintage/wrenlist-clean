@@ -38,6 +38,8 @@ export default function ImportPage() {
   const shopifyRetriedRef = useRef(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shopifyOrdersRef = useRef<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ebayOrdersRef = useRef<any[]>([])
   const [fetchedCount, setFetchedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
@@ -70,7 +72,7 @@ export default function ImportPage() {
     setStatusFilter('all')
 
     if (selectedPlatform === 'ebay') {
-      loadEbayInventory()
+      loadEbayInventory().then(() => loadEbaySoldItems())
     } else if (selectedPlatform === 'vinted') {
       loadVintedListings()
     } else if (selectedPlatform === 'shopify') {
@@ -122,6 +124,60 @@ export default function ImportPage() {
       setFetchError(err instanceof Error ? err.message : 'Failed to fetch eBay inventory')
     } finally {
       setIsFetching(false)
+    }
+  }
+
+  // --- eBay sold orders ---
+  async function loadEbaySoldItems() {
+    try {
+      const data = await fetchApi<{
+        orders: Array<{
+          id: string
+          orderId: string
+          legacyItemId: string
+          title: string
+          price: number | null
+          photo: string | null
+          listingUrl: string | null
+          alreadyImported: boolean
+          orderDate: string | null
+          buyer: string | null
+          rawOrder: Record<string, unknown>
+          rawLineItem: Record<string, unknown>
+        }>
+        totalCount: number
+      }>('/api/ebay/orders')
+
+      // Store raw order data for use during import
+      ebayOrdersRef.current = data.orders
+
+      // Skip items already shown as active inventory
+      const existingIds = new Set(items.map(i => i.listingId).filter(Boolean))
+
+      const soldItems: ImportableItem[] = data.orders
+        .filter(o => !existingIds.has(o.legacyItemId))
+        .map(o => ({
+          id: o.id,
+          platform: 'ebay' as Platform,
+          title: o.title,
+          price: o.price,
+          photo: o.photo,
+          listingId: o.legacyItemId,
+          listingUrl: o.listingUrl,
+          alreadyImported: o.alreadyImported,
+          checked: !o.alreadyImported,
+          listingStatus: 'sold' as const,
+          platformListedAt: o.orderDate,
+        }))
+
+      if (soldItems.length > 0) {
+        setItems(prev => [...prev, ...soldItems])
+        setTotalCount(prev => prev + soldItems.length)
+        setFetchedCount(prev => prev + soldItems.length)
+      }
+    } catch (err) {
+      // Don't fail the whole import if sold items fail — active inventory already loaded
+      console.error('Failed to fetch eBay sold items:', err)
     }
   }
 
@@ -901,7 +957,12 @@ export default function ImportPage() {
     if (!selectedPlatform || selectedCount === 0) return
 
     if (selectedPlatform === 'ebay') {
-      await handleEbayImport()
+      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
+      const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
+
+      if (hasActiveItems) await handleEbayImport()
+      if (hasSoldItems) await handleEbaySoldImport()
     } else if (selectedPlatform === 'vinted') {
       // Check if any selected items are sold — use sales flow for those
       const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
@@ -968,7 +1029,51 @@ export default function ImportPage() {
       )
 
       // Refresh list
-      await loadEbayInventory()
+      await loadEbayInventory().then(() => loadEbaySoldItems())
+    } catch (err) {
+      vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
+    }
+  }
+
+  async function handleEbaySoldImport() {
+    const selected = items.filter(i => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    if (selected.length === 0) return
+
+    vintedImport.setFetching('Importing eBay sold items...')
+
+    try {
+      // Find raw order data for selected items
+      const selectedLegacyIds = new Set(selected.map(i => i.listingId).filter(Boolean))
+      const relevantOrders = ebayOrdersRef.current
+        .filter((o: { legacyItemId?: string }) => selectedLegacyIds.has(o.legacyItemId || ''))
+        .map((o: { rawOrder?: Record<string, unknown> }) => o.rawOrder)
+        .filter(Boolean)
+
+      if (relevantOrders.length === 0) {
+        vintedImport.setDone(0, 0, 0, selected.length)
+        return
+      }
+
+      const result = await fetchApi<{
+        itemsSold: number
+        enriched: number
+        autoCreated: number
+        autoCreatedItems?: Array<{ title: string; price: string }>
+        message?: string
+      }>(
+        '/api/ebay/sync-orders',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orders: relevantOrders }),
+        }
+      )
+
+      const total = (result.itemsSold || 0) + (result.autoCreated || 0)
+      vintedImport.setDone(total, 0, 0, selected.length)
+
+      // Refresh list
+      await loadEbayInventory().then(() => loadEbaySoldItems())
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
@@ -1845,7 +1950,7 @@ export default function ImportPage() {
               onClick={() => {
                 vintedImport.reset()
                 // Re-fetch to show updated imported status
-                if (selectedPlatform === 'ebay') loadEbayInventory()
+                if (selectedPlatform === 'ebay') loadEbayInventory().then(() => loadEbaySoldItems())
                 else if (selectedPlatform === 'vinted') loadVintedListings()
                 else if (selectedPlatform === 'shopify') { loadShopifyListings().then(() => loadShopifyOrders()) }
                 else if (selectedPlatform === 'etsy') loadEtsyListings()

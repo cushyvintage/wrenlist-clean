@@ -62,7 +62,7 @@ const EBAY_OAUTH_SCOPES = [
   'https://api.ebay.com/oauth/api_scope',
   'https://api.ebay.com/oauth/api_scope/sell.inventory',
   'https://api.ebay.com/oauth/api_scope/sell.account',
-  'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
+  'https://api.ebay.com/oauth/api_scope/sell.fulfillment',
   'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly',
 ]
 
@@ -460,6 +460,35 @@ export class eBayClient {
   }
 
   /**
+   * Get item details by legacy item ID via Browse API.
+   * Returns title, description, images, condition, category, etc.
+   * Used to enrich auto-imported sold items.
+   */
+  async getItemByLegacyId(legacyItemId: string): Promise<{
+    title?: string
+    shortDescription?: string
+    description?: string
+    condition?: string
+    conditionId?: string
+    image?: { imageUrl?: string }
+    additionalImages?: Array<{ imageUrl?: string }>
+    categoryPath?: string
+    categoryId?: string
+    brand?: string
+    color?: string
+    itemWebUrl?: string
+  } | null> {
+    try {
+      return await this.apiRequest(
+        `/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id=${encodeURIComponent(legacyItemId)}`
+      )
+    } catch {
+      // Browse API may fail for ended/sold listings — non-critical
+      return null
+    }
+  }
+
+  /**
    * Create an offer
    */
   async createOffer(offer: any): Promise<any> {
@@ -638,10 +667,11 @@ export class eBayClient {
   /**
    * Get orders from Fulfillment API
    */
-  async getOrders(params: { limit?: number; filter?: string } = {}): Promise<any> {
-    const { limit = 50, filter } = params
+  async getOrders(params: { limit?: number; offset?: number; filter?: string } = {}): Promise<any> {
+    const { limit = 50, offset = 0, filter } = params
     const url = new URL(`${this.baseUrl}/sell/fulfillment/v1/order`)
     url.searchParams.set('limit', limit.toString())
+    url.searchParams.set('offset', offset.toString())
     if (filter) {
       url.searchParams.set('filter', filter)
     }
@@ -663,6 +693,67 @@ export class eBayClient {
     }
 
     return response.json()
+  }
+
+  /**
+   * Paginate through all orders from the Fulfillment API.
+   * Returns a flat array of orders across all pages.
+   */
+  async getAllOrders(params: { filter?: string; maxPages?: number } = {}): Promise<any[]> {
+    const { filter, maxPages = 20 } = params
+    const limit = 50
+    const allOrders: any[] = []
+
+    for (let page = 0; page < maxPages; page++) {
+      const response = await this.getOrders({ limit, offset: page * limit, filter })
+      const orders = response.orders || []
+      allOrders.push(...orders)
+      if (orders.length < limit || allOrders.length >= (response.total || Infinity)) break
+    }
+
+    return allOrders
+  }
+
+  /**
+   * Upload tracking info to eBay for an order.
+   * Creates a shipping fulfillment record with tracking number and carrier.
+   * Requires sell.fulfillment scope (not readonly).
+   *
+   * See: https://developer.ebay.com/api-docs/sell/fulfillment/resources/order/shipping_fulfillment/methods/createShippingFulfillment
+   */
+  async createShippingFulfillment(
+    orderId: string,
+    lineItems: Array<{ lineItemId: string; quantity: number }>,
+    trackingNumber: string,
+    carrier: string
+  ): Promise<{ fulfillmentId?: string }> {
+    const response = await undiciFetch(
+      `${this.baseUrl}/sell/fulfillment/v1/order/${encodeURIComponent(orderId)}/shipping_fulfillment`,
+      {
+        method: 'POST',
+        headers: new UndiciHeaders({
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.getAccessToken()}`,
+        }),
+        body: JSON.stringify({
+          lineItems,
+          trackingNumber,
+          shippingCarrierCode: carrier,
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText })) as any
+      const msg = error.errors?.[0]?.message || error.message || response.statusText
+      throw new Error(`eBay shipping fulfillment error (${response.status}): ${msg}`)
+    }
+
+    // 201 Created — fulfillment ID is in the Location header
+    const location = response.headers.get('location') || ''
+    const fulfillmentId = location.split('/').pop() || undefined
+    return { fulfillmentId }
   }
 }
 

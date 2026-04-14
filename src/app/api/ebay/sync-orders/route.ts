@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
-import { enrichEbaySoldItem } from '@/lib/ebay-sale-enrichment'
+import { enrichEbaySoldItem, createFindFromEbaySale, type EbayOrder } from '@/lib/ebay-sale-enrichment'
 import { withAuth } from '@/lib/with-auth'
 
 /**
@@ -59,6 +59,11 @@ export const POST = withAuth(async (req, user) => {
       return ApiResponseHelper.badRequest('No eBay connection found. Please connect to eBay first.')
     }
 
+    // Accept optional pre-fetched orders from import page
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body = await req.json().catch(() => ({} as any))
+    const providedOrders = body?.orders as any[] | undefined
+
     let ebayClient
     try {
       ebayClient = await getEbayClientForUser(user.id, supabase, 'EBAY_GB')
@@ -66,18 +71,24 @@ export const POST = withAuth(async (req, user) => {
       return ApiResponseHelper.badRequest('Your eBay connection has expired. Please reconnect.')
     }
 
-    // Fetch recent orders (last 30 days) — no fulfillment status filter
-    // because eBay only allows specific 2-value combos, not all 3
-    const since = new Date(Date.now() - 30 * 86400000).toISOString()
-    const ordersResponse = await ebayClient.getOrders({
-      limit: 50,
-      filter: `creationdate:[${since}..]`,
-    })
-
-    const orders = ordersResponse.orders || []
+    let orders: any[]
+    if (Array.isArray(providedOrders) && providedOrders.length > 0) {
+      // Use pre-fetched orders from import page (no eBay API call needed)
+      orders = providedOrders
+    } else {
+      // Default: fetch recent orders (last 30 days)
+      const since = new Date(Date.now() - 30 * 86400000).toISOString()
+      const ordersResponse = await ebayClient.getOrders({
+        limit: 50,
+        filter: `creationdate:[${since}..]`,
+      })
+      orders = ordersResponse.orders || []
+    }
     let itemsSold = 0
     let enriched = 0
+    let autoCreated = 0
     const allDelistedFrom: string[] = []
+    const autoCreatedItems: Array<{ title: string; price: string }> = []
 
     for (const order of orders) {
       if (!order.lineItems || order.lineItems.length === 0) continue
@@ -94,7 +105,29 @@ export const POST = withAuth(async (req, user) => {
           .eq('platform_listing_id', legacyItemId)
           .maybeSingle()
 
-        if (!marketplaceData) continue
+        if (!marketplaceData) {
+          // Check if already auto-created on a previous sync
+          const { data: existingPmd } = await supabaseAdmin
+            .from('product_marketplace_data')
+            .select('find_id')
+            .eq('marketplace', 'ebay')
+            .eq('platform_listing_id', legacyItemId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+          if (existingPmd) continue
+
+          // Auto-create find from unmatched sale
+          const autoResult = await createFindFromEbaySale(supabaseAdmin, user.id, order, lineItem)
+          if (autoResult.created) {
+            autoCreated++
+            autoCreatedItems.push({
+              title: autoResult.title,
+              price: `${lineItem.total?.value || '?'} ${lineItem.total?.currency || 'GBP'}`,
+            })
+          }
+          continue
+        }
 
         const result = await enrichEbaySoldItem(
           supabase, supabaseAdmin, user.id,
@@ -117,7 +150,7 @@ export const POST = withAuth(async (req, user) => {
       .insert({
         user_id: user.id,
         orders_checked: orders.length,
-        items_sold: itemsSold,
+        items_sold: itemsSold + autoCreated,
         synced_at: new Date().toISOString(),
       })
 
@@ -125,8 +158,10 @@ export const POST = withAuth(async (req, user) => {
       ordersChecked: orders.length,
       itemsSold,
       enriched,
+      autoCreated,
+      autoCreatedItems,
       delistedFrom: [...new Set(allDelistedFrom)],
-      message: `Synced ${orders.length} orders, found ${itemsSold} new sold items, enriched ${enriched} existing`,
+      message: `Synced ${orders.length} orders, found ${itemsSold} new sold items, enriched ${enriched} existing${autoCreated > 0 ? `, auto-imported ${autoCreated} sold items not in Wrenlist` : ''}`,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to sync eBay orders'

@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createPublishJob } from '@/lib/publish-jobs'
+import { getEbayClientForUser } from '@/lib/ebay-client'
 
 /**
  * eBay Fulfillment API order shape (relevant fields only)
  * See: https://developer.ebay.com/api-docs/sell/fulfillment/resources/order/methods/getOrders
  */
-interface EbayOrder {
+export interface EbayOrder {
   orderId: string
   creationDate?: string
   buyer?: {
@@ -45,7 +46,7 @@ interface EbayOrder {
   lineItems?: EbayLineItem[]
 }
 
-interface EbayLineItem {
+export interface EbayLineItem {
   lineItemId?: string
   legacyItemId?: string
   title?: string
@@ -62,6 +63,122 @@ interface EnrichResult {
   findId: string
   isNewSale: boolean
   delistedFrom: string[]
+}
+
+interface AutoCreateResult {
+  findId: string
+  created: boolean
+  title: string
+}
+
+/**
+ * Auto-create a find + PMD from an unmatched eBay sold order.
+ * Called when the sync finds an eBay order whose legacyItemId doesn't match
+ * any existing product_marketplace_data record (i.e. item was sold on eBay
+ * but never imported into Wrenlist).
+ *
+ * After creating the find, runs enrichEbaySoldItem to populate sale metadata.
+ */
+export async function createFindFromEbaySale(
+  supabaseAdmin: SupabaseClient,
+  userId: string,
+  order: EbayOrder,
+  lineItem: EbayLineItem
+): Promise<AutoCreateResult> {
+  const title = lineItem.title || 'Untitled eBay item'
+  const legacyItemId = lineItem.legacyItemId || ''
+  const price = parseFloat(lineItem.total?.value || '0')
+  const sku = `EB-SALE-${Date.now().toString(36).toUpperCase().slice(-6)}`
+
+  // Try to fetch item details from Browse API for photos/description/condition
+  let photos: string[] = []
+  let description: string | null = null
+  let condition: string | null = null
+  let brand: string | null = null
+  let enrichedTitle = title
+
+  try {
+    const ebayClient = await getEbayClientForUser(userId, supabaseAdmin, 'EBAY_GB')
+    const itemDetails = await ebayClient.getItemByLegacyId(legacyItemId)
+
+    if (itemDetails) {
+      // Collect all images
+      if (itemDetails.image?.imageUrl) {
+        photos.push(itemDetails.image.imageUrl)
+      }
+      if (itemDetails.additionalImages) {
+        for (const img of itemDetails.additionalImages) {
+          if (img.imageUrl) photos.push(img.imageUrl)
+        }
+      }
+
+      // Use richer title/description if available
+      if (itemDetails.title) enrichedTitle = itemDetails.title
+      description = itemDetails.shortDescription || null
+      brand = itemDetails.brand || null
+
+      // Map eBay condition to Wrenlist condition
+      const condStr = (itemDetails.condition || '').toLowerCase()
+      if (condStr.includes('new')) condition = 'new_with_tags'
+      else if (condStr.includes('excellent') || condStr.includes('like new')) condition = 'very_good'
+      else if (condStr.includes('good')) condition = 'good'
+      else if (condStr.includes('used')) condition = 'good'
+    }
+  } catch {
+    // Non-critical — proceed with order data only
+  }
+
+  // Create find
+  const { data: newFind, error: findError } = await supabaseAdmin
+    .from('finds')
+    .insert({
+      user_id: userId,
+      name: enrichedTitle,
+      description,
+      brand,
+      condition,
+      asking_price_gbp: price,
+      sold_price_gbp: price,
+      sold_at: order.creationDate || new Date().toISOString(),
+      photos,
+      sku,
+      status: 'sold',
+      platform_fields: {
+        selectedPlatforms: ['ebay'],
+        ebay_sale_auto_import: true,
+      },
+      selected_marketplaces: ['ebay'],
+    })
+    .select('id')
+    .single()
+
+  if (findError || !newFind) {
+    console.error('[createFindFromEbaySale] Failed to create find:', findError)
+    return { findId: '', created: false, title: enrichedTitle }
+  }
+
+  // Create PMD row
+  const { error: pmdError } = await supabaseAdmin
+    .from('product_marketplace_data')
+    .insert({
+      find_id: newFind.id,
+      user_id: userId,
+      marketplace: 'ebay',
+      platform_listing_id: legacyItemId,
+      platform_listing_url: `https://www.ebay.co.uk/itm/${legacyItemId}`,
+      listing_price: price,
+      status: 'sold',
+      fields: {},
+    })
+
+  if (pmdError) {
+    console.error('[createFindFromEbaySale] Failed to create PMD:', pmdError)
+  }
+
+  // Enrich with full sale metadata (buyer, fees, shipment)
+  await enrichEbaySoldItem(supabaseAdmin, supabaseAdmin, userId, newFind.id, order, lineItem)
+
+  return { findId: newFind.id, created: true, title: enrichedTitle }
 }
 
 /**
