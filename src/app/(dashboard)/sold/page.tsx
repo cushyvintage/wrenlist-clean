@@ -37,6 +37,7 @@ interface SoldItem {
   transactionId?: string | null
   shipmentId?: string | null
   labelUrl?: string | null
+  autoImported?: boolean
 }
 
 interface Metrics {
@@ -61,7 +62,7 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   'in transit': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'In Transit' },
   'awaiting collection': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Awaiting Collection' },
   'label sent': { bg: 'bg-status-info-bg', text: 'text-status-info', label: 'Label Sent' },
-  'not sent': { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Not Sent' },
+  'not sent': { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Not Sent' },
   shipped: { bg: 'bg-status-warning-bg', text: 'text-status-warning', label: 'Shipped' },
   returning: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Returning' },
   refunded: { bg: 'bg-status-error-bg', text: 'text-status-error', label: 'Refunded' },
@@ -69,10 +70,10 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
 }
 
 /** Statuses where the seller still needs to take action */
-const NEEDS_ACTION_STATUSES = new Set(['label sent'])
+const NEEDS_ACTION_STATUSES = new Set(['label sent', 'not sent'])
 
 /** Statuses that are definitively resolved — never show as "needs action" */
-const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled', 'not sent'])
+const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled'])
 
 /** How many days after sale before we stop treating null-status as "needs action" */
 const NEEDS_ACTION_WINDOW_DAYS = 5
@@ -144,19 +145,21 @@ function OrderCard({
   formatDate,
 }: {
   item: SoldItem
-  onUpdateStatus: (id: string, status: string, trackingNumber?: string) => Promise<void>
+  onUpdateStatus: (id: string, status: string, trackingNumber?: string, carrier?: string) => Promise<void>
   onGenerateLabel?: (item: SoldItem) => void
   formatDate: (d: string | null) => string
 }) {
   const router = useRouter()
   const [showTracking, setShowTracking] = useState(false)
   const [trackingInput, setTrackingInput] = useState(item.trackingNumber || '')
+  const [carrierInput, setCarrierInput] = useState('')
   const [isUpdating, setIsUpdating] = useState(false)
+  const isEbay = item.marketplace === 'ebay'
 
   const handleAction = async (status: string, tracking?: string) => {
     setIsUpdating(true)
     try {
-      await onUpdateStatus(item.id, status, tracking)
+      await onUpdateStatus(item.id, status, tracking, carrierInput || undefined)
       setShowTracking(false)
     } finally {
       setIsUpdating(false)
@@ -200,6 +203,11 @@ function OrderCard({
             )}
             <span className="text-ink-lt text-xs">{item.buyer || 'Unknown buyer'}</span>
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
+            {item.autoImported && (
+              <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700">
+                Auto-imported
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-1.5">
             <ShipmentBadge status={item.shipmentStatus} soldAt={item.sold_at} />
@@ -224,33 +232,53 @@ function OrderCard({
 
       {/* Tracking input */}
       {showTracking && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={trackingInput}
-            onChange={(e) => setTrackingInput(e.target.value)}
-            placeholder="Tracking number"
-            className="flex-1 px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && trackingInput.trim()) {
-                handleAction('shipped', trackingInput.trim())
-              }
-            }}
-            autoFocus
-          />
-          <button
-            onClick={() => handleAction('shipped', trackingInput.trim())}
-            disabled={!trackingInput.trim() || isUpdating}
-            className="px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition disabled:opacity-50"
-          >
-            Save
-          </button>
-          <button
-            onClick={() => setShowTracking(false)}
-            className="px-2 py-1.5 text-xs text-ink-lt hover:text-ink transition"
-          >
-            Cancel
-          </button>
+        <div className="flex flex-col gap-2">
+          {isEbay && (
+            <select
+              value={carrierInput}
+              onChange={(e) => setCarrierInput(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+            >
+              <option value="">Carrier (optional)</option>
+              <option value="Royal Mail">Royal Mail</option>
+              <option value="Evri">Evri</option>
+              <option value="DPD">DPD</option>
+              <option value="DHL">DHL</option>
+              <option value="Yodel">Yodel</option>
+              <option value="UPS">UPS</option>
+              <option value="FedEx">FedEx</option>
+              <option value="Parcelforce">Parcelforce</option>
+              <option value="Other">Other</option>
+            </select>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              placeholder="Tracking number"
+              className="flex-1 px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && trackingInput.trim()) {
+                  handleAction('shipped', trackingInput.trim())
+                }
+              }}
+              autoFocus
+            />
+            <button
+              onClick={() => handleAction('shipped', trackingInput.trim())}
+              disabled={!trackingInput.trim() || isUpdating}
+              className="px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setShowTracking(false)}
+              className="px-2 py-1.5 text-xs text-ink-lt hover:text-ink transition"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -291,6 +319,16 @@ function OrderCard({
             >
               Generate Label
             </button>
+          )}
+          {isEbay && item.transactionId && (!normalized || normalized === 'not sent' || normalized === 'label sent') && (
+            <a
+              href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(item.transactionId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
+            >
+              Ship on eBay
+            </a>
           )}
           {item.labelUrl && (
             <a
@@ -391,9 +429,10 @@ export default function SoldHistoryPage() {
 
   /* ── Shipment status update handler ──────────────────────── */
 
-  const handleUpdateShipment = useCallback(async (findId: string, shipmentStatus: string, trackingNumber?: string) => {
+  const handleUpdateShipment = useCallback(async (findId: string, shipmentStatus: string, trackingNumber?: string, carrier?: string) => {
     const body: Record<string, string> = { shipmentStatus }
     if (trackingNumber) body.trackingNumber = trackingNumber
+    if (carrier) body.carrier = carrier
 
     await fetchApi(`/api/sold/${findId}/shipment`, {
       method: 'PATCH',
@@ -449,7 +488,7 @@ export default function SoldHistoryPage() {
         }
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { action: 'get_vinted_sales', params: { pages: 4, perPage: 100, enrich: true } },
+          { action: 'get_vinted_sales', params: { pages: 4, perPage: 100, enrich: false } },
           (response: Record<string, unknown> | undefined) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
@@ -943,6 +982,14 @@ export default function SoldHistoryPage() {
                         <span className="font-medium text-sm text-sage truncate block">
                           {item.name}
                         </span>
+                        {item.autoImported && (
+                          <span
+                            className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700"
+                            title="This item was sold on eBay but wasn't in your Wrenlist inventory — we imported it automatically so your records stay complete."
+                          >
+                            Auto-imported
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         {item.marketplace && item.marketplace !== 'unknown' ? (
