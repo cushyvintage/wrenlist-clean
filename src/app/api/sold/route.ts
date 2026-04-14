@@ -192,7 +192,9 @@ export const GET = withAuth(async (req, user) => {
         margin_percent: marginPercent,
         days_listed: daysListed,
         shipmentStatus: (sale?.shipmentStatus as string) || null,
-        buyer: (sale?.buyer as Record<string, unknown>)?.username as string || null,
+        buyer: ((sale?.buyer as Record<string, unknown>)?.username
+          || (sale?.buyer as Record<string, unknown>)?.name
+          || (sale?.buyer as Record<string, unknown>)?.email) as string || null,
         grossAmount: (sale?.grossAmount as number) || null,
         serviceFee: (sale?.serviceFee as number) || null,
         netAmount: (sale?.netAmount as number) || null,
