@@ -48,6 +48,8 @@ interface SoldItem {
   } | null
   feeSource?: string | null
   carrier?: string | null
+  isBundle?: boolean
+  itemCount?: number
 }
 
 interface Metrics {
@@ -88,11 +90,15 @@ const RESOLVED_STATUSES = new Set(['delivered', 'refunded', 'cancelled'])
 /** How many days after sale before we stop treating null-status as "needs action" */
 const NEEDS_ACTION_WINDOW_DAYS = 5
 
+/** After this many days, "Not Sent" is likely stale — show "Status unknown" instead */
+const STALE_STATUS_DAYS = 14
+
 function normalizeStatus(raw: string | null | undefined): string | null {
   if (!raw) return null
   const lower = raw.toLowerCase()
   // Vinted sends verbose strings like "Package delivered.", "Not sent. Buyer refunded."
-  // Order matters — check compound statuses first before single-word matches
+  // Compound statuses first: "Not sent. Buyer refunded." should be refunded, not "not sent"
+  if (lower.includes('not sent') && lower.includes('refund')) return 'refunded'
   if (lower.includes('not sent')) return 'not sent'
   if (lower.includes('sale completed') || lower.includes('delivered')) return 'delivered'
   if (lower.includes('suspend')) return 'cancelled'
@@ -110,7 +116,12 @@ function needsAction(item: SoldItem): boolean {
   const status = normalizeStatus(item.shipmentStatus)
   // Resolved statuses never need action
   if (status !== null && RESOLVED_STATUSES.has(status)) return false
-  // Known actionable statuses
+  // Stale "not sent" or "label sent" items (>14 days) are no longer actionable
+  if (status !== null && NEEDS_ACTION_STATUSES.has(status) && item.sold_at) {
+    const daysSinceSale = (Date.now() - new Date(item.sold_at).getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSinceSale > STALE_STATUS_DAYS) return false
+  }
+  // Known actionable statuses (within window)
   if (status !== null) return NEEDS_ACTION_STATUSES.has(status)
   // Null status: only needs action if sold recently (within window)
   if (!item.sold_at) return false
@@ -139,6 +150,19 @@ function ShipmentBadge({ status, soldAt }: { status: string | null | undefined; 
     )
   }
   const key = normalizeStatus(status) || status.toLowerCase()
+
+  // If "Not Sent" but the sale is old, show "Status unknown" instead
+  if (key === 'not sent' && soldAt) {
+    const daysSinceSale = (Date.now() - new Date(soldAt).getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSinceSale > STALE_STATUS_DAYS) {
+      return (
+        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-cream text-ink-lt">
+          Status unknown
+        </span>
+      )
+    }
+  }
+
   const style = SHIPMENT_STYLES[key] || { bg: 'bg-cream', text: 'text-ink-lt', label: status }
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${style.bg} ${style.text}`}>
@@ -216,7 +240,7 @@ function OrderCard({
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
             {item.autoImported && (
               <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700">
-                Auto-imported
+                Sold outside Wrenlist
               </span>
             )}
           </div>
@@ -369,6 +393,271 @@ function OrderCard({
   )
 }
 
+/* ── Bundle Order Card ───────────────────────────────────────── */
+
+function BundleOrderCard({
+  items,
+  onUpdateStatus,
+  onGenerateLabel,
+  formatDate,
+}: {
+  items: SoldItem[]
+  onUpdateStatus: (id: string, status: string, trackingNumber?: string, carrier?: string) => Promise<void>
+  onGenerateLabel?: (item: SoldItem) => void
+  formatDate: (d: string | null) => string
+}) {
+  const router = useRouter()
+  const [showTracking, setShowTracking] = useState(false)
+  const [trackingInput, setTrackingInput] = useState(items[0]?.trackingNumber || '')
+  const [carrierInput, setCarrierInput] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const first = items[0]!
+  const isEbay = first.marketplace === 'ebay'
+  const normalized = normalizeStatus(first.shipmentStatus)
+  const totalPrice = items.reduce((sum, i) => sum + (i.sold_price_gbp || 0), 0)
+  const totalNet = items.reduce((sum, i) => sum + (i.netAmount || 0), 0)
+
+  const handleAction = async (status: string, tracking?: string) => {
+    setIsUpdating(true)
+    try {
+      // Update first item — API propagates to siblings
+      await onUpdateStatus(first.id, status, tracking, carrierInput || undefined)
+      setShowTracking(false)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  return (
+    <div className="border border-border rounded-md bg-cream/40 flex flex-col gap-0 md:col-span-2">
+      {/* Bundle header */}
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {first.marketplace && first.marketplace !== 'unknown' && (
+            <MarketplaceIcon platform={first.marketplace as Platform} size="sm" />
+          )}
+          <span className="text-xs font-semibold text-sage">
+            Bundle order · {items.length} items
+          </span>
+          <span className="text-ink-lt text-xs">{first.buyer || 'Unknown buyer'}</span>
+          <span className="text-ink-lt text-xs">{formatDate(first.sold_at)}</span>
+          <ShipmentBadge status={first.shipmentStatus} soldAt={first.sold_at} />
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-mono text-sm font-medium text-ink">£{totalPrice.toFixed(2)}</p>
+          {totalNet > 0 && totalNet !== totalPrice && (
+            <p className="font-mono text-[11px] text-ink-lt">net £{totalNet.toFixed(2)}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Individual items (compact — no action buttons) */}
+      <div className="px-4 pb-2 flex flex-col gap-2">
+        {items.map((item) => (
+          <div key={item.id} className="flex gap-3 items-center bg-white rounded p-2 border border-border/50">
+            <div
+              className="shrink-0 cursor-pointer"
+              onClick={() => router.push(`/sold/${item.id}`)}
+            >
+              {item.photo ? (
+                <Image
+                  src={item.photo}
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="rounded object-cover"
+                  style={{ width: 44, height: 44 }}
+                  unoptimized
+                />
+              ) : (
+                <div className="w-11 h-11 rounded bg-cream-dk" />
+              )}
+            </div>
+            <p
+              className="flex-1 font-medium text-sm text-sage truncate cursor-pointer hover:underline"
+              onClick={() => router.push(`/sold/${item.id}`)}
+            >
+              {item.name}
+            </p>
+            <p className="font-mono text-sm text-ink shrink-0">
+              {item.sold_price_gbp != null ? `£${item.sold_price_gbp.toFixed(2)}` : '--'}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Shipping address */}
+      {first.shippingAddress?.line1 && (
+        <div className="px-4 pb-2 text-[11px] text-ink-lt leading-relaxed">
+          <span className="font-medium text-ink">Ship to:</span>{' '}
+          {first.shippingAddress.name && <>{first.shippingAddress.name}, </>}
+          {first.shippingAddress.line1}
+          {first.shippingAddress.line2 && <>, {first.shippingAddress.line2}</>}
+          {first.shippingAddress.city && <>, {first.shippingAddress.city}</>}
+          {first.shippingAddress.postalCode && <> {first.shippingAddress.postalCode}</>}
+        </div>
+      )}
+
+      {/* Tracking input */}
+      {showTracking && (
+        <div className="px-4 pb-3 flex flex-col gap-2">
+          {isEbay && (
+            <select
+              value={carrierInput}
+              onChange={(e) => setCarrierInput(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+            >
+              <option value="">Carrier (optional)</option>
+              <option value="Royal Mail">Royal Mail</option>
+              <option value="Evri">Evri</option>
+              <option value="DPD">DPD</option>
+              <option value="DHL">DHL</option>
+              <option value="Yodel">Yodel</option>
+              <option value="UPS">UPS</option>
+              <option value="FedEx">FedEx</option>
+              <option value="Parcelforce">Parcelforce</option>
+              <option value="Other">Other</option>
+            </select>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              placeholder="Tracking number"
+              className="flex-1 px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && trackingInput.trim()) {
+                  handleAction('shipped', trackingInput.trim())
+                }
+              }}
+              autoFocus
+            />
+            <button
+              onClick={() => handleAction('shipped', trackingInput.trim())}
+              disabled={!trackingInput.trim() || isUpdating}
+              className="px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setShowTracking(false)}
+              className="px-2 py-1.5 text-xs text-ink-lt hover:text-ink transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons — once for the whole bundle */}
+      {!showTracking && (
+        <div className="px-4 pb-3 flex gap-2 flex-wrap">
+          {(!normalized || normalized === 'label sent') && (
+            <button
+              onClick={() => setShowTracking(true)}
+              disabled={isUpdating}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+            >
+              Add Tracking
+            </button>
+          )}
+          {(!normalized || normalized === 'label sent') && (
+            <button
+              onClick={() => handleAction('shipped')}
+              disabled={isUpdating}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
+            >
+              Mark Shipped
+            </button>
+          )}
+          {(normalized === 'shipped' || normalized === 'in transit') && (
+            <button
+              onClick={() => handleAction('delivered')}
+              disabled={isUpdating}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
+            >
+              Mark Delivered
+            </button>
+          )}
+          {onGenerateLabel && first.marketplace === 'vinted' && !first.labelUrl && (
+            <button
+              onClick={() => onGenerateLabel(first)}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition"
+            >
+              Generate Label
+            </button>
+          )}
+          {isEbay && first.transactionId && (!normalized || normalized === 'not sent' || normalized === 'label sent') && (
+            <a
+              href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(first.transactionId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
+            >
+              Ship on eBay
+            </a>
+          )}
+          {first.labelUrl && (
+            <a
+              href={first.labelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition inline-block"
+            >
+              View Label
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Group action items into bundles + singles ───────────────── */
+
+type ActionEntry = { type: 'single'; item: SoldItem } | { type: 'bundle'; items: SoldItem[]; key: string }
+
+function groupActionItems(items: SoldItem[]): ActionEntry[] {
+  const bundleMap = new Map<string, SoldItem[]>()
+  const singles: SoldItem[] = []
+
+  for (const item of items) {
+    if (item.isBundle && item.transactionId) {
+      const existing = bundleMap.get(item.transactionId)
+      if (existing) {
+        existing.push(item)
+      } else {
+        bundleMap.set(item.transactionId, [item])
+      }
+    } else {
+      singles.push(item)
+    }
+  }
+
+  const entries: ActionEntry[] = []
+
+  // Interleave bundles and singles in original order (by first item's position)
+  // Build entries with original-order position for sorting
+  const posMap = new Map<ActionEntry, number>()
+
+  for (const [key, bundleItems] of bundleMap) {
+    const entry: ActionEntry = { type: 'bundle', items: bundleItems, key }
+    posMap.set(entry, items.indexOf(bundleItems[0]!))
+    entries.push(entry)
+  }
+  for (const item of singles) {
+    const entry: ActionEntry = { type: 'single', item }
+    posMap.set(entry, items.indexOf(item))
+    entries.push(entry)
+  }
+
+  entries.sort((a, b) => (posMap.get(a) ?? 0) - (posMap.get(b) ?? 0))
+
+  return entries
+}
+
 /* ── Chunked sync helper (avoids Vercel 413 on large payloads) ── */
 
 const SYNC_CHUNK_SIZE = 50
@@ -449,6 +738,9 @@ export default function SoldHistoryPage() {
 
   // Unique platforms for filter dropdown
   const platforms = [...new Set(allItems.map((i) => i.marketplace).filter((m) => m && m !== 'unknown'))]
+
+  // Only show margin column if any items have cost data
+  const hasAnyCosts = allItems.some((i) => i.cost_gbp != null && i.cost_gbp > 0)
 
   /* ── Shipment status update handler ──────────────────────── */
 
@@ -788,15 +1080,28 @@ export default function SoldHistoryPage() {
             {actionView === 'cards' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {visibleActions.map((item) => (
-                    <OrderCard
-                      key={item.id}
-                      item={item}
-                      onUpdateStatus={handleUpdateShipment}
-                      onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
-                      formatDate={formatDate}
-                    />
-                  ))}
+                  {groupActionItems(visibleActions).map((entry) => {
+                    if (entry.type === 'bundle') {
+                      return (
+                        <BundleOrderCard
+                          key={entry.key}
+                          items={entry.items}
+                          onUpdateStatus={handleUpdateShipment}
+                          onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
+                          formatDate={formatDate}
+                        />
+                      )
+                    }
+                    return (
+                      <OrderCard
+                        key={entry.item.id}
+                        item={entry.item}
+                        onUpdateStatus={handleUpdateShipment}
+                        onGenerateLabel={(i) => { setLabelOrder(i); setLabelModalOpen(true) }}
+                        formatDate={formatDate}
+                      />
+                    )
+                  })}
                 </div>
                 {hasMore && (
                   <button
@@ -999,7 +1304,7 @@ export default function SoldHistoryPage() {
                     <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Sold</th>
                     <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Fees</th>
                     <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Net</th>
-                    <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Margin</th>
+                    {hasAnyCosts && <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Margin</th>}
                     <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Date</th>
                   </tr>
                 </thead>
@@ -1029,14 +1334,21 @@ export default function SoldHistoryPage() {
                         <span className="font-medium text-sm text-sage truncate block">
                           {item.name}
                         </span>
-                        {item.autoImported && (
-                          <span
-                            className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700"
-                            title="This item was sold on eBay but wasn't in your Wrenlist inventory — we imported it automatically so your records stay complete."
-                          >
-                            Auto-imported
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          {item.isBundle && (
+                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700">
+                              Bundle ({item.itemCount})
+                            </span>
+                          )}
+                          {item.autoImported && (
+                            <span
+                              className="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700"
+                              title="This item sold on eBay before it was added to Wrenlist — we pulled it in automatically so your records are complete."
+                            >
+                              Sold outside Wrenlist
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         {item.marketplace && item.marketplace !== 'unknown' ? (
@@ -1057,16 +1369,20 @@ export default function SoldHistoryPage() {
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink-lt">
                         {item.serviceFee != null && item.serviceFee > 0
                           ? `−£${item.serviceFee.toFixed(2)}`
-                          : '--'}
+                          : item.feeSource === 'actual' && item.serviceFee === 0 && item.marketplace === 'ebay'
+                            ? <span className="text-amber-600" title="eBay fees settle 1-2 days after sale">pending</span>
+                            : '--'}
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-sm text-ink">
                         {item.netAmount != null ? `£${item.netAmount.toFixed(2)}` : '--'}
                       </td>
-                      <td className="px-3 py-2 text-right text-sm font-mono">
-                        <span className={item.margin_percent && item.margin_percent > 0 ? 'text-green-600' : 'text-ink-lt'}>
-                          {item.margin_percent != null ? `${item.margin_percent}%` : '--'}
-                        </span>
-                      </td>
+                      {hasAnyCosts && (
+                        <td className="px-3 py-2 text-right text-sm font-mono">
+                          <span className={item.margin_percent && item.margin_percent > 0 ? 'text-green-600' : 'text-ink-lt'}>
+                            {item.margin_percent != null ? `${item.margin_percent}%` : '--'}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-3 py-2 text-ink-lt text-xs">{formatDate(item.sold_at)}</td>
                     </tr>
                   ))}

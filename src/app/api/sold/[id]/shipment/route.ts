@@ -84,6 +84,32 @@ export const PATCH = withAuth(async (req, user, params) => {
     return ApiResponseHelper.internalError(updateErr.message)
   }
 
+  // Propagate status to bundle siblings (same transactionId = same shipment)
+  const transactionId = existingSale.transactionId as string | undefined
+  if (transactionId) {
+    const { data: siblings } = await supabase
+      .from('product_marketplace_data')
+      .select('id, fields')
+      .eq('status', 'sold')
+      .neq('id', pmd.id)
+      .filter('fields->sale->>transactionId', 'eq', transactionId)
+
+    if (siblings?.length) {
+      for (const sib of siblings) {
+        const sibFields = (sib.fields as Record<string, unknown>) || {}
+        const sibSale = (sibFields.sale as Record<string, unknown>) || {}
+        const sibUpdated = { ...sibSale }
+        if (shipmentStatus) sibUpdated.shipmentStatus = shipmentStatus
+        if (trackingNumber !== undefined) sibUpdated.trackingNumber = trackingNumber
+        if (carrier) sibUpdated.carrier = carrier
+        await supabase
+          .from('product_marketplace_data')
+          .update({ fields: { ...sibFields, sale: sibUpdated } })
+          .eq('id', sib.id)
+      }
+    }
+  }
+
   // Push tracking to eBay if this is an eBay sale with a tracking number
   let ebayPushResult: string | null = null
   if (trackingNumber && pmd.marketplace === 'ebay') {

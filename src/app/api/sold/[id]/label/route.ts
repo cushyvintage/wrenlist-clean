@@ -131,6 +131,41 @@ export const POST = withAuth(async (req, user, params) => {
 
   if (updateErr) return ApiResponseHelper.internalError(updateErr.message)
 
+  // Propagate label to bundle siblings (same transactionId = same shipment)
+  const transactionId = existingSale.transactionId as string | undefined
+  if (transactionId) {
+    const { data: siblings } = await supabase
+      .from('product_marketplace_data')
+      .select('id, fields')
+      .eq('status', 'sold')
+      .neq('id', pmd.id)
+      .filter('fields->sale->>transactionId', 'eq', transactionId)
+
+    if (siblings?.length) {
+      for (const sib of siblings) {
+        const sibFields = (sib.fields as Record<string, unknown>) || {}
+        const sibSale = (sibFields.sale as Record<string, unknown>) || {}
+        await supabase
+          .from('product_marketplace_data')
+          .update({
+            fields: {
+              ...sibFields,
+              sale: {
+                ...sibSale,
+                labelUrl: body.labelUrl,
+                labelStoragePath: storagePath,
+                labelGeneratedAt: new Date().toISOString(),
+                shipmentStatus: 'label sent',
+                ...(body.trackingNumber && { trackingNumber: body.trackingNumber }),
+                ...(body.carrier && { carrier: body.carrier }),
+              },
+            },
+          })
+          .eq('id', sib.id)
+      }
+    }
+  }
+
   return ApiResponseHelper.success({
     labelUrl: body.labelUrl,
     labelStoragePath: storagePath,

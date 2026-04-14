@@ -56,6 +56,8 @@ interface SoldItem {
   } | null
   feeSource?: string | null
   carrier?: string | null
+  isBundle?: boolean
+  itemCount?: number
 }
 
 /**
@@ -206,6 +208,8 @@ export const GET = withAuth(async (req, user) => {
         shippingAddress: (sale?.shippingAddress as SoldItem['shippingAddress']) || null,
         feeSource: (sale?.feeSource as string) || null,
         carrier: (sale?.carrier as string) || null,
+        isBundle: (sale?.isBundle as boolean) || false,
+        itemCount: (sale?.itemCount as number) || 1,
       }
     })
 
