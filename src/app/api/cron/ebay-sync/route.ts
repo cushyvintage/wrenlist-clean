@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
       try {
         const ebayClient = await getEbayClientForUser(userId, supabaseAdmin, 'EBAY_GB')
 
-        const since = new Date(Date.now() - 30 * 86400000).toISOString()
+        // Look back 90 days (eBay max) to catch all historical orders
+        const since = new Date(Date.now() - 90 * 86400000).toISOString()
         const ordersResponse = await ebayClient.getOrders({
           limit: 100,
           filter: `creationdate:[${since}..]`,

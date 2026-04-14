@@ -76,13 +76,11 @@ export const POST = withAuth(async (req, user) => {
       // Use pre-fetched orders from import page (no eBay API call needed)
       orders = providedOrders
     } else {
-      // Default: fetch recent orders (last 30 days)
-      const since = new Date(Date.now() - 30 * 86400000).toISOString()
-      const ordersResponse = await ebayClient.getOrders({
-        limit: 50,
-        filter: `creationdate:[${since}..]`,
-      })
-      orders = ordersResponse.orders || []
+      // Default: 30 days. Pass ?days=90 for historical backfill (eBay max is ~90 days)
+      const { searchParams } = new URL(req.url)
+      const days = Math.min(parseInt(searchParams.get('days') || '30') || 30, 90)
+      const since = new Date(Date.now() - days * 86400000).toISOString()
+      orders = await ebayClient.getAllOrders({ filter: `creationdate:[${since}..]` })
     }
     let itemsSold = 0
     let enriched = 0
