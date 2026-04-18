@@ -109,6 +109,11 @@ function normalizeStatus(raw: string | null | undefined): string | null {
   if (lower.includes('transit') || lower.includes('on its way')) return 'in transit'
   if (lower.includes('post office') || lower.includes('collection')) return 'awaiting collection'
   if (lower.includes('label')) return 'label sent'
+  // "Payment successful!" = buyer paid, seller hasn't shipped yet. From the
+  // seller's perspective this is identical to 'not sent' — something to pack
+  // and post. Must come BEFORE the generic 'sent' match since the word
+  // "successful" also contains no ship info.
+  if (lower.includes('payment') && lower.includes('success')) return 'not sent'
   if (lower.includes('shipped') || lower.includes('sent')) return 'shipped'
   return lower
 }
