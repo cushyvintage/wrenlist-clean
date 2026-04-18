@@ -1144,8 +1144,11 @@ export default function SoldHistoryPage() {
       {/* ── Needs Action section ─────────────────────────────── */}
       {!isLoading && actionItems.length > 0 && (() => {
         const PREVIEW_COUNT = 6
-        const visibleActions = showAllAction ? actionItems : actionItems.slice(0, PREVIEW_COUNT)
-        const hasMore = actionItems.length > PREVIEW_COUNT
+        // Group first, then slice — a 5-item bundle should count as 1 card,
+        // not eat 5 of the 6 preview slots (which previously hid the 7th item).
+        const allEntries = groupActionItems(actionItems)
+        const visibleEntries = showAllAction ? allEntries : allEntries.slice(0, PREVIEW_COUNT)
+        const hasMore = allEntries.length > PREVIEW_COUNT
 
         // Group for pick list: stash name → items (alphabetic by stash, then by name)
         const picklistGroups = (() => {
@@ -1175,7 +1178,7 @@ export default function SoldHistoryPage() {
                   Needs action
                 </h2>
                 <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold min-w-[20px]">
-                  {actionItems.length}
+                  {allEntries.length}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1218,7 +1221,7 @@ export default function SoldHistoryPage() {
             {actionView === 'cards' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {groupActionItems(visibleActions).map((entry) => {
+                  {visibleEntries.map((entry) => {
                     if (entry.type === 'bundle') {
                       return (
                         <BundleOrderCard
@@ -1246,7 +1249,7 @@ export default function SoldHistoryPage() {
                     onClick={() => setShowAllAction(!showAllAction)}
                     className="text-xs text-sage hover:text-sage-lt transition font-medium"
                   >
-                    {showAllAction ? 'Show less' : `Show all ${actionItems.length} orders`}
+                    {showAllAction ? 'Show less' : `Show all ${allEntries.length} orders`}
                   </button>
                 )}
               </>
