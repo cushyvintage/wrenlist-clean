@@ -10,7 +10,6 @@ interface FindWithMarketplaceJoin {
   sold_price_gbp: number | null
   sourced_at: string | null
   sold_at: string | null
-  cancelled_at: string | null
   photos: string[] | null
   platform_fields: Record<string, unknown> | null
   stash_id: string | null
@@ -31,7 +30,6 @@ interface SoldItem {
   sold_price_gbp: number | null
   sourced_at: string | null
   sold_at: string | null
-  cancelled_at: string | null
   photo: string | null
   stashId?: string | null
   stashName?: string | null
@@ -123,7 +121,6 @@ export const GET = withAuth(async (req, user) => {
           sold_price_gbp,
           sourced_at,
           sold_at,
-          cancelled_at,
           photos,
           platform_fields,
           stash_id,
@@ -139,7 +136,6 @@ export const GET = withAuth(async (req, user) => {
         .eq('user_id', user.id)
         .eq('status', 'sold')
         .gte('sold_at', startDate.toISOString())
-        .order('cancelled_at', { ascending: false, nullsFirst: false })
         .order('sold_at', { ascending: false })
         .range(off, off + PAGE_SIZE - 1)
 
@@ -191,7 +187,6 @@ export const GET = withAuth(async (req, user) => {
         sold_price_gbp: find.sold_price_gbp,
         sourced_at: find.sourced_at,
         sold_at: find.sold_at,
-        cancelled_at: find.cancelled_at,
         photo: find.photos?.[0] || null,
         stashId: find.stash_id,
         stashName: Array.isArray(find.stash) ? find.stash[0]?.name || null : find.stash?.name || null,
@@ -218,38 +213,34 @@ export const GET = withAuth(async (req, user) => {
       }
     })
 
-    // Filter out phantom "Bundle N items" finds created by the Vinted /my_orders
-    // fallback when item-level data was missing at list time. These aren't real
-    // inventory — the real items exist under the same transactionId. See
-    // extension/.../vinted/client.ts around line 2345 for the source.
+    // Filter out phantom "Bundle N items" finds created by the old Vinted
+    // /my_orders fallback when item-level data was missing at list time. These
+    // aren't real inventory — the real items exist under the same transactionId.
+    // Extension v0.9.2 prevents new ones; existing ones stay filtered here until
+    // the DB cleanup migration runs.
     const BUNDLE_PLACEHOLDER_RE = /^Bundle\s+\d+\s+items?$/i
     const realItems = items.filter((item) => !BUNDLE_PLACEHOLDER_RE.test(item.name || ''))
 
-    // Separate active and cancelled items
-    const activeItems = realItems.filter((item) => !item.cancelled_at)
-    const cancelledItems = realItems.filter((item) => item.cancelled_at)
-
-    // Calculate metrics for active items only
-    const itemsSold = activeItems.length
-    const totalRevenue = activeItems.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
-    const totalCost = activeItems.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
+    // Calculate metrics
+    const itemsSold = realItems.length
+    const totalRevenue = realItems.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
+    const totalCost = realItems.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
     const totalProfit = totalRevenue - totalCost
-    const itemsWithMargin = activeItems.filter((item) => item.margin_percent != null)
+    const itemsWithMargin = realItems.filter((item) => item.margin_percent != null)
     const avgMargin =
       itemsWithMargin.length > 0
         ? Math.round(itemsWithMargin.reduce((sum, item) => sum + (item.margin_percent as number), 0) / itemsWithMargin.length)
         : 0
 
     return ApiResponseHelper.success({
-      items: activeItems,
-      cancelledItems,
+      items: realItems,
       metrics: {
         itemsSold,
         totalRevenue,
         totalCost,
         totalProfit,
         avgMargin,
-        avgPerItem: activeItems.length > 0 ? Math.round(totalRevenue / activeItems.length) : 0,
+        avgPerItem: realItems.length > 0 ? Math.round(totalRevenue / realItems.length) : 0,
       },
       timeframe,
     })
