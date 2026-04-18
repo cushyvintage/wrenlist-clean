@@ -990,35 +990,40 @@ export default function SoldHistoryPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-border pb-4">
         <div>
           <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
+          <p className="text-[11px] text-ink-lt mt-1">
+            Auto-sync runs every 15 min (eBay on any device; Vinted while Chrome is open).
+            When a sale is detected, other marketplaces are auto-delisted.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleEbaySync}
             disabled={isEbaySyncing}
-            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+            title="Force an immediate eBay check — normally runs every 15 min"
+            className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
           >
-            {isEbaySyncing ? 'Syncing…' : 'Sync eBay Sales'}
+            {isEbaySyncing ? 'Checking eBay…' : 'eBay — sync now'}
           </button>
           <button
             onClick={handleSyncSales}
             disabled={isSyncing || extension.detected === false}
-            title={extension.detected === false ? 'Vinted sync requires the desktop Chrome extension' : undefined}
-            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+            title={extension.detected === false ? 'Vinted sync requires the desktop Chrome extension' : 'Force an immediate Vinted check — normally runs every 15 min'}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSyncing ? 'Syncing…' : 'Sync Vinted Sales'}
+            {isSyncing ? 'Checking Vinted…' : 'Vinted — sync now'}
           </button>
           <button
             onClick={handleBackfillAddresses}
             disabled={isBackfilling}
             className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
           >
-            {isBackfilling ? 'Backfilling...' : 'Backfill addresses'}
+            {isBackfilling ? 'Backfilling…' : 'Backfill addresses'}
           </button>
           {syncMessage && (
-            <span className="text-xs text-ink-lt">{syncMessage}</span>
+            <span className="text-xs text-ink-lt basis-full sm:basis-auto">{syncMessage}</span>
           )}
         </div>
       </div>

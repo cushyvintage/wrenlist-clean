@@ -37,11 +37,9 @@ interface EbayConnectProps {
   ebayChangingPolicies: boolean
   ebaySetupMessage: string | null
   policyIsLoading: boolean
-  salesDetection: Record<string, boolean>
   onPolicyChange: (field: string, value: string) => void
   onSaveEbayPolicies: () => void
   onChangePoliciesClick: () => void
-  onSalesDetectionToggle: () => void
 }
 
 interface EbaySellerStats {
@@ -76,11 +74,9 @@ export function EbayConnect({
   ebayChangingPolicies,
   ebaySetupMessage,
   policyIsLoading,
-  salesDetection,
   onPolicyChange,
   onSaveEbayPolicies,
   onChangePoliciesClick,
-  onSalesDetectionToggle,
 }: EbayConnectProps) {
   const [sellerStats, setSellerStats] = useState<EbaySellerStats | null>(null)
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null)
@@ -280,23 +276,16 @@ export function EbayConnect({
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+        <div className="flex items-start gap-3 p-3 border border-border rounded mb-4 text-xs text-ink-lt">
+          <span className="text-sage mt-0.5">&#x2713;</span>
           <div>
-            <div className="font-medium text-sm text-ink">Sale detection</div>
-            <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when eBay reports a sale</div>
+            <div className="font-medium text-sm text-ink">Auto-sync enabled</div>
+            <div className="mt-1">
+              Wrenlist checks eBay for new sales every 15 minutes automatically (works on any device).
+              When a sale is detected, the find is marked sold and any other marketplaces it&apos;s listed
+              on are queued for automatic delisting.
+            </div>
           </div>
-          <button
-            onClick={onSalesDetectionToggle}
-            className={`relative w-10 h-6 rounded-full transition ${
-              salesDetection.ebay ? 'bg-sage' : 'bg-gray-300'
-            }`}
-          >
-            <div
-              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
-                salesDetection.ebay ? 'right-0.5' : 'left-0.5'
-              }`}
-            ></div>
-          </button>
         </div>
 
         <div className="flex gap-2">

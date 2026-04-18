@@ -39,7 +39,6 @@ export default function PlatformConnectPage() {
   // server always renders false, client may differ.
   const [isMobileOrNonChrome, setIsMobileOrNonChrome] = useState(false)
   const [ebayChangingPolicies, setEbayChangingPolicies] = useState(false)
-  const [salesDetection, setSalesDetection] = useState<Record<string, boolean>>({ ebay: true, vinted: true })
   const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
@@ -131,14 +130,12 @@ export default function PlatformConnectPage() {
           ebayChangingPolicies={ebayChangingPolicies}
           ebaySetupMessage={platforms.ebaySetupMessage}
           policyIsLoading={platforms.policyIsLoading}
-          salesDetection={salesDetection}
           onPolicyChange={(field, value) => platforms.setEbaySelectedPolicies({ ...platforms.ebaySelectedPolicies, [field]: value })}
           onSaveEbayPolicies={async () => {
             const ok = await platforms.handleSaveEbayPolicies()
             if (ok) setEbayChangingPolicies(false)
           }}
           onChangePoliciesClick={() => { platforms.setEbaySelectedPolicies({}); setEbayChangingPolicies(true) }}
-          onSalesDetectionToggle={() => setSalesDetection({ ...salesDetection, ebay: !salesDetection.ebay })}
         />
       </Panel>
 
@@ -155,8 +152,6 @@ export default function PlatformConnectPage() {
           extensionDetected={extensionDetected}
           isMobileOrNonChrome={isMobileOrNonChrome}
           showDebug={showDebug}
-          salesDetection={salesDetection}
-          onSalesDetectionToggle={() => setSalesDetection({ ...salesDetection, vinted: !salesDetection.vinted })}
           onVintedSync={platforms.handleVintedSync}
           onDisconnect={platforms.handleVintedDisconnect}
         />

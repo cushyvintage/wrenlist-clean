@@ -38,8 +38,6 @@ interface VintedConnectProps {
   extensionDetected: boolean | null
   isMobileOrNonChrome: boolean
   showDebug: boolean
-  salesDetection: Record<string, boolean>
-  onSalesDetectionToggle: () => void
   onVintedSync: () => void
   onDisconnect: () => void
 }
@@ -76,8 +74,6 @@ export function VintedConnect({
   extensionDetected,
   isMobileOrNonChrome,
   showDebug,
-  salesDetection,
-  onSalesDetectionToggle,
   onVintedSync,
   onDisconnect,
 }: VintedConnectProps) {
@@ -335,23 +331,16 @@ export function VintedConnect({
         </div>
       )}
 
-      <div className="flex items-center justify-between p-3 border border-border rounded mb-4">
+      <div className="flex items-start gap-3 p-3 border border-border rounded mb-4 text-xs text-ink-lt">
+        <span className="text-sage mt-0.5">&#x2713;</span>
         <div>
-          <div className="font-medium text-sm text-ink">Sale detection</div>
-          <div className="text-xs text-ink-lt mt-1">Auto-mark finds as sold when Vinted reports a sale</div>
+          <div className="font-medium text-sm text-ink">Auto-sync enabled</div>
+          <div className="mt-1">
+            Wrenlist checks Vinted for new sales every 15 minutes while the desktop extension is running.
+            When a sale is detected, the find is marked sold and any other marketplaces it&apos;s listed on
+            are queued for automatic delisting.
+          </div>
         </div>
-        <button
-          onClick={onSalesDetectionToggle}
-          className={`relative w-10 h-6 rounded-full transition ${
-            salesDetection.vinted ? 'bg-sage' : 'bg-gray-300'
-          }`}
-        >
-          <div
-            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition ${
-              salesDetection.vinted ? 'right-0.5' : 'left-0.5'
-            }`}
-          ></div>
-        </button>
       </div>
 
       {vintedActionError && (
