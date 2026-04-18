@@ -43,10 +43,19 @@ export const GET = withAuth(async (_req, user) => {
 
   // Filter out items without platform_listing_id (can't delist without an ID).
   // Mark invalid items as error so the user gets feedback instead of being stuck.
+  // Also skip items whose retry_not_before is in the future (exponential backoff
+  // between failed delist attempts — prevents hammering a rate-limited platform).
   const allItems = data || []
   const validItems: DelistQueueItem[] = []
+  const nowMs = Date.now()
 
   for (const item of allItems) {
+    const fields = (item.fields as Record<string, unknown> | null) || {}
+    const retryNotBefore = typeof fields.retry_not_before === 'string' ? Date.parse(fields.retry_not_before) : NaN
+    if (!Number.isNaN(retryNotBefore) && retryNotBefore > nowMs) {
+      // Still in backoff window — extension will pick up on a later poll
+      continue
+    }
     if (item.platform_listing_id) {
       validItems.push(item as DelistQueueItem)
     } else {

@@ -58,6 +58,7 @@ interface SoldItem {
   carrier?: string | null
   isBundle?: boolean
   itemCount?: number
+  isGift?: boolean
 }
 
 /**
@@ -210,6 +211,7 @@ export const GET = withAuth(async (req, user) => {
         carrier: (sale?.carrier as string) || null,
         isBundle: (sale?.isBundle as boolean) || false,
         itemCount: (sale?.itemCount as number) || 1,
+        isGift: (sale?.isGift as boolean) || false,
       }
     })
 

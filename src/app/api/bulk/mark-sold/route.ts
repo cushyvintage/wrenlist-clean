@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { markMarketplacesForDelist } from '@/lib/auto-delist'
 
 /**
  * POST /api/bulk/mark-sold
@@ -44,6 +45,11 @@ export const POST = withAuth(async (request, user) => {
       return ApiResponseHelper.notFound('One or more finds not found or not authorized')
     }
 
+    // Which finds weren't already sold? Only those need auto-delist fired.
+    const findsToDelist = (finds ?? [])
+      .filter((f) => f.status !== 'sold')
+      .map((f) => f.id)
+
     // Prepare update data
     const now = new Date().toISOString()
     const updateData = {
@@ -63,8 +69,22 @@ export const POST = withAuth(async (request, user) => {
       return ApiResponseHelper.internalError()
     }
 
+    // Fire auto-delist for each find that just transitioned to sold. Do this
+    // sequentially to avoid overloading the DB; these calls are fire-and-forget
+    // in intent — log but don't fail the whole request if one errors.
+    let delistedCount = 0
+    for (const findId of findsToDelist) {
+      try {
+        await markMarketplacesForDelist(supabase, findId, user.id)
+        delistedCount++
+      } catch (err) {
+        console.error('[bulk-mark-sold] auto-delist failed for find', findId, err)
+      }
+    }
+
     return ApiResponseHelper.success({
       updated: findIds.length,
+      delistTriggered: delistedCount,
       message: `Marked ${findIds.length} item${findIds.length !== 1 ? 's' : ''} as sold`,
     })
   } catch (error) {

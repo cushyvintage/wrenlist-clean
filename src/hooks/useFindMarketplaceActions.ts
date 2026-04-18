@@ -196,10 +196,14 @@ export function useFindMarketplaceActions({
     if (!find) return
     setRetryingPlatform(marketplace)
     try {
+      // If the find has been sold, an error-state PMD came from a failed DELIST,
+      // not a failed publish. Retrying with needs_publish would cause the extension
+      // to re-list an already-sold item. Route to needs_delist instead.
+      const nextStatus = find.status === 'sold' ? 'needs_delist' : 'needs_publish'
       const res = await fetch(`/api/finds/${id}/marketplace?marketplace=${marketplace}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'needs_publish' }),
+        body: JSON.stringify({ status: nextStatus }),
       })
       if (!res.ok) throw new Error('Failed to retry')
       refreshMarketplaceData()

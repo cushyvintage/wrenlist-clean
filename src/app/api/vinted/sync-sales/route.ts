@@ -5,6 +5,7 @@ import { logMarketplaceEvent } from '@/lib/marketplace-events'
 import { createPublishJob } from '@/lib/publish-jobs'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 import { withAuth } from '@/lib/with-auth'
+import { isRefundedStatus } from '@/lib/refund-detection'
 
 interface VintedSaleItem {
   itemId?: string
@@ -268,6 +269,49 @@ export const POST = withAuth(async (req, user) => {
             const existingFields = existingPmd.fields as Record<string, unknown> | null
             const existingSale = existingFields?.sale as Record<string, unknown> | undefined
             if (find.status === 'sold' && existingSale?.transactionId === transactionId) {
+              // Refund detection: Vinted's shipmentStatus changed to a refund string
+              // since last sync. Revert the find to 'listed' so revenue / metrics
+              // don't count a sale the seller didn't actually get paid for.
+              // We intentionally do NOT auto re-list on other marketplaces here —
+              // their listings may have been manually deleted, replaced, or the
+              // item may genuinely be gone. The failed-delist banner surfaces
+              // what needs manual attention.
+              const isNowRefunded = isRefundedStatus(sale.shipmentStatusTitle)
+              const wasRefunded = (existingSale?.refundedAt as string | undefined) != null
+              if (isNowRefunded && !wasRefunded) {
+                console.log(`[Vinted Sync Sales] Refund detected for tx=${transactionId}, reverting find ${find.id}`)
+                await supabase.from('finds').update({
+                  status: 'listed',
+                  sold_price_gbp: null,
+                  sold_at: null,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', find.id).eq('user_id', user.id)
+
+                const refundedSale = {
+                  ...existingSale,
+                  ...saleData,
+                  refundedAt: new Date().toISOString(),
+                }
+                await supabase.from('product_marketplace_data').update({
+                  status: 'listed',
+                  fields: { ...(existingFields || {}), sale: refundedSale },
+                  updated_at: new Date().toISOString(),
+                }).eq('find_id', find.id).eq('marketplace', 'vinted')
+
+                logMarketplaceEvent(supabase, user.id, {
+                  findId: find.id,
+                  marketplace: 'vinted',
+                  eventType: 'refund_detected',
+                  source: 'api',
+                  details: {
+                    transactionId,
+                    shipmentStatus: sale.shipmentStatusTitle,
+                    revertedSoldPrice: existingSale?.grossAmount,
+                  },
+                })
+                synced++; continue
+              }
+
               // Link customer if missing
               if (customerId) {
                 await supabase.from('product_marketplace_data').update({

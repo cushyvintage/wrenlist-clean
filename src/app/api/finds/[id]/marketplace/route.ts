@@ -163,13 +163,25 @@ export async function PATCH(
       return ApiResponseHelper.notFound('Find not found')
     }
 
-    // Update marketplace data status (clear error_message on status change)
+    // Update marketplace data status (clear error_message + reset retry_count
+    // on any retry-intent status change so the extension starts from attempt 1)
     const updatePayload: Record<string, unknown> = {
       status: body.status || 'needs_delist',
       updated_at: new Date().toISOString(),
     }
-    if (body.status === 'needs_publish') {
+    if (body.status === 'needs_publish' || body.status === 'needs_delist') {
       updatePayload.error_message = null
+
+      // Reset retry_count in fields so extension doesn't immediately skip as exhausted.
+      // Read existing fields first (can't do partial JSONB update in one PATCH).
+      const { data: existing } = await supabase
+        .from('product_marketplace_data')
+        .select('fields')
+        .eq('find_id', findId)
+        .eq('marketplace', marketplace)
+        .maybeSingle()
+      const existingFields = (existing?.fields as Record<string, unknown> | null) || {}
+      updatePayload.fields = { ...existingFields, retry_count: 0 }
     }
 
     const { error } = await supabase

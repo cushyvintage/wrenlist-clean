@@ -50,6 +50,7 @@ interface SoldItem {
   carrier?: string | null
   isBundle?: boolean
   itemCount?: number
+  isGift?: boolean
 }
 
 interface Metrics {
@@ -238,6 +239,14 @@ function OrderCard({
             )}
             <span className="text-ink-lt text-xs">{item.buyer || 'Unknown buyer'}</span>
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
+            {item.isGift && (
+              <span
+                className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-rose-50 text-rose-700"
+                title="Buyer marked this as a gift"
+              >
+                🎁 Gift
+              </span>
+            )}
             {item.autoImported && (
               <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 text-teal-700">
                 Sold outside Wrenlist
@@ -747,6 +756,51 @@ export default function SoldHistoryPage() {
     loadSoldItems()
   }, [loadSoldItems])
 
+  // Failed-delist surfacing: PMDs stuck in status='error' mean an item sold
+  // elsewhere but we couldn't delist it here — risk of double-sale if we don't
+  // surface it. Quiet background poll; don't block the page on this.
+  const [failedDelists, setFailedDelists] = useState<{
+    count: number
+    byMarketplace: Record<string, number>
+  } | null>(null)
+  const [isRetryingDelists, setIsRetryingDelists] = useState(false)
+
+  const loadFailedDelists = useCallback(async () => {
+    try {
+      const d = await fetchApi<{ count: number; byMarketplace: Record<string, number> }>(
+        '/api/sold/failed-delists',
+      )
+      setFailedDelists(d)
+    } catch {
+      // Silent — banner is advisory, not critical
+    }
+  }, [])
+
+  useEffect(() => {
+    loadFailedDelists()
+  }, [loadFailedDelists])
+
+  const handleRetryAllDelists = useCallback(async () => {
+    if (isRetryingDelists) return
+    setIsRetryingDelists(true)
+    try {
+      const result = await fetchApi<{ retried: number; message: string }>(
+        '/api/sold/retry-delist',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ all: true }),
+        },
+      )
+      setSyncMessage(result.message || `Re-queued ${result.retried} delists`)
+      await loadFailedDelists()
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'Retry failed')
+    } finally {
+      setIsRetryingDelists(false)
+    }
+  }, [isRetryingDelists, loadFailedDelists])
+
   const allItems = data?.items ?? []
   const metrics = data?.metrics ?? null
 
@@ -1036,6 +1090,27 @@ export default function SoldHistoryPage() {
           <span className="text-ink-lt text-sm">
             Vinted sync runs through the desktop Chrome extension. Open Wrenlist on your computer to pull the latest Vinted sales. eBay sync works anywhere.
           </span>
+        </div>
+      )}
+
+      {/* Failed-delist banner — items stuck live on other marketplaces after a sale */}
+      {failedDelists && failedDelists.count > 0 && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-md px-4 py-3">
+          <span className="text-red-700 text-sm flex-1">
+            <span className="font-semibold">⚠ {failedDelists.count} item{failedDelists.count === 1 ? '' : 's'} failed to delist</span>
+            {' — may still be live on '}
+            {Object.entries(failedDelists.byMarketplace)
+              .map(([mp, n]) => `${mp} (${n})`)
+              .join(', ')}
+            . Risk of double-sale until delisted.
+          </span>
+          <button
+            onClick={handleRetryAllDelists}
+            disabled={isRetryingDelists}
+            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition disabled:opacity-50"
+          >
+            {isRetryingDelists ? 'Retrying…' : 'Retry all'}
+          </button>
         </div>
       )}
 

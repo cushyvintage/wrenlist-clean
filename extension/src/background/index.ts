@@ -433,6 +433,13 @@ type ExternalMessage = Record<string, unknown>;
     periodInMinutes: VINTED_SALES_SYNC_INTERVAL_MINUTES,
   });
 
+  // Every N cycles, do a "deep sync" that ignores the checkpoint and re-posts
+  // the most recent 50 orders. Server-side dedup handles the no-op cases, and
+  // status changes on older orders (refunds, tracking updates) flow through.
+  // Without this, once a tx passes the checkpoint it's never re-evaluated.
+  const LAST_VINTED_DEEP_SYNC_KEY = "lastVintedDeepSyncAt";
+  const VINTED_DEEP_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // every 24h
+
   async function runVintedSalesSync(): Promise<void> {
     try {
       // Check if user is logged into Vinted
@@ -442,11 +449,21 @@ type ExternalMessage = Record<string, unknown>;
         return;
       }
 
-      // Read last synced transaction ID
-      const stored = await chrome.storage.local.get([LAST_VINTED_SALE_TX_KEY]);
-      const stopAtId = (stored[LAST_VINTED_SALE_TX_KEY] as string) || undefined;
+      // Decide whether this cycle is a deep sync (ignore checkpoint) or normal.
+      const deepStored = await chrome.storage.local.get([LAST_VINTED_DEEP_SYNC_KEY]);
+      const lastDeepAt = (deepStored[LAST_VINTED_DEEP_SYNC_KEY] as number) || 0;
+      const isDeepSync = Date.now() - lastDeepAt > VINTED_DEEP_SYNC_INTERVAL_MS;
 
-      console.log("[VintedSalesSync] Fetching sales, stopAtId:", stopAtId || "(none)");
+      // Read last synced transaction ID (ignored on deep sync)
+      const stored = await chrome.storage.local.get([LAST_VINTED_SALE_TX_KEY]);
+      const stopAtId = isDeepSync
+        ? undefined
+        : ((stored[LAST_VINTED_SALE_TX_KEY] as string) || undefined);
+
+      console.log(
+        `[VintedSalesSync] Fetching sales (mode=${isDeepSync ? "deep" : "incremental"}), stopAtId:`,
+        stopAtId || "(none)",
+      );
 
       const { client } = createVintedServices({ tld: "co.uk" });
       // Silent bootstrap: never open a background Vinted tab from the sync
@@ -454,6 +471,12 @@ type ExternalMessage = Record<string, unknown>;
       // cycle rather than flashing a tab in the user's browser.
       await client.bootstrap();
       const result = await client.getSales(1, 50, stopAtId);
+
+      // On deep sync, record the timestamp even if there are no sales so we
+      // don't keep deep-syncing every 15 min until we find one.
+      if (isDeepSync) {
+        await chrome.storage.local.set({ [LAST_VINTED_DEEP_SYNC_KEY]: Date.now() });
+      }
 
       if (!result.sales || result.sales.length === 0) {
         console.debug("[VintedSalesSync] No new sales found");
@@ -986,6 +1009,23 @@ type ExternalMessage = Record<string, unknown>;
   const MAX_PUBLISH_RETRIES = 3;
 
   /**
+   * Exponential backoff schedule for failed queue items (publish or delist):
+   *   attempt 1 fail → wait 2 min before retry
+   *   attempt 2 fail → wait 10 min before retry
+   *   attempt 3 fail → no retry (status becomes 'error')
+   * Previously all 3 retries fired within ~3 min because the queue poll ran
+   * every minute and immediately re-picked the item. Transient issues
+   * (Cloudflare bot checks, rate limits, auth hiccups) never had time to
+   * clear. The server-side delist-queue GET filters by retry_not_before so
+   * the extension doesn't see items still within the backoff window.
+   */
+  function nextRetryNotBefore(nextAttemptNumber: number): string | null {
+    if (nextAttemptNumber <= 1) return new Date(Date.now() + 2 * 60_000).toISOString();
+    if (nextAttemptNumber === 2) return new Date(Date.now() + 10 * 60_000).toISOString();
+    return null; // attempt 3+ exhausted retries; status flips to 'error' anyway
+  }
+
+  /**
    * Idempotency guard: prevents duplicate listings when the report-back POST
    * fails (network issue, Vercel cold start) and the queue still shows
    * needs_publish on the next poll cycle.
@@ -1489,6 +1529,7 @@ type ExternalMessage = Record<string, unknown>;
             const errorMsg = delistError instanceof Error ? delistError.message : String(delistError);
             const nextRetryCount = retryCount + 1;
             console.error(`[QueuePoll] ${mp} delist threw for ${listingId}: ${errorMsg} (attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES})`);
+            const backoff = nextRetryNotBefore(nextRetryCount);
             try {
               await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                 method: "POST",
@@ -1498,7 +1539,11 @@ type ExternalMessage = Record<string, unknown>;
                   marketplace: mp,
                   status: nextRetryCount >= MAX_PUBLISH_RETRIES ? "error" : "needs_delist",
                   error_message: errorMsg,
-                  fields: { ...existingFields, retry_count: nextRetryCount },
+                  fields: {
+                    ...existingFields,
+                    retry_count: nextRetryCount,
+                    ...(backoff ? { retry_not_before: backoff } : {}),
+                  },
                 }),
               });
             } catch { /* ignore reporting failure */ }
@@ -1550,7 +1595,8 @@ type ExternalMessage = Record<string, unknown>;
                   }),
                 });
               } else {
-                console.warn(`[QueuePoll] Delist attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${listingId} on ${mp}: ${errorMsg}. Will retry.`);
+                const backoff = nextRetryNotBefore(nextRetryCount);
+                console.warn(`[QueuePoll] Delist attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${listingId} on ${mp}: ${errorMsg}. Will retry after ${backoff ?? "immediately"}.`);
                 await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
                   method: "POST",
                   credentials: "include",
@@ -1560,7 +1606,11 @@ type ExternalMessage = Record<string, unknown>;
                     marketplace: mp,
                     status: "needs_delist",
                     error_message: errorMsg,
-                    fields: { ...existingFields, retry_count: nextRetryCount },
+                    fields: {
+                      ...existingFields,
+                      retry_count: nextRetryCount,
+                      ...(backoff ? { retry_not_before: backoff } : {}),
+                    },
                   }),
                 });
               }

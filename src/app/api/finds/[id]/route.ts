@@ -1,9 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { UpdateFindSchema, validateBody } from '@/lib/validation'
-import { createPublishJob } from '@/lib/publish-jobs'
+import { markMarketplacesForDelist } from '@/lib/auto-delist'
 import type { Find } from '@/types'
 
 /**
@@ -212,64 +211,8 @@ export async function PATCH(
   }
 }
 
-/**
- * Helper: Mark all active marketplace listings as 'needs_delist'
- * This triggers the extension to delist from each marketplace
- */
-async function markMarketplacesForDelist(supabase: SupabaseClient, findId: string, userId?: string) {
-  const { data: marketplaceData, error: fetchError } = await supabase
-    .from('product_marketplace_data')
-    .select('marketplace, platform_listing_id')
-    .eq('find_id', findId)
-    .eq('status', 'listed')
-
-  if (fetchError) {
-    console.error('Failed to fetch marketplace data:', fetchError)
-    return
-  }
-
-  if (!marketplaceData || marketplaceData.length === 0) {
-    // No active listings to delist
-    return
-  }
-
-  // Update all active listings to 'needs_delist'
-  const { error: updateError } = await supabase
-    .from('product_marketplace_data')
-    .update({
-      status: 'needs_delist',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('find_id', findId)
-    .eq('status', 'listed')
-
-  if (updateError) {
-    console.error('Failed to mark marketplaces for delist:', updateError)
-    throw updateError
-  }
-
-  // Dual-write: create delist jobs for each marketplace
-  if (userId) {
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    for (const item of marketplaceData) {
-      const jobResult = await createPublishJob(supabaseAdmin, {
-        user_id: userId,
-        find_id: findId,
-        platform: item.marketplace,
-        action: 'delist',
-        payload: { platform_listing_id: item.platform_listing_id },
-      })
-      if (jobResult.error) {
-        console.error('[DualWrite] Failed to create delist job for', item.marketplace, jobResult.error)
-      }
-    }
-  }
-
-  console.log(`[Auto-Delist] Marked ${marketplaceData.length} marketplace(s) for delist for find ${findId}`)
-}
+// markMarketplacesForDelist has moved to src/lib/auto-delist.ts so bulk entry
+// points (bulk-mark-sold, future cron recoveries) share the same behaviour.
 
 /**
  * DELETE /api/finds/[id]

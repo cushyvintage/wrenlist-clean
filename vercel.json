@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/refresh-stats",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/retry-failed-delists",
+      "schedule": "0 7 * * *"
     }
   ]
 }
