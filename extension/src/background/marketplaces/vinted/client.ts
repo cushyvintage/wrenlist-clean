@@ -2353,18 +2353,27 @@ export class VintedClient {
         if (/^Bundle\s+\d+\s+items?$/i.test(String(tx.title).trim())) {
           console.log('[Vinted] Skipping bundle order placeholder from /my_orders — awaiting enrichment');
         } else {
-          // Extract item from the order itself - /my_orders format
-          // Try to get item_id from various possible fields
-          const itemId = tx.item_id || tx.product_id || tx.item?.id || tx.photo?.id?.toString()?.slice(0, -5) || null;
-          items = [{
-            id: itemId,
-            title: tx.title,
-            price: tx.price?.amount || tx.price_numeric || tx.price,
-            photo: tx.photo,
-            photos: tx.photos,
-            url: tx.item_url || tx.url,
-          }];
-          console.log('[Vinted] Extracted embedded item from my_orders:', { itemId, title: tx.title });
+          // Only synthesize an item if we have a real listing ID from Vinted.
+          // The previous `tx.photo.id.slice(0, -5)` fallback fabricated short IDs
+          // that never matched existing product_marketplace_data rows — result was
+          // 151 duplicate finds created in a single sync on 2026-04-18 because
+          // every fabricated ID was treated as "new listing" by sync-sales.
+          // If no real ID is present, leave items empty and let getOrderDetails()
+          // provide the authoritative data on the next enrichment cycle.
+          const itemId = tx.item_id || tx.product_id || tx.item?.id || null;
+          if (itemId) {
+            items = [{
+              id: itemId,
+              title: tx.title,
+              price: tx.price?.amount || tx.price_numeric || tx.price,
+              photo: tx.photo,
+              photos: tx.photos,
+              url: tx.item_url || tx.url,
+            }];
+            console.log('[Vinted] Extracted embedded item from my_orders:', { itemId, title: tx.title });
+          } else {
+            console.log('[Vinted] Skipping my_orders tx with no real listing ID — awaiting enrichment', { title: tx.title });
+          }
         }
       }
       
