@@ -211,7 +211,90 @@ export const POST = withAuth(async (req, user) => {
       try {
         const transactionId = String(sale.transactionId || '')
         const saleItems = sale.items || []
-        if (!saleItems.length) { skipped++; continue }
+
+        // Empty items but with transactionId: this is the bundle placeholder
+        // path (ext v0.9.2 strips synthetic items from `/my_orders` bundle
+        // summaries). We can still refresh shipmentStatus + sale metadata on
+        // any existing PMDs that already point at this transactionId.
+        // Without this, bundle orders never get their shipment status updated
+        // after the initial sync because we skip the whole sale.
+        if (!saleItems.length) {
+          if (!transactionId) { skipped++; continue }
+
+          // Build refreshed sale metadata (same shape as below)
+          const refreshSaleData: Record<string, unknown> = {
+            transactionId,
+            conversationId: sale.conversationId || null,
+            shipmentId: sale.shipmentId || null,
+            buyer: sale.buyer || null,
+            grossAmount: sale.grossAmount,
+            serviceFee: sale.serviceFee,
+            netAmount: sale.netAmount,
+            currency: sale.currency || 'GBP',
+            shippingAddress: sale.shippingAddress || null,
+            trackingNumber: sale.trackingNumber || null,
+            carrier: sale.carrier || null,
+            shipmentStatus: sale.shipmentStatusTitle || null,
+            statusCode: sale.statusCode || null,
+            labelUrl: sale.labelUrl || null,
+            orderDate: sale.orderDate || null,
+            completedDate: sale.completedDate || null,
+            isBundle: sale.isBundle || false,
+            itemCount: sale.itemCount || 0,
+          }
+
+          // Find all this user's PMDs matching this transactionId
+          const { data: bundlePmds } = await supabase
+            .from('product_marketplace_data')
+            .select('id, find_id, fields, finds!inner(user_id, status)')
+            .eq('marketplace', 'vinted')
+            .eq('finds.user_id', user.id)
+            .filter('fields->sale->>transactionId', 'eq', transactionId)
+
+          if (!bundlePmds || bundlePmds.length === 0) {
+            // Nothing to refresh and no items to create — safe to skip
+            skipped++
+            continue
+          }
+
+          // Refresh each matching PMD's shipmentStatus + sale metadata
+          for (const pmd of bundlePmds as Array<{
+            id: string; find_id: string; fields: Record<string, unknown> | null;
+            finds: { user_id: string; status: string } | { user_id: string; status: string }[] | null;
+          }>) {
+            const existingFields = pmd.fields || {}
+            const existingSale = (existingFields.sale as Record<string, unknown> | undefined) || {}
+
+            // Refund detection on the bundle path: same check as the main branch
+            const find = Array.isArray(pmd.finds) ? pmd.finds[0] : pmd.finds
+            const isNowRefunded = isRefundedStatus(sale.shipmentStatusTitle)
+            const wasRefunded = (existingSale?.refundedAt as string | undefined) != null
+            if (isNowRefunded && !wasRefunded && find?.status === 'sold') {
+              await supabase.from('finds').update({
+                status: 'listed',
+                sold_price_gbp: null,
+                sold_at: null,
+                updated_at: new Date().toISOString(),
+              }).eq('id', pmd.find_id).eq('user_id', user.id)
+
+              const refundedSale = { ...existingSale, ...refreshSaleData, refundedAt: new Date().toISOString() }
+              await supabase.from('product_marketplace_data').update({
+                status: 'listed',
+                fields: { ...existingFields, sale: refundedSale },
+                updated_at: new Date().toISOString(),
+              }).eq('id', pmd.id)
+              continue
+            }
+
+            const refreshedSale = { ...existingSale, ...refreshSaleData }
+            await supabase.from('product_marketplace_data').update({
+              fields: { ...existingFields, sale: refreshedSale },
+              updated_at: new Date().toISOString(),
+            }).eq('id', pmd.id)
+          }
+          synced += bundlePmds.length
+          continue
+        }
 
         // Sale metadata to store in PMD fields
         const saleData = {
