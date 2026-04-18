@@ -10,7 +10,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import type { Platform } from '@/types'
-import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
+import { EXTENSION_ID, useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { ShippingLabelModal } from '@/components/sold/ShippingLabelModal'
 import { useConfirm } from '@/components/wren/ConfirmProvider'
 
@@ -662,7 +662,10 @@ function groupActionItems(items: SoldItem[]): ActionEntry[] {
 
 const SYNC_CHUNK_SIZE = 50
 
-async function syncSalesInChunks(sales: unknown[]): Promise<{ synced: number; created: number; errors: number; needsPhotoBackfill: Array<{ findId: string; photos: string[] }> }> {
+async function syncSalesInChunks(
+  sales: unknown[],
+  onProgress?: (processed: number, total: number) => void,
+): Promise<{ synced: number; created: number; errors: number; needsPhotoBackfill: Array<{ findId: string; photos: string[] }> }> {
   let totalSynced = 0, totalCreated = 0, totalErrors = 0
   const allPhotoBackfill: Array<{ findId: string; photos: string[] }> = []
 
@@ -682,9 +685,32 @@ async function syncSalesInChunks(sales: unknown[]): Promise<{ synced: number; cr
     totalCreated += result.created
     totalErrors += result.errors
     if (result.needsPhotoBackfill) allPhotoBackfill.push(...result.needsPhotoBackfill)
+    onProgress?.(Math.min(i + SYNC_CHUNK_SIZE, sales.length), sales.length)
   }
 
   return { synced: totalSynced, created: totalCreated, errors: totalErrors, needsPhotoBackfill: allPhotoBackfill }
+}
+
+/* ── Friendly error mapper for Vinted sync errors ────────────── */
+
+function mapVintedSyncError(raw: string): string {
+  const msg = raw.toLowerCase()
+  if (msg.includes('extension not available') || msg.includes('could not establish connection')) {
+    return 'Wrenlist extension not detected. Open Wrenlist on desktop Chrome to sync Vinted.'
+  }
+  if (msg.includes('logged out') || msg.includes('session expired') || msg.includes('sign back in')) {
+    return 'Sign in to vinted.co.uk in Chrome, then try again.'
+  }
+  if (msg.includes('cooldown') || msg.includes('rate')) {
+    return 'Vinted is rate-limiting. Wait a minute and try again.'
+  }
+  if (msg.includes('cloudflare') || msg.includes('captcha') || msg.includes('challenge')) {
+    return 'Vinted is showing a bot check. Open vinted.co.uk in Chrome, complete any challenge, then retry.'
+  }
+  if (msg.includes('csrf') || msg.includes('token')) {
+    return 'Could not authenticate with Vinted. Open vinted.co.uk in Chrome, then retry.'
+  }
+  return raw
 }
 
 /* ── Main Page ────────────────────────────────────────────────── */
@@ -697,6 +723,7 @@ export default function SoldHistoryPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const extension = useExtensionInfo()
   const [showAllAction, setShowAllAction] = useState(false)
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [actionView, setActionView] = useState<'cards' | 'picklist'>('cards')
@@ -792,8 +819,15 @@ export default function SoldHistoryPage() {
 
   const handleSyncSales = useCallback(async () => {
     if (isSyncing) return
+
+    // Pre-flight: extension required for Vinted sync
+    if (extension.detected === false) {
+      setSyncMessage('Vinted sync requires the desktop extension — open Wrenlist in Chrome to sync.')
+      return
+    }
+
     setIsSyncing(true)
-    setSyncMessage(null)
+    setSyncMessage('Connecting to Vinted…')
 
     try {
       const sales = await new Promise<unknown[]>((resolve, reject) => {
@@ -823,9 +857,13 @@ export default function SoldHistoryPage() {
         return
       }
 
-      const syncData = await syncSalesInChunks(sales)
+      setSyncMessage(`Got ${sales.length} orders from Vinted — saving…`)
+      const syncData = await syncSalesInChunks(sales, (done, total) => {
+        setSyncMessage(`Saving sales… ${done}/${total}`)
+      })
 
       if (syncData.needsPhotoBackfill.length > 0) {
+        setSyncMessage(`Saving photos for ${syncData.needsPhotoBackfill.length} items…`)
         await fetchApi('/api/finds/photo-backfill', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -833,15 +871,16 @@ export default function SoldHistoryPage() {
         })
       }
 
-      setSyncMessage(`Synced ${syncData.synced} items, created ${syncData.created} new`)
+      setSyncMessage(`✓ Synced ${syncData.synced} items, ${syncData.created} new`)
       loadSoldItems()
     } catch (err) {
       console.error('Sync failed:', err)
-      setSyncMessage(err instanceof Error ? err.message : 'Sync failed')
+      const raw = err instanceof Error ? err.message : 'Sync failed'
+      setSyncMessage(mapVintedSyncError(raw))
     } finally {
       setIsSyncing(false)
     }
-  }, [isSyncing, loadSoldItems])
+  }, [isSyncing, loadSoldItems, extension.detected])
 
   const handleBackfillAddresses = useCallback(async () => {
     if (isBackfilling) return
@@ -895,7 +934,7 @@ export default function SoldHistoryPage() {
   const handleEbaySync = useCallback(async () => {
     if (isEbaySyncing) return
     setIsEbaySyncing(true)
-    setSyncMessage(null)
+    setSyncMessage('Checking eBay for recent orders…')
     setEbayDisconnected(false)
 
     try {
@@ -907,7 +946,14 @@ export default function SoldHistoryPage() {
         message: string
       }>('/api/ebay/sync-orders?days=90', { method: 'POST' })
 
-      setSyncMessage(result.message || `Checked ${result.ordersChecked} orders, ${result.itemsSold} new sales`)
+      const parts: string[] = []
+      if (result.itemsSold > 0) parts.push(`${result.itemsSold} new`)
+      if (result.enriched > 0) parts.push(`${result.enriched} enriched`)
+      if (result.autoCreated > 0) parts.push(`${result.autoCreated} auto-created`)
+      const summary = parts.length
+        ? `✓ ${result.ordersChecked} orders checked — ${parts.join(', ')}`
+        : `✓ ${result.ordersChecked} orders checked, nothing new`
+      setSyncMessage(result.message || summary)
       if (result.itemsSold > 0 || result.enriched > 0 || result.autoCreated > 0) {
         loadSoldItems()
       }
@@ -954,14 +1000,15 @@ export default function SoldHistoryPage() {
             disabled={isEbaySyncing}
             className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
           >
-            {isEbaySyncing ? 'Syncing...' : 'Sync eBay Sales'}
+            {isEbaySyncing ? 'Syncing…' : 'Sync eBay Sales'}
           </button>
           <button
             onClick={handleSyncSales}
-            disabled={isSyncing}
-            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+            disabled={isSyncing || extension.detected === false}
+            title={extension.detected === false ? 'Vinted sync requires the desktop Chrome extension' : undefined}
+            className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSyncing ? 'Syncing...' : 'Sync Vinted Sales'}
+            {isSyncing ? 'Syncing…' : 'Sync Vinted Sales'}
           </button>
           <button
             onClick={handleBackfillAddresses}
@@ -975,6 +1022,15 @@ export default function SoldHistoryPage() {
           )}
         </div>
       </div>
+
+      {/* Vinted needs extension banner (mobile / no-extension users) */}
+      {extension.detected === false && !extension.loading && (
+        <div className="flex items-center gap-3 bg-sage/5 border border-sage/20 rounded-md px-4 py-3">
+          <span className="text-ink-lt text-sm">
+            Vinted sync runs through the desktop Chrome extension. Open Wrenlist on your computer to pull the latest Vinted sales. eBay sync works anywhere.
+          </span>
+        </div>
+      )}
 
       {/* eBay disconnected banner */}
       {ebayDisconnected && (
@@ -1369,7 +1425,7 @@ export default function SoldHistoryPage() {
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink-lt">
                         {item.serviceFee != null && item.serviceFee > 0
                           ? `−£${item.serviceFee.toFixed(2)}`
-                          : item.feeSource === 'actual' && item.serviceFee === 0 && item.marketplace === 'ebay'
+                          : item.feeSource === 'actual' && (item.serviceFee === 0 || item.serviceFee == null) && item.marketplace === 'ebay'
                             ? <span className="text-amber-600" title="eBay fees settle 1-2 days after sale">pending</span>
                             : '--'}
                       </td>
