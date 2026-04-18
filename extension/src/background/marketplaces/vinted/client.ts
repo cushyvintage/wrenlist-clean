@@ -2344,18 +2344,28 @@ export class VintedClient {
       // Handle /my_orders format where item data is embedded directly in the order
       // Check if this looks like embedded item data (has title and photo at root, but no items array)
       if (items.length === 0 && tx.title && (tx.photo || tx.photos)) {
-        // Extract item from the order itself - /my_orders format
-        // Try to get item_id from various possible fields
-        const itemId = tx.item_id || tx.product_id || tx.item?.id || tx.photo?.id?.toString()?.slice(0, -5) || null;
-        items = [{
-          id: itemId,
-          title: tx.title,
-          price: tx.price?.amount || tx.price_numeric || tx.price,
-          photo: tx.photo,
-          photos: tx.photos,
-          url: tx.item_url || tx.url,
-        }];
-        console.log('[Vinted] Extracted embedded item from my_orders:', { itemId, title: tx.title });
+        // Vinted returns "Bundle N items" as the tx.title for bundle orders on the
+        // list endpoint — that's an order summary, NOT a real item. Synthesising a
+        // fake item from it creates a phantom find downstream (seen as 'Bundle 5 items'
+        // rows on /sold). Leave items empty; getOrderDetails() on a later cycle will
+        // return the real items and the server-side sync-sales route will skip this
+        // placeholder (see `if (!saleItems.length) { skipped++; continue }`).
+        if (/^Bundle\s+\d+\s+items?$/i.test(String(tx.title).trim())) {
+          console.log('[Vinted] Skipping bundle order placeholder from /my_orders — awaiting enrichment');
+        } else {
+          // Extract item from the order itself - /my_orders format
+          // Try to get item_id from various possible fields
+          const itemId = tx.item_id || tx.product_id || tx.item?.id || tx.photo?.id?.toString()?.slice(0, -5) || null;
+          items = [{
+            id: itemId,
+            title: tx.title,
+            price: tx.price?.amount || tx.price_numeric || tx.price,
+            photo: tx.photo,
+            photos: tx.photos,
+            url: tx.item_url || tx.url,
+          }];
+          console.log('[Vinted] Extracted embedded item from my_orders:', { itemId, title: tx.title });
+        }
       }
       
       sales.push({

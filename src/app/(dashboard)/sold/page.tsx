@@ -416,7 +416,9 @@ function BundleOrderCard({
   const isEbay = first.marketplace === 'ebay'
   const normalized = normalizeStatus(first.shipmentStatus)
   const totalPrice = items.reduce((sum, i) => sum + (i.sold_price_gbp || 0), 0)
-  const totalNet = items.reduce((sum, i) => sum + (i.netAmount || 0), 0)
+  // netAmount is stored bundle-level on every sibling item (same transactionId),
+  // so we take it once from the first item — summing would multiply by items.length.
+  const totalNet = items[0]?.netAmount || 0
 
   const handleAction = async (status: string, tracking?: string) => {
     setIsUpdating(true)
