@@ -14,6 +14,8 @@ import type { ListingActionResult, SupportedMarketplace } from "./orchestrator/t
 import { normalizeError, resolveShopifyUrl } from "./orchestrator/utils.js";
 import { createVintedServices } from "./marketplaces/vinted/index.js";
 import { createEtsyServices } from "./marketplaces/etsy/index.js";
+import { createEbaySellerHubServices } from "./marketplaces/ebay/index.js";
+import type { EbayTimerange } from "./marketplaces/ebay/constants.js";
 import {
   VintedCooldownError,
   VintedLoggedOutError,
@@ -575,6 +577,183 @@ type ExternalMessage = Record<string, unknown>;
         "vinted-sync",
         `Unexpected failure: ${e instanceof Error ? e.message : String(e)}`,
         { stack: e instanceof Error ? e.stack : undefined },
+      );
+    }
+  }
+
+  // --- Etsy sales sync: periodic receipt collection ---
+  // Mirrors the Vinted alarm: every 15 min, fetch latest completed receipts,
+  // POST to sync-sales. Server handles match-or-create + auto-delist of
+  // other marketplaces. Checkpoint stops us re-posting stale receipts.
+  const ETSY_SALES_SYNC_ALARM = "etsy_sales_sync";
+  const ETSY_SALES_SYNC_INTERVAL_MINUTES = 15;
+  const LAST_ETSY_RECEIPT_KEY = "lastEtsyReceiptId";
+
+  chrome.alarms.create(ETSY_SALES_SYNC_ALARM, {
+    delayInMinutes: 4, // staggered: Vinted=2, Etsy=4, Shopify=6
+    periodInMinutes: ETSY_SALES_SYNC_INTERVAL_MINUTES,
+  });
+
+  async function runEtsySalesSync(): Promise<void> {
+    try {
+      const isLoggedIn = await checkMarketplaceLogin("etsy");
+      if (!isLoggedIn) {
+        console.debug("[EtsySalesSync] Not logged into Etsy, skipping");
+        return;
+      }
+
+      const { client } = createEtsyServices();
+      const result = await client.getReceipts(1, "completed");
+
+      if (!result.orders || result.orders.length === 0) {
+        console.debug("[EtsySalesSync] No completed receipts");
+        return;
+      }
+
+      // Skip if newest receipt matches our checkpoint
+      const stored = await chrome.storage.local.get([LAST_ETSY_RECEIPT_KEY]);
+      const lastReceiptId = stored[LAST_ETSY_RECEIPT_KEY] as string | undefined;
+      const newestId = String(result.orders[0]?.orderId ?? "");
+      if (lastReceiptId && newestId === lastReceiptId) {
+        console.debug("[EtsySalesSync] No new receipts since checkpoint");
+        return;
+      }
+
+      // Transform EtsyOrder → sync-sales payload (matches import page shape)
+      const enrichedSales = result.orders.map((receipt) => ({
+        receiptId: String(receipt.orderId),
+        grossAmount: receipt.grossAmount ?? 0,
+        shippingCost: receipt.shippingCost ?? null,
+        taxAmount: receipt.taxAmount ?? null,
+        discount: receipt.discount ?? null,
+        refundAmount: receipt.refundAmount ?? null,
+        buyerPaid: receipt.buyerPaid ?? null,
+        netAmount: receipt.netAmount ?? 0,
+        currency: receipt.currency || "GBP",
+        buyer: receipt.buyer || null,
+        orderDate: receipt.orderDate || null,
+        isGift: receipt.isGift || false,
+        giftMessage: receipt.giftMessage || null,
+        items: (receipt.items || []).map((it) => ({
+          itemId: String(it.listingId || ""),
+          title: it.title,
+          price: it.cost ?? 0,
+          thumbnailUrl: it.imageUrl,
+          itemUrl: null,
+        })),
+        receiptItems: receipt.items || [],
+        trackingNumber: receipt.trackingNumber || null,
+        carrier: receipt.carrier || null,
+        deliveryStatus: receipt.deliveryStatus || null,
+        shippingAddress: receipt.shippingAddress || null,
+        isBundle: (receipt.listingIds?.length || 1) > 1,
+        itemCount: receipt.listingIds?.length || 1,
+      }));
+
+      const baseUrl = await getWrenlistBaseUrl();
+      const syncRes = await queueFetch(`${baseUrl}/api/etsy/sync-sales`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sales: enrichedSales }),
+      });
+
+      if (syncRes.ok) {
+        const raw = await syncRes.json();
+        const data = raw.data || raw;
+        console.log("[EtsySalesSync] Synced:", data?.message || data);
+        // Only advance checkpoint on clean sync
+        if ((data.errors || 0) === 0) {
+          await chrome.storage.local.set({ [LAST_ETSY_RECEIPT_KEY]: newestId });
+        } else {
+          console.warn(`[EtsySalesSync] ${data.errors} errors — not advancing checkpoint`);
+        }
+      } else {
+        const text = await syncRes.text();
+        console.error("[EtsySalesSync] API error:", syncRes.status, text);
+        await remoteLog("error", "etsy-sync", `API ${syncRes.status}: ${text.slice(0, 200)}`);
+      }
+    } catch (e) {
+      console.error("[EtsySalesSync] Failed:", e);
+      await remoteLog(
+        "error",
+        "etsy-sync",
+        `Unexpected failure: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  // --- Shopify sales sync: periodic order collection ---
+  // Fetches shop URL from /api/shopify/connect (stored server-side), then
+  // pulls latest orders from Shopify Admin. Server handles match-or-create
+  // + auto-delist. Uses checkpoint to avoid re-posting old orders.
+  const SHOPIFY_SALES_SYNC_ALARM = "shopify_sales_sync";
+  const SHOPIFY_SALES_SYNC_INTERVAL_MINUTES = 15;
+  const LAST_SHOPIFY_ORDER_KEY = "lastShopifyOrderId";
+
+  chrome.alarms.create(SHOPIFY_SALES_SYNC_ALARM, {
+    delayInMinutes: 6, // staggered: Vinted=2, Etsy=4, Shopify=6
+    periodInMinutes: SHOPIFY_SALES_SYNC_INTERVAL_MINUTES,
+  });
+
+  async function runShopifySalesSync(): Promise<void> {
+    try {
+      const baseUrl = await getWrenlistBaseUrl();
+
+      // Ask Wrenlist for the stored shop domain (server is source of truth)
+      const connRes = await queueFetch(`${baseUrl}/api/shopify/connect`);
+      if (!connRes.ok) {
+        console.debug("[ShopifySalesSync] connect endpoint failed, skipping");
+        return;
+      }
+      const connRaw = await connRes.json();
+      const conn = connRaw.data || connRaw;
+      if (!conn?.connected || !conn?.storeDomain) {
+        console.debug("[ShopifySalesSync] No Shopify store domain, skipping");
+        return;
+      }
+
+      const client = new ShopifyClient(conn.storeDomain);
+      const result = await client.getOrders();
+
+      if (!result.orders || result.orders.length === 0) {
+        console.debug("[ShopifySalesSync] No orders");
+        return;
+      }
+
+      const stored = await chrome.storage.local.get([LAST_SHOPIFY_ORDER_KEY]);
+      const lastOrderId = stored[LAST_SHOPIFY_ORDER_KEY] as string | undefined;
+      const newestId = String(result.orders[0]?.orderId ?? "");
+      if (lastOrderId && newestId === lastOrderId) {
+        console.debug("[ShopifySalesSync] No new orders since checkpoint");
+        return;
+      }
+
+      const syncRes = await queueFetch(`${baseUrl}/api/shopify/sync-orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders: result.orders }),
+      });
+
+      if (syncRes.ok) {
+        const raw = await syncRes.json();
+        const data = raw.data || raw;
+        console.log("[ShopifySalesSync] Synced:", data?.message || data);
+        if ((data.errors || 0) === 0) {
+          await chrome.storage.local.set({ [LAST_SHOPIFY_ORDER_KEY]: newestId });
+        } else {
+          console.warn(`[ShopifySalesSync] ${data.errors} errors — not advancing checkpoint`);
+        }
+      } else {
+        const text = await syncRes.text();
+        console.error("[ShopifySalesSync] API error:", syncRes.status, text);
+        await remoteLog("error", "shopify-sync", `API ${syncRes.status}: ${text.slice(0, 200)}`);
+      }
+    } catch (e) {
+      console.error("[ShopifySalesSync] Failed:", e);
+      await remoteLog(
+        "error",
+        "shopify-sync",
+        `Unexpected failure: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }
@@ -1628,6 +1807,10 @@ type ExternalMessage = Record<string, unknown>;
       }
     } else if (alarm.name === VINTED_SALES_SYNC_ALARM) {
       await runVintedSalesSync();
+    } else if (alarm.name === ETSY_SALES_SYNC_ALARM) {
+      await runEtsySalesSync();
+    } else if (alarm.name === SHOPIFY_SALES_SYNC_ALARM) {
+      await runShopifySalesSync();
     } else if (alarm.name === STATS_REFRESH_ALARM) {
       await runStatsRefresh();
     }
@@ -2037,6 +2220,51 @@ async function dispatchExternalMessage(message: ExternalMessage) {
         ?? (message.forceRefresh as boolean | undefined)
         ?? false;
       return createEtsyServices().client.getShopConfig(forceRefresh);
+    }
+
+    // ── eBay Seller Hub (SSR scraping for historical orders) ────────
+    case "get_ebay_seller_hub_orders": {
+      const ep = (message.params as Record<string, unknown>) ?? {};
+      const timerange = (ep.timerange as EbayTimerange | undefined) ?? "PREVIOUSYEAR";
+      const maxPages = (ep.pages as number | undefined) ?? 20;
+
+      const ebayClient = createEbaySellerHubServices().client;
+      const debug = (ep.debug as boolean) ?? false;
+
+      try {
+        // Check login first
+        const loggedIn = await ebayClient.checkLogin();
+        if (!loggedIn) {
+          return { success: false, needsLogin: true, message: "Please log into eBay in this browser first" };
+        }
+
+        // Fetch first page to get total count
+        const firstResult = await ebayClient.getOrders(1, timerange);
+        const allOrders = [...firstResult.orders];
+        // Calculate pages from totalCount (HTML regex may not match SSR)
+        const calculatedPages = firstResult.totalCount > 0
+          ? Math.ceil(firstResult.totalCount / 50)
+          : firstResult.totalPages;
+        const totalPages = Math.min(calculatedPages, maxPages);
+
+        // Fetch remaining pages
+        for (let p = 2; p <= totalPages; p++) {
+          chrome.storage.local.set({ _keepAlive: Date.now() });
+          const pageResult = await ebayClient.getOrders(p, timerange);
+          allOrders.push(...pageResult.orders);
+        }
+
+        return {
+          success: true,
+          orders: allOrders,
+          totalCount: firstResult.totalCount,
+          totalPages,
+          ...(debug ? { _debug: { firstResultTotalPages: firstResult.totalPages, firstResultTotalCount: firstResult.totalCount, clientDebug: firstResult._debug } } : {}),
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { success: false, message: msg, orders: [] };
+      }
     }
 
     default:
