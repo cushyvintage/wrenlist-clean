@@ -58,34 +58,34 @@ async function reconcileCancelledOrders(
               const cancelledTime = new Date(find.cancelled_at)
               if (cancelledTime <= oneDayAgo) {
                 // 24h has passed - permanently delete
-                await supabaseAdmin
+                await (supabaseAdmin
                   .from('product_marketplace_data')
                   .delete()
-                  .eq('id', listing.id)
+                  .eq('id', listing.id) as any)
 
                 // Check if this find has any other marketplace listings
-                const { data: otherListings } = await supabaseAdmin
+                const { data: otherListings } = (await supabaseAdmin
                   .from('product_marketplace_data')
                   .select('id')
                   .eq('find_id', find.id)
-                  .neq('marketplace', 'ebay')
+                  .neq('marketplace', 'ebay')) as any
 
                 // Only delete the find if it has no other marketplace listings
                 if (!otherListings || otherListings.length === 0) {
-                  await supabaseAdmin
+                  await (supabaseAdmin
                     .from('finds')
                     .delete()
-                    .eq('id', find.id)
+                    .eq('id', find.id) as any)
 
                   permanentlyDeletedCount++
                 }
               }
             } else {
               // First time seeing this as cancelled - mark it
-              await supabaseAdmin
+              await (supabaseAdmin
                 .from('finds')
                 .update({ cancelled_at: now.toISOString() })
-                .eq('id', find.id)
+                .eq('id', find.id) as any)
 
               cancelledCount++
             }
