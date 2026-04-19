@@ -93,6 +93,36 @@ export interface Supplier {
 }
 
 // ============================================================================
+// PACKAGING MATERIALS
+// ============================================================================
+
+export type PackagingCategory =
+  | 'mailers'
+  | 'boxes'
+  | 'protection'
+  | 'presentation'
+  | 'branding'
+  | 'tape'
+  | 'labels'
+  | 'other'
+
+export interface PackagingMaterial {
+  id: string
+  user_id: string
+  name: string
+  sku: string | null
+  category: PackagingCategory
+  cost_per_unit_gbp: number | null
+  stock_qty: number
+  min_stock_qty: number
+  supplier: string | null
+  notes: string | null
+  archived_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
 // MARKETPLACE PLATFORM FIELDS
 // ============================================================================
 

@@ -136,6 +136,7 @@ Existing examples: `src/components/add-find/ISBNLookup.tsx`, `src/components/add
 | `hmrc_mileage_rates` | HMRC reference rates (public read) | ON (read-only) |
 | `sourcing_trips` | Sourcing trip records | ON |
 | `suppliers` | Supplier contacts | ON |
+| `packaging_materials` | User-managed packaging inventory (mailers, boxes, tape, etc.) | ON |
 
 **Marketplace configuration**
 | Table | Purpose | RLS |
