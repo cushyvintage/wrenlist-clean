@@ -5,7 +5,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Panel } from '@/components/wren/Panel'
-import { StatCard } from '@/components/wren/StatCard'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
@@ -783,7 +782,9 @@ function mapVintedSyncError(raw: string): string {
 export default function SoldHistoryPage() {
   const router = useRouter()
   const confirm = useConfirm()
-  const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'tax_year' | 'last_tax_year' | 'all'>('month')
+  // Sold now always fetches the current month's window. The period picker
+  // moved to /orders as part of the workspace-vs-ledger split.
+  const [timeframe] = useState<'month' | 'quarter' | 'tax_year' | 'last_tax_year' | 'all'>('month')
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
@@ -885,9 +886,6 @@ export default function SoldHistoryPage() {
 
   // Unique platforms for filter dropdown
   const platforms = [...new Set(allItems.map((i) => i.marketplace).filter((m) => m && m !== 'unknown'))]
-
-  // Only show margin column if any items have cost data
-  const hasAnyCosts = allItems.some((i) => i.cost_gbp != null && i.cost_gbp > 0)
 
   /* ── Shipment status update handler ──────────────────────── */
 
@@ -1112,7 +1110,11 @@ export default function SoldHistoryPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-border pb-4">
         <div>
-          <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
+          <p className="text-xs text-ink-lt">
+            Your fulfilment workspace — what needs shipping today, tracking,
+            and the history of everything sold. For revenue and tax reports,
+            see <Link href="/orders" className="text-sage hover:underline">Orders</Link>.
+          </p>
           <p className="text-[11px] text-ink-lt mt-1">
             Auto-sync runs every 15 min — eBay via cron (any device);
             Vinted, Etsy, Shopify via the desktop extension while Chrome is open
@@ -1401,63 +1403,22 @@ export default function SoldHistoryPage() {
         )
       })()}
 
-      {/* ── Stats grid (metrics for all items) ───────────────── */}
-      {!isLoading && metrics && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs uppercase tracking-widest text-sage-dim font-medium">
-              Performance
-            </h2>
-            <div className="flex gap-1 bg-cream rounded p-1 flex-wrap">
-              {([
-                ['month', 'this month'],
-                ['quarter', '3 months'],
-                ['tax_year', 'tax year'],
-                ['last_tax_year', 'last tax year'],
-                ['all', 'all time'],
-              ] as const).map(([tf, label]) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded transition whitespace-nowrap ${
-                    timeframe === tf
-                      ? 'bg-sage text-white'
-                      : 'text-ink hover:bg-cream-dk'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+      {/* Performance stats have moved to Orders as the accounting ledger
+          view. Sold is now the shipping workspace — one-line quick summary
+          here, richer breakdown (CSV export, month-over-month) on /orders. */}
+      {!isLoading && metrics && metrics.itemsSold > 0 && (
+        <div className="rounded-md border border-border bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-ink-lt">
+            <span className="font-medium text-ink">{metrics.itemsSold}</span>{' '}
+            {metrics.itemsSold === 1 ? 'item' : 'items'} sold · £{metrics.totalRevenue.toLocaleString()} revenue
+            <span className="text-ink-lt/70"> · this month</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="items sold"
-              value={metrics.itemsSold.toString()}
-              delta={`£${metrics.avgPerItem} avg per item`}
-            />
-            <StatCard
-              label="total revenue"
-              value={`£${metrics.totalRevenue.toLocaleString()}`}
-              delta={`${metrics.itemsSold} ${metrics.itemsSold === 1 ? 'item' : 'items'}`}
-            />
-            <StatCard
-              label="total profit"
-              value={`£${metrics.totalProfit.toLocaleString()}`}
-              delta="after cost"
-            />
-            <StatCard
-              label="avg margin"
-              value={`${metrics.avgMargin}%`}
-              delta={
-                timeframe === 'tax_year' ? 'this tax year'
-                : timeframe === 'last_tax_year' ? 'last tax year'
-                : timeframe === 'quarter' ? 'last 3 months'
-                : timeframe === 'all' ? 'all time'
-                : 'this month'
-              }
-            />
-          </div>
+          <Link
+            href="/orders"
+            className="text-xs text-sage hover:underline"
+          >
+            See full ledger →
+          </Link>
         </div>
       )}
 
@@ -1530,10 +1491,7 @@ export default function SoldHistoryPage() {
                     <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Platform</th>
                     <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Status</th>
                     <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Buyer</th>
-                    <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Sold</th>
-                    <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Fees</th>
-                    <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Net</th>
-                    {hasAnyCosts && <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Margin</th>}
+                    <th className="px-3 py-2 text-right font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Sold for</th>
                     <th className="px-3 py-2 text-left font-medium text-ink-lt text-[10px] uppercase tracking-[.08em]">Date</th>
                   </tr>
                 </thead>
@@ -1595,23 +1553,6 @@ export default function SoldHistoryPage() {
                       <td className="px-3 py-2 text-right font-mono text-ink text-sm font-medium">
                         £{item.sold_price_gbp?.toFixed(2) || '--'}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs text-ink-lt">
-                        {item.serviceFee != null && item.serviceFee > 0
-                          ? `−£${item.serviceFee.toFixed(2)}`
-                          : item.feeSource === 'actual' && (item.serviceFee === 0 || item.serviceFee == null) && item.marketplace === 'ebay'
-                            ? <span className="text-amber-600" title="eBay fees settle 1-2 days after sale">pending</span>
-                            : '--'}
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-sm text-ink">
-                        {item.netAmount != null ? `£${item.netAmount.toFixed(2)}` : '--'}
-                      </td>
-                      {hasAnyCosts && (
-                        <td className="px-3 py-2 text-right text-sm font-mono">
-                          <span className={item.margin_percent && item.margin_percent > 0 ? 'text-green-600' : 'text-ink-lt'}>
-                            {item.margin_percent != null ? `${item.margin_percent}%` : '--'}
-                          </span>
-                        </td>
-                      )}
                       <td className="px-3 py-2 text-ink-lt text-xs">{formatDate(item.sold_at)}</td>
                     </tr>
                   ))}
