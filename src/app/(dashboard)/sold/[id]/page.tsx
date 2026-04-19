@@ -481,8 +481,15 @@ export default function SoldDetailPage() {
             <DetailRow label="carrier">{sale.carrier}</DetailRow>
           )}
 
-          {/* Shipment action buttons */}
-          {(!sale.shipmentStatus || ['not sent', 'label sent'].includes(normaliseShipmentStatus(sale.shipmentStatus))) && (
+          {/* Shipment action buttons — hide entirely only for terminal
+              states (delivered, refunded, cancelled, returning). In-transit
+              is no longer terminal: we show Mark delivered so the user can
+              close out the order from the detail page. */}
+          {(() => {
+            const norm = sale.shipmentStatus ? normaliseShipmentStatus(sale.shipmentStatus) : null
+            const terminal = norm === 'delivered' || norm === 'refunded' || norm === 'cancelled' || norm === 'returning'
+            return !terminal
+          })() && (
             <div className="pt-3 border-t border-border mt-1">
               {showTracking ? (
                 <div className="space-y-2">
@@ -530,41 +537,82 @@ export default function SoldDetailPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowTracking(true)}
-                    disabled={isUpdatingShipment}
-                    className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
-                  >
-                    Add Tracking
-                  </button>
-                  <button
-                    onClick={() => handleUpdateShipment('shipped')}
-                    disabled={isUpdatingShipment}
-                    className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
-                  >
-                    Mark Shipped
-                  </button>
-                  <button
-                    onClick={() => handleUpdateShipment('delivered')}
-                    disabled={isUpdatingShipment}
-                    className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
-                  >
-                    Mark Delivered
-                  </button>
-                  {sale.marketplace === 'ebay' && sale.transactionId && (
-                    <a
-                      href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(sale.transactionId)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
-                    >
-                      Ship on eBay
-                    </a>
-                  )}
-                </div>
-              )}
+              ) : (() => {
+                // Mirror the state machine from the Sold list so a user sees
+                // the same progression on the detail page. One primary CTA
+                // per state instead of three competing buttons.
+                const norm = sale.shipmentStatus ? normaliseShipmentStatus(sale.shipmentStatus) : null
+                const hasLabel = !!sale.labelUrl
+                const isPreShip = !norm || norm === 'not sent'
+                const isLabelSent = norm === 'label sent' || (isPreShip && hasLabel)
+                const isInTransit = norm === 'shipped' || norm === 'in transit'
+
+                const primaryBtn = 'px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-dk transition disabled:opacity-50'
+                const linkBtn = 'px-2 py-1.5 text-xs text-ink-lt hover:text-sage transition disabled:opacity-50 underline-offset-2 hover:underline'
+
+                if (isInTransit) {
+                  return (
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <button
+                        onClick={() => handleUpdateShipment('delivered')}
+                        disabled={isUpdatingShipment}
+                        className={primaryBtn + ' border border-sage'}
+                      >
+                        Mark delivered
+                      </button>
+                      {sale.labelUrl && (
+                        <a href={sale.labelUrl} target="_blank" rel="noopener noreferrer" className={linkBtn}>
+                          View label
+                        </a>
+                      )}
+                    </div>
+                  )
+                }
+
+                if (isLabelSent) {
+                  return (
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <button
+                        onClick={() => handleUpdateShipment('shipped')}
+                        disabled={isUpdatingShipment}
+                        className={primaryBtn}
+                      >
+                        Mark shipped
+                      </button>
+                      {sale.labelUrl && (
+                        <a href={sale.labelUrl} target="_blank" rel="noopener noreferrer" className={linkBtn}>
+                          View label
+                        </a>
+                      )}
+                      <button onClick={() => setShowTracking(true)} className={linkBtn}>
+                        Add tracking
+                      </button>
+                    </div>
+                  )
+                }
+
+                // Pre-ship: primary depends on marketplace. Vinted's "Generate
+                // label" lives on the list page (it opens a modal), so on the
+                // detail page we only surface the eBay shipping dashboard link
+                // here and point Vinted users to the list for the modal.
+                return (
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {sale.marketplace === 'ebay' && sale.transactionId && (
+                      <a
+                        href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(sale.transactionId)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={primaryBtn + ' inline-block'}
+                      >
+                        Ship on eBay
+                      </a>
+                    )}
+                    <button onClick={() => setShowTracking(true)} className={linkBtn}>
+                      Shipped elsewhere?
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           )}
           {sale.isGift && (

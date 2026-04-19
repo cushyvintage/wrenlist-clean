@@ -358,66 +358,133 @@ function OrderCard({
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action buttons — single primary CTA per state. We used to surface
+          Add Tracking / Mark Shipped / Generate Label side by side, which
+          left the user with three competing primaries. Now the shipment
+          state dictates what's primary and everything else drops to a link. */}
       {!showTracking && (
-        <div className="flex gap-2 flex-wrap">
-          {(!normalized || normalized === 'label sent') && (
-            <button
-              onClick={() => setShowTracking(true)}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
-            >
-              Add Tracking
-            </button>
-          )}
-          {(!normalized || normalized === 'label sent') && (
-            <button
-              onClick={() => handleAction('shipped')}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
-            >
-              Mark Shipped
-            </button>
-          )}
-          {(normalized === 'shipped' || normalized === 'in transit') && (
-            <button
-              onClick={() => handleAction('delivered')}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
-            >
-              Mark Delivered
-            </button>
-          )}
-          {onGenerateLabel && item.marketplace === 'vinted' && !item.labelUrl && (
-            <button
-              onClick={() => onGenerateLabel(item)}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition"
-            >
-              Generate Label
-            </button>
-          )}
-          {isEbay && item.transactionId && (!normalized || normalized === 'not sent' || normalized === 'label sent') && (
-            <a
-              href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(item.transactionId)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
-            >
-              Ship on eBay
-            </a>
-          )}
-          {item.labelUrl && (
-            <a
-              href={item.labelUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition inline-block"
-            >
-              View Label
-            </a>
-          )}
-        </div>
+        <ShipmentActions
+          item={item}
+          normalized={normalized}
+          isUpdating={isUpdating}
+          isEbay={isEbay}
+          onMarkShipped={() => handleAction('shipped')}
+          onMarkDelivered={() => handleAction('delivered')}
+          onOpenTracking={() => setShowTracking(true)}
+          onGenerateLabel={onGenerateLabel ? () => onGenerateLabel(item) : undefined}
+        />
       )}
+    </div>
+  )
+}
+
+/**
+ * Single primary CTA + supporting links, driven by the order's state.
+ *
+ * State decision table (for Vinted — eBay's "Ship on eBay" fills the
+ * primary slot instead of Generate label):
+ *
+ *   no label, not sent         → Generate label          · [Shipped elsewhere]
+ *   label printed (labelUrl)   → Mark shipped            · [View label] [Add tracking]
+ *   shipped / in transit       → Mark delivered          · [View label]
+ *   delivered / returned etc.  → nothing
+ */
+function ShipmentActions({
+  item,
+  normalized,
+  isUpdating,
+  isEbay,
+  onMarkShipped,
+  onMarkDelivered,
+  onOpenTracking,
+  onGenerateLabel,
+}: {
+  item: SoldItem
+  normalized: string | null
+  isUpdating: boolean
+  isEbay: boolean
+  onMarkShipped: () => void
+  onMarkDelivered: () => void
+  onOpenTracking: () => void
+  onGenerateLabel?: () => void
+}) {
+  const isPreShip = !normalized || normalized === 'not sent'
+  const isLabelSent = normalized === 'label sent' || (isPreShip && !!item.labelUrl)
+  const isInTransit = normalized === 'shipped' || normalized === 'in transit'
+  const isTerminal = normalized === 'delivered' || normalized === 'refunded' || normalized === 'cancelled' || normalized === 'returning'
+
+  if (isTerminal) {
+    return null
+  }
+
+  const primaryBtn = 'px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-dk transition disabled:opacity-50'
+  const linkBtn = 'px-2 py-1.5 text-xs text-ink-lt hover:text-sage transition disabled:opacity-50 underline-offset-2 hover:underline'
+
+  // STATE: shipped — only thing left is confirm delivery
+  if (isInTransit) {
+    return (
+      <div className="flex gap-3 items-center flex-wrap">
+        <button
+          onClick={onMarkDelivered}
+          disabled={isUpdating}
+          className={primaryBtn + ' border border-sage'}
+        >
+          Mark delivered
+        </button>
+        {item.labelUrl && (
+          <a href={item.labelUrl} target="_blank" rel="noopener noreferrer" className={linkBtn}>
+            View label
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  // STATE: label printed — user needs to drop it off, then confirm ship
+  if (isLabelSent) {
+    return (
+      <div className="flex gap-3 items-center flex-wrap">
+        <button
+          onClick={onMarkShipped}
+          disabled={isUpdating}
+          className={primaryBtn}
+        >
+          Mark shipped
+        </button>
+        {item.labelUrl && (
+          <a href={item.labelUrl} target="_blank" rel="noopener noreferrer" className={linkBtn}>
+            View label
+          </a>
+        )}
+        <button onClick={onOpenTracking} className={linkBtn}>Add tracking</button>
+      </div>
+    )
+  }
+
+  // STATE: pre-ship — primary depends on marketplace
+  return (
+    <div className="flex gap-3 items-center flex-wrap">
+      {onGenerateLabel && item.marketplace === 'vinted' && (
+        <button
+          onClick={onGenerateLabel}
+          className={primaryBtn}
+        >
+          Generate label
+        </button>
+      )}
+      {isEbay && item.transactionId && (
+        <a
+          href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(item.transactionId)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={primaryBtn + ' inline-block'}
+        >
+          Ship on eBay
+        </a>
+      )}
+      <button onClick={onOpenTracking} className={linkBtn}>
+        Shipped elsewhere?
+      </button>
     </div>
   )
 }
@@ -592,64 +659,21 @@ function BundleOrderCard({
         </div>
       )}
 
-      {/* Action buttons — once for the whole bundle */}
+      {/* Action buttons — shared state machine with OrderCard so bundles
+          and single orders read the same way. "first" is the stand-in for
+          the bundle's shipment state (all items share one shipment). */}
       {!showTracking && (
-        <div className="px-4 pb-3 flex gap-2 flex-wrap">
-          {(!normalized || normalized === 'label sent') && (
-            <button
-              onClick={() => setShowTracking(true)}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
-            >
-              Add Tracking
-            </button>
-          )}
-          {(!normalized || normalized === 'label sent') && (
-            <button
-              onClick={() => handleAction('shipped')}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
-            >
-              Mark Shipped
-            </button>
-          )}
-          {(normalized === 'shipped' || normalized === 'in transit') && (
-            <button
-              onClick={() => handleAction('delivered')}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
-            >
-              Mark Delivered
-            </button>
-          )}
-          {onGenerateLabel && first.marketplace === 'vinted' && !first.labelUrl && (
-            <button
-              onClick={() => onGenerateLabel(first)}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition"
-            >
-              Generate Label
-            </button>
-          )}
-          {isEbay && first.transactionId && (!normalized || normalized === 'not sent' || normalized === 'label sent') && (
-            <a
-              href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(first.transactionId)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
-            >
-              Ship on eBay
-            </a>
-          )}
-          {first.labelUrl && (
-            <a
-              href={first.labelUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition inline-block"
-            >
-              View Label
-            </a>
-          )}
+        <div className="px-4 pb-3">
+          <ShipmentActions
+            item={first}
+            normalized={normalized}
+            isUpdating={isUpdating}
+            isEbay={isEbay}
+            onMarkShipped={() => handleAction('shipped')}
+            onMarkDelivered={() => handleAction('delivered')}
+            onOpenTracking={() => setShowTracking(true)}
+            onGenerateLabel={onGenerateLabel ? () => onGenerateLabel(first) : undefined}
+          />
         </div>
       )}
     </div>
