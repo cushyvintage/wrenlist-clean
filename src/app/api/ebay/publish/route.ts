@@ -423,7 +423,7 @@ export async function POST(request: NextRequest) {
       { onConflict: 'find_id,marketplace' }
     )
 
-    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingId, listingUrl, sku } })
+    await logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingId, listingUrl, sku } })
 
     return ApiResponseHelper.success({
       success: true,

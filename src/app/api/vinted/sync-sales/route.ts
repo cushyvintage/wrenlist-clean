@@ -132,6 +132,78 @@ async function upsertVintedCustomer(
 }
 
 /**
+ * When a refund is detected, three things need to happen beyond just flipping
+ * find.status back to 'listed':
+ *   1. Recompute the buyer's customer aggregate totals so this sale doesn't
+ *      keep inflating their lifetime spend.
+ *   2. Re-queue any sibling PMDs that were auto-delisted when the sale
+ *      originally fired (delisted → needs_publish). The user's other
+ *      marketplaces may have been taken down weeks ago; refunded item is
+ *      theirs again, so re-list.
+ *   3. Do NOT touch sibling PMDs that are in 'sold' (user may have also sold
+ *      this item elsewhere — unlikely but possible in multi-listing flows).
+ */
+async function handleRefundAftermath(
+  supabase: SupabaseClient,
+  userId: string,
+  findId: string,
+  refundedMarketplace: string,
+): Promise<void> {
+  // (1) Recompute customer aggregates for the buyer of the refunded sale.
+  // customer_id sits on the PMD row that just got refunded.
+  const { data: refundedPmd } = await supabase
+    .from('product_marketplace_data')
+    .select('customer_id')
+    .eq('find_id', findId)
+    .eq('marketplace', refundedMarketplace)
+    .maybeSingle()
+
+  if (refundedPmd?.customer_id) {
+    await recomputeCustomerAggregates(supabase, refundedPmd.customer_id)
+  }
+
+  // (2) Re-list siblings that were auto-delisted. Flip them to needs_publish
+  // so the extension puts the listing back up on the other marketplaces.
+  // We use updated_at > created_at as a proxy for "was previously active" —
+  // PMDs that were never listed (never crosslisted) will never have been
+  // auto-delisted here, so they're naturally excluded.
+  const { data: siblingPmds } = await supabase
+    .from('product_marketplace_data')
+    .select('id, marketplace, platform_listing_id')
+    .eq('find_id', findId)
+    .neq('marketplace', refundedMarketplace)
+    .in('status', ['delisted', 'needs_delist', 'error'])
+
+  if (siblingPmds && siblingPmds.length > 0) {
+    await supabase
+      .from('product_marketplace_data')
+      .update({
+        status: 'needs_publish',
+        error_message: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('find_id', findId)
+      .neq('marketplace', refundedMarketplace)
+      .in('status', ['delisted', 'needs_delist', 'error'])
+
+    // Dual-write: enqueue publish jobs so the Jobs page reflects them.
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    for (const sib of siblingPmds) {
+      await createPublishJob(supabaseAdmin, {
+        user_id: userId,
+        find_id: findId,
+        platform: sib.marketplace,
+        action: 'publish',
+        payload: { platform_listing_id: sib.platform_listing_id },
+      })
+    }
+  }
+}
+
+/**
  * Recompute customer aggregate stats from linked PMD records.
  */
 async function recomputeCustomerAggregates(
@@ -283,6 +355,8 @@ export const POST = withAuth(async (req, user) => {
                 fields: { ...existingFields, sale: refundedSale },
                 updated_at: new Date().toISOString(),
               }).eq('id', pmd.id)
+
+              await handleRefundAftermath(supabase, user.id, pmd.find_id, 'vinted')
               continue
             }
 
@@ -381,7 +455,9 @@ export const POST = withAuth(async (req, user) => {
                   updated_at: new Date().toISOString(),
                 }).eq('find_id', find.id).eq('marketplace', 'vinted')
 
-                logMarketplaceEvent(supabase, user.id, {
+                await handleRefundAftermath(supabase, user.id, find.id, 'vinted')
+
+                await logMarketplaceEvent(supabase, user.id, {
                   findId: find.id,
                   marketplace: 'vinted',
                   eventType: 'refund_detected',
@@ -512,7 +588,7 @@ export const POST = withAuth(async (req, user) => {
               .select('marketplace, platform_listing_id')
               .eq('find_id', findId)
               .neq('marketplace', 'vinted')
-              .in('status', ['listed', 'needs_publish'])
+              .in('status', ['listed', 'needs_publish', 'draft', 'hidden'])
 
             if (otherListings && otherListings.length > 0) {
               await supabase.from('product_marketplace_data').update({
@@ -533,7 +609,7 @@ export const POST = withAuth(async (req, user) => {
           }
 
           // Log event
-          logMarketplaceEvent(supabase, user.id, {
+          await logMarketplaceEvent(supabase, user.id, {
             findId,
             marketplace: 'vinted',
             eventType: 'sold',

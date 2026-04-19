@@ -117,7 +117,7 @@ export const POST = withAuth(async (req, user) => {
         errors++
         const errMsg = findError?.message || 'Find creation returned null'
         itemErrors.push({ listingId: String(item.id), title: item.title || 'Untitled', error: errMsg })
-        logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item.id), error: errMsg } })
+        await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item.id), error: errMsg } })
         continue
       }
 
@@ -132,14 +132,14 @@ export const POST = withAuth(async (req, user) => {
         status: item.is_sold ? 'sold' : item.is_hidden ? 'hidden' : 'listed',
       })
 
-      logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api', details: { listingId: String(item.id) } })
+      await logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api', details: { listingId: String(item.id) } })
 
       imported++
     } catch (err) {
       errors++
       const errMsg = err instanceof Error ? err.message : 'Unknown error'
       itemErrors.push({ listingId: String(item?.id || 'unknown'), title: item?.title || 'Untitled', error: errMsg })
-      logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item?.id), error: errMsg } })
+      await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId: String(item?.id), error: errMsg } })
     }
   }
 

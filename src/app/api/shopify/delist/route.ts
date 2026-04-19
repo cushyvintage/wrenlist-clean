@@ -89,7 +89,7 @@ export const POST = withAuth(async (request, user) => {
       )
     }
 
-    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'delisted', source: 'api' })
+    await logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'delisted', source: 'api' })
 
     return ApiResponseHelper.success({
       message: 'Product delisted from Shopify',

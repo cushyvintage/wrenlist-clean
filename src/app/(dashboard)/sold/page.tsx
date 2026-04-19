@@ -118,16 +118,23 @@ function normalizeStatus(raw: string | null | undefined): string | null {
   return lower
 }
 
+/** Long-unshipped orders — show an "Overdue" badge so they're visible without hiding */
+function isOverdue(item: SoldItem): boolean {
+  if (!item.sold_at) return false
+  const status = normalizeStatus(item.shipmentStatus)
+  if (status !== null && RESOLVED_STATUSES.has(status)) return false
+  if (status !== null && !NEEDS_ACTION_STATUSES.has(status)) return false
+  const daysSinceSale = (Date.now() - new Date(item.sold_at).getTime()) / (1000 * 60 * 60 * 24)
+  return daysSinceSale > STALE_STATUS_DAYS
+}
+
 function needsAction(item: SoldItem): boolean {
   const status = normalizeStatus(item.shipmentStatus)
   // Resolved statuses never need action
   if (status !== null && RESOLVED_STATUSES.has(status)) return false
-  // Stale "not sent" or "label sent" items (>14 days) are no longer actionable
-  if (status !== null && NEEDS_ACTION_STATUSES.has(status) && item.sold_at) {
-    const daysSinceSale = (Date.now() - new Date(item.sold_at).getTime()) / (1000 * 60 * 60 * 24)
-    if (daysSinceSale > STALE_STATUS_DAYS) return false
-  }
-  // Known actionable statuses (within window)
+  // 'label sent' / 'not sent' stays in the Needs Action list forever once it's
+  // in that state — no silent hiding after 14 days. See isOverdue() for the
+  // "Overdue!" badge we show on long-pending ones.
   if (status !== null) return NEEDS_ACTION_STATUSES.has(status)
   // Null status: only needs action if sold recently (within window)
   if (!item.sold_at) return false
@@ -244,6 +251,14 @@ function OrderCard({
             )}
             <span className="text-ink-lt text-xs">{item.buyer || 'Unknown buyer'}</span>
             <span className="text-ink-lt text-xs">{formatDate(item.sold_at)}</span>
+            {isOverdue(item) && (
+              <span
+                className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-700"
+                title="Sold more than 2 weeks ago and still not shipped"
+              >
+                Overdue!
+              </span>
+            )}
             {item.isGift && (
               <span
                 className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-rose-50 text-rose-700"
@@ -456,8 +471,18 @@ function BundleOrderCard({
           <span className="text-xs font-semibold text-sage">
             Bundle order · {items.length} items
           </span>
-          <span className="text-ink-lt text-xs">{first.buyer || 'Unknown buyer'}</span>
+          <span className="text-ink-lt text-xs">
+            {items.map((i) => i.buyer).find(Boolean) || 'Unknown buyer'}
+          </span>
           <span className="text-ink-lt text-xs">{formatDate(first.sold_at)}</span>
+          {isOverdue(first) && (
+            <span
+              className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-100 text-red-700"
+              title="Bundle sold more than 2 weeks ago and still not shipped"
+            >
+              Overdue!
+            </span>
+          )}
           <ShipmentBadge status={first.shipmentStatus} soldAt={first.sold_at} />
         </div>
         <div className="text-right shrink-0">
@@ -785,6 +810,16 @@ export default function SoldHistoryPage() {
     loadFailedDelists()
   }, [loadFailedDelists])
 
+  // Vinted auth health from extension heartbeat — the alarm now reports false
+  // when it finds the user signed out of Vinted, so we can banner the silent
+  // sync pause instead of letting orders quietly go stale.
+  const [vintedAuthHealthy, setVintedAuthHealthy] = useState<boolean | null>(null)
+  useEffect(() => {
+    fetchApi<{ online: boolean; vinted_auth_healthy: boolean | null }>('/api/extension/heartbeat')
+      .then((d) => setVintedAuthHealthy(d.vinted_auth_healthy))
+      .catch(() => { /* silent */ })
+  }, [])
+
   const handleRetryAllDelists = useCallback(async () => {
     if (isRetryingDelists) return
     setIsRetryingDelists(true)
@@ -1055,8 +1090,10 @@ export default function SoldHistoryPage() {
         <div>
           <p className="text-xs text-ink-lt">Orders, fulfilment, and profit tracking</p>
           <p className="text-[11px] text-ink-lt mt-1">
-            Auto-sync runs every 15 min (eBay on any device; Vinted while Chrome is open).
-            When a sale is detected, other marketplaces are auto-delisted.
+            Auto-sync runs every 15 min — eBay via cron (any device);
+            Vinted, Etsy, Shopify via the desktop extension while Chrome is open
+            and signed into each marketplace.
+            A sale auto-delists the same item elsewhere; a refund auto-re-lists it.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -1094,6 +1131,28 @@ export default function SoldHistoryPage() {
         <div className="flex items-center gap-3 bg-sage/5 border border-sage/20 rounded-md px-4 py-3">
           <span className="text-ink-lt text-sm">
             Vinted sync runs through the desktop Chrome extension. Open Wrenlist on your computer to pull the latest Vinted sales. eBay sync works anywhere.
+          </span>
+        </div>
+      )}
+
+      {/* Vinted auth paused banner — the 15-min alarm is silently skipping
+          because it can't reach Vinted. Surfacing this avoids users noticing
+          stale statuses days later. Only false triggers the banner; null
+          means the alarm hasn't run yet. */}
+      {vintedAuthHealthy === false && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-md px-4 py-3">
+          <span className="text-amber-700 text-sm flex-1">
+            <span className="font-semibold">Vinted sync paused</span>
+            {' — the extension can\'t reach Vinted. '}
+            <a
+              href="https://www.vinted.co.uk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-medium"
+            >
+              Sign back in at vinted.co.uk
+            </a>
+            {' and sync resumes automatically within 15 minutes.'}
           </span>
         </div>
       )}

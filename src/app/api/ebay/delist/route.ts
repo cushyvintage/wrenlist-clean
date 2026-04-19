@@ -103,7 +103,7 @@ export const POST = withAuth(async (request, user) => {
       // Don't fail — the item was actually delisted, just the DB sync failed
     }
 
-    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'delisted', source: 'api' })
+    await logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'delisted', source: 'api' })
 
     return ApiResponseHelper.success({
       message: 'Item successfully delisted from eBay',

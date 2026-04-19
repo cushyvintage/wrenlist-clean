@@ -128,7 +128,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         const data = await res.json()
         if (res.ok && data.data?.success) {
           results.ebay = { ok: true, listingUrl: data.data.listingUrl }
-          logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingUrl: data.data.listingUrl } })
+          await logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'ebay', eventType: 'listed', source: 'api', details: { listingUrl: data.data.listingUrl } })
         } else {
           const ebayError = data.error || data.data?.message || 'eBay publish failed'
           results.ebay = { ok: false, error: ebayError }
@@ -188,7 +188,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           results[marketplace] = { ok: false, error: `Failed to queue: ${queueError.message}` }
         } else {
           results[marketplace] = { ok: true, listingUrl: undefined }
-          logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'queued', source: 'api' })
+          await logMarketplaceEvent(supabase, user.id, { findId, marketplace, eventType: 'queued', source: 'api' })
 
           // Dual-write: also create a publish job for the new job queue
           const supabaseAdmin = createClient(

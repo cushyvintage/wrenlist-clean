@@ -117,7 +117,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     return ApiResponseHelper.internalError(`Failed to queue delist: ${updateError.message}`)
   }
 
-  logMarketplaceEvent(supabase, user.id, {
+  await logMarketplaceEvent(supabase, user.id, {
     findId,
     marketplace,
     eventType: 'queued',

@@ -349,7 +349,7 @@ export async function enrichEbaySoldItem(
       .select('marketplace, platform_listing_id')
       .eq('find_id', findId)
       .neq('marketplace', 'ebay')
-      .in('status', ['listed', 'needs_publish'])
+      .in('status', ['listed', 'needs_publish', 'draft', 'hidden'])
 
     if (otherListings && otherListings.length > 0) {
       await supabase.from('product_marketplace_data').update({

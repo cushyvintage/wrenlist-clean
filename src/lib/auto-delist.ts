@@ -12,6 +12,21 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createPublishJob } from './publish-jobs'
 
+/**
+ * States that count as "active or pending" — all must be cleared when a sale
+ * is detected elsewhere to avoid the cross-listed item selling twice.
+ *
+ *   listed           — actually live on the marketplace
+ *   needs_publish    — queued to publish, hasn't hit the platform yet
+ *   draft            — saved draft, user may publish later
+ *   hidden           — temporarily hidden but still in inventory
+ *
+ * Previously this set only included 'listed', so a draft eBay listing
+ * saved in parallel with a Vinted sale could stay around and get
+ * accidentally published after the fact.
+ */
+const ACTIVE_OR_PENDING_STATUSES = ['listed', 'needs_publish', 'draft', 'hidden']
+
 export async function markMarketplacesForDelist(
   supabase: SupabaseClient,
   findId: string,
@@ -19,9 +34,9 @@ export async function markMarketplacesForDelist(
 ): Promise<void> {
   const { data: marketplaceData, error: fetchError } = await supabase
     .from('product_marketplace_data')
-    .select('marketplace, platform_listing_id')
+    .select('marketplace, platform_listing_id, status')
     .eq('find_id', findId)
-    .eq('status', 'listed')
+    .in('status', ACTIVE_OR_PENDING_STATUSES)
 
   if (fetchError) {
     console.error('[auto-delist] Failed to fetch marketplace data:', fetchError)
@@ -39,7 +54,7 @@ export async function markMarketplacesForDelist(
       updated_at: new Date().toISOString(),
     })
     .eq('find_id', findId)
-    .eq('status', 'listed')
+    .in('status', ACTIVE_OR_PENDING_STATUSES)
 
   if (updateError) {
     console.error('[auto-delist] Failed to mark marketplaces for delist:', updateError)

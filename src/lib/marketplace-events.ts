@@ -20,7 +20,7 @@ export function classifyError(message: string): ErrorClass {
 /**
  * Log a marketplace event. Fire-and-forget — never throws, never blocks.
  */
-export function logMarketplaceEvent(
+export async function logMarketplaceEvent(
   supabase: SupabaseClient,
   userId: string,
   params: {
@@ -31,14 +31,18 @@ export function logMarketplaceEvent(
     details?: Record<string, unknown>
     errorClass?: ErrorClass
   }
-): void {
+): Promise<void> {
   // Auto-classify errors if not explicitly provided
   const errorClass = params.errorClass
     ?? (params.eventType.includes('error') && params.details?.error_message
       ? classifyError(String(params.details.error_message))
       : null)
 
-  supabase
+  // Awaited so Vercel serverless doesn't kill the insert when the HTTP
+  // response returns. Previously fire-and-forget via .then() — resulting in
+  // ~0 events actually landing in the table. Trade-off: adds one short DB
+  // round-trip to each caller. If this becomes a bottleneck, batch-write.
+  const { error } = await supabase
     .from('marketplace_events')
     .insert({
       user_id: userId,
@@ -49,7 +53,6 @@ export function logMarketplaceEvent(
       details: params.details || {},
       ...(errorClass ? { error_class: errorClass } : {}),
     })
-    .then(({ error }) => {
-      if (error) console.warn('[MarketplaceEvents] Failed to log event:', error.message)
-    })
+
+  if (error) console.warn('[MarketplaceEvents] Failed to log event:', error.message)
 }

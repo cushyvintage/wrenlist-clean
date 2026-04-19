@@ -409,6 +409,12 @@ type ExternalMessage = Record<string, unknown>;
 
   async function sendHeartbeat(): Promise<void> {
     try {
+      // Include per-marketplace auth health so /sold can banner silent sync
+      // pauses. Updated by runVintedSalesSync et al. after each cycle.
+      const healthState = await chrome.storage.local.get([
+        "vintedAuthHealthy",
+        "vintedAuthCheckedAt",
+      ]);
       const baseUrl = await getWrenlistBaseUrl();
       await queueFetch(`${baseUrl}/api/extension/heartbeat`, {
         method: "POST",
@@ -416,6 +422,8 @@ type ExternalMessage = Record<string, unknown>;
         body: JSON.stringify({
           extension_version: EXTENSION_VERSION,
           user_agent: navigator.userAgent,
+          vinted_auth_healthy: healthState.vintedAuthHealthy ?? null,
+          vinted_auth_checked_at: healthState.vintedAuthCheckedAt ?? null,
         }),
       });
     } catch (e) {
@@ -442,12 +450,26 @@ type ExternalMessage = Record<string, unknown>;
 
   async function runVintedSalesSync(): Promise<void> {
     try {
-      // Check if user is logged into Vinted
+      // Check if user is logged into Vinted. This was previously a silent
+      // console.debug — users couldn't tell the sync was paused and items
+      // stayed at stale statuses indefinitely. Log + expose via heartbeat so
+      // /sold can banner "Vinted sync paused — sign back in".
       const isLoggedIn = await checkMarketplaceLogin("vinted");
       if (!isLoggedIn) {
         console.debug("[VintedSalesSync] Not logged into Vinted, skipping");
+        await remoteLog(
+          "warn",
+          "vinted-sync",
+          "Vinted auth missing — sales sync paused until user signs back in at vinted.co.uk",
+        );
+        try {
+          await chrome.storage.local.set({ vintedAuthHealthy: false, vintedAuthCheckedAt: Date.now() });
+        } catch { /* noop */ }
         return;
       }
+      try {
+        await chrome.storage.local.set({ vintedAuthHealthy: true, vintedAuthCheckedAt: Date.now() });
+      } catch { /* noop */ }
 
       // Decide whether this cycle is a deep sync (ignore checkpoint) or normal.
       const deepStored = await chrome.storage.local.get([LAST_VINTED_DEEP_SYNC_KEY]);
@@ -735,7 +757,16 @@ type ExternalMessage = Record<string, unknown>;
         return;
       }
 
-      const client = new ShopifyClient(conn.storeDomain);
+      // ShopifyClient expects the bare shop slug (e.g. "pyedpp-i5"), not the
+      // full myshopify.com domain. getShopifyGraphqlUrl prepends
+      // `admin.shopify.com/api/shopify/` — passing "foo.myshopify.com"
+      // produces an invalid URL and the call fails with "Please enter a
+      // valid Shopify admin shop URL". Mirror resolveShopifyUrl()'s behaviour.
+      const shopSlug = String(conn.storeDomain)
+        .replace(/^https?:\/\//, "")
+        .replace(/\.myshopify\.com\/?$/, "")
+        .replace(/\/$/, "");
+      const client = new ShopifyClient(shopSlug);
       const result = await client.getOrders();
 
       if (!result.orders || result.orders.length === 0) {

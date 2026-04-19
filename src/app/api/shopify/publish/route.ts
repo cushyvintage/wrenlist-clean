@@ -104,7 +104,7 @@ export const POST = withAuth(async (request, user) => {
     }
 
     const listingUrl = product.online_store_url || `https://${connection.store_domain}/products/${product.handle}`
-    logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'listed', source: 'api', details: { listingId: String(product.id), listingUrl } })
+    await logMarketplaceEvent(supabase, user.id, { findId, marketplace: 'shopify', eventType: 'listed', source: 'api', details: { listingId: String(product.id), listingUrl } })
 
     return ApiResponseHelper.success({
       listingId: String(product.id),

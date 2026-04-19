@@ -195,7 +195,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const eventType = targetStatus === 'error' ? 'publish_error' : targetStatus === 'draft' ? 'listed' : 'listed'
-  logMarketplaceEvent(supabaseAdmin, user.id, {
+  await logMarketplaceEvent(supabaseAdmin, user.id, {
     findId,
     marketplace,
     eventType: targetStatus === 'error' ? 'publish_error' : 'listed',

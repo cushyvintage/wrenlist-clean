@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
           errors++
           const errMsg = findError?.message || 'Find creation returned null'
           itemErrors.push({ listingId, title: item.title || 'Untitled', error: errMsg })
-          logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, title: item.title, error: errMsg } })
+          await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, title: item.title, error: errMsg } })
           continue
         }
 
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
           platform_listed_at: platformListedAt,
         })
 
-        logMarketplaceEvent(supabase, user.id, {
+        await logMarketplaceEvent(supabase, user.id, {
           findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api',
           details: { listingId, sku, pmdStatus, photoCount: photos.length, mirroredPhotoCount: mirroredPhotos.length },
         })
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         const listingId = String(item?.id || 'unknown')
         const errMsg = err instanceof Error ? err.message : 'Unknown error'
         itemErrors.push({ listingId, title: item?.title || 'Untitled', error: errMsg })
-        logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, error: errMsg } })
+        await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'vinted', eventType: 'import_error', source: 'api', details: { listingId, error: errMsg } })
       }
     }
 

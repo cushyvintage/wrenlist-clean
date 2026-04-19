@@ -176,7 +176,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 
   const eventType = targetStatus === 'error' ? 'delist_error' : 'delisted'
-  logMarketplaceEvent(supabase, user.id, {
+  await logMarketplaceEvent(supabase, user.id, {
     findId,
     marketplace,
     eventType,

@@ -402,7 +402,7 @@ export const POST = withAuth(async (req, user) => {
               .select('marketplace, platform_listing_id')
               .eq('find_id', findId)
               .neq('marketplace', 'etsy')
-              .in('status', ['listed', 'needs_publish'])
+              .in('status', ['listed', 'needs_publish', 'draft', 'hidden'])
 
             if (otherListings && otherListings.length > 0) {
               await supabase.from('product_marketplace_data').update({
@@ -422,7 +422,7 @@ export const POST = withAuth(async (req, user) => {
             }
           }
 
-          logMarketplaceEvent(supabase, user.id, {
+          await logMarketplaceEvent(supabase, user.id, {
             findId,
             marketplace: 'etsy',
             eventType: 'sold',

@@ -202,7 +202,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
           )
 
         const eventType = job.action === 'delist' ? 'delist_error' : 'publish_error'
-        logMarketplaceEvent(supabase, user.id, {
+        await logMarketplaceEvent(supabase, user.id, {
           findId: job.find_id,
           marketplace: job.platform,
           eventType,
@@ -254,7 +254,7 @@ async function updatePmdOnComplete(
         { onConflict: 'find_id,marketplace' }
       )
 
-    logMarketplaceEvent(supabase, userId, {
+    await logMarketplaceEvent(supabase, userId, {
       findId,
       marketplace: platform,
       eventType: 'listed',
@@ -272,7 +272,7 @@ async function updatePmdOnComplete(
       .eq('find_id', findId)
       .eq('marketplace', platform)
 
-    logMarketplaceEvent(supabase, userId, {
+    await logMarketplaceEvent(supabase, userId, {
       findId,
       marketplace: platform,
       eventType: 'delisted',

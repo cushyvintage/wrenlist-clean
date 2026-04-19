@@ -10,9 +10,16 @@ import { ApiResponseHelper } from '@/lib/api-response'
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
   const body = await req.json().catch(() => ({}))
-  const { extension_version, user_agent } = body as {
+  const {
+    extension_version,
+    user_agent,
+    vinted_auth_healthy,
+    vinted_auth_checked_at,
+  } = body as {
     extension_version?: string
     user_agent?: string
+    vinted_auth_healthy?: boolean | null
+    vinted_auth_checked_at?: number | null
   }
 
   const supabase = createClient(
@@ -30,6 +37,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         extension_version: extension_version || null,
         user_agent: user_agent || null,
         last_seen_at: now,
+        ...(typeof vinted_auth_healthy === 'boolean' ? { vinted_auth_healthy } : {}),
+        ...(typeof vinted_auth_checked_at === 'number'
+          ? { vinted_auth_checked_at: new Date(vinted_auth_checked_at).toISOString() }
+          : {}),
       },
       { onConflict: 'user_id' }
     )
@@ -55,7 +66,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
 
   const { data, error } = await supabase
     .from('extension_heartbeats')
-    .select('last_seen_at, extension_version')
+    .select('last_seen_at, extension_version, vinted_auth_healthy, vinted_auth_checked_at')
     .eq('user_id', user.id)
     .single()
 
@@ -64,6 +75,8 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       online: false,
       last_seen_at: null,
       extension_version: null,
+      vinted_auth_healthy: null,
+      vinted_auth_checked_at: null,
     })
   }
 
@@ -75,5 +88,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     online,
     last_seen_at: data.last_seen_at,
     extension_version: data.extension_version,
+    vinted_auth_healthy: data.vinted_auth_healthy,
+    vinted_auth_checked_at: data.vinted_auth_checked_at,
   })
 })

@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
             errors++
             const errMsg = findError?.message || 'Find creation returned null'
             itemErrors.push({ sku, title: product.title || sku, error: errMsg })
-            logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, title: product.title, error: errMsg } })
+            await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, title: product.title, error: errMsg } })
             continue
           }
 
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
             })()
           }
 
-          logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'ebay', eventType: 'imported', source: 'api', details: { sku, listingId, photoCount: photos.length } })
+          await logMarketplaceEvent(supabase, user.id, { findId: find.id, marketplace: 'ebay', eventType: 'imported', source: 'api', details: { sku, listingId, photoCount: photos.length } })
 
           imported++
         } catch (err) {
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
           const sku = item?.sku || 'unknown'
           const errMsg = err instanceof Error ? err.message : 'Unknown error'
           itemErrors.push({ sku, title: item?.product?.title || sku, error: errMsg })
-          logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, error: errMsg } })
+          await logMarketplaceEvent(supabase, user.id, { findId: '', marketplace: 'ebay', eventType: 'import_error', source: 'api', details: { sku, error: errMsg } })
         }
       }
 

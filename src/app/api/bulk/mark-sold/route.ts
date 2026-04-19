@@ -69,17 +69,24 @@ export const POST = withAuth(async (request, user) => {
       return ApiResponseHelper.internalError()
     }
 
-    // Fire auto-delist for each find that just transitioned to sold. Do this
-    // sequentially to avoid overloading the DB; these calls are fire-and-forget
-    // in intent — log but don't fail the whole request if one errors.
+    // Fire auto-delist for each find that just transitioned to sold.
+    // Parallelize with a bounded concurrency — 50 finds × ~500ms sequential
+    // would hit Vercel's 10s function timeout. 5 at a time keeps DB round
+    // trips manageable while still finishing 50 finds in ~5s.
+    const CONCURRENCY = 5
     let delistedCount = 0
-    for (const findId of findsToDelist) {
-      try {
-        await markMarketplacesForDelist(supabase, findId, user.id)
-        delistedCount++
-      } catch (err) {
-        console.error('[bulk-mark-sold] auto-delist failed for find', findId, err)
-      }
+    for (let i = 0; i < findsToDelist.length; i += CONCURRENCY) {
+      const batch = findsToDelist.slice(i, i + CONCURRENCY)
+      const results = await Promise.allSettled(
+        batch.map((findId) => markMarketplacesForDelist(supabase, findId, user.id)),
+      )
+      results.forEach((r, idx) => {
+        if (r.status === 'fulfilled') {
+          delistedCount++
+        } else {
+          console.error('[bulk-mark-sold] auto-delist failed for find', batch[idx], r.reason)
+        }
+      })
     }
 
     return ApiResponseHelper.success({
