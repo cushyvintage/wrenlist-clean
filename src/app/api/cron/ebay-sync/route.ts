@@ -16,7 +16,7 @@ async function reconcileCancelledOrders(
 
   try {
     // Fetch all sold finds with eBay listings for this user
-    const { data: soldFinds } = await supabaseAdmin
+    const { data: soldFinds } = (await supabaseAdmin
       .from('finds')
       .select(`
         id,
@@ -29,7 +29,7 @@ async function reconcileCancelledOrders(
         )
       `)
       .eq('user_id', userId)
-      .eq('status', 'sold') as unknown as { data: Array<{ id: string; name: string; cancelled_at: string | null; product_marketplace_data: Array<{ id: string; platform_listing_id: string | null; marketplace: string }> }> }
+      .eq('status', 'sold')) as any
 
     if (!soldFinds || soldFinds.length === 0) return { cancelledCount: 0, permanentlyDeletedCount: 0 }
 
