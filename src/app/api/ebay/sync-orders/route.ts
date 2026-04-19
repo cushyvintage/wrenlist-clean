@@ -38,8 +38,8 @@ export const GET = withAuth(async (req, user) => {
  * Reconcile cancelled eBay orders - marks finds as cancelled (soft-delete after 24h)
  */
 async function reconcileCancelledOrders(
-  supabase: ReturnType<typeof createSupabaseServerClient>,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabaseAdmin: any,
   userId: string,
   ebayClient: Awaited<ReturnType<typeof getEbayClientForUser>>
 ): Promise<{ cancelledCount: number; cancelledItems: Array<{ title: string }>; permanentlyDeletedCount: number }> {
@@ -60,7 +60,7 @@ async function reconcileCancelledOrders(
       )
     `)
     .eq('user_id', userId)
-    .eq('status', 'sold')
+    .eq('status', 'sold') as any
 
   if (!soldFinds || soldFinds.length === 0) return { cancelledCount: 0, cancelledItems: [], permanentlyDeletedCount: 0 }
 
@@ -100,7 +100,7 @@ async function reconcileCancelledOrders(
                 .from('product_marketplace_data')
                 .select('id')
                 .eq('find_id', find.id)
-                .neq('marketplace', 'ebay')
+                .neq('marketplace', 'ebay') as any
 
               // Only delete the find if it has no other marketplace listings
               if (!otherListings || otherListings.length === 0) {
@@ -116,7 +116,7 @@ async function reconcileCancelledOrders(
             // First time seeing this as cancelled - mark it
             await supabaseAdmin
               .from('finds')
-              .update({ cancelled_at: now.toISOString() })
+              .update({ cancelled_at: now.toISOString() } as any)
               .eq('id', find.id)
 
             cancelledCount++

@@ -7,7 +7,7 @@ import { enrichEbaySoldItem, createFindFromEbaySale } from '@/lib/ebay-sale-enri
  * Reconcile cancelled eBay orders - marks as cancelled, deletes after 24h
  */
 async function reconcileCancelledOrders(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   userId: string,
   ebayClient: Awaited<ReturnType<typeof getEbayClientForUser>>
 ): Promise<{ cancelledCount: number; permanentlyDeletedCount: number }> {
@@ -16,7 +16,7 @@ async function reconcileCancelledOrders(
 
   try {
     // Fetch all sold finds with eBay listings for this user
-    const { data: soldFinds } = (await supabaseAdmin
+    const { data: soldFinds, error: findsError } = await supabaseAdmin
       .from('finds')
       .select(`
         id,
@@ -29,9 +29,9 @@ async function reconcileCancelledOrders(
         )
       `)
       .eq('user_id', userId)
-      .eq('status', 'sold')) as any
+      .eq('status', 'sold') as any
 
-    if (!soldFinds || soldFinds.length === 0) return { cancelledCount: 0, permanentlyDeletedCount: 0 }
+    if (findsError || !soldFinds || soldFinds.length === 0) return { cancelledCount: 0, permanentlyDeletedCount: 0 }
 
     const now = new Date()
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
@@ -58,34 +58,34 @@ async function reconcileCancelledOrders(
               const cancelledTime = new Date(find.cancelled_at)
               if (cancelledTime <= oneDayAgo) {
                 // 24h has passed - permanently delete
-                await (supabaseAdmin
+                await supabaseAdmin
                   .from('product_marketplace_data')
                   .delete()
-                  .eq('id', listing.id) as any)
+                  .eq('id', listing.id)
 
                 // Check if this find has any other marketplace listings
-                const { data: otherListings } = (await supabaseAdmin
+                const { data: otherListings } = await supabaseAdmin
                   .from('product_marketplace_data')
                   .select('id')
                   .eq('find_id', find.id)
-                  .neq('marketplace', 'ebay')) as any
+                  .neq('marketplace', 'ebay')
 
                 // Only delete the find if it has no other marketplace listings
                 if (!otherListings || otherListings.length === 0) {
-                  await (supabaseAdmin
+                  await supabaseAdmin
                     .from('finds')
                     .delete()
-                    .eq('id', find.id) as any)
+                    .eq('id', find.id)
 
                   permanentlyDeletedCount++
                 }
               }
             } else {
               // First time seeing this as cancelled - mark it
-              await (supabaseAdmin
+              await supabaseAdmin
                 .from('finds')
                 .update({ cancelled_at: now.toISOString() } as any)
-                .eq('id', find.id))
+                .eq('id', find.id)
 
               cancelledCount++
             }
