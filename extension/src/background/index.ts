@@ -2532,12 +2532,20 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
     tld: resolveTldFromMessage(message, marketplace),
   });
 
-  // For Facebook, also return the actorId (user ID) from cached session
+  // Return user ID from cached session for platforms that have it
   let userId: string | undefined;
-  if (marketplace === 'facebook' && isLoggedIn) {
+  if (isLoggedIn) {
     try {
-      const stored = await chrome.storage.local.get('wrenlist_fb_actorid');
-      userId = stored.wrenlist_fb_actorid || undefined;
+      if (marketplace === 'facebook') {
+        const stored = await chrome.storage.local.get('wrenlist_fb_actorid');
+        userId = stored.wrenlist_fb_actorid || undefined;
+      } else if (marketplace === 'depop') {
+        const cookies = await chrome.cookies.getAll({ domain: '.depop.com' });
+        userId = cookies.find(c => c.name === 'user_id')?.value || undefined;
+      } else if (marketplace === 'etsy') {
+        const cookies = await chrome.cookies.getAll({ domain: '.etsy.com' });
+        userId = cookies.find(c => c.name === 'uaid')?.value || undefined;
+      }
     } catch {
       // ignore
     }
