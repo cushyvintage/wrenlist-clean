@@ -84,8 +84,8 @@ async function reconcileCancelledOrders(
               // First time seeing this as cancelled - mark it
               await (supabaseAdmin
                 .from('finds')
-                .update({ cancelled_at: now.toISOString() })
-                .eq('id', find.id) as any)
+                .update({ cancelled_at: now.toISOString() } as any)
+                .eq('id', find.id))
 
               cancelledCount++
             }
