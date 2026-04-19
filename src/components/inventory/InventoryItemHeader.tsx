@@ -32,6 +32,7 @@ interface InventoryItemHeaderProps {
   onMarkAsSoldClick: () => void
   onEditClick: () => void
   onSyncClick: () => Promise<void>
+  onAIListingClick?: () => void
   onListOnVintedClick: () => void
   onListOnEbayClick: () => void
   onDelistVintedClick?: () => Promise<void>
@@ -58,6 +59,7 @@ export default function InventoryItemHeader({
   onMarkAsSoldClick,
   onEditClick,
   onSyncClick,
+  onAIListingClick,
   onListOnVintedClick,
   onListOnEbayClick,
   onDelistVintedClick,
@@ -112,6 +114,23 @@ export default function InventoryItemHeader({
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             {isSyncing ? '↻ Syncing...' : '↻ Sync'}
+          </button>
+        )}
+        {!isEditing && onAIListingClick && (
+          <button
+            onClick={onAIListingClick}
+            className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+            title="Generate listing copy with Wren AI"
+            style={{
+              borderWidth: '1px',
+              borderColor: 'rgba(61,92,58,.22)',
+              backgroundColor: 'transparent',
+              color: '#3D5C3A',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            ✨ Wren AI
           </button>
         )}
         {!isEditing && find.status === 'listed' && (

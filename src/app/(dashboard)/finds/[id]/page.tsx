@@ -20,6 +20,7 @@ import { useFindMarketplaceActions } from '@/hooks/useFindMarketplaceActions'
 import { FindNotificationBanners } from '@/components/finds/FindNotificationBanners'
 import { FindViewMode } from '@/components/finds/FindViewMode'
 import { FindEditMode } from '@/components/finds/FindEditMode'
+import { AIListingPanel } from '@/components/finds/AIListingPanel'
 
 interface FormData {
   title: string
@@ -91,6 +92,7 @@ export default function InventoryDetailPage() {
   const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)
   const [crosslistTargets, setCrosslistTargets] = useState<Platform[]>([])
+  const [aiPanelOpen, setAIPanelOpen] = useState(false)
   const extensionInfo = useExtensionInfo()
   const heartbeat = useExtensionHeartbeat()
   const { connected: allConnectedPlatforms, disconnected: disconnectedPlatforms, recheckPlatforms } = useConnectedPlatforms({ pollInterval: 60_000 })
@@ -606,6 +608,7 @@ export default function InventoryDetailPage() {
         onMarkAsSoldClick={() => setMarkSoldConfirm(true)}
         onEditClick={() => setIsEditing(true)}
         onSyncClick={handleSyncOrders}
+        onAIListingClick={() => setAIPanelOpen(true)}
         onListOnVintedClick={marketplaceActions.handleListOnVinted}
         onListOnEbayClick={marketplaceActions.handleListOnEbay}
         onDelistVintedClick={marketplaceActions.handleDelistFromVinted}
@@ -645,6 +648,29 @@ export default function InventoryDetailPage() {
           onDelistPlatform={marketplaceActions.handleDelistFromPlatform}
           onRetryPublish={marketplaceActions.handleRetryPublish}
           onDeleteClick={() => setDeleteConfirm(true)}
+        />
+      )}
+
+      {find && (
+        <AIListingPanel
+          findId={find.id}
+          findName={find.name}
+          open={aiPanelOpen}
+          onClose={() => setAIPanelOpen(false)}
+          onApplied={async () => {
+            const res = await fetch(`/api/finds/${id}`)
+            if (res.ok) {
+              const result = await res.json()
+              const data = unwrapApiResponse<Find>(result)
+              setFind(data)
+              setFormData((prev) => ({
+                ...prev,
+                title: data.name || prev.title,
+                description: data.description || prev.description,
+                platformFields: (data.platform_fields as PlatformFieldsData) || prev.platformFields,
+              }))
+            }
+          }}
         />
       )}
 
