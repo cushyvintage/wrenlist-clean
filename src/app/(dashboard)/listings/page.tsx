@@ -650,7 +650,11 @@ export default function ListingsPage() {
                 { label: 'Active listings', value: String(counts.listed) },
                 { label: 'Listed value', value: `£${totalListedValue.toLocaleString()}` },
                 { label: 'Platforms', value: String(activeMarketplaces.length) },
-                { label: 'Avg days listed', value: String(avgDaysListed), highlight: avgDaysListed > 30 },
+                // Measured from when the item entered Wrenlist, not the original
+                // listing date on the marketplace — real "days on sale" needs
+                // platform_listed_at (see DATABASE_SCHEMA_REFERENCE). Label
+                // honestly until we surface that field end-to-end.
+                { label: 'Avg days in stock', value: avgDaysListed > 0 ? String(avgDaysListed) : '—', highlight: avgDaysListed > 30 },
               ].map((stat) => (
                 <div
                   key={stat.label}

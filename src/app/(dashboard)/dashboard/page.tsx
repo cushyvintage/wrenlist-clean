@@ -24,16 +24,17 @@ interface AnalyticsSummary {
   draft_finds: number
   total_sales: number
   cogs: number
-  gross_profit: number
-  profit_margin_pct: number
-  avg_profit_per_item: number
+  gross_profit: number | null
+  profit_margin_pct: number | null
+  avg_profit_per_item: number | null
+  cost_coverage_pct: number
   stock_cost: number
   stock_listed_value: number
   stock_count: number
   avg_days_to_sell: number
   sell_through_pct: number
   this_month_sales: number
-  this_month_profit: number
+  this_month_profit: number | null
   this_month_items_sold: number
   this_month_items_sourced: number
   this_month_expenses: number
@@ -96,9 +97,11 @@ export default function DashboardPage() {
   // Use summary data for metrics
   const activeFinds = summary?.stock_count ?? 0
   const monthlyRevenue = summary?.this_month_sales || 0
-  const monthlyProfit = summary?.this_month_profit || 0
-  const avgMargin = summary?.profit_margin_pct || 0
+  const monthlyProfit = summary?.this_month_profit ?? null
+  const avgMargin = summary?.profit_margin_pct ?? null
+  const avgProfitPerItem = summary?.avg_profit_per_item ?? null
   const avgDaysToSell = summary?.avg_days_to_sell || 0
+  const hasAnyCost = (summary?.cost_coverage_pct ?? 0) > 0
 
   // Count-up animation runs once per session across all 4 stat cards.
   // The session gate is read ONCE at mount (useMemo) so all 4 cards stay in
@@ -120,7 +123,7 @@ export default function DashboardPage() {
     sessionKey: COUNT_UP_SESSION_KEY,
   })
   const animatedMonthlyRevenue = useCountUp(monthlyRevenue, { enabled: countUpEnabled })
-  const animatedAvgMargin = useCountUp(avgMargin, { enabled: countUpEnabled })
+  const animatedAvgMargin = useCountUp(avgMargin ?? 0, { enabled: countUpEnabled && avgMargin != null })
   const animatedAvgDaysToSell = useCountUp(avgDaysToSell, { enabled: countUpEnabled })
 
   const recentFinds = finds.slice(0, 3)
@@ -192,20 +195,30 @@ export default function DashboardPage() {
             label="This month sales"
             value={Math.round(animatedMonthlyRevenue)}
             prefix="£"
-            delta={`${summary?.this_month_items_sold || 0} sold · £${monthlyProfit.toFixed(0)} profit`}
+            delta={
+              monthlyProfit != null
+                ? `${summary?.this_month_items_sold || 0} sold · £${monthlyProfit.toFixed(0)} profit`
+                : `${summary?.this_month_items_sold || 0} sold · profit —`
+            }
           />
           <StatCard
             className="stat-card-stagger"
             label="Profit margin"
-            value={Math.round(animatedAvgMargin)}
-            suffix="%"
-            delta={`£${(summary?.avg_profit_per_item || 0).toFixed(0)} avg per item`}
+            value={avgMargin != null ? Math.round(animatedAvgMargin) : '—'}
+            suffix={avgMargin != null ? '%' : ''}
+            delta={
+              avgProfitPerItem != null
+                ? `£${avgProfitPerItem.toFixed(0)} avg per item`
+                : hasAnyCost
+                  ? '—'
+                  : 'add cost to sourced items'
+            }
           />
           <StatCard
             className="stat-card-stagger"
             label="Days to sell"
-            value={Math.round(animatedAvgDaysToSell)}
-            suffix=" days"
+            value={avgDaysToSell > 0 ? Math.round(animatedAvgDaysToSell) : '—'}
+            suffix={avgDaysToSell > 0 ? ' days' : ''}
             delta={`${summary?.sell_through_pct || 0}% sell-through`}
           />
         </div>
@@ -333,9 +346,16 @@ export default function DashboardPage() {
                 <span className="text-ink-lt">Profit</span>
                 <span
                   className="font-mono font-medium"
-                  style={{ color: monthlyProfit >= 0 ? '#4A7A45' : '#dc2626' }}
+                  style={{
+                    color:
+                      monthlyProfit == null
+                        ? '#6B7D6A'
+                        : monthlyProfit >= 0
+                          ? '#4A7A45'
+                          : '#dc2626',
+                  }}
                 >
-                  £{monthlyProfit.toFixed(2)}
+                  {monthlyProfit != null ? `£${monthlyProfit.toFixed(2)}` : '—'}
                 </span>
               </div>
             </div>

@@ -78,13 +78,26 @@ export default function InsightsHistoryPage() {
 
   const filtered = events.filter((ev) => filter === 'all' || statusOf(ev) === filter)
 
-  // Group by day for the rendered list
-  const groups = new Map<string, InsightEvent[]>()
+  // Group by day, then collapse same-key events within a day so the history
+  // doesn't read as spam when the engine re-fires hourly. We keep the most
+  // recent event per key (that's the current status) and track how many
+  // times the same nudge was shown that day.
+  interface DayInsight { event: InsightEvent; repeatCount: number }
+  const groups = new Map<string, DayInsight[]>()
   for (const ev of filtered) {
-    const key = dayKey(ev.shown_at)
-    const list = groups.get(key) ?? []
-    list.push(ev)
-    groups.set(key, list)
+    const day = dayKey(ev.shown_at)
+    const list = groups.get(day) ?? []
+    const existing = list.find((d) => d.event.insight_key === ev.insight_key)
+    if (existing) {
+      existing.repeatCount += 1
+      // Prefer the most recent event so status (clicked/dismissed) reflects latest.
+      if (new Date(ev.shown_at) > new Date(existing.event.shown_at)) {
+        existing.event = ev
+      }
+    } else {
+      list.push({ event: ev, repeatCount: 1 })
+    }
+    groups.set(day, list)
   }
 
   const counts = {
@@ -142,7 +155,7 @@ export default function InsightsHistoryPage() {
                 {day}
               </div>
               <div className="space-y-3">
-                {dayEvents.map((ev) => {
+                {dayEvents.map(({ event: ev, repeatCount }) => {
                   const style = TYPE_STYLES[ev.type]
                   const status = statusOf(ev)
                   return (
@@ -154,6 +167,11 @@ export default function InsightsHistoryPage() {
                         <div className="flex-1 min-w-0">
                           <div className={`text-[10px] uppercase tracking-widest font-medium mb-1 ${style.label}`}>
                             {ev.type} · {ev.insight_key}
+                            {repeatCount > 1 && (
+                              <span className="ml-2 normal-case tracking-normal text-ink-lt">
+                                · shown {repeatCount}× today
+                              </span>
+                            )}
                           </div>
                           <div className="font-serif italic text-sm text-ink leading-relaxed">
                             &ldquo;{ev.insight_text}&rdquo;

@@ -88,6 +88,7 @@ const SHIPMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   returning: { bg: 'bg-red-100', text: 'text-red-800', label: 'Returning' },
   refunded: { bg: 'bg-red-100', text: 'text-red-800', label: 'Refunded' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+  'not sent': { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Not Shipped' },
 }
 
 /** Normalise Vinted status strings like "Package delivered." → "delivered" */
@@ -101,6 +102,11 @@ function normaliseShipmentStatus(raw: string): string {
   if (s.includes('shipped')) return 'shipped'
   if (s.includes('refund')) return 'refunded'
   if (s.includes('cancel')) return 'cancelled'
+  // Vinted's tx-level status before seller ships is "Payment successful!" — that's
+  // a payment state, not a shipment state. Surface it as "not sent" so the badge
+  // reads correctly and the action buttons below know this needs shipping.
+  if (s.includes('payment') && s.includes('success')) return 'not sent'
+  if (s === 'not sent' || s === 'awaiting shipment') return 'not sent'
   return s
 }
 
@@ -225,6 +231,10 @@ export default function SoldDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showTracking, setShowTracking] = useState(false)
+  const [trackingInput, setTrackingInput] = useState('')
+  const [carrierInput, setCarrierInput] = useState('')
+  const [isUpdatingShipment, setIsUpdatingShipment] = useState(false)
   const { getNode } = useCategoryTree()
 
   const formatCategory = (slug: string | null): string => {
@@ -244,6 +254,28 @@ export default function SoldDetailPage() {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleUpdateShipment = async (status: string, tracking?: string, carrier?: string) => {
+    setIsUpdatingShipment(true)
+    try {
+      const body: Record<string, string> = { shipmentStatus: status }
+      if (tracking) body.trackingNumber = tracking
+      if (carrier) body.carrier = carrier
+      await fetchApi(`/api/sold/${id}/shipment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      showSuccess(status === 'shipped' ? 'Marked as shipped' : `Status updated to ${status}`)
+      setShowTracking(false)
+      // Reload data
+      call(() => fetchApi<SoldDetail>(`/api/sold/${id}`))
+    } catch {
+      // Error handled by fetchApi
+    } finally {
+      setIsUpdatingShipment(false)
     }
   }
 
@@ -373,6 +405,7 @@ export default function SoldDetailPage() {
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-serif text-ink leading-tight">{data.name}</h1>
           <div className="flex items-center gap-2 mt-2">
+            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800">Sold</span>
             {sale.marketplace !== 'unknown' && (
               <MarketplaceIcon platform={sale.marketplace as Platform} size="sm" />
             )}
@@ -447,17 +480,92 @@ export default function SoldDetailPage() {
           {sale.carrier && (
             <DetailRow label="carrier">{sale.carrier}</DetailRow>
           )}
-          {sale.marketplace === 'ebay' && sale.transactionId && (
-            <DetailRow label="ship">
-              <a
-                href={`https://www.ebay.co.uk/mesh/ord/details?orderid=${encodeURIComponent(sale.transactionId)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sage hover:underline"
-              >
-                ship via eBay &rarr;
-              </a>
-            </DetailRow>
+
+          {/* Shipment action buttons */}
+          {(!sale.shipmentStatus || ['not sent', 'label sent'].includes(normaliseShipmentStatus(sale.shipmentStatus))) && (
+            <div className="pt-3 border-t border-border mt-1">
+              {showTracking ? (
+                <div className="space-y-2">
+                  {sale.marketplace === 'ebay' && (
+                    <select
+                      value={carrierInput}
+                      onChange={(e) => setCarrierInput(e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+                    >
+                      <option value="">Carrier (optional)</option>
+                      <option value="Royal Mail">Royal Mail</option>
+                      <option value="Evri">Evri</option>
+                      <option value="DPD">DPD</option>
+                      <option value="DHL">DHL</option>
+                      <option value="Yodel">Yodel</option>
+                      <option value="Parcelforce">Parcelforce</option>
+                    </select>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={trackingInput}
+                      onChange={(e) => setTrackingInput(e.target.value)}
+                      placeholder="Tracking number"
+                      className="flex-1 px-2 py-1.5 text-xs border border-border rounded bg-cream focus:outline-none focus:border-sage"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && trackingInput.trim()) {
+                          handleUpdateShipment('shipped', trackingInput.trim(), carrierInput || undefined)
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleUpdateShipment('shipped', trackingInput.trim(), carrierInput || undefined)}
+                      disabled={!trackingInput.trim() || isUpdatingShipment}
+                      className="px-3 py-1.5 text-xs font-medium rounded bg-sage text-white hover:bg-sage-lt transition disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setShowTracking(false)}
+                      className="px-2 py-1.5 text-xs text-ink-lt hover:text-ink transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowTracking(true)}
+                    disabled={isUpdatingShipment}
+                    className="px-3 py-1.5 text-xs font-medium rounded border border-sage text-sage hover:bg-sage hover:text-white transition disabled:opacity-50"
+                  >
+                    Add Tracking
+                  </button>
+                  <button
+                    onClick={() => handleUpdateShipment('shipped')}
+                    disabled={isUpdatingShipment}
+                    className="px-3 py-1.5 text-xs font-medium rounded border border-ink-lt/30 text-ink-lt hover:border-sage hover:text-sage transition disabled:opacity-50"
+                  >
+                    Mark Shipped
+                  </button>
+                  <button
+                    onClick={() => handleUpdateShipment('delivered')}
+                    disabled={isUpdatingShipment}
+                    className="px-3 py-1.5 text-xs font-medium rounded border border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition disabled:opacity-50"
+                  >
+                    Mark Delivered
+                  </button>
+                  {sale.marketplace === 'ebay' && sale.transactionId && (
+                    <a
+                      href={`https://www.ebay.co.uk/sh/ord/details?orderid=${encodeURIComponent(sale.transactionId)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 text-xs font-medium rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition inline-block"
+                    >
+                      Ship on eBay
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {sale.isGift && (
             <DetailRow label="gift">
@@ -480,16 +588,32 @@ export default function SoldDetailPage() {
               <span className="font-mono">£{sale.grossAmount.toFixed(2)}</span>
             </DetailRow>
           )}
-          {sale.serviceFee != null && (sale.serviceFee > 0 || sale.feeSource === 'estimated') && (
+          {sale.serviceFee != null && (sale.serviceFee > 0 || sale.feeSource === 'estimated') ? (() => {
+            // Vinted buyer protection is charged to buyer, not deducted from seller
+            // (seller still receives the full gross). Detect by checking whether
+            // net + fee equals gross — if it does, the fee IS deducted from seller.
+            const sellerFeeDeducted =
+              sale.grossAmount != null &&
+              sale.netAmount != null &&
+              Math.abs(sale.grossAmount - sale.serviceFee - sale.netAmount) < 0.01
+            return (
+              <DetailRow label={sellerFeeDeducted ? 'service fee' : 'buyer protection'}>
+                <span className={`font-mono ${sellerFeeDeducted ? 'text-red-600' : 'text-ink-lt'}`}>
+                  {sellerFeeDeducted ? '-' : ''}£{sale.serviceFee.toFixed(2)}
+                  {!sellerFeeDeducted && (
+                    <span className="text-ink-lt font-sans text-[10px] ml-1">(paid by buyer)</span>
+                  )}
+                  {sale.feeSource === 'estimated' && (
+                    <span className="text-ink-lt font-sans text-[10px] ml-1">(estimated)</span>
+                  )}
+                </span>
+              </DetailRow>
+            )
+          })() : sale.marketplace === 'ebay' && sale.serviceFee === 0 ? (
             <DetailRow label="service fee">
-              <span className="font-mono text-red-600">
-                -£{sale.serviceFee.toFixed(2)}
-                {sale.feeSource === 'estimated' && (
-                  <span className="text-ink-lt font-sans text-[10px] ml-1">(estimated)</span>
-                )}
-              </span>
+              <span className="text-amber-600 text-xs">Fees pending — eBay settles in 1-2 days</span>
             </DetailRow>
-          )}
+          ) : null}
           {sale.shippingCost != null && sale.shippingCost > 0 && (
             <DetailRow label="shipping">
               <span className="font-mono">+£{sale.shippingCost.toFixed(2)}</span>

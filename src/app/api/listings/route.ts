@@ -85,6 +85,7 @@ export const GET = withAuth(async (req, user) => {
           error_message,
           created_at,
           updated_at,
+          platform_listed_at,
           finds!inner (
             id,
             user_id,
@@ -95,7 +96,8 @@ export const GET = withAuth(async (req, user) => {
             category,
             brand,
             condition,
-            description
+            description,
+            sourced_at
           )
         `)
         .eq('finds.user_id', user.id)

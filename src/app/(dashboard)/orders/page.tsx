@@ -54,10 +54,13 @@ export default function OrdersPage() {
     return (marketplace as Platform) || 'vinted'
   }
 
-  // Calculate totals
+  // Calculate totals. Profit/margin only make sense when at least one order
+  // has cost data — otherwise `cost=0` makes it look like 100% profit margin.
   const totalRevenue = orders.reduce((sum, o) => sum + (o.sold_price_gbp || 0), 0)
   const totalCost = orders.reduce((sum, o) => sum + (o.cost_gbp || 0), 0)
-  const totalMargin = totalRevenue - totalCost
+  const hasAnyCost = orders.some((o) => (o.cost_gbp || 0) > 0)
+  const totalMargin = hasAnyCost ? totalRevenue - totalCost : null
+  const marginPct = hasAnyCost && totalRevenue > 0 ? Math.round(((totalMargin as number) / totalRevenue) * 100) : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,17 +84,21 @@ export default function OrdersPage() {
         <div className="p-4 bg-white border border-sage/14 rounded">
           <div className="text-xs font-medium text-ink-lt uppercase mb-2">total profit</div>
           <div className="text-2xl font-serif font-medium text-sage-dk">
-            £{totalMargin.toFixed(2)}
+            {totalMargin != null ? `£${totalMargin.toFixed(2)}` : '—'}
           </div>
-          <div className="text-xs text-ink-lt mt-1">after cost of goods</div>
+          <div className="text-xs text-ink-lt mt-1">
+            {totalMargin != null ? 'after cost of goods' : 'add cost to track profit'}
+          </div>
         </div>
 
         <div className="p-4 bg-white border border-sage/14 rounded">
           <div className="text-xs font-medium text-ink-lt uppercase mb-2">avg margin</div>
           <div className="text-2xl font-serif font-medium text-ink">
-            {orders.length > 0 ? Math.round((totalMargin / totalRevenue) * 100) : 0}%
+            {marginPct != null ? `${marginPct}%` : '—'}
           </div>
-          <div className="text-xs text-ink-lt mt-1">margin rate</div>
+          <div className="text-xs text-ink-lt mt-1">
+            {marginPct != null ? 'margin rate' : 'add cost to track'}
+          </div>
         </div>
       </div>
 

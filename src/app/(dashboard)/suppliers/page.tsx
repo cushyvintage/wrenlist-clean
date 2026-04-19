@@ -365,7 +365,7 @@ export default function SuppliersPage() {
                     <div className="flex-1 min-w-0">
                       <Link
                         href={`/suppliers/${supplier.id}`}
-                        className="font-medium text-ink text-sm leading-tight hover:underline"
+                        className="block font-medium text-ink text-sm leading-tight hover:underline"
                       >
                         {supplier.name}
                       </Link>

@@ -18,16 +18,17 @@ interface AnalyticsSummary {
   draft_finds: number
   total_sales: number
   cogs: number
-  gross_profit: number
-  profit_margin_pct: number
-  avg_profit_per_item: number
+  gross_profit: number | null
+  profit_margin_pct: number | null
+  avg_profit_per_item: number | null
+  cost_coverage_pct: number
   stock_cost: number
   stock_listed_value: number
   stock_count: number
   avg_days_to_sell: number
   sell_through_pct: number
   this_month_sales: number
-  this_month_profit: number
+  this_month_profit: number | null
   this_month_items_sold: number
   this_month_items_sourced: number
   this_month_expenses: number
@@ -200,11 +201,13 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label="Profit"
-            value={summary?.gross_profit || 0}
-            prefix="£"
+            value={summary?.gross_profit != null ? summary.gross_profit : '—'}
+            prefix={summary?.gross_profit != null ? '£' : ''}
             delta={
               summary && summary.sold_finds > 0
-                ? `£${summary.avg_profit_per_item.toFixed(0)} avg per item`
+                ? summary.avg_profit_per_item != null
+                  ? `£${summary.avg_profit_per_item.toFixed(0)} avg per item`
+                  : 'add cost to track profit'
                 : 'no sales yet'
             }
           />
@@ -218,16 +221,22 @@ export default function AnalyticsPage() {
           />
           <StatCard
             label="Profit margin"
-            value={summary?.profit_margin_pct || 0}
-            suffix="%"
-            delta={summary && summary.cogs > 0 ? `£${summary.cogs.toFixed(0)} COGS` : '—'}
+            value={summary?.profit_margin_pct != null ? summary.profit_margin_pct : '—'}
+            suffix={summary?.profit_margin_pct != null ? '%' : ''}
+            delta={
+              summary?.profit_margin_pct != null
+                ? `£${summary.cogs.toFixed(0)} COGS (${summary.cost_coverage_pct}% of items)`
+                : summary && summary.sold_finds > 0
+                  ? 'add cost to sourced items'
+                  : '—'
+            }
           />
           <StatCard
             label="Sell-through rate"
             value={summary?.sell_through_pct || 0}
             suffix="%"
             delta={
-              summary
+              summary && summary.avg_days_to_sell > 0
                 ? `${summary.avg_days_to_sell}d avg to sell`
                 : '—'
             }
@@ -322,9 +331,16 @@ export default function AnalyticsPage() {
               <div className="text-[11px] text-ink-lt mb-0.5">Profit</div>
               <div
                 className="font-mono text-sm font-medium"
-                style={{ color: summary.this_month_profit >= 0 ? '#4A7A45' : '#dc2626' }}
+                style={{
+                  color:
+                    summary.this_month_profit == null
+                      ? '#6B7D6A'
+                      : summary.this_month_profit >= 0
+                        ? '#4A7A45'
+                        : '#dc2626',
+                }}
               >
-                £{summary.this_month_profit.toFixed(0)}
+                {summary.this_month_profit != null ? `£${summary.this_month_profit.toFixed(0)}` : '—'}
               </div>
             </div>
             <div>
@@ -643,6 +659,11 @@ function generateInsight(
   // Pick the most useful insight
   if (aging && aging.aged_60 > 5) {
     return `${aging.aged_60} items have been listed for over 60 days — £${aging.aged_stock_value.toFixed(0)} tied up. Consider repricing or bundling slow movers.`
+  }
+
+  // If no cost data captured, margin metrics are meaningless — nudge instead.
+  if (summary.avg_profit_per_item == null || summary.profit_margin_pct == null) {
+    return `${summary.sold_finds} items sold for £${summary.total_sales.toFixed(0)}. Add cost prices to sourced items to see profit and margin.`
   }
 
   if (summary.sell_through_pct >= 60) {

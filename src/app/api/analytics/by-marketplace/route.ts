@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { withAuth } from '@/lib/with-auth'
+import { platformLabel } from '@/lib/platforms'
 
 interface MarketplaceAnalytics {
   marketplace: string
@@ -67,10 +68,10 @@ export const GET = withAuth(async (_req, user) => {
       })
     }
 
-    // Convert to array and format response
+    // Convert to array and format response — keep brand casing (eBay, not Ebay).
     const analytics: MarketplaceAnalytics[] = Array.from(marketplaceMap.entries())
       .map(([marketplace, data]) => ({
-        marketplace: marketplace.charAt(0).toUpperCase() + marketplace.slice(1), // Capitalize
+        marketplace: platformLabel(marketplace),
         listed_count: data.listed,
         sold_count: data.sold,
         total_revenue: data.revenue,

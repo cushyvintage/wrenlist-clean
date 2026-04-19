@@ -1,4 +1,5 @@
 import type { Platform } from '@/types'
+import { platformLabel } from '@/lib/platforms'
 
 /** Statuses that block an item from being crosslisted to a platform */
 export const CROSSLIST_BLOCKED_STATUSES = new Set(['listed', 'draft', 'needs_publish', 'needs_delist'])
@@ -8,8 +9,7 @@ export const API_PLATFORMS = new Set<Platform>(['ebay'])
 
 /** Format a platform key for display: 'ebay' → 'eBay', 'facebook' → 'Facebook' */
 export function formatPlatformName(platform: string): string {
-  if (platform === 'ebay') return 'eBay'
-  return platform.charAt(0).toUpperCase() + platform.slice(1)
+  return platformLabel(platform)
 }
 
 interface PublishResult {

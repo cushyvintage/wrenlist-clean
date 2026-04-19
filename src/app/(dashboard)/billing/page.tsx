@@ -176,7 +176,7 @@ export default function BillingPage() {
               >
                 {portalLoading ? 'Loading...' : 'Manage Billing'}
               </button>
-            ) : (
+            ) : profile.plan === 'flock' ? null : (
               <a
                 href="#plans"
                 className="px-3 py-1.5 text-xs bg-sage text-cream rounded-sm font-medium hover:bg-sage-dk transition-colors"

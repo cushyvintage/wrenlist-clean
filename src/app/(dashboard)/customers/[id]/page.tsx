@@ -163,26 +163,37 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
-      {/* P&L highlight */}
-      {pnl && pnl.totalRevenue > 0 && (
-        <div className={`flex items-center justify-between rounded-md border px-5 py-3 ${
-          pnl.totalProfit > 0 ? 'bg-green-50 border-green-200' : pnl.totalProfit < 0 ? 'bg-red-50 border-red-200' : 'bg-cream border-border'
-        }`}>
-          <div>
-            <span className="text-xs text-ink-lt">profit from this customer</span>
-            <span className={`ml-3 text-xl font-mono font-semibold ${
-              pnl.totalProfit > 0 ? 'text-green-700' : pnl.totalProfit < 0 ? 'text-red-700' : 'text-ink'
-            }`}>
-              {pnl.totalProfit >= 0 ? '+' : ''}£{pnl.totalProfit.toFixed(2)}
-            </span>
+      {/* P&L highlight. Profit is only meaningful when we have cost data; otherwise
+          we'd be reporting "profit = revenue" which is misleading.
+          On Vinted the fee is buyer-paid (buyer protection) so it doesn't reduce
+          net received — only show it on the P&L strip when it actually changes net. */}
+      {pnl && pnl.totalRevenue > 0 && (() => {
+        const hasCost = pnl.totalCost > 0
+        const sellerFeeDeducted = Math.abs(pnl.totalRevenue - pnl.totalFees - pnl.totalNet) < 0.01 && pnl.totalFees > 0
+        return (
+          <div className={`flex items-center justify-between rounded-md border px-5 py-3 ${
+            hasCost && pnl.totalProfit > 0 ? 'bg-green-50 border-green-200'
+              : hasCost && pnl.totalProfit < 0 ? 'bg-red-50 border-red-200'
+              : 'bg-cream border-border'
+          }`}>
+            <div>
+              <span className="text-xs text-ink-lt">profit from this customer</span>
+              <span className={`ml-3 text-xl font-mono font-semibold ${
+                hasCost && pnl.totalProfit > 0 ? 'text-green-700'
+                  : hasCost && pnl.totalProfit < 0 ? 'text-red-700'
+                  : 'text-ink-lt'
+              }`}>
+                {hasCost ? `${pnl.totalProfit >= 0 ? '+' : ''}£${pnl.totalProfit.toFixed(2)}` : '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-ink-lt">
+              <span>£{pnl.totalRevenue.toFixed(2)} revenue</span>
+              {sellerFeeDeducted && <span>£{pnl.totalFees.toFixed(2)} fees</span>}
+              <span>{hasCost ? `£${pnl.totalCost.toFixed(2)} cost` : 'cost not tracked'}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs text-ink-lt">
-            <span>£{pnl.totalRevenue.toFixed(2)} revenue</span>
-            {pnl.totalFees > 0 && <span>£{pnl.totalFees.toFixed(2)} fees</span>}
-            <span>£{pnl.totalCost.toFixed(2)} cost</span>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       <div className="grid grid-cols-2 gap-4">
         {/* Stats */}
@@ -195,12 +206,19 @@ export default function CustomerDetailPage() {
             <span className="text-xs text-ink-lt">total revenue</span>
             <span className="text-sm font-mono">£{(pnl?.totalRevenue ?? Number(c.total_spent_gbp)).toFixed(2)}</span>
           </div>
-          {pnl && pnl.totalFees > 0 && (
-            <div className="flex justify-between items-baseline py-2 border-b border-border">
-              <span className="text-xs text-ink-lt">platform fees</span>
-              <span className="text-sm font-mono text-red-600">-£{pnl.totalFees.toFixed(2)}</span>
-            </div>
-          )}
+          {pnl && pnl.totalFees > 0 && (() => {
+            const sellerFeeDeducted = Math.abs(pnl.totalRevenue - pnl.totalFees - pnl.totalNet) < 0.01
+            return (
+              <div className="flex justify-between items-baseline py-2 border-b border-border">
+                <span className="text-xs text-ink-lt">
+                  {sellerFeeDeducted ? 'platform fees' : 'buyer protection (Vinted)'}
+                </span>
+                <span className={`text-sm font-mono ${sellerFeeDeducted ? 'text-red-600' : 'text-ink-lt'}`}>
+                  {sellerFeeDeducted ? '-' : ''}£{pnl.totalFees.toFixed(2)}
+                </span>
+              </div>
+            )
+          })()}
           {pnl && (
             <div className="flex justify-between items-baseline py-2 border-b border-border">
               <span className="text-xs text-ink-lt">net received</span>
@@ -210,14 +228,20 @@ export default function CustomerDetailPage() {
           {pnl && (
             <div className="flex justify-between items-baseline py-2 border-b border-border">
               <span className="text-xs text-ink-lt">total cost</span>
-              <span className="text-sm font-mono">£{pnl.totalCost.toFixed(2)}</span>
+              <span className="text-sm font-mono">
+                {pnl.totalCost > 0 ? `£${pnl.totalCost.toFixed(2)}` : '—'}
+              </span>
             </div>
           )}
           {pnl && (
             <div className="flex justify-between items-baseline py-2 border-b border-border">
               <span className="text-xs text-ink-lt">profit</span>
-              <span className={`text-sm font-mono font-medium ${pnl.totalProfit > 0 ? 'text-green-600' : pnl.totalProfit < 0 ? 'text-red-600' : ''}`}>
-                £{pnl.totalProfit.toFixed(2)}
+              <span className={`text-sm font-mono font-medium ${
+                pnl.totalCost <= 0 ? 'text-ink-lt'
+                  : pnl.totalProfit > 0 ? 'text-green-600'
+                  : pnl.totalProfit < 0 ? 'text-red-600' : ''
+              }`}>
+                {pnl.totalCost > 0 ? `£${pnl.totalProfit.toFixed(2)}` : '—'}
               </span>
             </div>
           )}
@@ -232,7 +256,9 @@ export default function CustomerDetailPage() {
           {daysSinceFirst != null && (
             <div className="flex justify-between items-baseline py-2">
               <span className="text-xs text-ink-lt">customer for</span>
-              <span className="text-sm">{daysSinceFirst} days</span>
+              <span className="text-sm">
+                {daysSinceFirst === 0 ? 'new — first order today' : `${daysSinceFirst} day${daysSinceFirst === 1 ? '' : 's'}`}
+              </span>
             </div>
           )}
         </Panel>
@@ -296,8 +322,14 @@ export default function CustomerDetailPage() {
                   <span className="text-sm font-mono text-ink block">
                     £{o.grossAmount.toFixed(2)}
                   </span>
-                  <span className={`text-[11px] font-mono ${o.profit > 0 ? 'text-green-600' : o.profit < 0 ? 'text-red-600' : 'text-ink-lt'}`}>
-                    {o.profit >= 0 ? '+' : ''}£{o.profit.toFixed(2)}
+                  <span className={`text-[11px] font-mono ${
+                    (o.cost_gbp ?? 0) <= 0 ? 'text-ink-lt'
+                      : o.profit > 0 ? 'text-green-600'
+                      : o.profit < 0 ? 'text-red-600' : 'text-ink-lt'
+                  }`}>
+                    {(o.cost_gbp ?? 0) > 0
+                      ? `${o.profit >= 0 ? '+' : ''}£${o.profit.toFixed(2)}`
+                      : 'no cost'}
                   </span>
                 </div>
               </Link>

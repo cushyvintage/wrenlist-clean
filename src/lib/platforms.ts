@@ -16,3 +16,24 @@ export const CATEGORY_PLATFORMS = ['ebay', 'vinted', 'shopify', 'etsy', 'depop']
 
 export type PublishPlatform = (typeof PUBLISH_PLATFORMS)[number]
 export type CategoryPlatform = (typeof CATEGORY_PLATFORMS)[number]
+
+/** Canonical display labels — respects brand casing (eBay, not Ebay). */
+export const PLATFORM_LABELS: Record<(typeof ALL_PLATFORMS)[number], string> = {
+  vinted: 'Vinted',
+  ebay: 'eBay',
+  etsy: 'Etsy',
+  shopify: 'Shopify',
+  depop: 'Depop',
+  poshmark: 'Poshmark',
+  mercari: 'Mercari',
+  facebook: 'Facebook',
+  whatnot: 'Whatnot',
+  grailed: 'Grailed',
+}
+
+/** Display label for a platform key — falls back to raw value if unknown. */
+export function platformLabel(key: string | null | undefined): string {
+  if (!key) return '—'
+  const lower = key.toLowerCase()
+  return (PLATFORM_LABELS as Record<string, string>)[lower] ?? key
+}

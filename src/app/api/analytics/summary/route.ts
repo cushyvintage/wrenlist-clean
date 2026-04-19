@@ -10,11 +10,12 @@ interface AnalyticsSummary {
   draft_finds: number
 
   // Financial — sold items only
-  total_sales: number        // sum of sold_price_gbp for sold items
-  cogs: number               // cost of goods sold (cost_gbp for sold items only)
-  gross_profit: number       // total_sales - cogs
-  profit_margin_pct: number  // (gross_profit / total_sales) * 100
-  avg_profit_per_item: number // gross_profit / sold count
+  total_sales: number                    // sum of sold_price_gbp for sold items
+  cogs: number                           // cost of goods sold (cost_gbp for sold items only)
+  gross_profit: number | null            // total_sales - cogs; null when cost coverage is 0
+  profit_margin_pct: number | null       // (gross_profit / total_sales) * 100; null when no cost data
+  avg_profit_per_item: number | null     // gross_profit / sold count; null when no cost data
+  cost_coverage_pct: number              // share of sold items that have cost_gbp set
 
   // Stock value — unsold items
   stock_cost: number         // what you paid for unsold inventory
@@ -27,7 +28,7 @@ interface AnalyticsSummary {
 
   // This month
   this_month_sales: number
-  this_month_profit: number
+  this_month_profit: number | null   // null when no cost data this month
   this_month_items_sold: number
   this_month_items_sourced: number
   this_month_expenses: number
@@ -96,13 +97,15 @@ export const GET = withAuth(async (req: NextRequest, user) => {
     // Financial — SOLD items only
     let totalSales = 0
     let cogs = 0
+    let soldWithCost = 0
     const daysToSellData: number[] = []
 
     periodFinds.forEach((find) => {
       if (find.status === 'sold' && find.sold_price_gbp) {
         totalSales += find.sold_price_gbp
-        if (find.cost_gbp) {
+        if (find.cost_gbp && find.cost_gbp > 0) {
           cogs += find.cost_gbp
+          soldWithCost += 1
         }
         if (find.sourced_at && find.sold_at) {
           const days = Math.round(
@@ -114,9 +117,18 @@ export const GET = withAuth(async (req: NextRequest, user) => {
       }
     })
 
-    const grossProfit = totalSales - cogs
-    const profitMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0
-    const avgProfitPerItem = soldFinds > 0 ? Math.round((grossProfit / soldFinds) * 100) / 100 : 0
+    // When no sold item has a cost, margin/profit are undefined rather than 100%.
+    const hasAnyCost = soldWithCost > 0
+    const grossProfit = hasAnyCost ? totalSales - cogs : null
+    const profitMarginPct = hasAnyCost && totalSales > 0
+      ? Math.round(((totalSales - cogs) / totalSales) * 100)
+      : null
+    const avgProfitPerItem = hasAnyCost && soldFinds > 0
+      ? Math.round(((totalSales - cogs) / soldFinds) * 100) / 100
+      : null
+    const costCoveragePct = soldFinds > 0
+      ? Math.round((soldWithCost / soldFinds) * 100)
+      : 0
     const avgDaysToSell = daysToSellData.length > 0
       ? Math.round(daysToSellData.reduce((a, b) => a + b, 0) / daysToSellData.length)
       : 0
@@ -147,6 +159,7 @@ export const GET = withAuth(async (req: NextRequest, user) => {
 
     const thisMonthSales = thisMonthSold.reduce((sum, f) => sum + (f.sold_price_gbp || 0), 0)
     const thisMonthCogs = thisMonthSold.reduce((sum, f) => sum + (f.cost_gbp || 0), 0)
+    const thisMonthHasAnyCost = thisMonthSold.some((f) => (f.cost_gbp || 0) > 0)
 
     const thisMonthSourced = finds.filter((f) => {
       const d = f.sourced_at ? new Date(f.sourced_at) : new Date(f.created_at)
@@ -185,9 +198,10 @@ export const GET = withAuth(async (req: NextRequest, user) => {
 
       total_sales: Math.round(totalSales * 100) / 100,
       cogs: Math.round(cogs * 100) / 100,
-      gross_profit: Math.round(grossProfit * 100) / 100,
+      gross_profit: grossProfit == null ? null : Math.round(grossProfit * 100) / 100,
       profit_margin_pct: profitMarginPct,
       avg_profit_per_item: avgProfitPerItem,
+      cost_coverage_pct: costCoveragePct,
 
       stock_cost: Math.round(stockCost * 100) / 100,
       stock_listed_value: Math.round(stockListedValue * 100) / 100,
@@ -197,7 +211,9 @@ export const GET = withAuth(async (req: NextRequest, user) => {
       sell_through_pct: sellThroughPct,
 
       this_month_sales: Math.round(thisMonthSales * 100) / 100,
-      this_month_profit: Math.round((thisMonthSales - thisMonthCogs) * 100) / 100,
+      this_month_profit: thisMonthHasAnyCost
+        ? Math.round((thisMonthSales - thisMonthCogs) * 100) / 100
+        : null,
       this_month_items_sold: thisMonthSold.length,
       this_month_items_sourced: thisMonthSourced,
       this_month_expenses: Math.round(thisMonthExpenses * 100) / 100,
