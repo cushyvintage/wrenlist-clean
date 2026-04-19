@@ -72,7 +72,7 @@ export default function ImportPage() {
     setStatusFilter('all')
 
     if (selectedPlatform === 'ebay') {
-      loadEbayInventory().then(() => loadEbaySoldItems())
+      loadEbayInventory().then(() => loadEbaySoldItems()).then(() => loadEbayHistoricalOrders())
     } else if (selectedPlatform === 'vinted') {
       loadVintedListings()
     } else if (selectedPlatform === 'shopify') {
@@ -178,6 +178,130 @@ export default function ImportPage() {
     } catch (err) {
       // Don't fail the whole import if sold items fail — active inventory already loaded
       console.error('Failed to fetch eBay sold items:', err)
+    }
+  }
+
+  // --- eBay historical orders (via extension SSR scraping) ---
+  async function loadEbayHistoricalOrders() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+
+    try {
+      setIsFetching(true)
+      setFetchError(null)
+
+      // Get already-loaded item IDs to dedup
+      const existingIds = new Set(items.map(i => i.listingId).filter(Boolean))
+
+      const response = await new Promise<{
+        success?: boolean
+        needsLogin?: boolean
+        message?: string
+        orders?: Array<{
+          orderId: string
+          creationDate: string
+          lineItems: Array<{
+            legacyItemId: string
+            title: string
+            total: { value: string; currency: string }
+          }>
+          _scraped: {
+            status: string
+            totalDisplay: string
+            postalCode: string
+            imageUrl: string | null
+          }
+        }>
+        totalCount?: number
+      }>((resolve) => {
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          {
+            action: 'get_ebay_seller_hub_orders',
+            params: { timerange: 'PREVIOUSYEAR', pages: 10 },
+          },
+          (resp) => resolve(resp || { success: false })
+        )
+      })
+
+      if (!response.success || !response.orders?.length) {
+        if (response.needsLogin) {
+          console.warn('[eBay historical] Not logged into eBay — skipping')
+        }
+        return
+      }
+
+      // Map scraped orders to ImportableItem, store raw orders for import
+      const historicalItems: ImportableItem[] = []
+      const historicalRawOrders: Array<Record<string, unknown>> = []
+
+      for (const order of response.orders) {
+        for (const li of order.lineItems) {
+          if (!li.legacyItemId || existingIds.has(li.legacyItemId)) continue
+          existingIds.add(li.legacyItemId)
+
+          const price = parseFloat(li.total.value) || null
+
+          historicalItems.push({
+            id: `ebay-hist-${li.legacyItemId}`,
+            platform: 'ebay' as Platform,
+            title: li.title,
+            price,
+            photo: order._scraped.imageUrl,
+            listingId: li.legacyItemId,
+            listingUrl: `https://www.ebay.co.uk/itm/${li.legacyItemId}`,
+            alreadyImported: false,
+            checked: true,
+            listingStatus: 'sold' as const,
+            platformListedAt: order.creationDate,
+          })
+
+          // Build raw order shape matching what sync-orders expects
+          historicalRawOrders.push({
+            legacyItemId: li.legacyItemId,
+            rawOrder: {
+              orderId: order.orderId,
+              creationDate: order.creationDate,
+              lineItems: [{
+                legacyItemId: li.legacyItemId,
+                title: li.title,
+                total: li.total,
+              }],
+            },
+          })
+        }
+      }
+
+      if (historicalItems.length > 0) {
+        // Check which are already imported
+        try {
+          const { data: existingPmds } = await fetch('/api/ebay/imported-ids', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listingIds: historicalItems.map(i => i.listingId) }),
+          }).then(r => r.json())
+
+          const importedSet = new Set(((existingPmds as string[]) || []))
+          for (const item of historicalItems) {
+            if (importedSet.has(item.listingId || '')) {
+              item.alreadyImported = true
+              item.checked = false
+            }
+          }
+        } catch {
+          // Non-critical — worst case user sees items they already imported
+        }
+
+        // Append raw orders to the ref used by handleEbaySoldImport
+        ebayOrdersRef.current = [...ebayOrdersRef.current, ...historicalRawOrders]
+
+        setItems(prev => [...prev, ...historicalItems])
+        setTotalCount(prev => prev + historicalItems.length)
+        setFetchedCount(prev => prev + historicalItems.length)
+      }
+    } catch (err) {
+      console.error('Failed to fetch eBay historical orders:', err)
+    } finally {
+      setIsFetching(false)
     }
   }
 

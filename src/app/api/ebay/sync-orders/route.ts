@@ -35,9 +35,109 @@ export const GET = withAuth(async (req, user) => {
 })
 
 /**
+ * Reconcile cancelled eBay orders - marks finds as cancelled (soft-delete after 24h)
+ */
+async function reconcileCancelledOrders(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  ebayClient: Awaited<ReturnType<typeof getEbayClientForUser>>
+): Promise<{ cancelledCount: number; cancelledItems: Array<{ title: string }>; permanentlyDeletedCount: number }> {
+  const cancelledItems: Array<{ title: string }> = []
+  let cancelledCount = 0
+  let permanentlyDeletedCount = 0
+
+  // Fetch all sold finds with eBay listings for this user
+  const { data: soldFinds } = await supabase
+    .from('finds')
+    .select(`
+      id,
+      name,
+      cancelled_at,
+      product_marketplace_data(
+        id,
+        platform_listing_id
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'sold')
+
+  if (!soldFinds || soldFinds.length === 0) return { cancelledCount: 0, cancelledItems: [], permanentlyDeletedCount: 0 }
+
+  const now = new Date()
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  // Check each eBay listing to see if it still exists
+  for (const find of soldFinds) {
+    const ebaySales = (find.product_marketplace_data || []).filter(
+      (pmd: any) => pmd.marketplace === 'ebay'
+    )
+
+    for (const listing of ebaySales) {
+      if (!listing.platform_listing_id) continue
+
+      try {
+        // Try to fetch the item from eBay - if it fails or doesn't exist, it's cancelled
+        const itemId = listing.platform_listing_id
+        const existingOrders = await ebayClient.getAllOrders({
+          filter: `lineItems.legacyItemId:${itemId}`,
+        })
+
+        // If no orders found with this item, it was cancelled/removed
+        if (!existingOrders || existingOrders.length === 0) {
+          // If already marked as cancelled, check if 24h has passed
+          if (find.cancelled_at) {
+            const cancelledTime = new Date(find.cancelled_at)
+            if (cancelledTime <= oneDayAgo) {
+              // 24h has passed - permanently delete
+              await supabaseAdmin
+                .from('product_marketplace_data')
+                .delete()
+                .eq('id', listing.id)
+
+              // Check if this find has any other marketplace listings
+              const { data: otherListings } = await supabase
+                .from('product_marketplace_data')
+                .select('id')
+                .eq('find_id', find.id)
+                .neq('marketplace', 'ebay')
+
+              // Only delete the find if it has no other marketplace listings
+              if (!otherListings || otherListings.length === 0) {
+                await supabaseAdmin
+                  .from('finds')
+                  .delete()
+                  .eq('id', find.id)
+
+                permanentlyDeletedCount++
+              }
+            }
+          } else {
+            // First time seeing this as cancelled - mark it
+            await supabaseAdmin
+              .from('finds')
+              .update({ cancelled_at: now.toISOString() })
+              .eq('id', find.id)
+
+            cancelledCount++
+            cancelledItems.push({ title: find.name })
+          }
+        }
+      } catch (error) {
+        // Silently skip on error - don't want to delete valid finds due to API issues
+        console.warn(`[reconcileCancelledOrders] Error checking item ${listing.platform_listing_id}:`, error)
+      }
+    }
+  }
+
+  return { cancelledCount, cancelledItems, permanentlyDeletedCount }
+}
+
+/**
  * POST /api/ebay/sync-orders
  * Polls eBay Fulfillment API for recent sold orders.
  * Enriches with buyer info, fees, shipment data in fields.sale.
+ * Also reconciles cancelled orders from eBay.
  */
 export const POST = withAuth(async (req, user) => {
   try {
@@ -142,6 +242,14 @@ export const POST = withAuth(async (req, user) => {
       }
     }
 
+    // Reconcile cancelled orders
+    const { cancelledCount, cancelledItems, permanentlyDeletedCount } = await reconcileCancelledOrders(
+      supabase,
+      supabaseAdmin,
+      user.id,
+      ebayClient
+    )
+
     // Log sync completion
     await supabase
       .from('ebay_sync_log')
@@ -152,6 +260,15 @@ export const POST = withAuth(async (req, user) => {
         synced_at: new Date().toISOString(),
       })
 
+    const messageParts = [
+      `Synced ${orders.length} orders, found ${itemsSold} new sold items, enriched ${enriched} existing`,
+      autoCreated > 0 ? `auto-imported ${autoCreated} sold items not in Wrenlist` : null,
+      cancelledCount > 0 ? `marked ${cancelledCount} cancelled orders` : null,
+      permanentlyDeletedCount > 0 ? `deleted ${permanentlyDeletedCount} orders (24h after cancellation)` : null,
+    ].filter(Boolean)
+
+    const message = messageParts.join(', ')
+
     return ApiResponseHelper.success({
       ordersChecked: orders.length,
       itemsSold,
@@ -159,7 +276,10 @@ export const POST = withAuth(async (req, user) => {
       autoCreated,
       autoCreatedItems,
       delistedFrom: [...new Set(allDelistedFrom)],
-      message: `Synced ${orders.length} orders, found ${itemsSold} new sold items, enriched ${enriched} existing${autoCreated > 0 ? `, auto-imported ${autoCreated} sold items not in Wrenlist` : ''}`,
+      cancelledCount,
+      cancelledItems,
+      permanentlyDeletedCount,
+      message,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to sync eBay orders'

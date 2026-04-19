@@ -105,9 +105,9 @@ export function ImportItemList({
                 ) : (
                   <div className="text-sm font-medium text-ink truncate">{item.title}</div>
                 )}
-                {item.listingId && (
+                {item.platformListedAt && (
                   <div className="text-xs text-ink-lt mt-0.5">
-                    #{item.listingId}
+                    {new Date(item.platformListedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 )}
               </div>
@@ -136,11 +136,11 @@ export function ImportItemList({
                 )}
                 {item.alreadyImported ? (
                   <span className="text-xs text-ink-lt bg-cream-dk px-2 py-1 rounded">
-                    already in wren
+                    imported
                   </span>
                 ) : (
                   <span className="text-xs text-sage bg-sage-pale px-2 py-1 rounded">
-                    not in wren
+                    new
                   </span>
                 )}
               </div>

@@ -4,9 +4,110 @@ import { getEbayClientForUser } from '@/lib/ebay-client'
 import { enrichEbaySoldItem, createFindFromEbaySale } from '@/lib/ebay-sale-enrichment'
 
 /**
+ * Reconcile cancelled eBay orders - marks as cancelled, deletes after 24h
+ */
+async function reconcileCancelledOrders(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  ebayClient: Awaited<ReturnType<typeof getEbayClientForUser>>
+): Promise<{ cancelledCount: number; permanentlyDeletedCount: number }> {
+  let cancelledCount = 0
+  let permanentlyDeletedCount = 0
+
+  try {
+    // Fetch all sold finds with eBay listings for this user
+    const { data: soldFinds } = await supabaseAdmin
+      .from('finds')
+      .select(`
+        id,
+        name,
+        cancelled_at,
+        product_marketplace_data(
+          id,
+          platform_listing_id,
+          marketplace
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'sold')
+
+    if (!soldFinds || soldFinds.length === 0) return { cancelledCount: 0, permanentlyDeletedCount: 0 }
+
+    const now = new Date()
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    // Check each eBay listing to see if it still exists
+    for (const find of soldFinds) {
+      const ebaySales = (find.product_marketplace_data || []).filter(
+        (pmd: any) => pmd.marketplace === 'ebay'
+      )
+
+      for (const listing of ebaySales) {
+        if (!listing.platform_listing_id) continue
+
+        try {
+          // Try to fetch orders with this item ID - if empty, it's cancelled
+          const existingOrders = await ebayClient.getAllOrders({
+            filter: `lineItems.legacyItemId:${listing.platform_listing_id}`,
+          })
+
+          // If no orders found with this item, it was cancelled/removed
+          if (!existingOrders || existingOrders.length === 0) {
+            // If already marked as cancelled, check if 24h has passed
+            if (find.cancelled_at) {
+              const cancelledTime = new Date(find.cancelled_at)
+              if (cancelledTime <= oneDayAgo) {
+                // 24h has passed - permanently delete
+                await supabaseAdmin
+                  .from('product_marketplace_data')
+                  .delete()
+                  .eq('id', listing.id)
+
+                // Check if this find has any other marketplace listings
+                const { data: otherListings } = await supabaseAdmin
+                  .from('product_marketplace_data')
+                  .select('id')
+                  .eq('find_id', find.id)
+                  .neq('marketplace', 'ebay')
+
+                // Only delete the find if it has no other marketplace listings
+                if (!otherListings || otherListings.length === 0) {
+                  await supabaseAdmin
+                    .from('finds')
+                    .delete()
+                    .eq('id', find.id)
+
+                  permanentlyDeletedCount++
+                }
+              }
+            } else {
+              // First time seeing this as cancelled - mark it
+              await supabaseAdmin
+                .from('finds')
+                .update({ cancelled_at: now.toISOString() })
+                .eq('id', find.id)
+
+              cancelledCount++
+            }
+          }
+        } catch (error) {
+          // Silently skip on error
+          console.warn(`[cron:ebay-sync] Error checking item ${listing.platform_listing_id}:`, error)
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`[cron:ebay-sync] Error reconciling cancelled orders for user ${userId}:`, error)
+  }
+
+  return { cancelledCount, permanentlyDeletedCount }
+}
+
+/**
  * GET /api/cron/ebay-sync
  * Vercel Cron job that polls eBay for sold orders across all users.
  * Enriches with buyer info, fees, shipment data in fields.sale.
+ * Also removes cancelled orders from Wrenlist.
  * Protected by CRON_SECRET environment variable.
  *
  * Schedule: Every 15 minutes
@@ -46,6 +147,8 @@ export async function GET(request: NextRequest) {
       totalItemsSold: 0,
       totalEnriched: 0,
       totalAutoCreated: 0,
+      totalCancelled: 0,
+      totalPermanentlyDeleted: 0,
       errors: [] as string[],
     }
 
@@ -126,8 +229,15 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // Reconcile cancelled orders for this user
+        const { cancelledCount: cancelledForUser, permanentlyDeletedCount: deletedForUser } = await reconcileCancelledOrders(
+          supabaseAdmin,
+          userId,
+          ebayClient
+        )
+
         // Log sync completion for this user
-        if (orders.length > 0 || itemsSoldForUser > 0) {
+        if (orders.length > 0 || itemsSoldForUser > 0 || cancelledForUser > 0 || deletedForUser > 0) {
           await supabaseAdmin
             .from('ebay_sync_log')
             .insert({
@@ -141,6 +251,8 @@ export async function GET(request: NextRequest) {
           results.totalItemsSold += itemsSoldForUser
           results.totalEnriched += enrichedForUser
           results.totalAutoCreated += autoCreatedForUser
+          results.totalCancelled += cancelledForUser
+          results.totalPermanentlyDeleted += deletedForUser
         }
 
         results.usersProcessed++
