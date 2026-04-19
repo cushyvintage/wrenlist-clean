@@ -205,6 +205,13 @@ async function handleRefundAftermath(
 
 /**
  * Recompute customer aggregate stats from linked PMD records.
+ *
+ * Important: bundle orders (N items bought together in one Vinted transaction)
+ * have the SAME grossAmount stored on every sibling PMD. Naively summing
+ * across PMDs produces a 5x inflation on 5-item bundles (same bug that caused
+ * "net £155.55" on the /sold bundle card). Deduplicate by transactionId
+ * before summing, and count orders by unique transaction — one bundle = one
+ * order economically, not N.
  */
 async function recomputeCustomerAggregates(
   supabase: SupabaseClient,
@@ -216,7 +223,17 @@ async function recomputeCustomerAggregates(
     .eq('customer_id', customerId)
     .eq('status', 'sold')
 
-  if (!pmds || pmds.length === 0) return
+  if (!pmds || pmds.length === 0) {
+    // No sold orders left — zero everything (common after a refund)
+    await supabase.from('customers').update({
+      total_orders: 0,
+      total_spent_gbp: 0,
+      first_order_at: null,
+      last_order_at: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', customerId)
+    return
+  }
 
   // Fetch sold_at from finds as fallback for missing orderDate
   const findIds = pmds.map(p => p.find_id)
@@ -227,23 +244,32 @@ async function recomputeCustomerAggregates(
 
   const findDates = new Map((finds || []).map(f => [f.id, f.sold_at]))
 
+  // Dedupe by transactionId: bundle siblings share one. Use a falsy-safe
+  // fallback (find_id) for rows missing a transactionId so they still count.
+  type TxSummary = { amount: number; orderDate: string | null }
+  const txs = new Map<string, TxSummary>()
+  for (const pmd of pmds) {
+    const sale = (pmd.fields as Record<string, unknown>)?.sale as Record<string, unknown> | undefined
+    const txKey = (sale?.transactionId as string | undefined) || `find:${pmd.find_id}`
+    if (txs.has(txKey)) continue
+    const amount = (sale?.grossAmount as number) || 0
+    const orderDate = (sale?.orderDate as string) || findDates.get(pmd.find_id) || null
+    txs.set(txKey, { amount, orderDate })
+  }
+
   let totalSpent = 0
   let firstOrder: string | null = null
   let lastOrder: string | null = null
-
-  for (const pmd of pmds) {
-    const sale = (pmd.fields as Record<string, unknown>)?.sale as Record<string, unknown> | undefined
-    const amount = (sale?.grossAmount as number) || 0
-    totalSpent += amount
-    const orderDate = (sale?.orderDate as string) || findDates.get(pmd.find_id) || null
-    if (orderDate) {
-      if (!firstOrder || orderDate < firstOrder) firstOrder = orderDate
-      if (!lastOrder || orderDate > lastOrder) lastOrder = orderDate
+  for (const tx of txs.values()) {
+    totalSpent += tx.amount
+    if (tx.orderDate) {
+      if (!firstOrder || tx.orderDate < firstOrder) firstOrder = tx.orderDate
+      if (!lastOrder || tx.orderDate > lastOrder) lastOrder = tx.orderDate
     }
   }
 
   await supabase.from('customers').update({
-    total_orders: pmds.length,
+    total_orders: txs.size,
     total_spent_gbp: totalSpent,
     first_order_at: firstOrder,
     last_order_at: lastOrder,
