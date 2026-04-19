@@ -2532,8 +2532,9 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
     tld: resolveTldFromMessage(message, marketplace),
   });
 
-  // Return user ID from cached session for platforms that have it
+  // Return user ID and username from cached session for platforms that have it
   let userId: string | undefined;
+  let username: string | undefined;
   if (isLoggedIn) {
     try {
       if (marketplace === 'facebook') {
@@ -2542,9 +2543,35 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
       } else if (marketplace === 'depop') {
         const cookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'user_id' });
         userId = cookie?.value || undefined;
+        // Resolve Depop username via their API (extension has bearer token)
+        if (userId) {
+          try {
+            const tokenCookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'access_token' });
+            if (tokenCookie?.value) {
+              const res = await fetch(`https://webapi.depop.com/api/v1/shop/${userId}/`, {
+                headers: { 'Authorization': `Bearer ${tokenCookie.value}`, 'Accept': 'application/json' },
+              });
+              if (res.ok) {
+                const data = await res.json();
+                username = data.slug || data.username || undefined;
+              }
+            }
+          } catch { /* ignore */ }
+        }
       } else if (marketplace === 'etsy') {
         const cookie = await chrome.cookies.get({ url: 'https://www.etsy.com', name: 'uaid' });
         userId = cookie?.value || undefined;
+        // Resolve Etsy shop name from listings manager page
+        try {
+          const html = await fetch('https://www.etsy.com/your/shops/me/tools/listings', {
+            credentials: 'include',
+          }).then(r => r.text());
+          const shopMatch = html.match(/"shop_name"\s*:\s*"([^"]+)"/) ??
+            html.match(/\/shop\/([A-Za-z0-9]+)/);
+          if (shopMatch?.[1]) {
+            username = shopMatch[1];
+          }
+        } catch { /* ignore */ }
       }
     } catch {
       // ignore
@@ -2556,6 +2583,7 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
     loggedIn: isLoggedIn,
     marketplace,
     userId,
+    username,
   };
 }
 

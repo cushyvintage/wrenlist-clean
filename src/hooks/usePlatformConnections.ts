@@ -149,7 +149,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const checkEtsySession = async (): Promise<void> => {
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
-      const response = await new Promise<{ loggedIn: boolean; userId?: string }>((resolve) => {
+      const response = await new Promise<{ loggedIn: boolean; userId?: string; username?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'etsy' }, (response) => {
           clearTimeout(timeout)
@@ -162,7 +162,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         await fetch('/api/etsy/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ etsyUserId: response.userId || 'extension', etsyUsername: 'etsy' }),
+          body: JSON.stringify({ etsyUserId: response.userId || 'extension', etsyUsername: response.username || 'etsy' }),
         }).catch(() => {})
       }
     } catch {
@@ -203,7 +203,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const checkDepopSession = async (): Promise<void> => {
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
-      const response = await new Promise<{ loggedIn: boolean; userId?: string }>((resolve) => {
+      const response = await new Promise<{ loggedIn: boolean; userId?: string; username?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'depop' }, (response) => {
           clearTimeout(timeout)
@@ -216,7 +216,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         await fetch('/api/depop/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ depopUserId: response.userId, depopUsername: response.userId }),
+          body: JSON.stringify({ depopUserId: response.userId, depopUsername: response.username || response.userId }),
         }).catch(() => {})
       }
     } catch {
