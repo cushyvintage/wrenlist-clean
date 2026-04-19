@@ -2540,11 +2540,11 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
         const stored = await chrome.storage.local.get('wrenlist_fb_actorid');
         userId = stored.wrenlist_fb_actorid || undefined;
       } else if (marketplace === 'depop') {
-        const cookies = await chrome.cookies.getAll({ domain: '.depop.com' });
-        userId = cookies.find(c => c.name === 'user_id')?.value || undefined;
+        const cookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'user_id' });
+        userId = cookie?.value || undefined;
       } else if (marketplace === 'etsy') {
-        const cookies = await chrome.cookies.getAll({ domain: '.etsy.com' });
-        userId = cookies.find(c => c.name === 'uaid')?.value || undefined;
+        const cookie = await chrome.cookies.get({ url: 'https://www.etsy.com', name: 'uaid' });
+        userId = cookie?.value || undefined;
       }
     } catch {
       // ignore
