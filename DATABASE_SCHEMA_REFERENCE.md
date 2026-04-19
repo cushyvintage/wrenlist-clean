@@ -22,6 +22,7 @@ Operations
 ├── mileage           - HMRC mileage tracking (auto-calc 45p/mile)
 ├── sourcing_trips    - Sourcing trip records
 ├── suppliers         - Supplier contacts
+├── packaging_materials - Packaging inventory (mailers, boxes, tape, etc.)
 ├── listing_templates - Reusable listing templates
 
 eBay Integration
@@ -125,6 +126,7 @@ auth.users (Supabase Auth)
 ├── expenses (1:N) via user_id
 ├── mileage (1:N) via user_id
 ├── suppliers (1:N) via user_id
+├── packaging_materials (1:N) via user_id
 ├── sourcing_trips (1:N) via user_id
 ├── listing_templates (1:N) via user_id
 ├── ebay_tokens (1:1) via user_id UNIQUE
@@ -150,6 +152,7 @@ auth.users (Supabase Auth)
 | profiles | plan | free, nester, forager, flock |
 | expenses | category | packaging, postage, platform_fees, supplies, vehicle, other |
 | mileage | purpose | car_boot, charity_shop, house_clearance, sourcing, delivery, other |
+| packaging_materials | category | mailers, boxes, protection, presentation, branding, tape, labels, other |
 
 ---
 
