@@ -173,7 +173,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const checkFacebookSession = async (): Promise<void> => {
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
-      const response = await new Promise<{ loggedIn: boolean }>((resolve) => {
+      const response = await new Promise<{ loggedIn: boolean; userId?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'facebook' }, (response) => {
           clearTimeout(timeout)
@@ -182,6 +182,19 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         })
       })
       setFacebookConnected(response.loggedIn)
+
+      // Persist connection to DB when logged in with a user ID
+      if (response.loggedIn && response.userId) {
+        try {
+          await fetch('/api/facebook/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ facebookUserId: response.userId }),
+          })
+        } catch {
+          // Non-critical
+        }
+      }
     } catch {
       setFacebookConnected(false)
     }

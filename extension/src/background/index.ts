@@ -2531,12 +2531,23 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
     settings: resolveSettings(message),
     tld: resolveTldFromMessage(message, marketplace),
   });
-  
-  // Return in the expected format
+
+  // For Facebook, also return the actorId (user ID) from cached session
+  let userId: string | undefined;
+  if (marketplace === 'facebook' && isLoggedIn) {
+    try {
+      const stored = await chrome.storage.local.get('wrenlist_fb_actorid');
+      userId = stored.wrenlist_fb_actorid || undefined;
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     success: true,
     loggedIn: isLoggedIn,
     marketplace,
+    userId,
   };
 }
 
