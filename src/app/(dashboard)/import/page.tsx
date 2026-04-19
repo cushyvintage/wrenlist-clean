@@ -1081,7 +1081,7 @@ export default function ImportPage() {
     if (!selectedPlatform || selectedCount === 0) return
 
     if (selectedPlatform === 'ebay') {
-      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const selectedItems = filteredItems.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
       const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
 
@@ -1089,7 +1089,7 @@ export default function ImportPage() {
       if (hasSoldItems) await handleEbaySoldImport()
     } else if (selectedPlatform === 'vinted') {
       // Check if any selected items are sold — use sales flow for those
-      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const selectedItems = filteredItems.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
       const hasActiveItems = selectedItems.some((i) => i.listingStatus === 'active' || i.listingStatus === 'hidden')
 
@@ -1103,14 +1103,14 @@ export default function ImportPage() {
         await handleVintedImport()
       }
     } else if (selectedPlatform === 'shopify') {
-      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const selectedItems = filteredItems.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
       const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
 
       if (hasActiveItems) await handleShopifyImport()
       if (hasSoldItems) await handleShopifySoldImport()
     } else if (selectedPlatform === 'etsy') {
-      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const selectedItems = filteredItems.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
       const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
 
@@ -1119,7 +1119,7 @@ export default function ImportPage() {
     } else if (selectedPlatform === 'facebook') {
       await handleFacebookImport()
     } else if (selectedPlatform === 'depop') {
-      const selectedItems = items.filter((i) => i.checked && !i.alreadyImported)
+      const selectedItems = filteredItems.filter((i) => i.checked && !i.alreadyImported)
       const hasSoldItems = selectedItems.some((i) => i.listingStatus === 'sold')
       const hasActiveItems = selectedItems.some((i) => i.listingStatus !== 'sold')
       if (hasActiveItems) await handleDepopImport()
@@ -1306,7 +1306,7 @@ export default function ImportPage() {
       return
     }
 
-    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    const soldItems = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
     if (soldItems.length === 0) return
 
     const totalItems = soldItems.length
@@ -1381,7 +1381,7 @@ export default function ImportPage() {
   }
 
   async function handleEtsyImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus !== 'sold')
+    const selected = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus !== 'sold')
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Etsy listings...')
@@ -1435,7 +1435,7 @@ export default function ImportPage() {
   }
 
   async function handleEtsySoldImport() {
-    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    const soldItems = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
     if (soldItems.length === 0) return
 
     const totalItems = soldItems.length
@@ -1629,7 +1629,7 @@ export default function ImportPage() {
   }
 
   async function handleFacebookImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    const selected = filteredItems.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
 
     vintedImport.setFetching('Enriching Facebook listings...')
@@ -1799,7 +1799,7 @@ export default function ImportPage() {
   }
 
   async function handleDepopImport() {
-    const selected = items.filter((i) => i.checked && !i.alreadyImported)
+    const selected = filteredItems.filter((i) => i.checked && !i.alreadyImported)
     if (selected.length === 0) return
 
     vintedImport.setFetching('Importing Depop listings...')
@@ -1876,7 +1876,7 @@ export default function ImportPage() {
   }
 
   async function handleDepopSoldImport() {
-    const soldItems = items.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
+    const soldItems = filteredItems.filter((i) => i.checked && !i.alreadyImported && i.listingStatus === 'sold')
     if (soldItems.length === 0) return
 
     vintedImport.setFetching('Importing sold Depop listings...')

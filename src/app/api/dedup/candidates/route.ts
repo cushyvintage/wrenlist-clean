@@ -10,7 +10,10 @@ import { withAuth } from '@/lib/with-auth'
  */
 export const GET = withAuth(async (req, user) => {
   const url = new URL(req.url)
-  const threshold = Math.max(0.2, Math.min(1, parseFloat(url.searchParams.get('threshold') || '0.4')))
+  // Default 0.55 — at 0.35–0.40 we were returning visually-unrelated pairs
+  // (e.g. "Ceramic Basket" vs "Ceramic Bowl") because pg_trgm similarity on
+  // short titles is noisy. 0.55 is tighter without losing obvious dupes.
+  const threshold = Math.max(0.2, Math.min(1, parseFloat(url.searchParams.get('threshold') || '0.55')))
   const limit = Math.max(1, Math.min(50, parseInt(url.searchParams.get('limit') || '20', 10)))
 
   const supabase = await createSupabaseServerClient()

@@ -17,6 +17,14 @@ export type PlanId = 'free' | 'nester' | 'flourish' | 'forager' | 'soar' | 'floc
 export const FOUNDING_FLOCK_DEADLINE = new Date('2026-06-30T23:59:59Z')
 export const isFoundingFlockWindow = () => new Date() < FOUNDING_FLOCK_DEADLINE
 
+/**
+ * Open beta window. While active: plan limits are announced but not enforced,
+ * and UI surfaces that ask users to "upgrade" should be hidden. After this
+ * date, usage counters and blocks kick in.
+ */
+export const BETA_ENDS = new Date('2026-06-30T23:59:59Z')
+export const isBetaActive = () => new Date() < BETA_ENDS
+
 export interface Plan {
   id: PlanId
   name: string

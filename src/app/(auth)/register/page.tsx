@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/services/supabase'
 import { trackEvent } from '@/lib/plausible'
+import { PLANS } from '@/config/plans'
 
 export default function RegisterPage() {
   // Updated UX with clearer password requirements and billing info
@@ -284,32 +285,33 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Pricing preview */}
+            {/* Pricing preview — single source of truth is @/config/plans.
+                Render every plan so this page can't drift from /billing again. */}
             <div className="pt-2">
               <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-3">
                 Plans after beta
               </label>
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { name: 'Free', price: 0, finds: '10 finds/mo' },
-                  { name: 'Nester', price: 14, finds: '100 finds/mo' },
-                  { name: 'Forager', price: 29, finds: '500 finds/mo', popular: true },
-                  { name: 'Flock', price: 59, finds: 'Unlimited' },
-                ].map((plan) => (
-                  <div
-                    key={plan.name}
-                    className="relative p-3 border border-sage/14 rounded text-center opacity-60"
-                  >
-                    {plan.popular && (
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
-                        POPULAR
-                      </div>
-                    )}
-                    <div className="font-medium text-ink">{plan.name}</div>
-                    <div className="text-lg font-semibold text-sage mt-1">&pound;{plan.price}<span className="text-xs text-ink-lt">/mo</span></div>
-                    <div className="text-xs text-ink-lt mt-1">{plan.finds}</div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-3 gap-2">
+                {PLANS.map((plan) => {
+                  const findsLabel = plan.findsPerMonth == null
+                    ? 'Unlimited finds'
+                    : `${plan.findsPerMonth} finds/mo`
+                  return (
+                    <div
+                      key={plan.id}
+                      className="relative p-3 border border-sage/14 rounded text-center opacity-60"
+                    >
+                      {plan.featured && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
+                          POPULAR
+                        </div>
+                      )}
+                      <div className="font-medium text-ink">{plan.name}</div>
+                      <div className="text-lg font-semibold text-sage mt-1">&pound;{plan.monthlyPrice}<span className="text-xs text-ink-lt">/mo</span></div>
+                      <div className="text-xs text-ink-lt mt-1">{findsLabel}</div>
+                    </div>
+                  )
+                })}
               </div>
               <div className="text-center text-xs text-sage-dim mt-3 space-y-1">
                 <p><strong>Beta users:</strong> All features free for 3 months (no payment required)</p>

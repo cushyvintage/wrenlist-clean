@@ -115,6 +115,21 @@ export async function GET(req: NextRequest) {
       (ebayConn.count && ebayConn.count > 0 ? 1 : 0) +
       (shopifyConn.count && shopifyConn.count > 0 ? 1 : 0)
 
+    // List of identity providers — the Account settings page uses this to
+    // hide "Change password" for SSO-only users (they don't have a password
+    // on the Wrenlist auth server). `identities` is on user.identities on the
+    // Supabase JS client; Bearer-token lookups may not have it populated, in
+    // which case we fall back to the app_metadata provider list.
+    const identityProviders = Array.isArray(user.identities)
+      ? user.identities.map((i) => i.provider).filter(Boolean)
+      : []
+    const metaProviders = Array.isArray(user.app_metadata?.providers)
+      ? (user.app_metadata.providers as string[])
+      : user.app_metadata?.provider
+        ? [user.app_metadata.provider as string]
+        : []
+    const providers = identityProviders.length > 0 ? identityProviders : metaProviders
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -122,6 +137,7 @@ export async function GET(req: NextRequest) {
         created_at: user.created_at,
         full_name,
         avatar_url: profile?.avatar_url ?? null,
+        providers,
       },
       plan: {
         id: plan,

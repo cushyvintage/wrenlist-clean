@@ -12,6 +12,8 @@ export interface User {
   createdAt: string
   full_name?: string | null
   avatar_url?: string | null
+  /** Identity providers linked to this account (e.g. ['google'], ['email']). */
+  providers?: string[]
 }
 
 export interface AuthState {

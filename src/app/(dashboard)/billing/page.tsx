@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PLANS } from '@/config/plans'
+import { PLANS, isBetaActive } from '@/config/plans'
 import type { PlanId } from '@/config/plans'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 
@@ -187,8 +187,10 @@ export default function BillingPage() {
           </div>
 
           <div className="space-y-3">
-            {/* Finds Usage */}
-            {planLimit && (
+            {/* Finds Usage — during the open beta we replace the usage bar
+                with a reassuring "unlimited" pill so a new user isn't scared
+                by a big red 54/25 on their first look. */}
+            {planLimit && !isBetaActive() && (
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-xs uppercase tracking-wider font-medium text-sage-dim">
@@ -209,6 +211,12 @@ export default function BillingPage() {
                     }}
                   />
                 </div>
+              </div>
+            )}
+            {planLimit && isBetaActive() && (
+              <div className="flex items-center gap-2 text-xs text-sage-dim">
+                <span className="w-1.5 h-1.5 rounded-full bg-sage" />
+                <span>Open beta — limits are lifted until beta ends.</span>
               </div>
             )}
 

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Panel } from '@/components/wren/Panel'
 import { Badge } from '@/components/wren/Badge'
-import { PLAN_LIMITS } from '@/config/plans'
+import { PLAN_LIMITS, isBetaActive } from '@/config/plans'
 import type { Find, Profile, PlanId, Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { showError } from '@/lib/toast-error'
@@ -278,7 +279,9 @@ function InventoryPageContent() {
     }
 
     const planLimit = PLAN_LIMITS[profile.plan as PlanId]?.finds
-    if (planLimit !== null && profile.finds_this_month >= planLimit) {
+    // Respect the beta window — limits are announced but not enforced until
+    // BETA_ENDS. Matches the hidden usage counter above.
+    if (!isBetaActive() && planLimit !== null && profile.finds_this_month >= planLimit) {
       setPlanLimitError(`You've reached your monthly limit of ${planLimit} finds. Upgrade your plan to add more.`)
       return
     }
@@ -599,8 +602,10 @@ function InventoryPageContent() {
             </p>
           </div>
           <div className="flex gap-2 items-center self-start">
-            {/* Usage indicator */}
-            {profile && planLimit !== null && (
+            {/* Usage indicator — hidden during the open beta because the
+                limit isn't enforced and a red 25/25 counter next to 54 items
+                looks broken. Comes back once BETA_ENDS passes. */}
+            {profile && planLimit !== null && !isBetaActive() && (
               <div
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] rounded-full"
                 style={{
@@ -624,6 +629,21 @@ function InventoryPageContent() {
                     </button>
                   </>
                 )}
+              </div>
+            )}
+            {profile && isBetaActive() && (
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] rounded-full"
+                style={{
+                  backgroundColor: 'rgba(61,92,58,.08)',
+                  borderWidth: '1px',
+                  borderColor: 'rgba(61,92,58,.14)',
+                  color: '#6B7D6A',
+                }}
+                title="Open beta \u2014 all plan limits are lifted until the beta ends"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-sage" />
+                <span>Beta \u00b7 unlimited</span>
               </div>
             )}
             <button
@@ -1164,9 +1184,14 @@ function InventoryPageContent() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="font-medium text-[14px] truncate" style={{ color: '#1E2E1C' }}>
+                    <Link
+                      href={`/finds/${find.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-[14px] truncate hover:underline focus:underline focus:outline-none"
+                      style={{ color: '#1E2E1C' }}
+                    >
                       {displayName}
-                    </div>
+                    </Link>
                     <div className="font-mono text-[13px] flex-shrink-0" style={{ color: '#1E2E1C' }}>
                       {find.asking_price_gbp ? `£${find.asking_price_gbp}` : '—'}
                     </div>
@@ -1259,9 +1284,14 @@ function InventoryPageContent() {
                           {getEmoji(find.category)}
                         </span>
                         <div className="flex-1">
-                          <div className="font-medium text-[13px]" style={{ color: '#1E2E1C' }}>
+                          <Link
+                            href={`/finds/${find.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-medium text-[13px] hover:underline focus:underline focus:outline-none"
+                            style={{ color: '#1E2E1C' }}
+                          >
                             {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
-                          </div>
+                          </Link>
                           <div className="text-[11px] flex items-center gap-2" style={{ color: '#6B7D6A' }}>
                             <span>{formatCategory(find.category)}</span>
                             <QuickMoveButton

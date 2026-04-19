@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { fetchApi } from '@/lib/api-utils'
 import { Button } from '@/components/wren/Button'
 import { Modal } from '@/components/wren/Modal'
 import { supabase } from '@/services/supabase'
 import AIAutoFillSettings from '@/components/settings/AIAutoFillSettings'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 type DeleteStep = 'confirm' | 'feedback' | 'processing' | 'done'
 
@@ -89,9 +90,35 @@ interface AuthResponse {
   }
 }
 
+const VALID_TABS = ['account', 'workspace', 'integrations', 'ai', 'billing', 'legal'] as const
+function isValidTab(v: string | null): v is SettingsTab {
+  return v !== null && (VALID_TABS as readonly string[]).includes(v)
+}
+
 export default function SettingsPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const searchParams = useSearchParams()
+  const { user: authUser } = useAuthContext()
+  // Deep-link via ?tab=integrations etc. Falls back to 'account' if the
+  // param is missing or unknown. The tab buttons also mutate the URL so
+  // copy/paste shares the current tab.
+  const initialTab = isValidTab(searchParams.get('tab')) ? (searchParams.get('tab') as SettingsTab) : 'account'
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
+
+  // Keep state in sync with back/forward navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (isValidTab(tab) && tab !== activeTab) setActiveTab(tab as SettingsTab)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // SSO-only users never had a Wrenlist password — "Change password" would
+  // email them a reset link for an account they can't log in to with a
+  // password, which is confusing. Show a clearer note instead.
+  const providers = authUser?.providers ?? []
+  const hasEmailProvider = providers.length === 0 || providers.includes('email')
+  const ssoOnlyProvider =
+    providers.length > 0 && !hasEmailProvider ? providers[0] : null
 
   const [accountData, setAccountData] = useState<AccountData>({
     email: '',
@@ -407,6 +434,9 @@ export default function SettingsPage() {
                     return
                   }
                   setActiveTab(tab)
+                  const params = new URLSearchParams(searchParams.toString())
+                  params.set('tab', tab)
+                  router.replace(`/settings?${params.toString()}`, { scroll: false })
                 }}
                 className={`w-full text-left px-4 py-2.5 rounded-sm text-sm font-medium transition-colors ${
                   activeTab === tab
@@ -534,17 +564,28 @@ export default function SettingsPage() {
               </Button>
             </div>
 
-            {/* Change Password */}
+            {/* Change Password (hidden for SSO-only users — they don't have
+                a Wrenlist password to change). */}
             <div className="border-t border-sage/14 pt-6">
-              <a
-                href="/forgot-password"
-                className="inline-block px-4 py-2 bg-cream-md border border-sage/22 text-ink-lt rounded-sm font-medium text-sm hover:bg-cream transition-colors"
-              >
-                Change password
-              </a>
-              <p className="text-xs text-sage-dim mt-2">
-                You&apos;ll receive a password reset link via email
-              </p>
+              {hasEmailProvider ? (
+                <>
+                  <a
+                    href="/forgot-password"
+                    className="inline-block px-4 py-2 bg-cream-md border border-sage/22 text-ink-lt rounded-sm font-medium text-sm hover:bg-cream transition-colors"
+                  >
+                    Change password
+                  </a>
+                  <p className="text-xs text-sage-dim mt-2">
+                    You&apos;ll receive a password reset link via email
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-sage-dim">
+                  You signed in with{' '}
+                  <span className="capitalize">{ssoOnlyProvider ?? 'single sign-on'}</span>.
+                  Manage your password with your provider.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -673,8 +714,17 @@ export default function SettingsPage() {
                           <p>
                             Account:{' '}
                             <span className="font-mono text-ink">
-                              {platform.accountName || '—'}
+                              {platform.accountName
+                                ? /^\d+$/.test(platform.accountName)
+                                  ? `User \u2116${platform.accountName}`
+                                  : platform.accountName
+                                : '—'}
                             </span>
+                            {platform.accountName && /^\d+$/.test(platform.accountName) && platform.platform === 'Vinted' && (
+                              <span className="ml-1 text-[10px] text-sage-dim">
+                                (Vinted hides public usernames from its API)
+                              </span>
+                            )}
                           </p>
                           <p>
                             Last sync:{' '}

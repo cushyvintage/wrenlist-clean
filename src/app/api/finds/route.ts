@@ -191,10 +191,12 @@ export const POST = withAuth(async (req, user) => {
       .single()
 
     if (profile && !skipLimitCheck) {
-      const { PLAN_LIMITS } = await import('@/config/plans')
+      const { PLAN_LIMITS, isBetaActive } = await import('@/config/plans')
       const limit = PLAN_LIMITS[profile.plan as keyof typeof PLAN_LIMITS]?.finds ?? null
 
-      if (limit !== null && profile.finds_this_month >= limit) {
+      // Limits are announced but not enforced during the open beta — matches
+      // the UI behavior on /finds and /add-find.
+      if (!isBetaActive() && limit !== null && profile.finds_this_month >= limit) {
         return ApiResponseHelper.error('Monthly find limit reached. Upgrade your plan to add more finds.', 402)
       }
     }

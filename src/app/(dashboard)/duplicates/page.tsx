@@ -28,7 +28,10 @@ export default function DuplicatesPage() {
   const confirm = useConfirm()
 
   const loadCandidates = useCallback(() => {
-    call(() => fetchApi<CandidatesResponse>('/api/dedup/candidates?threshold=0.35&limit=30'))
+    // Threshold lives on the server (default 0.55). Don't pin it here —
+    // anything lower brings back visually-unrelated pairs like
+    // "Ceramic Basket" vs "Ceramic Bowl".
+    call(() => fetchApi<CandidatesResponse>('/api/dedup/candidates?limit=30'))
   }, [call])
 
   useEffect(() => { loadCandidates() }, [loadCandidates])
