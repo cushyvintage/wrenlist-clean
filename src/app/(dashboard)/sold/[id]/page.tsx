@@ -591,10 +591,9 @@ export default function SoldDetailPage() {
                   )
                 }
 
-                // Pre-ship: primary depends on marketplace. Vinted's "Generate
-                // label" lives on the list page (it opens a modal), so on the
-                // detail page we only surface the eBay shipping dashboard link
-                // here and point Vinted users to the list for the modal.
+                // Pre-ship: primary depends on marketplace. Vinted's
+                // "Generate label" modal lives on the Sold list, so we link
+                // back to it rather than duplicate the modal here.
                 return (
                   <div className="flex flex-wrap gap-3 items-center">
                     {sale.marketplace === 'ebay' && sale.transactionId && (
@@ -606,6 +605,11 @@ export default function SoldDetailPage() {
                       >
                         Ship on eBay
                       </a>
+                    )}
+                    {sale.marketplace === 'vinted' && (
+                      <Link href="/sold" className={primaryBtn + ' inline-block'}>
+                        Generate label on Sold →
+                      </Link>
                     )}
                     <button onClick={() => setShowTracking(true)} className={linkBtn}>
                       Shipped elsewhere?
