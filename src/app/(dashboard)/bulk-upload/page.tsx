@@ -19,6 +19,7 @@ interface ParsedFind {
   asking_price_gbp: number | null
   cost_gbp: number | null
   sku?: string
+  photos: string[]
   errors: string[]
 }
 
@@ -97,6 +98,12 @@ function validateRow(row: CsvRow, validCategories: string[]): ParsedFind {
   const price = row.price?.trim() || ''
   const costPrice = row.cost_price?.trim() || ''
   const sku = row.sku?.trim()
+  // Photos column accepts a pipe- or semicolon-separated list of URLs.
+  // Comma would conflict with the CSV delimiter even when quoted.
+  const photos = (row.photos?.trim() || '')
+    .split(/[|;]/)
+    .map((p) => p.trim())
+    .filter((p) => /^https?:\/\//i.test(p))
 
   if (!title) errors.push('Missing title')
   if (!category) {
@@ -143,9 +150,15 @@ function validateRow(row: CsvRow, validCategories: string[]): ParsedFind {
     asking_price_gbp,
     cost_gbp,
     sku,
+    photos,
     errors,
   }
 }
+
+const SAMPLE_CSV = `title,description,category,brand,condition,price,cost_price,sku,photos
+"Vintage stoneware vase","Tall hand-thrown stoneware vase, mid-century","home_garden_ceramics","",good,18.00,4.00,WL-CER-001,https://example.com/photo1.jpg|https://example.com/photo2.jpg
+"Royal Doulton plate","Blue transfer dinner plate, 25cm","home_garden_ceramics","Royal Doulton",very_good,22.00,3.50,,
+`
 
 export default function BulkUploadPage() {
   const router = useRouter()
@@ -223,6 +236,7 @@ export default function BulkUploadPage() {
             asking_price_gbp: row.asking_price_gbp,
             cost_gbp: row.cost_gbp,
             sku: row.sku || undefined,
+            photos: row.photos.length > 0 ? row.photos : undefined,
             status: 'draft',
             source_type: 'bulk_upload',
             source_name: 'CSV import',
@@ -281,15 +295,40 @@ export default function BulkUploadPage() {
         {!showResults ? (
           <div className="space-y-6">
             <div className="bg-white border border-sage/20 rounded-lg p-6">
-              <h2 className="font-semibold mb-3">CSV Format</h2>
+              <div className="flex items-start justify-between mb-3 gap-4">
+                <h2 className="font-semibold">CSV Format</h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = new Blob([SAMPLE_CSV], { type: 'text/csv' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'wrenlist-bulk-upload-template.csv'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}
+                  className="text-xs px-3 py-1.5 border border-sage rounded text-sage hover:bg-sage/10 transition-colors flex-shrink-0"
+                >
+                  ↓ download template
+                </button>
+              </div>
               <p className="text-sm text-sage mb-4">Your CSV file should have these columns:</p>
-              <code className="block bg-cream p-4 rounded text-xs overflow-x-auto whitespace-pre">
-{`title,description,category,brand,condition,price,cost_price,sku
-"Victorian Doulton jug","Blue transfer...","ceramics","Royal Doulton","good",25,5,WL-CER-001`}
-              </code>
-              <div className="mt-4 text-sm">
-                <p className="font-semibold mb-2">Required: title, category, condition, price</p>
-                <p className="text-sage">Optional: description, brand, cost_price, sku</p>
+              <code className="block bg-cream p-4 rounded text-xs overflow-x-auto whitespace-pre">{SAMPLE_CSV}</code>
+              <div className="mt-4 text-sm space-y-1">
+                <p className="font-semibold">Required: title, category, condition, price</p>
+                <p className="text-sage">Optional: description, brand, cost_price, sku, photos</p>
+                <p className="text-xs text-sage">
+                  <strong>category</strong>: use canonical slugs like
+                  <code className="mx-1 px-1 bg-cream rounded">home_garden_ceramics</code>
+                  or <code className="mx-1 px-1 bg-cream rounded">clothing_womenswear_womens_dresses</code>
+                </p>
+                <p className="text-xs text-sage">
+                  <strong>condition</strong>: one of new_with_tags, new_without_tags, very_good, good, fair, poor
+                </p>
+                <p className="text-xs text-sage">
+                  <strong>photos</strong>: pipe- or semicolon-separated URLs (must be https). Comma is reserved for CSV columns.
+                </p>
               </div>
             </div>
 

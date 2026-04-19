@@ -7,6 +7,7 @@ import { StatCard } from '@/components/wren/StatCard'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
+import { relativeDate } from '@/lib/format-date'
 import type { Customer, Platform } from '@/types'
 import Link from 'next/link'
 import { Button } from '@/components/wren/Button'
@@ -39,16 +40,8 @@ export default function CustomersPage() {
   const customers = data?.customers ?? []
   const stats = data?.stats
 
-  const formatDate = (d: string | null) => {
-    if (!d) return '--'
-    const date = new Date(d)
-    const now = new Date()
-    const diff = Math.floor((now.getTime() - date.getTime()) / 86400000)
-    if (diff === 0) return 'today'
-    if (diff === 1) return 'yesterday'
-    if (diff < 7) return `${diff}d ago`
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
-  }
+  // Use the central relativeDate helper so dates don't read as
+  // "today / 5d ago / 6 Apr 26" (mixed two-digit and four-digit years).
 
   return (
     <div className="space-y-6">
@@ -124,7 +117,7 @@ export default function CustomersPage() {
                     <td className="px-3 py-2 text-ink-lt text-xs">{c.username || '--'}</td>
                     <td className="px-3 py-2 text-right font-mono">{c.total_orders}</td>
                     <td className="px-3 py-2 text-right font-mono">£{Number(c.total_spent_gbp).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-ink-lt text-xs">{formatDate(c.last_order_at)}</td>
+                    <td className="px-3 py-2 text-ink-lt text-xs">{relativeDate(c.last_order_at)}</td>
                   </tr>
                 ))}
               </tbody>

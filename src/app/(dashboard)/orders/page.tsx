@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { PlatformTag } from '@/components/wren/PlatformTag'
 import type { Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
+import { formatDate } from '@/lib/format-date'
 
 interface Order {
   id: string
@@ -41,14 +42,6 @@ export default function OrdersPage() {
 
     fetchOrders()
   }, [])
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      month: 'short',
-      day: 'numeric',
-      year: '2-digit',
-    })
-  }
 
   const formatPlatform = (marketplace: string): Platform => {
     return (marketplace as Platform) || 'vinted'

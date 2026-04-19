@@ -2,6 +2,7 @@
 
 import VintedMetadataPanel from '@/components/inventory/VintedMetadataPanel'
 import { MarketplaceStatusPanel } from '@/components/finds/MarketplaceStatusPanel'
+import { formatCategory } from '@/lib/format-category'
 import type { Find } from '@/types'
 import type { VintedStoredMetadata } from '@/types/vinted-metadata'
 
@@ -98,8 +99,8 @@ export function FindViewMode({
               <p className="text-xs uppercase tracking-wider font-medium" style={{ color: '#8A9E88' }}>
                 Category
               </p>
-              <p className="text-sm mt-1 capitalize" style={{ color: '#1E2E1C' }}>
-                {find.category || '—'}
+              <p className="text-sm mt-1" style={{ color: '#1E2E1C' }}>
+                {find.category ? formatCategory(find.category) : '—'}
               </p>
             </div>
             <div>

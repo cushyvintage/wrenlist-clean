@@ -667,30 +667,44 @@ function InventoryPageContent() {
           </div>
         )}
 
-        {/* Filter pills with counts */}
+        {/* Filter pills with counts. Show skeletons on first load — otherwise
+            "all (0) listed (0) draft (0) ..." flashes for a second on a 2k-item
+            inventory and reads as "you have nothing here". */}
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'listed', 'draft', 'on_hold', 'sold', 'aging', 'unpriced'] as StatusFilter[]).map((s) => {
-            const pillLabel = s === 'on_hold' ? 'on hold' : s
-            const pillCount =
-              s === 'aging'
-                ? agingCount
-                : s === 'unpriced'
-                ? unpricedCount
-                : (statusCounts[s as keyof typeof statusCounts] ?? 0)
-            return (
-              <button
-                key={s}
-                onClick={() => setSelectedStatus(s)}
-                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors capitalize whitespace-nowrap ${
-                  selectedStatus === s
-                    ? 'bg-sage-pale border border-sage text-sage'
-                    : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
-                }`}
-              >
-                {pillLabel} ({pillCount})
-              </button>
-            )
-          })}
+          {isLoading ? (
+            <>
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="px-3 py-1.5 text-xs rounded-full font-medium bg-sage/10 animate-pulse"
+                  style={{ width: 90 }}
+                >&nbsp;</div>
+              ))}
+            </>
+          ) : (
+            (['all', 'listed', 'draft', 'on_hold', 'sold', 'aging', 'unpriced'] as StatusFilter[]).map((s) => {
+              const pillLabel = s === 'on_hold' ? 'on hold' : s
+              const pillCount =
+                s === 'aging'
+                  ? agingCount
+                  : s === 'unpriced'
+                  ? unpricedCount
+                  : (statusCounts[s as keyof typeof statusCounts] ?? 0)
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSelectedStatus(s)}
+                  className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors capitalize whitespace-nowrap ${
+                    selectedStatus === s
+                      ? 'bg-sage-pale border border-sage text-sage'
+                      : 'bg-cream-md border border-sage/22 text-ink-lt hover:bg-cream'
+                  }`}
+                >
+                  {pillLabel} ({pillCount})
+                </button>
+              )
+            })
+          )}
         </div>
 
         {/* Stash filter */}
