@@ -4,7 +4,17 @@ import { useEffect, useCallback, useState } from 'react'
 import { useApiCall } from '@/hooks/useApiCall'
 import { fetchApi } from '@/lib/api-utils'
 import { DedupPairCard } from '@/components/dedup/DedupPairCard'
+import { selectKeeper } from '@/lib/dedup-keeper'
+import { useConfirm } from '@/components/wren/ConfirmProvider'
 import type { DedupCandidate } from '@/types'
+
+/**
+ * High-confidence pairs are eligible for one-click bulk merge. We keep the
+ * threshold high (≥0.95) because the bulk action is irreversible: the loser
+ * find is deleted, its PMD rows reassigned. Anything below 0.95 still
+ * requires the per-card decision.
+ */
+const BULK_MERGE_THRESHOLD = 0.95
 
 interface CandidatesResponse {
   candidates: DedupCandidate[]
@@ -14,6 +24,8 @@ interface CandidatesResponse {
 export default function DuplicatesPage() {
   const { data, isLoading, error, call, setData } = useApiCall<CandidatesResponse>(null)
   const [resolved, setResolved] = useState(0)
+  const [bulkMerging, setBulkMerging] = useState(false)
+  const confirm = useConfirm()
 
   const loadCandidates = useCallback(() => {
     call(() => fetchApi<CandidatesResponse>('/api/dedup/candidates?threshold=0.35&limit=30'))
@@ -24,6 +36,8 @@ export default function DuplicatesPage() {
   const candidates = data?.candidates ?? []
   const totalFound = (data?.count ?? 0) + resolved
   const [actionError, setActionError] = useState<string | null>(null)
+
+  const highConfidencePairs = candidates.filter((c) => c.similarityScore >= BULK_MERGE_THRESHOLD)
 
   const handleMerge = async (keeperId: string, duplicateId: string) => {
     setActionError(null)
@@ -45,6 +59,55 @@ export default function DuplicatesPage() {
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Merge failed')
+    }
+  }
+
+  const handleBulkMerge = async () => {
+    if (highConfidencePairs.length === 0) return
+    const ok = await confirm({
+      title: `Merge ${highConfidencePairs.length} high-confidence duplicate${highConfidencePairs.length === 1 ? '' : 's'}?`,
+      message:
+        'For each pair, Wrenlist keeps the find with richer data (more photos, description, brand) and deletes the other. PMD listings on the deleted find move to the keeper. This cannot be undone.',
+      confirmLabel: 'Merge all',
+      tone: 'danger',
+    })
+    if (!ok) return
+
+    setActionError(null)
+    setBulkMerging(true)
+    try {
+      const pairs = highConfidencePairs.map((c) => {
+        const { keeper, duplicate } = selectKeeper(c.findA, c.findB)
+        return { keeperId: keeper.id, duplicateId: duplicate.id }
+      })
+      const res = await fetchApi<{ merged: number; skipped: number; failed: number }>(
+        '/api/dedup/bulk-merge',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pairs }),
+        },
+      )
+      const mergedIds = new Set(pairs.map((p) => p.duplicateId))
+      if (data) {
+        setData({
+          ...data,
+          candidates: data.candidates.filter(
+            (c) => !mergedIds.has(c.findA.id) && !mergedIds.has(c.findB.id),
+          ),
+          count: Math.max(0, data.count - res.merged),
+        })
+        setResolved((r) => r + res.merged)
+      }
+      if (res.failed > 0) {
+        setActionError(
+          `${res.merged} merged, ${res.failed} failed${res.skipped > 0 ? `, ${res.skipped} skipped` : ''}.`,
+        )
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Bulk merge failed')
+    } finally {
+      setBulkMerging(false)
     }
   }
 
@@ -104,17 +167,31 @@ export default function DuplicatesPage() {
 
       {!isLoading && candidates.length > 0 && (
         <>
-          {/* Progress bar */}
+          {/* Progress bar + bulk action */}
           <div className="rounded-lg border border-border bg-white p-3">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-3">
               <span className="text-xs font-medium text-ink">
                 {resolved > 0 ? `${resolved} resolved` : `${candidates.length} pair${candidates.length !== 1 ? 's' : ''} to review`}
               </span>
-              {resolved > 0 && (
-                <span className="text-[10px] text-ink-lt">
-                  {candidates.length} remaining
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {resolved > 0 && (
+                  <span className="text-[10px] text-ink-lt">
+                    {candidates.length} remaining
+                  </span>
+                )}
+                {highConfidencePairs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBulkMerge}
+                    disabled={bulkMerging}
+                    className="text-[11px] px-2.5 py-1 rounded border border-sage text-sage hover:bg-sage/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bulkMerging
+                      ? 'Merging...'
+                      : `Merge ${highConfidencePairs.length} high-confidence (≥${Math.round(BULK_MERGE_THRESHOLD * 100)}%)`}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="w-full h-1.5 bg-sage/10 rounded-full overflow-hidden">
               <div

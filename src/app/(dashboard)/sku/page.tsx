@@ -1,118 +1,140 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Panel } from '@/components/wren/Panel'
-import { useState } from 'react'
+import { unwrapApiResponse } from '@/lib/api-utils'
+import { formatCategory } from '@/lib/format-category'
+import { relativeDate } from '@/lib/format-date'
 
-interface SKUEntry {
-  id: string
-  sku: string
-  barcode: string
-  itemName: string
-  category: string
-  price: number
-  createdAt: string
+/**
+ * SKU page — read-only browser over the SKUs Wrenlist generates for finds.
+ * The actual generation rule lives in src/lib/sku.ts; this page surfaces
+ * recent assignments and the category → prefix map so the user can sanity-
+ * check what's getting written.
+ *
+ * Custom pattern editing isn't supported yet (the current rule is fixed:
+ * `WL-{CAT}-{TIMESTAMP_BASE36}`), so we explain that rather than pretend.
+ */
+
+// Mirror of CATEGORY_PREFIXES in src/lib/sku.ts. Kept inline so this page
+// stays a single client file — if the source map grows, surface a tiny
+// `/api/sku/prefixes` route instead of letting these drift.
+const CATEGORY_PREFIXES: Record<string, string> = {
+  antiques: 'ANT',
+  art: 'ART',
+  baby_toddler: 'BAB',
+  books_media: 'BKS',
+  clothing: 'CLT',
+  craft_supplies: 'CRF',
+  collectibles: 'COL',
+  electronics: 'ELC',
+  health_beauty: 'HBE',
+  home_garden: 'HMG',
+  musical_instruments: 'MUS',
+  pet_supplies: 'PET',
+  sports_outdoors: 'SPO',
+  toys_games: 'TOY',
+  vehicles_parts: 'VEH',
+  other: 'OTH',
 }
 
-const mockSKUs: SKUEntry[] = [
-  {
-    id: '1',
-    sku: 'WR-DNM-260329-001',
-    barcode: '5901234123457',
-    itemName: "Levi's 501 Denim — 32W",
-    category: 'denim',
-    price: 45.00,
-    createdAt: '29 Mar 2026',
-  },
-  {
-    id: '2',
-    sku: 'WR-CLO-260328-001',
-    barcode: '5901234123458',
-    itemName: 'Carhartt Detroit Jacket — M',
-    category: 'clothing',
-    price: 145.00,
-    createdAt: '28 Mar 2026',
-  },
-  {
-    id: '3',
-    sku: 'WR-FTW-260327-001',
-    barcode: '5901234123459',
-    itemName: 'Nike Air Max 90 — UK 10',
-    category: 'footwear',
-    price: 95.00,
-    createdAt: '27 Mar 2026',
-  },
-  {
-    id: '4',
-    sku: 'WR-BAG-260326-001',
-    barcode: '5901234123460',
-    itemName: 'Vintage leather tote bag',
-    category: 'bags',
-    price: 65.00,
-    createdAt: '26 Mar 2026',
-  },
-]
-
-const categoryCodeMap: Record<string, string> = {
-  'denim': 'DNM',
-  'clothing': 'CLO',
-  'footwear': 'FTW',
-  'bags': 'BAG',
-  'accessories': 'ACC',
-  'vintage': 'VTG',
+interface FindRow {
+  id: string
+  name: string
+  sku: string | null
+  category: string | null
+  asking_price_gbp: number | null
+  created_at: string
 }
 
 export default function SKUPage() {
-  const [pattern, setPattern] = useState('WR-{CAT}-{DATE}-{SEQ}')
+  const [rows, setRows] = useState<FindRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
-  const filteredSKUs = mockSKUs.filter(sku =>
-    sku.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sku.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sku.barcode.includes(searchTerm)
-  )
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/finds?limit=200')
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return
+        const items = unwrapApiResponse<{ items: FindRow[] }>(j)?.items ?? []
+        const withSku = items.filter((f) => f.sku)
+        setRows(withSku)
+      })
+      .catch(() => setRows([]))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter(
+      (r) =>
+        r.sku?.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q),
+    )
+  }, [rows, searchTerm])
+
+  const downloadCsv = () => {
+    const header = 'sku,item,category,price_gbp,created_at\n'
+    const body = rows
+      .map((r) => {
+        const safeName = `"${(r.name || '').replace(/"/g, '""')}"`
+        return [
+          r.sku ?? '',
+          safeName,
+          r.category ?? '',
+          r.asking_price_gbp != null ? r.asking_price_gbp.toFixed(2) : '',
+          r.created_at,
+        ].join(',')
+      })
+      .join('\n')
+    const blob = new Blob([header + body], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `wrenlist-skus-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-6">
-        {/* Left: SKU Configuration */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: SKU rule */}
         <div className="space-y-4">
-          <Panel title="SKU pattern" action={{ text: "save changes" }}>
+          <Panel title="SKU pattern">
             <div className="p-5 space-y-4">
-              {/* Pattern Template */}
               <div>
                 <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
-                  pattern template
+                  current rule
                 </label>
-                <input
-                  type="text"
-                  value={pattern}
-                  onChange={(e) => setPattern(e.target.value)}
-                  className="w-full px-3 py-2 bg-cream-md border border-sage/14 rounded text-sm text-ink focus:outline-none focus:ring-1 focus:ring-sage"
-                />
-                <div className="text-xs text-ink-lt mt-2">
-                  Tokens: {'{CAT}'} = category, {'{DATE}'} = YYMMDD, {'{SEQ}'} = sequence, {'{BRAND}'} = brand initials
+                <div className="font-mono text-sm px-3 py-2 bg-cream-md border border-sage/14 rounded text-ink">
+                  WL-{'{CATEGORY_PREFIX}'}-{'{TIMESTAMP_BASE36}'}
                 </div>
+                <p className="text-xs text-ink-lt mt-2">
+                  Generated automatically when a find is created. Each SKU is
+                  globally unique and human-readable. Custom templates are not
+                  configurable yet — see <code>src/lib/sku.ts</code>.
+                </p>
               </div>
 
-              {/* Preview */}
               <div>
                 <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
-                  preview
-                </label>
-                <div className="font-mono text-lg px-3 py-2 bg-cream-md border border-sage/14 rounded text-ink tracking-wider">
-                  WR-DNM-260329-042
-                </div>
-              </div>
-
-              {/* Category Codes */}
-              <div>
-                <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
-                  category codes
+                  category prefixes
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(categoryCodeMap).map(([cat, code]) => (
-                    <div key={cat} className="flex justify-between items-center px-3 py-2 bg-cream-md border border-sage/14 rounded text-sm">
-                      <span className="text-ink-lt capitalize">{cat}</span>
+                  {Object.entries(CATEGORY_PREFIXES).map(([cat, code]) => (
+                    <div
+                      key={cat}
+                      className="flex justify-between items-center px-3 py-2 bg-cream-md border border-sage/14 rounded text-xs"
+                    >
+                      <span className="text-ink-lt">{formatCategory(cat)}</span>
                       <span className="font-mono font-medium text-ink">{code}</span>
                     </div>
                   ))}
@@ -120,47 +142,15 @@ export default function SKUPage() {
               </div>
             </div>
           </Panel>
-
-          {/* Barcode Settings */}
-          <Panel title="barcode format" action={{ text: "configure" }}>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
-                  barcode type
-                </label>
-                <select className="w-full px-3 py-2 bg-cream-md border border-sage/14 rounded text-sm text-ink focus:outline-none focus:ring-1 focus:ring-sage">
-                  <option>EAN-13 (standard)</option>
-                  <option>Code-128</option>
-                  <option>UPC-A</option>
-                  <option>QR Code</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-ink-lt uppercase tracking-wide mb-2">
-                  auto-generate barcodes?
-                </label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="barcode-auto" defaultChecked />
-                    <span className="text-sm text-ink">Yes, for each SKU</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="barcode-auto" />
-                    <span className="text-sm text-ink">Manual entry</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </Panel>
         </div>
 
-        {/* Right: Recent SKUs */}
+        {/* Right: Recent SKUs from real finds */}
         <div>
-          <Panel title="recent SKUs">
+          <Panel title={`recent SKUs (${rows.length})`}>
             <div className="p-5 space-y-3 border-b border-sage/14">
               <input
                 type="text"
-                placeholder="search SKU, barcode, or item..."
+                placeholder="search SKU or item name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 bg-cream-md border border-sage/14 rounded text-sm text-ink placeholder-ink-lt focus:outline-none focus:ring-1 focus:ring-sage"
@@ -168,26 +158,37 @@ export default function SKUPage() {
             </div>
 
             <div className="divide-y divide-sage/14 max-h-96 overflow-y-auto">
-              {filteredSKUs.map((sku) => (
-                <div key={sku.id} className="p-4 hover:bg-cream-md transition">
-                  <div className="font-medium text-ink text-sm mb-1">{sku.itemName}</div>
-                  <div className="flex items-center justify-between gap-4 text-xs">
-                    <div>
-                      <div className="text-ink-lt">SKU</div>
-                      <div className="font-mono text-ink font-medium">{sku.sku}</div>
-                    </div>
-                    <div>
-                      <div className="text-ink-lt">Barcode</div>
-                      <div className="font-mono text-ink text-xs">{sku.barcode}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-ink-lt">{sku.category}</div>
-                      <div className="font-mono text-ink font-medium">£{sku.price.toFixed(2)}</div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-ink-lt mt-2">Created {sku.createdAt}</div>
+              {loading ? (
+                <div className="p-5 text-sm text-ink-lt">Loading SKUs...</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-5 text-sm text-ink-lt">
+                  {rows.length === 0
+                    ? 'No SKUs yet — they\'re generated automatically when you add a find.'
+                    : 'No matches for that search.'}
                 </div>
-              ))}
+              ) : (
+                filtered.slice(0, 100).map((r) => (
+                  <Link
+                    key={r.id}
+                    href={`/finds/${r.id}`}
+                    className="block p-4 hover:bg-cream-md transition"
+                  >
+                    <div className="font-medium text-ink text-sm mb-1 truncate">
+                      {r.name}
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-xs">
+                      <div className="font-mono text-ink font-medium">{r.sku}</div>
+                      <div className="text-ink-lt">
+                        {r.category ? formatCategory(r.category) : '—'}
+                      </div>
+                      <div className="font-mono text-ink">
+                        {r.asking_price_gbp != null ? `£${r.asking_price_gbp.toFixed(2)}` : '—'}
+                      </div>
+                    </div>
+                    <div className="text-xs text-ink-lt mt-1">{relativeDate(r.created_at)}</div>
+                  </Link>
+                ))
+              )}
             </div>
           </Panel>
         </div>
@@ -197,9 +198,17 @@ export default function SKUPage() {
       <div className="bg-cream-md border border-sage/14 rounded p-4 flex items-center justify-between">
         <div>
           <h3 className="font-medium text-ink">Export SKU data</h3>
-          <p className="text-sm text-ink-lt mt-1">Download all SKUs and barcodes in CSV format for backup or import to third-party tools.</p>
+          <p className="text-sm text-ink-lt mt-1">
+            Download all SKUs and item details in CSV format for backup or
+            external tools.
+          </p>
         </div>
-        <button className="px-4 py-2 border border-sage/22 bg-white text-ink rounded text-sm font-medium hover:bg-cream-md transition flex-shrink-0">
+        <button
+          type="button"
+          onClick={downloadCsv}
+          disabled={rows.length === 0}
+          className="px-4 py-2 border border-sage/22 bg-white text-ink rounded text-sm font-medium hover:bg-cream-md transition flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           ↓ Export CSV
         </button>
       </div>
