@@ -757,6 +757,21 @@ type ExternalMessage = Record<string, unknown>;
         return;
       }
 
+      // Shopify's internal GraphQL endpoint needs an admin.shopify.com session
+      // cookie — only present if the user has Shopify admin open in a tab.
+      // Short-circuit when the cookie is missing so we don't spam
+      // "Please enter a valid Shopify admin shop URL" errors every 15 min.
+      const shopifyCookies = await chrome.cookies.getAll({
+        domain: "shopify.com",
+      });
+      const hasSessionCookie = shopifyCookies.some(
+        (c) => c.name.startsWith("_secure_session") || c.name === "_shopify_sa_t",
+      );
+      if (!hasSessionCookie) {
+        console.debug("[ShopifySalesSync] No admin.shopify.com session cookie — need to be logged into Shopify admin. Skipping quietly.");
+        return;
+      }
+
       // ShopifyClient expects the bare shop slug (e.g. "pyedpp-i5"), not the
       // full myshopify.com domain. getShopifyGraphqlUrl prepends
       // `admin.shopify.com/api/shopify/` — passing "foo.myshopify.com"
@@ -803,12 +818,17 @@ type ExternalMessage = Record<string, unknown>;
         await remoteLog("error", "shopify-sync", `API ${syncRes.status}: ${text.slice(0, 200)}`);
       }
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // "Please enter a valid Shopify admin shop URL" is ShopifyClient's generic
+      // error for any non-200 response — typically means the user isn't logged
+      // into admin.shopify.com. Downgrade to info so it doesn't look like a
+      // real crash in debug logs.
+      if (msg.includes("valid Shopify admin shop URL")) {
+        console.info("[ShopifySalesSync] Auth/URL error — user likely needs to sign into Shopify admin. Skipping quietly.");
+        return;
+      }
       console.error("[ShopifySalesSync] Failed:", e);
-      await remoteLog(
-        "error",
-        "shopify-sync",
-        `Unexpected failure: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      await remoteLog("error", "shopify-sync", `Unexpected failure: ${msg}`);
     }
   }
 
