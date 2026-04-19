@@ -160,8 +160,11 @@ export default function LandingPage() {
             <br />
             for.
           </h1>
-          <p className="hero-fade-3 mb-7 max-w-sm font-normal leading-relaxed text-[#4a6147]">
+          <p className="hero-fade-3 mb-2 max-w-sm font-normal leading-relaxed text-[#4a6147]">
             Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
+          </p>
+          <p className="hero-fade-3 mb-7 max-w-sm font-normal text-xs text-[#527050]">
+            A "find" is each item you source — from vintage shops, charity stores, and house clearances.
           </p>
           <div className="hero-fade-4 flex gap-4 items-center">
             <a href="/register" onClick={() => trackEvent('CTAClicked', { source: 'landing' })} className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
@@ -174,7 +177,10 @@ export default function LandingPage() {
         </div>
 
         <div className="hero-fade-5 flex flex-col justify-center gap-4 bg-[#ede8de] px-5 sm:px-8 lg:px-10 py-10">
-          <div className="text-xs font-medium uppercase tracking-wider text-[#527050]">your inventory at a glance</div>
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wider text-[#527050]">your inventory at a glance</div>
+            <p className="text-xs text-[#527050] mt-1 italic">Example items from active sellers</p>
+          </div>
 
           {/* Inventory Cards */}
           {[

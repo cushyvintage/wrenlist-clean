@@ -149,7 +149,7 @@ export default function RegisterPage() {
 
         {/* Register card */}
         <div className="bg-white border border-sage/14 rounded-lg p-8">
-          <h2 className="text-2xl font-serif text-ink mb-2">Create your <span className="italic">account</span></h2>
+          <h2 className="text-2xl font-serif text-ink mb-2">Create your account</h2>
           <p className="text-ink-lt text-sm mb-6">All features unlocked. We just want your feedback.</p>
 
           {/* Error message */}
@@ -235,13 +235,14 @@ export default function RegisterPage() {
             {/* Password input */}
             <div>
               <label className="block text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">
-                Password
+                Password <span className="text-red-500">*</span>
               </label>
+              <p className="text-xs text-ink-lt mb-2">Minimum 8 characters. Stronger passwords include uppercase letters and numbers.</p>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min 8 characters"
+                placeholder="Enter password (8+ characters)"
                 required
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
@@ -260,12 +261,12 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className={`text-xs font-medium ${strengthTextColor}`}>
-                      {strengthLabel}
+                      {strengthLabel} password
                     </span>
                     <div className="text-xs text-ink-lt space-x-2">
-                      <span className={hasMinLength ? 'text-green-600' : ''}>8+ chars</span>
-                      <span className={hasUppercase ? 'text-green-600' : ''}>uppercase</span>
-                      <span className={hasNumber ? 'text-green-600' : ''}>number</span>
+                      <span className={hasMinLength ? 'text-green-600' : ''}>✓ 8+ chars</span>
+                      <span className={hasUppercase ? 'text-green-600' : ''}>✓ uppercase</span>
+                      <span className={hasNumber ? 'text-green-600' : ''}>✓ number</span>
                     </div>
                   </div>
                 </div>
@@ -294,14 +295,15 @@ export default function RegisterPage() {
                       </div>
                     )}
                     <div className="font-medium text-ink">{plan.name}</div>
-                    <div className="text-lg font-semibold text-sage mt-1">&pound;{plan.price}</div>
+                    <div className="text-lg font-semibold text-sage mt-1">&pound;{plan.price}<span className="text-xs text-ink-lt">/mo</span></div>
                     <div className="text-xs text-ink-lt mt-1">{plan.finds}</div>
                   </div>
                 ))}
               </div>
-              <p className="text-center text-xs text-sage-dim mt-2">
-                Beta users get all features free for 3 months
-              </p>
+              <div className="text-center text-xs text-sage-dim mt-3 space-y-1">
+                <p><strong>Beta users:</strong> All features free for 3 months (no payment required)</p>
+                <p>After beta ends, your chosen plan will activate at the monthly price shown above. Cancel anytime.</p>
+              </div>
             </div>
 
             {/* Submit button */}
@@ -314,13 +316,13 @@ export default function RegisterPage() {
             </button>
 
             {/* Terms */}
-            <p className="text-center text-xs text-ink-lt mt-4">
+            <p className="text-center text-xs text-ink-md mt-4 border-t border-sage/10 pt-4">
               By signing up you agree to our{' '}
-              <a href="/terms" className="text-sage-lt hover:text-sage font-medium">
+              <a href="/terms" className="text-sage hover:underline font-medium">
                 Terms
               </a>
               {' '}and{' '}
-              <a href="/privacy" className="text-sage-lt hover:text-sage font-medium">
+              <a href="/privacy" className="text-sage hover:underline font-medium">
                 Privacy Policy
               </a>
             </p>

@@ -69,7 +69,7 @@ export function MarketingNav() {
         <div className="flex gap-2 items-center flex-shrink-0">
           <a
             href="/login"
-            className="hidden sm:block border border-[rgba(61,92,58,0.22)] rounded text-xs font-light text-[#4a6147] px-4 py-2 hover:bg-[#ede8de] hover:text-[#1e2e1c]"
+            className="hidden sm:block border border-[rgba(61,92,58,0.3)] rounded text-xs font-medium text-[#1e2e1c] px-4 py-2 hover:bg-[#ede8de] transition-colors"
           >
             log in
           </a>
@@ -117,7 +117,7 @@ export function MarketingNav() {
           })}
           <a
             href="/login"
-            className="block text-sm font-light text-[#4a6147] sm:hidden"
+            className="block text-sm font-medium text-[#1e2e1c] border-t border-[rgba(61,92,58,0.14)] pt-3 mt-2 sm:hidden"
           >
             log in
           </a>
