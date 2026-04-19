@@ -113,8 +113,10 @@ export default function PlatformConnectPage() {
       />
 
       {/* Debug logs exporter — fetches _debugLogs from extension and offers
-          a JSON download. Hidden on mobile where the extension can't run. */}
-      {!isMobileOrNonChrome && (
+          a JSON download. Hidden on mobile where the extension can't run.
+          Only shown to devs (NODE_ENV=development) or when ?debug is in the URL
+          — end-users don't need this in the default connection flow. */}
+      {!isMobileOrNonChrome && showDebug && (
         <div className="px-1">
           <DebugLogsButton extensionDetected={extensionDetected} />
         </div>
@@ -143,6 +145,7 @@ export default function PlatformConnectPage() {
       <Panel>
         <VintedConnect
           vintedConnected={platforms.vintedConnected}
+          vintedDetected={platforms.vintedDetected}
           vintedUsername={platforms.vintedUsername}
           vintedIsBusiness={platforms.vintedIsBusiness}
           vintedLoading={platforms.vintedLoading}
@@ -152,6 +155,7 @@ export default function PlatformConnectPage() {
           extensionDetected={extensionDetected}
           isMobileOrNonChrome={isMobileOrNonChrome}
           showDebug={showDebug}
+          onConnect={platforms.handleVintedConnect}
           onVintedSync={platforms.handleVintedSync}
           onDisconnect={platforms.handleVintedDisconnect}
         />
@@ -163,12 +167,11 @@ export default function PlatformConnectPage() {
       <Panel>
         <EtsyConnect
           etsyConnected={platforms.etsyConnected}
+          etsyDetected={platforms.etsyDetected}
+          etsyUsername={platforms.etsyUsername}
           etsyLoading={platforms.etsyLoading}
-          onCheckConnection={async () => {
-            platforms.setEtsyLoading(true)
-            await platforms.checkEtsySession()
-            platforms.setEtsyLoading(false)
-          }}
+          onConnect={platforms.handleEtsyConnect}
+          onDisconnect={platforms.handleEtsyDisconnect}
         />
       </Panel>
 
@@ -176,12 +179,10 @@ export default function PlatformConnectPage() {
       <Panel>
         <FacebookConnect
           facebookConnected={platforms.facebookConnected}
+          facebookDetected={platforms.facebookDetected}
           facebookLoading={platforms.facebookLoading}
-          onCheckConnection={async () => {
-            platforms.setFacebookLoading(true)
-            await platforms.checkFacebookSession()
-            platforms.setFacebookLoading(false)
-          }}
+          onConnect={platforms.handleFacebookConnect}
+          onDisconnect={platforms.handleFacebookDisconnect}
         />
       </Panel>
 
@@ -189,12 +190,11 @@ export default function PlatformConnectPage() {
       <Panel>
         <DepopConnect
           depopConnected={platforms.depopConnected}
+          depopDetected={platforms.depopDetected}
+          depopUsername={platforms.depopUsername}
           depopLoading={platforms.depopLoading}
-          onCheckConnection={async () => {
-            platforms.setDepopLoading(true)
-            await platforms.checkDepopSession()
-            platforms.setDepopLoading(false)
-          }}
+          onConnect={platforms.handleDepopConnect}
+          onDisconnect={platforms.handleDepopDisconnect}
         />
       </Panel>
 

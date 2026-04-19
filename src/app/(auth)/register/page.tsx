@@ -143,9 +143,19 @@ export default function RegisterPage() {
         </Link>
 
         {/* Beta banner */}
-        <div className="mb-6 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-md text-center flex items-center justify-center gap-2">
+        <div className="mb-3 px-4 py-3 bg-sage/10 border border-sage/20 rounded text-sm text-ink-md text-center flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-sage animate-pulse" />
           Open Beta — all features free for 3 months. No card needed.
+        </div>
+
+        {/* Chrome extension requirement notice */}
+        <div className="mb-6 px-4 py-3 bg-cream-md border border-sage/14 rounded text-xs text-ink-md flex items-start gap-2">
+          <svg className="w-4 h-4 text-sage flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <div>
+            Wrenlist works best with the <a href="/extension" className="text-sage underline hover:no-underline font-medium">Chrome extension</a> — it&apos;s how we publish to Vinted, Depop and others. You can install it after signing up.
+          </div>
         </div>
 
         {/* Register card */}
@@ -195,10 +205,10 @@ export default function RegisterPage() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Jordan"
+                  placeholder="e.g. Jordan"
                   required
                   disabled={isLoading}
-                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
+                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt/60 italic focus:outline-none focus:border-sage/30 focus:not-italic disabled:opacity-50"
                 />
               </div>
               <div>
@@ -209,10 +219,10 @@ export default function RegisterPage() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Kirk"
+                  placeholder="e.g. Kirk"
                   required
                   disabled={isLoading}
-                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt focus:outline-none focus:border-sage/30 disabled:opacity-50"
+                  className="w-full px-4 py-2.5 border border-sage/14 rounded text-ink placeholder-ink-lt/60 italic focus:outline-none focus:border-sage/30 focus:not-italic disabled:opacity-50"
                 />
               </div>
             </div>
@@ -303,7 +313,7 @@ export default function RegisterPage() {
               </div>
               <div className="text-center text-xs text-sage-dim mt-3 space-y-1">
                 <p><strong>Beta users:</strong> All features free for 3 months (no payment required)</p>
-                <p>After beta ends, your chosen plan will activate at the monthly price shown above. Cancel anytime.</p>
+                <p>At the end of the beta we&apos;ll email you before anything changes. Stay on Free with no action, or pick a paid plan if you&apos;ve outgrown it. Cancel anytime.</p>
               </div>
             </div>
 

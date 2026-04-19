@@ -26,9 +26,23 @@ interface EbayConnectionState {
   refreshStatus: () => Promise<void>
 }
 
+interface SessionInfo {
+  userId?: string | null
+  username?: string | null
+  tld?: string | null
+}
+
 export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPolicies: boolean) {
   const confirm = useConfirm()
+  // CONNECTED = row exists in DB (user has explicitly linked).
+  // DETECTED = extension sees an active marketplace session, but the user
+  // has not yet clicked "Connect". We NEVER persist detection to the DB on
+  // its own — that would be silent auto-connection. The UI surfaces a
+  // "Connect <platform>" affordance when detected && !connected so the
+  // user opts in with a single click.
   const [vintedConnected, setVintedConnected] = useState(false)
+  const [vintedDetected, setVintedDetected] = useState(false)
+  const [vintedDetectedInfo, setVintedDetectedInfo] = useState<SessionInfo>({})
   const [vintedUsername, setVintedUsername] = useState<string | null>(null)
   const [vintedIsBusiness, setVintedIsBusiness] = useState(false)
   const [vintedLoading, setVintedLoading] = useState(false)
@@ -45,12 +59,20 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const [shopifyError, setShopifyError] = useState<string | null>(null)
 
   const [etsyConnected, setEtsyConnected] = useState(false)
+  const [etsyDetected, setEtsyDetected] = useState(false)
+  const [etsyDetectedInfo, setEtsyDetectedInfo] = useState<SessionInfo>({})
+  const [etsyUsername, setEtsyUsername] = useState<string | null>(null)
   const [etsyLoading, setEtsyLoading] = useState(false)
 
   const [facebookConnected, setFacebookConnected] = useState(false)
+  const [facebookDetected, setFacebookDetected] = useState(false)
+  const [facebookDetectedInfo, setFacebookDetectedInfo] = useState<SessionInfo>({})
   const [facebookLoading, setFacebookLoading] = useState(false)
 
   const [depopConnected, setDepopConnected] = useState(false)
+  const [depopDetected, setDepopDetected] = useState(false)
+  const [depopDetectedInfo, setDepopDetectedInfo] = useState<SessionInfo>({})
+  const [depopUsername, setDepopUsername] = useState<string | null>(null)
   const [depopLoading, setDepopLoading] = useState(false)
 
   const [ebayPolicies, setEbayPolicies] = useState<EbayPolicies | null>(null)
@@ -61,11 +83,11 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
   const [pageError, setPageError] = useState<string | null>(null)
 
-  const checkVintedSession = async (): Promise<void> => {
+  // --- Extension detection helpers (local state ONLY — no POST) ---
+
+  const detectVintedSession = async (): Promise<void> => {
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        return
-      }
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
       const response = await new Promise<{ loggedIn: boolean; username?: string; userId?: string; tld?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(VINTED_EXTENSION_ID, { action: 'get_vinted_session' }, (response) => {
@@ -76,186 +98,255 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
       })
 
       if (response.loggedIn && response.username) {
-        setVintedConnected(true)
-
-        // Best-effort: ask the extension to fetch the authenticated Vinted user
-        // detail so we can tell the server whether this is a Pro/business
-        // account. The extension has vinted.co.uk cookies; we don't.
-        //
-        // The Vinted extension's get_vinted_session response returns the
-        // numeric id under the `username` field when it couldn't resolve the
-        // login name (which is the common case since Vinted's public user
-        // API now 401s without auth headers). So the numeric id candidate is
-        // whichever of (userId, username) actually looks numeric.
-        let isBusiness: boolean | null = null
-        const tld = response.tld || 'co.uk'
-        const rawId = String(response.userId ?? response.username ?? '')
-        const numericId = /^\d+$/.test(rawId) ? rawId : null
-        if (numericId) {
-          try {
-            const apiResp = await new Promise<{ success?: boolean; results?: { user?: { business?: boolean } } }>((resolve) => {
-              const timeout = setTimeout(() => resolve({ success: false }), 8000)
-              chrome.runtime.sendMessage(
-                VINTED_EXTENSION_ID,
-                {
-                  action: 'fetch_vinted_api',
-                  url: `https://www.vinted.${tld}/api/v2/users/${numericId}`,
-                  method: 'GET',
-                },
-                (r) => {
-                  clearTimeout(timeout)
-                  if (chrome.runtime.lastError) resolve({ success: false })
-                  else resolve(r || { success: false })
-                },
-              )
-            })
-            if (apiResp.success && typeof apiResp.results?.user?.business === 'boolean') {
-              isBusiness = apiResp.results.user.business
-            }
-          } catch {
-            // Non-fatal — leave isBusiness null, server will preserve existing value.
-          }
-        }
-
-        try {
-          const connectRes = await fetch('/api/vinted/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              vintedUsername: response.username,
-              vintedUserId: response.userId || response.username,
-              tld,
-              isBusiness,
-            }),
-          })
-          if (connectRes.ok) {
-            const connectData = await connectRes.json()
-            setVintedUsername(connectData.data?.vintedUsername || response.username)
-            setVintedIsBusiness(Boolean(connectData.data?.isBusiness))
-          } else {
-            setVintedUsername(response.username)
-          }
-        } catch {
-          setVintedUsername(response.username)
-        }
+        setVintedDetected(true)
+        setVintedDetectedInfo({
+          userId: response.userId ?? null,
+          username: response.username,
+          tld: response.tld || 'co.uk',
+        })
       } else {
-        setVintedConnected(false)
+        setVintedDetected(false)
       }
     } catch {
-      // Silently fail
+      setVintedDetected(false)
     }
   }
 
-  const checkEtsySession = async (): Promise<void> => {
+  const detectMarketplaceSession = async (
+    marketplace: 'etsy' | 'facebook' | 'depop',
+    setDetected: (v: boolean) => void,
+    setInfo: (v: SessionInfo) => void,
+  ): Promise<void> => {
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
       const response = await new Promise<{ loggedIn: boolean; userId?: string; username?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'etsy' }, (response) => {
+        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace }, (response) => {
           clearTimeout(timeout)
           if (chrome.runtime.lastError) resolve({ loggedIn: false })
           else resolve(response || { loggedIn: false })
         })
       })
-      setEtsyConnected(response.loggedIn)
       if (response.loggedIn) {
-        await fetch('/api/etsy/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ etsyUserId: response.userId || 'extension', etsyUsername: response.username || 'etsy' }),
-        }).catch(() => {})
+        setDetected(true)
+        setInfo({ userId: response.userId ?? null, username: response.username ?? null })
+      } else {
+        setDetected(false)
       }
     } catch {
-      setEtsyConnected(false)
+      setDetected(false)
     }
   }
 
-  const checkFacebookSession = async (): Promise<void> => {
-    try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
-      const response = await new Promise<{ loggedIn: boolean; userId?: string }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'facebook' }, (response) => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError) resolve({ loggedIn: false })
-          else resolve(response || { loggedIn: false })
-        })
-      })
-      setFacebookConnected(response.loggedIn)
+  // --- Explicit connect handlers (user clicked "Connect") ---
 
-      // Persist connection to DB when logged in with a user ID
-      if (response.loggedIn && response.userId) {
+  const handleVintedConnect = async (): Promise<void> => {
+    setVintedLoading(true)
+    setVintedActionError(null)
+    try {
+      const info = vintedDetectedInfo
+      if (!info.username) {
+        throw new Error('No Vinted session detected. Log in to vinted.co.uk first.')
+      }
+
+      // Best-effort business/Pro account lookup — numeric IDs only.
+      let isBusiness: boolean | null = null
+      const tld = info.tld || 'co.uk'
+      const rawId = String(info.userId ?? info.username ?? '')
+      const numericId = /^\d+$/.test(rawId) ? rawId : null
+      if (numericId && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         try {
-          await fetch('/api/facebook/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ facebookUserId: response.userId }),
+          const apiResp = await new Promise<{ success?: boolean; results?: { user?: { business?: boolean } } }>((resolve) => {
+            const timeout = setTimeout(() => resolve({ success: false }), 8000)
+            chrome.runtime.sendMessage(
+              VINTED_EXTENSION_ID,
+              { action: 'fetch_vinted_api', url: `https://www.vinted.${tld}/api/v2/users/${numericId}`, method: 'GET' },
+              (r) => {
+                clearTimeout(timeout)
+                if (chrome.runtime.lastError) resolve({ success: false })
+                else resolve(r || { success: false })
+              },
+            )
           })
+          if (apiResp.success && typeof apiResp.results?.user?.business === 'boolean') {
+            isBusiness = apiResp.results.user.business
+          }
         } catch {
-          // Non-critical
+          // Non-fatal
         }
       }
-    } catch {
-      setFacebookConnected(false)
+
+      const connectRes = await fetch('/api/vinted/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vintedUsername: info.username,
+          vintedUserId: info.userId || info.username,
+          tld,
+          isBusiness,
+        }),
+      })
+      if (!connectRes.ok) throw new Error('Failed to save Vinted connection')
+      const connectData = await connectRes.json()
+      setVintedConnected(true)
+      setVintedUsername(connectData.data?.vintedUsername || info.username)
+      setVintedIsBusiness(Boolean(connectData.data?.isBusiness))
+      setVintedDetected(false)
+    } catch (err) {
+      setVintedActionError(err instanceof Error ? err.message : 'Failed to connect Vinted')
+    } finally {
+      setVintedLoading(false)
     }
   }
 
-  const checkDepopSession = async (): Promise<void> => {
+  const handleEtsyConnect = async (): Promise<void> => {
+    setEtsyLoading(true)
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
-      const response = await new Promise<{ loggedIn: boolean; userId?: string; username?: string }>((resolve) => {
-        const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
-        chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace: 'depop' }, (response) => {
-          clearTimeout(timeout)
-          if (chrome.runtime.lastError) resolve({ loggedIn: false })
-          else resolve(response || { loggedIn: false })
-        })
+      const info = etsyDetectedInfo
+      if (!info.userId && !info.username) {
+        throw new Error('No Etsy session detected. Log in to etsy.com first.')
+      }
+      const res = await fetch('/api/etsy/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          etsyUserId: info.userId || 'extension',
+          etsyUsername: info.username || 'etsy',
+        }),
       })
-      setDepopConnected(response.loggedIn)
-      if (response.loggedIn && response.userId) {
-        await fetch('/api/depop/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ depopUserId: response.userId, depopUsername: response.username || response.userId }),
-        }).catch(() => {})
+      if (res.ok) {
+        const data = await res.json()
+        setEtsyConnected(true)
+        setEtsyUsername(data.data?.etsyUsername ?? info.username ?? null)
+        setEtsyDetected(false)
+      }
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : 'Failed to connect Etsy')
+    } finally {
+      setEtsyLoading(false)
+    }
+  }
+
+  const handleFacebookConnect = async (): Promise<void> => {
+    setFacebookLoading(true)
+    try {
+      const info = facebookDetectedInfo
+      if (!info.userId) {
+        throw new Error('No Facebook session detected. Log in to facebook.com first.')
+      }
+      const res = await fetch('/api/facebook/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ facebookUserId: info.userId }),
+      })
+      if (res.ok) {
+        setFacebookConnected(true)
+        setFacebookDetected(false)
+      }
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : 'Failed to connect Facebook')
+    } finally {
+      setFacebookLoading(false)
+    }
+  }
+
+  const handleDepopConnect = async (): Promise<void> => {
+    setDepopLoading(true)
+    try {
+      const info = depopDetectedInfo
+      if (!info.userId) {
+        throw new Error('No Depop session detected. Log in to depop.com first.')
+      }
+      const res = await fetch('/api/depop/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          depopUserId: info.userId,
+          depopUsername: info.username || info.userId,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDepopConnected(true)
+        setDepopUsername(data.data?.depopUsername ?? info.username ?? null)
+        setDepopDetected(false)
+      }
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : 'Failed to connect Depop')
+    } finally {
+      setDepopLoading(false)
+    }
+  }
+
+  // --- Disconnect handlers ---
+
+  const makeDisconnect = (
+    platform: string,
+    endpoint: string,
+    setConnected: (v: boolean) => void,
+    setDetected: (v: boolean) => void,
+    setUsername?: (v: string | null) => void,
+  ) => async (): Promise<void> => {
+    const ok = await confirm({
+      title: `Disconnect ${platform}?`,
+      message: 'You can reconnect any time — this only removes the link inside Wrenlist.',
+      confirmLabel: 'Disconnect',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      const res = await fetch(endpoint, { method: 'DELETE' })
+      if (res.ok) {
+        setConnected(false)
+        setDetected(false)
+        if (setUsername) setUsername(null)
+      } else {
+        setPageError(`Failed to disconnect ${platform}`)
       }
     } catch {
-      setDepopConnected(false)
+      setPageError(`Failed to disconnect ${platform}`)
     }
   }
 
-  // Fetch Vinted connection status on mount
+  const handleEtsyDisconnect = makeDisconnect('Etsy', '/api/etsy/connect', setEtsyConnected, setEtsyDetected, setEtsyUsername)
+  const handleFacebookDisconnect = makeDisconnect('Facebook', '/api/facebook/connect', setFacebookConnected, setFacebookDetected)
+  const handleDepopDisconnect = makeDisconnect('Depop', '/api/depop/connect', setDepopConnected, setDepopDetected, setDepopUsername)
+
+  // --- On mount: fetch DB state FIRST, then detect sessions ---
+
   useEffect(() => {
-    const fetchVintedStatus = async () => {
+    // Vinted: DB state + session detect. DB state is authoritative for
+    // "connected"; the session probe only decides whether to show the
+    // "Detected — Connect" affordance or leave it clean.
+    const init = async () => {
       try {
         setVintedLoading(true)
         const response = await fetch('/api/vinted/connect')
         if (response.ok) {
           const data = await response.json()
-          setVintedConnected(data.data.connected)
-          setVintedUsername(data.data.vintedUsername)
-          setVintedIsBusiness(Boolean(data.data.isBusiness))
+          setVintedConnected(Boolean(data.data?.connected))
+          setVintedUsername(data.data?.vintedUsername ?? null)
+          setVintedIsBusiness(Boolean(data.data?.isBusiness))
         }
       } catch {
         // Silently fail
       } finally {
         setVintedLoading(false)
       }
+      void detectVintedSession()
     }
-    fetchVintedStatus()
-    void checkVintedSession()
+    void init()
   }, [])
 
-  // Fetch Shopify connection status on mount
   useEffect(() => {
     const fetchShopifyStatus = async () => {
       try {
         const response = await fetch('/api/shopify/connect')
         if (response.ok) {
           const data = await response.json()
-          setShopifyConnected(data.data.connected)
-          setShopifyName(data.data.shopName)
-          setShopifyDomain(data.data.storeDomain)
+          setShopifyConnected(Boolean(data.data?.connected))
+          setShopifyName(data.data?.shopName ?? null)
+          setShopifyDomain(data.data?.storeDomain ?? null)
         }
       } catch {
         // Silently fail
@@ -264,14 +355,38 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     fetchShopifyStatus()
   }, [])
 
-  // Check Etsy, Facebook, Depop login on mount
   useEffect(() => {
-    setEtsyLoading(true)
-    void checkEtsySession().finally(() => setEtsyLoading(false))
-    setFacebookLoading(true)
-    void checkFacebookSession().finally(() => setFacebookLoading(false))
-    setDepopLoading(true)
-    void checkDepopSession().finally(() => setDepopLoading(false))
+    // Etsy / Facebook / Depop: DB check + separate session detect. Never POST
+    // on mount — a freshly signed up user should see zero platform rows in
+    // the DB until they click Connect.
+    const initMarketplace = async (
+      platform: 'etsy' | 'facebook' | 'depop',
+      setConnected: (v: boolean) => void,
+      setUsername: ((v: string | null) => void) | undefined,
+      setDetected: (v: boolean) => void,
+      setInfo: (v: SessionInfo) => void,
+      setLoading: (v: boolean) => void,
+    ) => {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/${platform}/connect`)
+        if (res.ok) {
+          const data = await res.json()
+          setConnected(Boolean(data.data?.connected))
+          if (setUsername) {
+            const usernameKey = `${platform}Username` as const
+            setUsername(data.data?.[usernameKey] ?? null)
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+      await detectMarketplaceSession(platform, setDetected, setInfo)
+      setLoading(false)
+    }
+    void initMarketplace('etsy', setEtsyConnected, setEtsyUsername, setEtsyDetected, setEtsyDetectedInfo, setEtsyLoading)
+    void initMarketplace('facebook', setFacebookConnected, undefined, setFacebookDetected, setFacebookDetectedInfo, setFacebookLoading)
+    void initMarketplace('depop', setDepopConnected, setDepopUsername, setDepopDetected, setDepopDetectedInfo, setDepopLoading)
   }, [])
 
   // Fetch eBay policies when needed
@@ -432,7 +547,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const handleVintedDisconnect = async (): Promise<void> => {
     const ok = await confirm({
       title: 'Disconnect Vinted?',
-      message: 'You can reconnect anytime by logging in via the extension.',
+      message: 'You can reconnect any time by logging in via the extension.',
       confirmLabel: 'Disconnect',
       tone: 'danger',
     })
@@ -440,7 +555,12 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     setVintedLoading(true)
     try {
       const response = await fetch('/api/vinted/connect', { method: 'DELETE' })
-      if (response.ok) { setVintedConnected(false); setVintedUsername(null); setVintedIsBusiness(false) }
+      if (response.ok) {
+        setVintedConnected(false)
+        setVintedUsername(null)
+        setVintedIsBusiness(false)
+        setVintedDetected(false)
+      }
     } catch {
       setPageError('Failed to disconnect Vinted')
     } finally {
@@ -450,19 +570,22 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
   return {
     // Vinted
-    vintedConnected, vintedUsername, vintedIsBusiness, vintedLoading, vintedSyncLoading,
+    vintedConnected, vintedDetected, vintedUsername, vintedIsBusiness, vintedLoading, vintedSyncLoading,
     vintedSyncResult, vintedActionError,
-    checkVintedSession, handleVintedSync, handleVintedDisconnect,
+    handleVintedConnect, handleVintedSync, handleVintedDisconnect,
     // Shopify
     shopifyConnected, shopifyName, shopifyDomain, shopifyFormOpen, setShopifyFormOpen,
     shopifyFormData, setShopifyFormData, shopifyLoading, shopifyError,
     handleShopifyConnect, handleShopifyDisconnect,
     // Etsy
-    etsyConnected, etsyLoading, setEtsyLoading, checkEtsySession,
+    etsyConnected, etsyDetected, etsyUsername, etsyLoading,
+    handleEtsyConnect, handleEtsyDisconnect,
     // Facebook
-    facebookConnected, facebookLoading, setFacebookLoading, checkFacebookSession,
+    facebookConnected, facebookDetected, facebookLoading,
+    handleFacebookConnect, handleFacebookDisconnect,
     // Depop
-    depopConnected, depopLoading, setDepopLoading, checkDepopSession,
+    depopConnected, depopDetected, depopUsername, depopLoading,
+    handleDepopConnect, handleDepopDisconnect,
     // eBay policies
     ebayPolicies, ebaySelectedPolicies, setEbaySelectedPolicies,
     ebayPoliciesLoading, ebaySetupMessage, policyIsLoading, handleSaveEbayPolicies,

@@ -137,18 +137,19 @@ export function EbayConnect({
     return (
       <div>
         <div className="mb-6">
-          <h3 className="font-medium text-sm text-ink mb-4">Connect your eBay account</h3>
+          <h3 className="font-medium text-sm text-ink mb-2">Connect your eBay account</h3>
+          <p className="text-xs text-ink-lt mb-4">Before you continue, make sure you have:</p>
           <div className="space-y-2 mb-6">
             <div className="flex items-start gap-3">
-              <div className="text-sm text-sage mt-0.5">✓</div>
+              <div className="text-sm text-ink-lt mt-0.5" aria-hidden>◯</div>
               <div className="text-sm text-ink">Active eBay seller account</div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="text-sm text-sage mt-0.5">✓</div>
+              <div className="text-sm text-ink-lt mt-0.5" aria-hidden>◯</div>
               <div className="text-sm text-ink">eBay Managed Payments enabled</div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="text-sm text-sage mt-0.5">✓</div>
+              <div className="text-sm text-ink-lt mt-0.5" aria-hidden>◯</div>
               <div className="text-sm text-ink">At least one shipping policy set up in eBay</div>
             </div>
           </div>

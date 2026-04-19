@@ -46,8 +46,11 @@ interface ShopStats {
 
 interface EtsyConnectProps {
   etsyConnected: boolean
+  etsyDetected: boolean
+  etsyUsername: string | null
   etsyLoading: boolean
-  onCheckConnection: () => void
+  onConnect: () => Promise<void>
+  onDisconnect: () => Promise<void>
 }
 
 function StatCard({ label, value, suffix }: { label: string; value: number | null | undefined; suffix?: string }) {
@@ -71,7 +74,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: EtsyConnectProps) {
+export function EtsyConnect({ etsyConnected, etsyDetected, etsyUsername, etsyLoading, onConnect, onDisconnect }: EtsyConnectProps) {
   const [shopStats, setShopStats] = useState<ShopStats | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -150,15 +153,22 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
             </div>
           </div>
           <div className="text-xs text-ink-lt">
-            {etsyLoading ? 'Checking login...' : etsyConnected
-              ? 'Ready to list your finds on Etsy'
-              : 'Log in to etsy.com, then click Check connection'}
+            {etsyLoading
+              ? 'Checking...'
+              : etsyConnected
+                ? (etsyUsername ? `@${etsyUsername}` : 'Ready to list your finds on Etsy')
+                : etsyDetected
+                  ? 'We detected an active Etsy session in your browser. Click Connect to link it.'
+                  : 'Log in to etsy.com, then click Check connection'}
           </div>
         </div>
-        <Badge status={etsyConnected ? 'listed' : 'draft'} label={etsyConnected ? 'connected' : 'not connected'} />
+        <Badge
+          status={etsyConnected ? 'listed' : etsyDetected ? 'on_hold' : 'draft'}
+          label={etsyConnected ? 'connected' : etsyDetected ? 'session detected' : 'not connected'}
+        />
       </div>
 
-      {!etsyConnected && (
+      {!etsyConnected && !etsyDetected && (
         <div className="flex gap-2">
           <a
             href="https://www.etsy.com/signin"
@@ -169,11 +179,23 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
             Log in to Etsy →
           </a>
           <button
-            onClick={onCheckConnection}
+            onClick={onConnect}
             disabled={etsyLoading}
             className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
           >
             {etsyLoading ? 'Checking...' : 'Check connection'}
+          </button>
+        </div>
+      )}
+
+      {!etsyConnected && etsyDetected && (
+        <div className="flex gap-2">
+          <button
+            onClick={onConnect}
+            disabled={etsyLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+          >
+            {etsyLoading ? 'Connecting…' : 'Connect Etsy'}
           </button>
         </div>
       )}
@@ -262,6 +284,14 @@ export function EtsyConnect({ etsyConnected, etsyLoading, onCheckConnection }: E
             {shopStats?.updatedAt && (
               <span className="text-[10px] text-ink-lt">Updated {timeAgo(shopStats.updatedAt)}</span>
             )}
+            <div className="flex-1" />
+            <button
+              onClick={onDisconnect}
+              disabled={etsyLoading}
+              className="px-3 py-1.5 text-xs font-medium text-red border border-border rounded hover:bg-red hover:bg-opacity-5 transition disabled:opacity-50"
+            >
+              Disconnect
+            </button>
           </div>
 
           {/* Info text */}

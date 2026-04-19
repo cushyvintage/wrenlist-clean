@@ -77,6 +77,22 @@ export async function middleware(req: NextRequest) {
 
   const isPublicRoute = PUBLIC_ROUTES.some((route) => matchesPrefix(pathname, route))
 
+  // Auth pages live on app.wrenlist.com. If an unauthenticated visitor lands
+  // on an auth route via the marketing domain (wrenlist.com/register,
+  // /login, etc.) redirect to the app subdomain so there's one canonical
+  // URL per flow. Keeps analytics, cookies and password manager entries
+  // consolidated on one host.
+  if (
+    isMarketingDomain &&
+    !session &&
+    AUTH_PAGE_PREFIXES.some((route) => matchesPrefix(pathname, route))
+  ) {
+    const appUrl = new URL(pathname + req.nextUrl.search, req.url)
+    appUrl.hostname = APP_SUBDOMAIN
+    appUrl.port = ''
+    return NextResponse.redirect(appUrl)
+  }
+
   if (!session && !isPublicRoute) {
     const loginUrl = new URL('/login', req.url)
     return NextResponse.redirect(loginUrl)

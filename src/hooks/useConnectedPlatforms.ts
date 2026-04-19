@@ -184,38 +184,48 @@ async function checkShopify(): Promise<ConnectedPlatform | null> {
 }
 
 async function checkVintedViaExtension(): Promise<ConnectedPlatform | null> {
+  // DB is authoritative — a Vinted cookie alone doesn't mean the user has
+  // linked their account to Wrenlist. Match the Etsy/Facebook/Depop rule.
   try {
-    const r = await sendExtensionMessage({ action: 'get_vinted_session' })
-    if (!r?.loggedIn) return null
+    const res = await fetch('/api/vinted/connect')
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data.data?.connected) return null
 
-    const extensionUsername = r.username || undefined
+    // Best-effort: probe the extension so "logged out on this device" can
+    // flip this to disconnected for the session. DB truth still wins for
+    // the Connected state itself.
+    const session = await sendExtensionMessage({ action: 'get_vinted_session' })
+    if (!session?.loggedIn) return null
 
-    // Try to get resolved display name + business flag from DB
-    try {
-      const res = await fetch('/api/vinted/connect')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.data?.connected && data.data?.vintedUsername) {
-          return {
-            platform: 'vinted',
-            username: data.data.vintedUsername,
-            isBusiness: Boolean(data.data.isBusiness),
-          }
-        }
-      }
-    } catch { /* fall through to extension username */ }
-
-    return { platform: 'vinted', username: extensionUsername }
+    return {
+      platform: 'vinted',
+      username: data.data?.vintedUsername || session.username || undefined,
+      isBusiness: Boolean(data.data?.isBusiness),
+    }
   } catch {
     return null
   }
 }
 
 async function checkExtensionPlatform(marketplace: Platform): Promise<ConnectedPlatform | null> {
+  // Connection is authoritative in the DB. The extension-session probe gates
+  // whether the user can currently list/import (cookie must be live), but
+  // "are they Connected to Wrenlist?" is a DB question. We must not light
+  // this up as Connected just because Chrome happens to hold a cookie —
+  // see the silent-auto-connection fix in usePlatformConnections.ts.
   try {
-    const r = await sendExtensionMessage({ action: 'check_marketplace_login', marketplace })
-    if (!r?.loggedIn) return null
-    return { platform: marketplace }
+    const res = await fetch(`/api/${marketplace}/connect`)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.data?.connected !== true) return null
+
+    const session = await sendExtensionMessage({ action: 'check_marketplace_login', marketplace })
+    if (!session?.loggedIn) return null
+
+    const usernameField = `${marketplace}Username` as const
+    const username = (data.data?.[usernameField] as string | undefined) ?? session.username
+    return { platform: marketplace, username: username || undefined }
   } catch {
     return null
   }

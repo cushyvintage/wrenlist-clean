@@ -29,6 +29,7 @@ interface VintedShopStats {
 
 interface VintedConnectProps {
   vintedConnected: boolean
+  vintedDetected: boolean
   vintedUsername: string | null
   vintedIsBusiness?: boolean
   vintedLoading: boolean
@@ -38,6 +39,7 @@ interface VintedConnectProps {
   extensionDetected: boolean | null
   isMobileOrNonChrome: boolean
   showDebug: boolean
+  onConnect: () => Promise<void>
   onVintedSync: () => void
   onDisconnect: () => void
 }
@@ -65,6 +67,7 @@ function timeAgo(dateStr: string): string {
 
 export function VintedConnect({
   vintedConnected,
+  vintedDetected,
   vintedUsername,
   vintedIsBusiness = false,
   vintedLoading,
@@ -74,6 +77,7 @@ export function VintedConnect({
   extensionDetected,
   isMobileOrNonChrome,
   showDebug,
+  onConnect,
   onVintedSync,
   onDisconnect,
 }: VintedConnectProps) {
@@ -179,13 +183,13 @@ export function VintedConnect({
           </div>
           <div className="flex-1">
             <div className="font-medium text-sm text-ink">Vinted</div>
-            <div className="text-xs text-ink-lt">Automatic via extension</div>
+            <div className="text-xs text-ink-lt">
+              {vintedDetected
+                ? 'We detected an active Vinted session in your browser. Click Connect to link it.'
+                : 'Log in to vinted.co.uk via the Wrenlist extension.'}
+            </div>
           </div>
         </div>
-
-        <p className="text-sm text-ink mb-4">
-          Vinted connects automatically via the Wrenlist extension. Simply log in to <strong>vinted.co.uk</strong> in your browser and Wrenlist will detect your account.
-        </p>
 
         <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
           <div className="text-sm text-amber">&#x26A0;</div>
@@ -197,15 +201,30 @@ export function VintedConnect({
           </div>
         </div>
 
-        <p className="text-xs text-ink-lt text-center">
-          {vintedLoading || extensionDetected === null
-            ? 'Checking status...'
-            : extensionDetected
-              ? 'Extension detected \u2713'
-              : isMobileOrNonChrome
-                ? 'Extension offline \u2014 open Chrome on your desktop to connect'
-                : 'Extension not detected. Install it to continue.'}
-        </p>
+        {vintedDetected ? (
+          <button
+            onClick={onConnect}
+            disabled={vintedLoading}
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-sage rounded hover:bg-sage-dk transition disabled:opacity-50"
+          >
+            {vintedLoading ? 'Connecting…' : 'Connect Vinted'}
+          </button>
+        ) : (
+          <p className="text-xs text-ink-lt text-center">
+            {vintedLoading || extensionDetected === null
+              ? 'Checking status...'
+              : extensionDetected
+                ? 'Extension detected — log in to Vinted to continue'
+                : isMobileOrNonChrome
+                  ? 'Extension offline — open Chrome on your desktop to connect'
+                  : 'Extension not detected. Install it to continue.'}
+          </p>
+        )}
+        {vintedActionError && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+            {vintedActionError}
+          </div>
+        )}
       </div>
     )
   }
