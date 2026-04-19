@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabase'
 import { trackEvent } from '@/lib/plausible'
 
 export default function RegisterPage() {
+  // Updated UX with clearer password requirements and billing info
   const router = useRouter()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
