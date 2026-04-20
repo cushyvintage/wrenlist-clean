@@ -451,11 +451,19 @@ export class DepopClient {
 
     const desc = typeof product.description === "string" ? product.description.trim() : "";
     if (desc) {
-      const firstLine = desc.split(/\r?\n/)[0].trim();
-      const sentence = firstLine.split(/[.!?]/)[0].trim();
-      const candidate = sentence || firstLine;
-      if (candidate) {
-        return candidate.length > 80 ? candidate.slice(0, 77) + "..." : candidate;
+      // Many sellers start descriptions with labels like "Condition:" or
+      // "Size:" on their own line. Drop short colon-terminated label lines
+      // and take the first line that actually looks like content.
+      const lines: string[] = desc
+        .split(/\r?\n/)
+        .map((l: string) => l.trim())
+        .filter(Boolean);
+      const isLabel = (l: string) => l.length <= 20 && /:$/.test(l);
+      const content = lines.find((l: string) => !isLabel(l)) ?? lines[0];
+      if (content) {
+        // First sentence (or clause) — cap at 80 chars with ellipsis.
+        const sentence = content.split(/[.!?]/)[0].trim() || content;
+        return sentence.length > 80 ? sentence.slice(0, 77) + "..." : sentence;
       }
     }
 
