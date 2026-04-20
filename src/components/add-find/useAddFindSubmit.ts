@@ -139,6 +139,15 @@ export function useAddFindSubmit(deps: SubmitDeps) {
   }
 
   const handleSaveDraft = async () => {
+    // Minimum draft requirement is a title — the API schema also enforces
+    // this, but when it trips, the 400 comes back as a validation error the
+    // user has to read. A fast client-side check gives clearer feedback and
+    // removes the "clicked Save draft, nothing happened" silent-fail UX
+    // found during stress testing.
+    if (!formData.title.trim()) {
+      setError('Add a title to save as draft.')
+      return
+    }
     setIsLoading(true)
     setError(null)
     setUploadProgress(0)

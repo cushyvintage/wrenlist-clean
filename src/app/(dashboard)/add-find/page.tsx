@@ -289,7 +289,8 @@ export default function AddFindPage() {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleSaveDraft}
-              disabled={form.isLoading}
+              disabled={form.isLoading || !form.formData.title.trim()}
+              title={!form.formData.title.trim() ? 'Add a title first' : undefined}
               className="flex-1 sm:flex-none px-4 py-2 text-sm border border-sage/14 rounded hover:bg-cream-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.isLoading ? 'Saving...' : 'Save draft'}
