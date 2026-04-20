@@ -19,7 +19,11 @@ const DELETE_REASONS = [
   'Other',
 ] as const
 
-type SettingsTab = 'account' | 'workspace' | 'integrations' | 'ai' | 'billing' | 'legal'
+// Integrations moved out of Settings entirely — /platform-connect is the
+// canonical page for marketplace connections (it has the eBay policy picker,
+// Vinted/Depop stats, disconnect buttons, etc.). Keep Settings focused on
+// profile/workspace/billing/legal. Old ?tab=integrations links redirect.
+type SettingsTab = 'account' | 'workspace' | 'ai' | 'billing' | 'legal'
 
 /** Center-crop to square + downscale to maxSize, output JPEG at given quality. */
 async function resizeImageToJpeg(file: File, maxSize: number, quality: number): Promise<File> {
@@ -64,13 +68,6 @@ interface WorkspaceData {
   address: string
 }
 
-interface PlatformConnection {
-  platform: string
-  status: 'connected' | 'not_connected' | 'error'
-  accountName?: string
-  lastSync?: string | null
-}
-
 interface ProfileResponse {
   full_name?: string
   plan?: string
@@ -90,7 +87,7 @@ interface AuthResponse {
   }
 }
 
-const VALID_TABS = ['account', 'workspace', 'integrations', 'ai', 'billing', 'legal'] as const
+const VALID_TABS = ['account', 'workspace', 'ai', 'billing', 'legal'] as const
 function isValidTab(v: string | null): v is SettingsTab {
   return v !== null && (VALID_TABS as readonly string[]).includes(v)
 }
@@ -99,11 +96,18 @@ export default function SettingsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user: authUser } = useAuthContext()
-  // Deep-link via ?tab=integrations etc. Falls back to 'account' if the
+  // Deep-link via ?tab=workspace etc. Falls back to 'account' if the
   // param is missing or unknown. The tab buttons also mutate the URL so
   // copy/paste shares the current tab.
   const initialTab = isValidTab(searchParams.get('tab')) ? (searchParams.get('tab') as SettingsTab) : 'account'
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
+
+  // Legacy /settings?tab=integrations links forward to the canonical page.
+  useEffect(() => {
+    if (searchParams.get('tab') === 'integrations') {
+      router.replace('/platform-connect')
+    }
+  }, [searchParams, router])
 
   // Keep state in sync with back/forward navigation
   useEffect(() => {
@@ -204,72 +208,6 @@ export default function SettingsPage() {
   const [workspaceSaveError, setWorkspaceSaveError] = useState<string | null>(null)
   const [isSavingWorkspace, setIsSavingWorkspace] = useState(false)
 
-  const [platforms, setPlatforms] = useState<PlatformConnection[]>([])
-  const [isLoadingPlatforms, setIsLoadingPlatforms] = useState(true)
-
-  // Load real platform connection statuses from single endpoint
-  useEffect(() => {
-    const loadPlatforms = async () => {
-      try {
-        interface PlatformEntry {
-          connected: boolean
-          username?: string | null
-          shopName?: string | null
-          lastSync?: string | null
-        }
-        interface PlatformStatus {
-          platforms: {
-            vinted: PlatformEntry
-            ebay: PlatformEntry
-            shopify: PlatformEntry
-            depop: PlatformEntry
-            etsy: PlatformEntry
-          }
-        }
-        const data = await fetchApi<PlatformStatus>('/api/platforms/status')
-        const p = data.platforms
-
-        setPlatforms([
-          {
-            platform: 'Vinted',
-            status: p.vinted.connected ? 'connected' : 'not_connected',
-            accountName: p.vinted.username || undefined,
-            lastSync: p.vinted.lastSync,
-          },
-          {
-            platform: 'eBay',
-            status: p.ebay.connected ? 'connected' : 'not_connected',
-            accountName: p.ebay.username || undefined,
-            lastSync: p.ebay.lastSync,
-          },
-          {
-            platform: 'Depop',
-            status: p.depop.connected ? 'connected' : 'not_connected',
-            accountName: p.depop.username || undefined,
-            lastSync: p.depop.lastSync,
-          },
-          {
-            platform: 'Shopify',
-            status: p.shopify.connected ? 'connected' : 'not_connected',
-            accountName: p.shopify.shopName || undefined,
-            lastSync: p.shopify.lastSync,
-          },
-          {
-            platform: 'Etsy',
-            status: p.etsy.connected ? 'connected' : 'not_connected',
-            accountName: p.etsy.username || undefined,
-            lastSync: p.etsy.lastSync,
-          },
-        ])
-      } catch (error) {
-        console.error('Failed to load platforms:', error)
-      } finally {
-        setIsLoadingPlatforms(false)
-      }
-    }
-    loadPlatforms()
-  }, [])
-
   const handleSaveWorkspaceChanges = async () => {
     try {
       setIsSavingWorkspace(true)
@@ -344,18 +282,6 @@ export default function SettingsPage() {
     }
   }
 
-  const formatLastSync = (dateString?: string | null) => {
-    if (!dateString) return '—'
-    const date = new Date(dateString)
-    const diffMinutes = Math.floor((Date.now() - date.getTime()) / 60000)
-    if (diffMinutes < 1) return 'Just now'
-    if (diffMinutes < 60) return `${diffMinutes}m ago`
-    const diffHours = Math.floor(diffMinutes / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
-    const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
-  }
-
   const handleDataExport = () => {
     window.location.href =
       'mailto:support@wrenlist.com?subject=GDPR%20Data%20Export%20Request&body=Please%20send%20me%20a%20copy%20of%20all%20data%20you%20hold%20for%20my%20account.'
@@ -424,7 +350,7 @@ export default function SettingsPage() {
       {/* Sidebar Navigation */}
       <div className="w-48 flex-shrink-0">
         <nav className="space-y-2">
-          {(['account', 'workspace', 'integrations', 'ai', 'billing', 'legal'] as const).map(
+          {(['account', 'workspace', 'ai', 'billing', 'legal'] as const).map(
             (tab) => (
               <button
                 key={tab}
@@ -678,98 +604,6 @@ export default function SettingsPage() {
                 {isSavingWorkspace ? 'Saving...' : 'Save changes'}
               </Button>
             </div>
-          </div>
-        )}
-
-        {/* Integrations Section */}
-        {activeTab === 'integrations' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="font-serif text-xl italic text-ink mb-1">
-                Platform Connections
-              </h2>
-              <p className="text-sm text-ink-lt">
-                Connect and sync your marketplace accounts
-              </p>
-            </div>
-
-            {isLoadingPlatforms && (
-              <p className="text-sm text-sage-dim">Loading connections…</p>
-            )}
-
-            {/* Platform List */}
-            <div className="space-y-4">
-              {platforms.map((platform, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white border border-sage/14 rounded-md p-5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-ink text-sm mb-1">
-                        {platform.platform}
-                      </h3>
-                      {platform.status === 'connected' ? (
-                        <div className="space-y-1 text-xs text-ink-lt">
-                          <p>
-                            Account:{' '}
-                            <span className="font-mono text-ink">
-                              {platform.accountName
-                                ? /^\d+$/.test(platform.accountName)
-                                  ? `User №${platform.accountName}`
-                                  : platform.accountName
-                                : '—'}
-                            </span>
-                            {platform.accountName && /^\d+$/.test(platform.accountName) && platform.platform === 'Vinted' && (
-                              <span className="ml-1 text-[10px] text-sage-dim">
-                                (Vinted hides public usernames from its API)
-                              </span>
-                            )}
-                          </p>
-                          <p>
-                            Last sync:{' '}
-                            <span className="text-sage-dim">
-                              {formatLastSync(platform.lastSync)}
-                            </span>
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-sage-dim">
-                          Not connected
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Button
-                        variant={platform.status === 'connected' ? 'ghost' : 'primary'}
-                        size="sm"
-                        onClick={() => router.push('/platform-connect')}
-                        className={
-                          platform.status === 'connected'
-                            ? 'border-sage/22 bg-cream-md text-ink-lt hover:bg-cream'
-                            : undefined
-                        }
-                      >
-                        {platform.status === 'connected' ? 'Manage' : 'Connect'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-xs text-sage-dim">
-              Connecting, disconnecting, and syncing are all handled on the{' '}
-              <button
-                type="button"
-                onClick={() => router.push('/platform-connect')}
-                className="underline hover:text-sage"
-              >
-                platform connections page
-              </button>
-              .
-            </p>
           </div>
         )}
 
