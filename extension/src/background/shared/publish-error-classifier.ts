@@ -47,19 +47,33 @@ interface ClassifierInput {
 export function classifyVintedError(input: ClassifierInput): PublishErrorContext {
   const { httpStatus, needsLogin, captchaUrl, message, internalErrors } = input;
 
-  // Try to unwrap whatever structure internalErrors holds. Vinted returns
-  // either a flat error envelope or nests the real body as a stringified JSON
-  // inside errors[].value (we've seen both).
+  // Unwrap up to three layers:
+  //   layer 0: internalErrors (string or object — the publisher's envelope)
+  //   layer 1: root — the client's { code: "post_failed", errors: [{value: "..."}] }
+  //   layer 2: inner — the actual Vinted response parsed out of errors[0].value
+  // The real field-level validation lives at layer 2, so we must descend.
   const root = unwrap(internalErrors);
-  const innerErrors = Array.isArray(root?.errors) ? root.errors : [];
-  const firstInner = innerErrors.length > 0 ? unwrap(firstInnerValue(innerErrors[0])) : null;
-  const combinedCode = root?.code ?? firstInner?.code ?? root?.message_code ?? firstInner?.message_code;
-  const combinedMsg = firstInner?.message ?? root?.message ?? message;
+  const wrapperErrors = Array.isArray(root?.errors) ? root.errors : [];
+  const inner = wrapperErrors.length > 0
+    ? unwrap(firstInnerValue(wrapperErrors[0]))
+    : null;
+
+  // Prefer the inner body for real error signals; root is usually a wrapper
+  // like { code: "post_failed" } which tells us nothing useful.
+  const signal = inner ?? root;
+  const combinedCode = signal?.code ?? signal?.message_code ?? root?.code ?? root?.message_code;
+  const combinedMsg = signal?.message ?? root?.message ?? message;
+
+  // The wrapper often stashes the HTTP status in its message, e.g.
+  // "Listing request failed: 400". Parse it so the 4xx/5xx branches can
+  // fire even when callers don't pass httpStatus explicitly.
+  const statusMatch = String(root?.message ?? message ?? "").match(/\b(4\d\d|5\d\d)\b/);
+  const effectiveStatus = httpStatus ?? (statusMatch ? Number(statusMatch[1]) : undefined);
 
   // --- auth ---
   if (
     needsLogin ||
-    httpStatus === 401 ||
+    effectiveStatus === 401 ||
     combinedCode === 100 ||
     combinedCode === "100" ||
     combinedCode === "invalid_authentication_token"
@@ -71,18 +85,30 @@ export function classifyVintedError(input: ClassifierInput): PublishErrorContext
   }
 
   // --- captcha ---
-  if (captchaUrl || /captcha/i.test(String(root?.url ?? "")) || /captcha/i.test(String(message ?? ""))) {
-    const url = captchaUrl ?? String(root?.url ?? "") ?? extractCaptchaUrl(String(message ?? ""));
+  const captchaFromSignal = typeof signal?.url === "string" ? signal.url : "";
+  const captchaFromRoot = typeof root?.url === "string" ? root.url : "";
+  if (
+    captchaUrl ||
+    /captcha/i.test(captchaFromSignal) ||
+    /captcha/i.test(captchaFromRoot) ||
+    /captcha/i.test(String(message ?? ""))
+  ) {
+    const url =
+      captchaUrl ||
+      (captchaFromSignal && captchaFromSignal.includes("captcha") ? captchaFromSignal : "") ||
+      (captchaFromRoot && captchaFromRoot.includes("captcha") ? captchaFromRoot : "") ||
+      extractCaptchaUrl(String(message ?? "")) ||
+      undefined;
     return {
       code: "captcha_required",
       summary:
         "Vinted is asking you to complete a captcha before we can list for you. Click the button below to complete it, then come back and we'll retry.",
-      actionUrl: url || undefined,
+      actionUrl: url,
     };
   }
 
   // --- rate limit ---
-  if (httpStatus === 429) {
+  if (effectiveStatus === 429) {
     return {
       code: "rate_limited",
       summary: "Vinted is throttling listings for this account. Pause briefly and retry in a few minutes.",
@@ -90,8 +116,18 @@ export function classifyVintedError(input: ClassifierInput): PublishErrorContext
   }
 
   // --- validation (400 with errors[{field, value}]) ---
-  const validationFields = extractValidationFields(root) ?? extractValidationFields(firstInner);
-  if (validationFields.length > 0 || combinedCode === 99 || combinedCode === "validation_error") {
+  // Try both signal (the actual Vinted body) and root in case the shape is
+  // flat rather than nested.
+  const validationFields = [
+    ...extractValidationFields(signal),
+    ...(signal !== root ? extractValidationFields(root) : []),
+  ];
+  const isValidation =
+    validationFields.length > 0 ||
+    combinedCode === 99 ||
+    combinedCode === "99" ||
+    combinedCode === "validation_error";
+  if (isValidation) {
     const photoIssue = validationFields.find((f) => f.field === "photos");
     if (photoIssue) {
       return {
@@ -108,7 +144,7 @@ export function classifyVintedError(input: ClassifierInput): PublishErrorContext
 
   // --- server error ---
   if (
-    (typeof httpStatus === "number" && httpStatus >= 500) ||
+    (typeof effectiveStatus === "number" && effectiveStatus >= 500) ||
     combinedCode === 105 ||
     combinedCode === "server_error" ||
     /server error/i.test(String(combinedMsg ?? ""))
