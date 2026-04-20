@@ -640,10 +640,10 @@ function InventoryPageContent() {
                   borderColor: 'rgba(61,92,58,.14)',
                   color: '#6B7D6A',
                 }}
-                title="Open beta \u2014 all plan limits are lifted until the beta ends"
+                title="Open beta — all plan limits are lifted until the beta ends"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-sage" />
-                <span>Beta \u00b7 unlimited</span>
+                <span>Beta · unlimited</span>
               </div>
             )}
             <button

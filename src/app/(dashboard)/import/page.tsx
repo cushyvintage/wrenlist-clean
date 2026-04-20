@@ -1128,7 +1128,7 @@ export default function ImportPage() {
   }
 
   async function handleEbayImport() {
-    const skus = items
+    const skus = filteredItems
       .filter((i) => i.checked && !i.alreadyImported)
       .map((i) => i.id)
 
@@ -1209,7 +1209,7 @@ export default function ImportPage() {
       return
     }
 
-    const selectedIds = items
+    const selectedIds = filteredItems
       .filter((i) => i.checked && !i.alreadyImported)
       .map((i) => i.id)
 

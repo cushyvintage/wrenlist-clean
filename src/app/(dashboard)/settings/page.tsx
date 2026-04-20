@@ -716,7 +716,7 @@ export default function SettingsPage() {
                             <span className="font-mono text-ink">
                               {platform.accountName
                                 ? /^\d+$/.test(platform.accountName)
-                                  ? `User \u2116${platform.accountName}`
+                                  ? `User №${platform.accountName}`
                                   : platform.accountName
                                 : '—'}
                             </span>
