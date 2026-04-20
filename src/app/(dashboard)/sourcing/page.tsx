@@ -420,7 +420,9 @@ export default function SourcingPage() {
                     </div>
                     <div className="text-xs text-ink-lt space-y-1">
                       {trip.location && <p>{trip.location}</p>}
-                      {getSupplierName(trip.supplier_id) && <p>Supplier: {getSupplierName(trip.supplier_id)}</p>}
+                      {/* Supplier link was a nullable FK on sourcing_trips that's been
+                          dropped from the schema. UI can come back once the join table
+                          is in place; for now we just render location. */}
                     </div>
                   </div>
                   <span className="text-xs text-ink-lt whitespace-nowrap">{formatDate(trip.date)}</span>

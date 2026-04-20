@@ -88,13 +88,19 @@ export const POST = withAuth(async (req, user) => {
     const supabase = await createSupabaseServerClient()
     const body = await req.json()
 
-    const { name, type, location, date, miles, entry_fee_gbp, notes, supplier_id } = body
+    const { name, type, location, date, miles, entry_fee_gbp, notes } = body
 
     // Validate required fields
     if (!name || !type || !date) {
       return ApiResponseHelper.badRequest('Missing required fields: name, type, date')
     }
 
+    // NOTE: supplier_id used to be a column on sourcing_trips but was
+    // removed at some point without updating this handler. Writing it
+    // caused every POST to 500 with "column does not exist". The client
+    // still sends supplier_id in the form body — we just ignore it here.
+    // If supplier tracking comes back it should live on `suppliers` via a
+    // trip → supplier pivot, not a nullable FK on the trip itself.
     const trip = {
       user_id: user.id,
       name,
@@ -104,7 +110,6 @@ export const POST = withAuth(async (req, user) => {
       miles: miles ? parseFloat(miles) : null,
       entry_fee_gbp: entry_fee_gbp ? parseFloat(entry_fee_gbp) : null,
       notes: notes || null,
-      supplier_id: supplier_id || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
