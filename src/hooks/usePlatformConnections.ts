@@ -149,14 +149,21 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         throw new Error('No Vinted session detected. Log in to vinted.co.uk first.')
       }
 
-      // Best-effort business/Pro account lookup — numeric IDs only.
+      // Resolve display name + business flag via the authenticated user
+      // detail endpoint. Vinted's public user API 401s without cookies, but
+      // the extension has them — `fetch_vinted_api` proxies the call. The
+      // response's `user.login` is the display name (e.g. "cushyvintage")
+      // while `user.business` flags Pro accounts. Only the session probe
+      // returns a numeric id for brand-new connects, so we *must* do this
+      // lookup to avoid storing "User №67094636" as the username.
       let isBusiness: boolean | null = null
+      let resolvedLogin: string | null = null
       const tld = info.tld || 'co.uk'
       const rawId = String(info.userId ?? info.username ?? '')
       const numericId = /^\d+$/.test(rawId) ? rawId : null
       if (numericId && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         try {
-          const apiResp = await new Promise<{ success?: boolean; results?: { user?: { business?: boolean } } }>((resolve) => {
+          const apiResp = await new Promise<{ success?: boolean; results?: { user?: { login?: string; business?: boolean } } }>((resolve) => {
             const timeout = setTimeout(() => resolve({ success: false }), 8000)
             chrome.runtime.sendMessage(
               VINTED_EXTENSION_ID,
@@ -168,8 +175,13 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
               },
             )
           })
-          if (apiResp.success && typeof apiResp.results?.user?.business === 'boolean') {
-            isBusiness = apiResp.results.user.business
+          if (apiResp.success) {
+            if (typeof apiResp.results?.user?.business === 'boolean') {
+              isBusiness = apiResp.results.user.business
+            }
+            if (apiResp.results?.user?.login && !/^\d+$/.test(apiResp.results.user.login)) {
+              resolvedLogin = apiResp.results.user.login
+            }
           }
         } catch {
           // Non-fatal
@@ -180,7 +192,11 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vintedUsername: info.username,
+          // Prefer the resolved login; fall back to whatever the session
+          // probe returned (may be the numeric id). The server already
+          // refuses to overwrite a previously-stored name with a numeric
+          // value — see /api/vinted/connect POST.
+          vintedUsername: resolvedLogin ?? info.username,
           vintedUserId: info.userId || info.username,
           tld,
           isBusiness,
