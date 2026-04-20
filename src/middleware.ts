@@ -164,6 +164,23 @@ export async function middleware(req: NextRequest) {
                 path: '/',
                 maxAge: 60 * 60 * 24 * 30, // 30 days
               })
+            } else {
+              // No profile row for this session → auth.users was deleted
+              // (profile FK cascades, so absence of profile means absence of
+              // user). Cookie is still JWT-valid so getSession() didn't flag
+              // it, but rendering any authenticated page would show a
+              // zombie "Good morning, There / User" state. Force sign-out.
+              const loginUrl = new URL('/login', req.url)
+              const redirect = NextResponse.redirect(loginUrl)
+              if (cachedUserId) redirect.cookies.delete('wl_onboarded')
+              // Clear every Supabase auth cookie — their names include the
+              // project ref so we match by prefix.
+              for (const c of req.cookies.getAll()) {
+                if (c.name.startsWith('sb-') && c.name.includes('auth')) {
+                  redirect.cookies.delete(c.name)
+                }
+              }
+              return redirect
             }
           }
         }
