@@ -136,9 +136,16 @@ export function MarketplaceStatusPanel({
                 )}
               </div>
             </div>
-            {md.status === 'error' && md.error_message && (
-              <p className="text-xs mt-1 px-2 py-1 rounded" style={{ color: '#DC2626', backgroundColor: 'rgba(220,38,38,.06)' }}>
-                {friendlyError(md.marketplace, md.error_message)}
+            {(md.status === 'error' || md.status === 'needs_publish') && md.error_message && (
+              <p
+                className="text-xs mt-1 px-2 py-1 rounded"
+                style={
+                  md.status === 'error'
+                    ? { color: '#DC2626', backgroundColor: 'rgba(220,38,38,.06)' }
+                    : { color: '#B45309', backgroundColor: 'rgba(245,158,11,.08)' }
+                }
+              >
+                {md.status === 'needs_publish' && 'Retrying — '}{friendlyError(md.marketplace, md.error_message)}
               </p>
             )}
           </div>

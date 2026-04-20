@@ -175,7 +175,12 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     updateData.last_synced_at = new Date().toISOString()
   }
 
-  if (targetStatus === 'error' && errorMessage) {
+  // Always persist the error message when we have one, even for
+  // intermediate 'needs_publish' (retry) states. Before, errors were
+  // only stored on the terminal 'error' status — so a user whose first
+  // publish attempt failed saw a silent 'pending' row with no clue
+  // what went wrong until retries were exhausted.
+  if (errorMessage && (targetStatus === 'error' || targetStatus === 'needs_publish')) {
     updateData.error_message = errorMessage
   }
 
@@ -206,27 +211,57 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   })
 
   // Sync publish_jobs table — the extension still uses this old endpoint but
-  // the Jobs page reads from publish_jobs. Mark matching pending/running publish
-  // jobs as completed or failed so the UI stays in sync.
-  const jobStatus = (targetStatus === 'listed' || targetStatus === 'draft') ? 'completed' : targetStatus === 'error' ? 'failed' : null
-  if (jobStatus) {
-    const now = new Date().toISOString()
+  // the Jobs page reads from publish_jobs. Update the matching pending job:
+  //   listed/draft → status=completed
+  //   error        → status=failed (retries exhausted)
+  //   needs_publish → leave status=pending but bump attempts + record the
+  //                   latest error so the Jobs page doesn't look frozen.
+  const terminalStatus = (targetStatus === 'listed' || targetStatus === 'draft')
+    ? 'completed'
+    : targetStatus === 'error' ? 'failed' : null
+  const now = new Date().toISOString()
+
+  if (terminalStatus) {
     await supabaseAdmin
       .from('publish_jobs')
       .update({
-        status: jobStatus,
+        status: terminalStatus,
         completed_at: now,
         updated_at: now,
-        ...(jobStatus === 'completed' ? {
+        ...(terminalStatus === 'completed' ? {
           result: { platform_listing_id, platform_listing_url, status: targetStatus },
         } : {}),
-        ...(jobStatus === 'failed' && errorMessage ? { error_message: errorMessage } : {}),
+        ...(terminalStatus === 'failed' && errorMessage ? { error_message: errorMessage } : {}),
       })
       .eq('find_id', findId)
       .eq('platform', marketplace)
       .eq('action', 'publish')
       .eq('user_id', user.id)
       .in('status', ['pending', 'claimed', 'running'])
+  } else if (targetStatus === 'needs_publish') {
+    // Retry in flight — bump attempts via a read-increment-write. RPC would
+    // be atomic but the job row is per-user and per-find so there's no
+    // real concurrency risk.
+    const { data: jobRow } = await supabaseAdmin
+      .from('publish_jobs')
+      .select('id, attempts')
+      .eq('find_id', findId)
+      .eq('platform', marketplace)
+      .eq('action', 'publish')
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'claimed', 'running'])
+      .maybeSingle()
+
+    if (jobRow) {
+      await supabaseAdmin
+        .from('publish_jobs')
+        .update({
+          attempts: (jobRow.attempts ?? 0) + 1,
+          updated_at: now,
+          ...(errorMessage ? { error_message: errorMessage } : {}),
+        })
+        .eq('id', jobRow.id)
+    }
   }
 
   // Fire-and-forget: log publish outcome for category feedback loop

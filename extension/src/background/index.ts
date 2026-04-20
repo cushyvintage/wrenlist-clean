@@ -1504,10 +1504,40 @@ type ExternalMessage = Record<string, unknown>;
             } else {
               // Publish failed — check if we should retry or mark as error
               const nextRetryCount = retryCount + 1;
-              // Include full error details (e.g. Vinted validation errors) in the message
-              const errorDetail = (result as any).errors ? JSON.stringify((result as any).errors) : '';
+              // Format a human-readable error message. Vinted returns validation
+              // errors as [{ value: "<stringified JSON>" }] where the inner JSON
+              // has its own errors[] of { field, value } pairs — raw stringify
+              // produced a wall of escaped quotes in the UI. Try to parse it
+              // into "field: message; field: message" form, fall back to the
+              // raw detail if the shape is unfamiliar.
+              const rawErrors = (result as unknown as { errors?: Array<{ value?: string } | string> }).errors;
+              let errorDetail = '';
+              if (Array.isArray(rawErrors) && rawErrors.length > 0) {
+                const parts: string[] = [];
+                for (const err of rawErrors) {
+                  const raw = typeof err === 'string' ? err : err?.value;
+                  if (!raw) continue;
+                  try {
+                    const inner = JSON.parse(raw);
+                    const innerErrors = Array.isArray(inner?.errors) ? inner.errors : null;
+                    if (innerErrors) {
+                      for (const e of innerErrors) {
+                        if (e?.field && e?.value) parts.push(`${e.field}: ${e.value}`);
+                        else if (e?.value) parts.push(String(e.value));
+                      }
+                    } else if (inner?.message) {
+                      parts.push(String(inner.message));
+                    } else {
+                      parts.push(raw.substring(0, 200));
+                    }
+                  } catch {
+                    parts.push(raw.substring(0, 200));
+                  }
+                }
+                errorDetail = parts.join('; ');
+              }
               const errorMsg = errorDetail
-                ? `${result.message ?? "Unknown publish error"} | ${errorDetail.substring(0, 500)}`
+                ? `${result.message ?? "Publish failed"} \u2014 ${errorDetail.substring(0, 500)}`
                 : (result.message ?? "Unknown publish error");
 
               if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
