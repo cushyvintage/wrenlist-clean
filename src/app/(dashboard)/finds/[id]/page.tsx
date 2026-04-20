@@ -87,7 +87,7 @@ export default function InventoryDetailPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [incompleteFields, setIncompleteFields] = useState<string[]>([])
-  const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null; error_message: string | null; platform_listed_at: string | null }>>([])
+  const [marketplaceData, setMarketplaceData] = useState<Array<{ marketplace: string; status: string; platform_listing_url: string | null; platform_listing_id: string | null; error_message: string | null; platform_listed_at: string | null; fields?: Record<string, unknown> | null }>>([])
   const [isCrosslisting, setIsCrosslisting] = useState(false)
   const [crosslistResult, setCrosslistResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showCrosslistPicker, setShowCrosslistPicker] = useState(false)

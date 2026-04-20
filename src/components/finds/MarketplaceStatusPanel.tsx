@@ -2,6 +2,22 @@
 
 import { friendlyError } from '@/lib/friendly-errors'
 
+export type PublishErrorCode =
+  | 'auth_expired'
+  | 'captcha_required'
+  | 'validation_error'
+  | 'photo_upload_failed'
+  | 'rate_limited'
+  | 'server_error'
+  | 'unknown'
+
+export interface PublishErrorContext {
+  code: PublishErrorCode
+  summary: string
+  actionUrl?: string
+  fields?: Array<{ field: string; message: string }>
+}
+
 interface MarketplaceData {
   marketplace: string
   status: string
@@ -9,6 +25,7 @@ interface MarketplaceData {
   platform_listing_id: string | null
   error_message: string | null
   platform_listed_at: string | null
+  fields?: Record<string, unknown> | null
 }
 
 interface MarketplaceStatusPanelProps {
@@ -137,20 +154,86 @@ export function MarketplaceStatusPanel({
               </div>
             </div>
             {(md.status === 'error' || md.status === 'needs_publish') && md.error_message && (
-              <p
-                className="text-xs mt-1 px-2 py-1 rounded"
-                style={
-                  md.status === 'error'
-                    ? { color: '#DC2626', backgroundColor: 'rgba(220,38,38,.06)' }
-                    : { color: '#B45309', backgroundColor: 'rgba(245,158,11,.08)' }
-                }
-              >
-                {md.status === 'needs_publish' && 'Retrying — '}{friendlyError(md.marketplace, md.error_message)}
-              </p>
+              <PublishErrorMessage
+                marketplace={md.marketplace}
+                status={md.status}
+                errorMessage={md.error_message}
+                fields={md.fields ?? null}
+              />
             )}
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Renders a publish error with an action button when we've classified it
+ * (auth/captcha/etc.). Falls back to the generic friendly message otherwise.
+ * `fields` is the raw PMD fields JSON which contains `last_error_code` and
+ * `last_error_context` written by the extension queue handler.
+ */
+function PublishErrorMessage({
+  marketplace,
+  status,
+  errorMessage,
+  fields,
+}: {
+  marketplace: string
+  status: string
+  errorMessage: string
+  fields: Record<string, unknown> | null
+}) {
+  const context = fields?.last_error_context as PublishErrorContext | undefined
+  const code = (fields?.last_error_code as PublishErrorCode | undefined) ?? context?.code
+  const isRetrying = status === 'needs_publish'
+  const palette = isRetrying
+    ? { color: '#B45309', background: 'rgba(245,158,11,.08)', border: 'rgba(245,158,11,.25)' }
+    : { color: '#DC2626', background: 'rgba(220,38,38,.06)', border: 'rgba(220,38,38,.22)' }
+
+  const summary = context?.summary ?? friendlyError(marketplace, errorMessage)
+  const prefix = isRetrying ? 'Retrying — ' : ''
+
+  return (
+    <div
+      className="text-xs mt-1 px-2 py-1.5 rounded space-y-1.5"
+      style={{ color: palette.color, backgroundColor: palette.background, border: `1px solid ${palette.border}` }}
+      role="status"
+    >
+      <p>{prefix}{summary}</p>
+
+      {code === 'validation_error' && context?.fields && context.fields.length > 0 && (
+        <ul className="pl-4 list-disc space-y-0.5">
+          {context.fields.map((f) => (
+            <li key={f.field}>
+              <strong className="capitalize">{f.field}:</strong> {f.message}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {code === 'captcha_required' && context?.actionUrl && (
+        <a
+          href={context.actionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-1 px-2 py-1 text-[11px] font-medium rounded"
+          style={{ backgroundColor: palette.color, color: '#fff' }}
+        >
+          Open captcha →
+        </a>
+      )}
+
+      {code === 'auth_expired' && (
+        <a
+          href="/platform-connect"
+          className="inline-block mt-1 px-2 py-1 text-[11px] font-medium rounded"
+          style={{ backgroundColor: palette.color, color: '#fff' }}
+        >
+          Reconnect {marketplace} →
+        </a>
+      )}
     </div>
   )
 }

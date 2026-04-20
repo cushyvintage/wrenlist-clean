@@ -1,5 +1,6 @@
 import type { Product, VintedImportMetadata } from "./types.js";
 import { EXTENSION_VERSION, remoteLog } from "./shared/api.js";
+import { classifyVintedError } from "./shared/publish-error-classifier.js";
 import {
   delistFromMarketplace,
   publishToMarketplace,
@@ -1502,47 +1503,48 @@ type ExternalMessage = Record<string, unknown>;
                 }),
               });
             } else {
-              // Publish failed — check if we should retry or mark as error
+              // Publish failed — classify the error so the UI can render an
+              // actionable surface (re-login button, captcha link, per-field
+              // details, etc.) instead of a raw error string. Classifier is
+              // a separate module (shared/publish-error-classifier) that
+              // knows Vinted's various failure envelopes.
               const nextRetryCount = retryCount + 1;
-              // Format a human-readable error message. Vinted returns validation
-              // errors as [{ value: "<stringified JSON>" }] where the inner JSON
-              // has its own errors[] of { field, value } pairs — raw stringify
-              // produced a wall of escaped quotes in the UI. Try to parse it
-              // into "field: message; field: message" form, fall back to the
-              // raw detail if the shape is unfamiliar.
-              const rawErrors = (result as unknown as { errors?: Array<{ value?: string } | string> }).errors;
-              let errorDetail = '';
-              if (Array.isArray(rawErrors) && rawErrors.length > 0) {
-                const parts: string[] = [];
-                for (const err of rawErrors) {
-                  const raw = typeof err === 'string' ? err : err?.value;
-                  if (!raw) continue;
-                  try {
-                    const inner = JSON.parse(raw);
-                    const innerErrors = Array.isArray(inner?.errors) ? inner.errors : null;
-                    if (innerErrors) {
-                      for (const e of innerErrors) {
-                        if (e?.field && e?.value) parts.push(`${e.field}: ${e.value}`);
-                        else if (e?.value) parts.push(String(e.value));
-                      }
-                    } else if (inner?.message) {
-                      parts.push(String(inner.message));
-                    } else {
-                      parts.push(raw.substring(0, 200));
-                    }
-                  } catch {
-                    parts.push(raw.substring(0, 200));
-                  }
-                }
-                errorDetail = parts.join('; ');
-              }
-              const errorMsg = errorDetail
-                ? `${result.message ?? "Publish failed"} \u2014 ${errorDetail.substring(0, 500)}`
-                : (result.message ?? "Unknown publish error");
+              const resultRecord = result as unknown as {
+                message?: string;
+                needsLogin?: boolean;
+                captchaUrl?: string;
+                internalErrors?: unknown;
+                errors?: unknown;
+              };
+              const errorContext = mp === "vinted"
+                ? classifyVintedError({
+                    needsLogin: resultRecord.needsLogin,
+                    captchaUrl: resultRecord.captchaUrl,
+                    message: resultRecord.message,
+                    // Prefer internalErrors (raw response); fall back to the
+                    // flat errors[] array the mapper sometimes surfaces.
+                    internalErrors: resultRecord.internalErrors ?? resultRecord.errors,
+                  })
+                : {
+                    code: "unknown" as const,
+                    summary: resultRecord.message ?? "Publish failed",
+                  };
 
-              if (nextRetryCount >= MAX_PUBLISH_RETRIES) {
-                // Exhausted retries — report error to API
-                console.error(`[QueuePoll] Failed to publish ${find.name} to ${mp} after ${MAX_PUBLISH_RETRIES} attempts: ${errorMsg}`);
+              const errorMsg = errorContext.summary.substring(0, 500);
+
+              // If the error is non-retriable (auth, captcha, hard validation)
+              // there's no point burning retry attempts — the UI prompts the
+              // user to act, and once they do they'll trigger a fresh publish.
+              const nonRetriable =
+                errorContext.code === "auth_expired" ||
+                errorContext.code === "captcha_required" ||
+                errorContext.code === "validation_error";
+
+              if (nonRetriable || nextRetryCount >= MAX_PUBLISH_RETRIES) {
+                // Terminal — report error to API with structured context so
+                // the UI can render an action button (re-login, open captcha,
+                // fix fields).
+                console.error(`[QueuePoll] Failed to publish ${find.name} to ${mp} (${errorContext.code}): ${errorMsg}`);
                 await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                   method: "POST",
                   credentials: "include",
@@ -1552,12 +1554,18 @@ type ExternalMessage = Record<string, unknown>;
                     marketplace: mp,
                     status: "error",
                     error_message: errorMsg,
-                    fields: { ...existingFields, retry_count: nextRetryCount },
+                    fields: {
+                      ...existingFields,
+                      retry_count: nextRetryCount,
+                      last_error_code: errorContext.code,
+                      last_error_context: errorContext,
+                    },
                   }),
                 });
               } else {
-                // Still have retries left — update retry_count in fields but keep needs_publish
-                console.warn(`[QueuePoll] Publish attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${find.name} on ${mp}: ${errorMsg}. Will retry.`);
+                // Retriable transient failure (server error, photo upload,
+                // rate limit). Bump retry count and let the next poll try.
+                console.warn(`[QueuePoll] Publish attempt ${nextRetryCount}/${MAX_PUBLISH_RETRIES} failed for ${find.name} on ${mp} (${errorContext.code}): ${errorMsg}. Will retry.`);
                 await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
                   method: "POST",
                   credentials: "include",
@@ -1567,7 +1575,12 @@ type ExternalMessage = Record<string, unknown>;
                     marketplace: mp,
                     status: "needs_publish",
                     error_message: errorMsg,
-                    fields: { ...existingFields, retry_count: nextRetryCount },
+                    fields: {
+                      ...existingFields,
+                      retry_count: nextRetryCount,
+                      last_error_code: errorContext.code,
+                      last_error_context: errorContext,
+                    },
                   }),
                 });
               }
