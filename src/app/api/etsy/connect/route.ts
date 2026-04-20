@@ -36,13 +36,30 @@ export const GET = withAuth(async (req, user) => {
  */
 export const POST = withAuth(async (req, user) => {
   const body = await req.json()
-  const { etsyUserId, etsyUsername } = body
+  const { etsyUserId } = body
+  let { etsyUsername } = body
 
   if (!etsyUserId) {
     return ApiResponseHelper.badRequest('Missing etsyUserId')
   }
 
   const supabase = await createSupabaseServerClient()
+
+  // Preserve a previously-resolved shop name when the incoming value is
+  // the generic fallback ("etsy") or looks opaque. check_marketplace_login
+  // returns an empty username for Etsy, so clients fall back to "etsy"
+  // unless they've done a follow-up SSR scrape.
+  const incomingIsFallback = !etsyUsername || etsyUsername === 'etsy' || etsyUsername === etsyUserId
+  if (incomingIsFallback) {
+    const { data: existing } = await supabase
+      .from('etsy_connections')
+      .select('etsy_username')
+      .eq('user_id', user.id)
+      .single()
+    if (existing?.etsy_username && existing.etsy_username !== 'etsy' && existing.etsy_username !== etsyUserId) {
+      etsyUsername = existing.etsy_username
+    }
+  }
 
   const { data: connection, error } = await supabase
     .from('etsy_connections')

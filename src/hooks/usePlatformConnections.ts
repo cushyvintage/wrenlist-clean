@@ -222,18 +222,51 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
       if (!info.userId && !info.username) {
         throw new Error('No Etsy session detected. Log in to etsy.com first.')
       }
+
+      // Resolve shop name via the extension's SSR scrape. check_marketplace_login
+      // returns an opaque session id plus an empty username, so without this we'd
+      // store the literal string "etsy" as the username. get_etsy_shop_stats
+      // already runs for the dashboard stats card — we just need its shopName.
+      let resolvedShopName: string | null = null
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const stats = await new Promise<{ shopName?: string | null }>((resolve) => {
+            const t = setTimeout(() => resolve({}), 15000)
+            chrome.runtime.sendMessage(
+              EXTENSION_ID,
+              { action: 'get_etsy_shop_stats' },
+              (r) => {
+                clearTimeout(t)
+                if (chrome.runtime.lastError) resolve({})
+                else resolve(r && typeof r === 'object' ? r as { shopName?: string | null } : {})
+              },
+            )
+          })
+          if (stats.shopName && typeof stats.shopName === 'string') {
+            resolvedShopName = stats.shopName
+          }
+        } catch {
+          // Non-fatal — user can still connect; shop name will populate
+          // on the next stats refresh.
+        }
+      }
+
+      const finalUsername = resolvedShopName
+        ?? (info.username && info.username !== 'etsy' ? info.username : null)
+        ?? 'etsy'
+
       const res = await fetch('/api/etsy/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           etsyUserId: info.userId || 'extension',
-          etsyUsername: info.username || 'etsy',
+          etsyUsername: finalUsername,
         }),
       })
       if (res.ok) {
         const data = await res.json()
         setEtsyConnected(true)
-        setEtsyUsername(data.data?.etsyUsername ?? info.username ?? null)
+        setEtsyUsername(data.data?.etsyUsername ?? finalUsername ?? null)
         setEtsyDetected(false)
       }
     } catch (err) {
@@ -273,18 +306,52 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
       if (!info.userId) {
         throw new Error('No Depop session detected. Log in to depop.com first.')
       }
+
+      // Resolve real display handle via the authenticated users/me endpoint.
+      // check_marketplace_login only returns the numeric Depop id, so
+      // without this we'd store e.g. "396908643" as the username. The
+      // extension already proxies Depop cookies via fetch_depop_api (same
+      // call the shop-stats refresh uses — see DepopConnect.tsx).
+      let resolvedUsername: string | null = null
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const meResp = await new Promise<{ results?: { username?: string } }>((resolve) => {
+            const t = setTimeout(() => resolve({}), 8000)
+            chrome.runtime.sendMessage(
+              EXTENSION_ID,
+              { action: 'fetch_depop_api', url: 'https://webapi.depop.com/api/v1/users/me/' },
+              (r) => {
+                clearTimeout(t)
+                if (chrome.runtime.lastError) resolve({})
+                else resolve(r && typeof r === 'object' ? r : {})
+              },
+            )
+          })
+          const uname = meResp.results?.username
+          if (typeof uname === 'string' && uname && !/^\d+$/.test(uname)) {
+            resolvedUsername = uname
+          }
+        } catch {
+          // Non-fatal — fall back to whatever the session probe gave us.
+        }
+      }
+
+      const finalUsername = resolvedUsername
+        ?? (info.username && !/^\d+$/.test(info.username) ? info.username : null)
+        ?? info.userId
+
       const res = await fetch('/api/depop/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           depopUserId: info.userId,
-          depopUsername: info.username || info.userId,
+          depopUsername: finalUsername,
         }),
       })
       if (res.ok) {
         const data = await res.json()
         setDepopConnected(true)
-        setDepopUsername(data.data?.depopUsername ?? info.username ?? null)
+        setDepopUsername(data.data?.depopUsername ?? finalUsername ?? null)
         setDepopDetected(false)
       }
     } catch (err) {

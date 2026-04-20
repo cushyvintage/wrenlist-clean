@@ -47,13 +47,30 @@ export async function POST(request: NextRequest) {
     if (!user) return ApiResponseHelper.unauthorized()
 
     const body = await request.json()
-    const { depopUserId, depopUsername } = body
+    let { depopUsername } = body
+    const { depopUserId } = body
 
     if (!depopUserId) {
       return ApiResponseHelper.badRequest('Missing depopUserId')
     }
 
     const supabase = await createSupabaseServerClient()
+
+    // Preserve a previously-resolved display handle if the incoming value
+    // is numeric (or falsy). Matches the Vinted route's protection — if
+    // the client's user-detail lookup fails, we'd rather keep "cushyvintage"
+    // than clobber it with "396908643".
+    const incomingLooksNumeric = !depopUsername || /^\d+$/.test(String(depopUsername))
+    if (incomingLooksNumeric) {
+      const { data: existing } = await supabase
+        .from('depop_connections')
+        .select('depop_username')
+        .eq('user_id', user.id)
+        .single()
+      if (existing?.depop_username && !/^\d+$/.test(existing.depop_username)) {
+        depopUsername = existing.depop_username
+      }
+    }
 
     const { data: connection, error } = await supabase
       .from('depop_connections')
