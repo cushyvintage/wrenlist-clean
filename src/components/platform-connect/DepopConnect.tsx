@@ -78,7 +78,9 @@ export function DepopConnect({ depopConnected, depopDetected, depopUsername, dep
           )
         })
 
-      const profileResp = await depopFetchViaExtension('https://webapi.depop.com/api/v1/users/me/')
+      // /api/v1/users/me/ was retired and 404s now — use the presentation
+      // namespace endpoint (matches the analytics URLs below).
+      const profileResp = await depopFetchViaExtension('https://webapi.depop.com/presentation/api/v1/users/me/')
       const profileData = (profileResp as Record<string, unknown>).results as Record<string, unknown> | undefined
       const netGmvResp = await depopFetchViaExtension(
         `https://webapi.depop.com/presentation/api/v1/analytics/sellers/historical/net_gmv/?window=monthly&from=${thirtyDaysAgo}&to=${now}`

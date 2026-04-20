@@ -319,9 +319,12 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
       // Resolve real display handle via the authenticated users/me endpoint.
       // check_marketplace_login only returns the numeric Depop id, so
-      // without this we'd store e.g. "396908643" as the username. The
-      // extension already proxies Depop cookies via fetch_depop_api (same
-      // call the shop-stats refresh uses — see DepopConnect.tsx).
+      // without this we'd store e.g. "396908643" as the username.
+      //
+      // Depop deprecated /api/v1/users/me/ and /api/v1/shop/{id}/ — both
+      // return 404 now. The live endpoint lives under the "presentation"
+      // namespace (same prefix the stats refresh uses) and returns
+      // { id, username, verified, first_name, ... }.
       let resolvedUsername: string | null = null
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         try {
@@ -329,7 +332,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
             const t = setTimeout(() => resolve({}), 8000)
             chrome.runtime.sendMessage(
               EXTENSION_ID,
-              { action: 'fetch_depop_api', url: 'https://webapi.depop.com/api/v1/users/me/' },
+              { action: 'fetch_depop_api', url: 'https://webapi.depop.com/presentation/api/v1/users/me/' },
               (r) => {
                 clearTimeout(t)
                 if (chrome.runtime.lastError) resolve({})

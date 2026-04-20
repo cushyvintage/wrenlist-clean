@@ -2575,17 +2575,25 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
       } else if (marketplace === 'depop') {
         const cookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'user_id' });
         userId = cookie?.value || undefined;
-        // Resolve Depop username via their API (extension has bearer token)
+        // Resolve Depop username via their authenticated user-me endpoint.
+        // /api/v1/users/me/ and /api/v1/shop/{id}/ were both retired — both
+        // 404 now. The live endpoint is under the "presentation" namespace
+        // (same prefix as the seller analytics endpoints) and returns
+        // { id, username, verified, first_name, ... }.
         if (userId) {
           try {
             const tokenCookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'access_token' });
             if (tokenCookie?.value) {
-              const res = await fetch(`https://webapi.depop.com/api/v1/shop/${userId}/`, {
-                headers: { 'Authorization': `Bearer ${tokenCookie.value}`, 'Accept': 'application/json' },
+              const res = await fetch('https://webapi.depop.com/presentation/api/v1/users/me/', {
+                headers: {
+                  'Authorization': `Bearer ${tokenCookie.value}`,
+                  'Accept': 'application/json',
+                  'Depop-UserId': userId,
+                },
               });
               if (res.ok) {
                 const data = await res.json();
-                username = data.slug || data.username || undefined;
+                username = data.username || data.slug || undefined;
               }
             }
           } catch { /* ignore */ }
