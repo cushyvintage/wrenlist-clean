@@ -217,8 +217,11 @@ export default function PlatformConnectPage() {
         />
       </Panel>
 
+      {/* Generic enough to render for any user. The data-driven version lives
+          on the Dashboard (Wren Insight cards) — the static tip here is a
+          nudge for the connection page, not a per-user recommendation. */}
       <InsightCard
-        text="Connect Etsy to reach buyers looking specifically for vintage — your Laura Ashley and Pendleton pieces would perform significantly better there."
+        text="Each marketplace reaches a different buyer base — connect the ones where your style of stock sells best. You can always connect more later."
       />
     </div>
   )

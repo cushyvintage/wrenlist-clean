@@ -153,14 +153,24 @@ export function EbayConnect({
               <div className="text-sm text-ink">At least one shipping policy set up in eBay</div>
             </div>
           </div>
-          <a
-            href="https://www.bizpolicy.ebay.co.uk/businesspolicy/policyoptin"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-sage hover:text-sage-dk transition underline"
-          >
-            Set up policies in eBay Seller Hub →
-          </a>
+          <div className="flex flex-col gap-1">
+            <a
+              href="https://www.bizpolicy.ebay.co.uk/businesspolicy/policyoptin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-sage hover:text-sage-dk transition underline"
+            >
+              Opt in to eBay business policies →
+            </a>
+            <a
+              href="https://www.ebay.co.uk/sh/ovw"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-sage hover:text-sage-dk transition underline"
+            >
+              Manage policies in Seller Hub →
+            </a>
+          </div>
         </div>
 
         <button

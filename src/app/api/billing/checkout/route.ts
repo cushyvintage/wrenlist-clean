@@ -2,12 +2,23 @@ import { NextRequest } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getServerUser, createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { isBetaActive } from '@/config/plans'
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getServerUser()
     if (!user) {
       return ApiResponseHelper.unauthorized()
+    }
+
+    // During the open beta, every user has unlimited access to every feature.
+    // Reject upgrade checkouts so nobody gets charged for something they
+    // already have. The UI hides the CTAs too; this is the last line of
+    // defence if a stale tab slips through.
+    if (isBetaActive()) {
+      return ApiResponseHelper.badRequest(
+        'Open beta is active — all plans are unlocked until the beta ends.'
+      )
     }
 
     const body = await request.json()

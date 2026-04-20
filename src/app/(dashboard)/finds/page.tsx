@@ -9,7 +9,7 @@ import { PLAN_LIMITS, isBetaActive } from '@/config/plans'
 import type { Find, Profile, PlanId, Platform } from '@/types'
 import { unwrapApiResponse } from '@/lib/api-utils'
 import { showError } from '@/lib/toast-error'
-import { formatCategory } from '@/lib/format-category'
+import { formatCategory, formatCategoryLong } from '@/lib/format-category'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
 import { crosslistFind, formatPlatformName } from '@/lib/crosslist'
@@ -1292,8 +1292,13 @@ function InventoryPageContent() {
                           >
                             {find.name && !/^[0-9a-f-]{36}$/.test(find.name) ? find.name : 'Untitled item'}
                           </Link>
-                          <div className="text-[11px] flex items-center gap-2" style={{ color: '#6B7D6A' }}>
-                            <span>{formatCategory(find.category)}</span>
+                          <div className="text-[11px] flex items-center gap-2 min-w-0" style={{ color: '#6B7D6A' }}>
+                            <span
+                              className="truncate"
+                              title={formatCategoryLong(find.category)}
+                            >
+                              {formatCategory(find.category)}
+                            </span>
                             <QuickMoveButton
                               findId={find.id}
                               currentStashId={find.stash_id}

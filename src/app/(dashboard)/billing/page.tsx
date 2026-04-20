@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PLANS, isBetaActive } from '@/config/plans'
+import { PLANS, isBetaActive, BETA_ENDS } from '@/config/plans'
 import type { PlanId } from '@/config/plans'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 
@@ -120,9 +120,38 @@ export default function BillingPage() {
 
   const currentPlan = PLANS.find(p => p.id === profile.plan)
   const planLimit = currentPlan?.findsPerMonth
+  const beta = isBetaActive()
+  const betaEndsFormatted = BETA_ENDS.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
 
   return (
     <div className="space-y-8 max-w-4xl">
+      {/* Open-beta banner — lives above everything so it's impossible to miss
+          while browsing the upgrade grid. When the beta ends this block
+          drops out automatically via isBetaActive(). */}
+      {beta && (
+        <div className="bg-sage/10 border border-sage/30 rounded-md p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-sage mt-2 animate-pulse flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-medium text-ink text-sm mb-1">
+                You&apos;re on the open beta
+              </h3>
+              <p className="text-xs text-ink-lt">
+                Everyone has every feature free until{' '}
+                <strong className="text-ink">{betaEndsFormatted}</strong>.
+                You don&apos;t need to upgrade — the plans below are here so
+                you can see what things will look like after beta. We&apos;ll
+                email you before anything changes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Success/Cancelled Messages */}
       {typeof window !== 'undefined' && (
         <>
@@ -176,7 +205,7 @@ export default function BillingPage() {
               >
                 {portalLoading ? 'Loading...' : 'Manage Billing'}
               </button>
-            ) : profile.plan === 'flock' ? null : (
+            ) : profile.plan === 'flock' || beta ? null : (
               <a
                 href="#plans"
                 className="px-3 py-1.5 text-xs bg-sage text-cream rounded-sm font-medium hover:bg-sage-dk transition-colors"
@@ -250,12 +279,19 @@ export default function BillingPage() {
             return (
               <div
                 key={plan.id}
-                className={`rounded-md border p-5 transition-all ${
+                className={`relative rounded-md border p-5 transition-all ${
                   isCurrentPlan
                     ? 'border-sage bg-sage-pale'
-                    : 'border-sage/14 bg-white hover:border-sage/30'
+                    : plan.featured
+                      ? 'border-sage/30 bg-white hover:border-sage/50'
+                      : 'border-sage/14 bg-white hover:border-sage/30'
                 }`}
               >
+                {plan.featured && !isCurrentPlan && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-sage text-white text-[10px] font-medium rounded-full">
+                    POPULAR
+                  </div>
+                )}
                 {/* Plan Name & Price */}
                 <h4 className="font-serif text-base italic text-ink mb-1">
                   {plan.name}
@@ -311,6 +347,14 @@ export default function BillingPage() {
                     className="w-full px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-xs font-medium text-ink-lt cursor-default"
                   >
                     Free
+                  </button>
+                ) : beta ? (
+                  <button
+                    disabled
+                    title={`Available after the beta ends on ${betaEndsFormatted}`}
+                    className="w-full px-3 py-2 bg-cream-md border border-sage/22 rounded-sm text-xs font-medium text-ink-lt cursor-default"
+                  >
+                    Available after beta
                   </button>
                 ) : (
                   <button

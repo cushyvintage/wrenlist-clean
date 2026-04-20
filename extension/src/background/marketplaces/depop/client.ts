@@ -308,7 +308,7 @@ export class DepopClient {
 
       return {
         marketplaceId: product.id.toString(),
-        title: this.readableTitle(product.slug),
+        title: this.resolveTitle(product),
         price: parseFloat(product.price.priceAmount),
         coverImage: allPhotos[0] || "",
         photos: allPhotos,
@@ -435,13 +435,51 @@ export class DepopClient {
     return match?.[1] ?? null;
   }
 
+  /**
+   * Pick the best available title for a Depop product, falling back through
+   * progressively noisier sources:
+   *   1. product.title — the canonical listing title
+   *   2. first sentence of product.description (80-char cap) — many long
+   *      titles were entered as description-first by sellers
+   *   3. slug parse — historical fallback; prone to producing "Condition
+   *      Good Vintage Condition With" style garbage when the slug is the
+   *      slugified description rather than the title.
+   */
+  private resolveTitle(product: any): string {
+    const direct = typeof product.title === "string" ? product.title.trim() : "";
+    if (direct) return direct;
+
+    const desc = typeof product.description === "string" ? product.description.trim() : "";
+    if (desc) {
+      const firstLine = desc.split(/\r?\n/)[0].trim();
+      const sentence = firstLine.split(/[.!?]/)[0].trim();
+      const candidate = sentence || firstLine;
+      if (candidate) {
+        return candidate.length > 80 ? candidate.slice(0, 77) + "..." : candidate;
+      }
+    }
+
+    return this.readableTitle(product.slug ?? "");
+  }
+
   private readableTitle(slug: string): string {
+    if (!slug) return "Untitled";
     const trimmed = slug
       .toLowerCase()
       .replace(/-[a-f0-9]{4}$/, "")
       .split("-");
-    trimmed.shift();
-    return trimmed.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+    // The original implementation unconditionally dropped the first token,
+    // assuming it was always the seller handle. In practice Depop's API
+    // slug field often doesn't include the handle, so .shift() was eating
+    // the real first word of the title. Drop it only when the first token
+    // matches the cached handle — otherwise keep it.
+    const handle = (this.userId ?? "").toLowerCase();
+    if (handle && trimmed[0] === handle) {
+      trimmed.shift();
+    }
+    return trimmed
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   }
 
   private generateTitle(product: any): string {
