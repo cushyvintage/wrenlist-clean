@@ -67,6 +67,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const [facebookConnected, setFacebookConnected] = useState(false)
   const [facebookDetected, setFacebookDetected] = useState(false)
   const [facebookDetectedInfo, setFacebookDetectedInfo] = useState<SessionInfo>({})
+  const [facebookUsername, setFacebookUsername] = useState<string | null>(null)
   const [facebookLoading, setFacebookLoading] = useState(false)
 
   const [depopConnected, setDepopConnected] = useState(false)
@@ -283,13 +284,22 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
       if (!info.userId) {
         throw new Error('No Facebook session detected. Log in to facebook.com first.')
       }
+      // Extension's check_marketplace_login now scrapes /me for the display
+      // name (see handleCheckLoginCommand, facebook branch). If that
+      // resolution failed, info.username is null and we let the server
+      // preserve any previously stored value instead of overwriting.
       const res = await fetch('/api/facebook/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ facebookUserId: info.userId }),
+        body: JSON.stringify({
+          facebookUserId: info.userId,
+          facebookUsername: info.username || null,
+        }),
       })
       if (res.ok) {
+        const data = await res.json()
         setFacebookConnected(true)
+        setFacebookUsername(data.data?.facebookUsername ?? info.username ?? null)
         setFacebookDetected(false)
       }
     } catch (err) {
@@ -392,7 +402,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   }
 
   const handleEtsyDisconnect = makeDisconnect('Etsy', '/api/etsy/connect', setEtsyConnected, setEtsyDetected, setEtsyUsername)
-  const handleFacebookDisconnect = makeDisconnect('Facebook', '/api/facebook/connect', setFacebookConnected, setFacebookDetected)
+  const handleFacebookDisconnect = makeDisconnect('Facebook', '/api/facebook/connect', setFacebookConnected, setFacebookDetected, setFacebookUsername)
   const handleDepopDisconnect = makeDisconnect('Depop', '/api/depop/connect', setDepopConnected, setDepopDetected, setDepopUsername)
 
   // --- On mount: fetch DB state FIRST, then detect sessions ---
@@ -468,7 +478,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
       setLoading(false)
     }
     void initMarketplace('etsy', setEtsyConnected, setEtsyUsername, setEtsyDetected, setEtsyDetectedInfo, setEtsyLoading)
-    void initMarketplace('facebook', setFacebookConnected, undefined, setFacebookDetected, setFacebookDetectedInfo, setFacebookLoading)
+    void initMarketplace('facebook', setFacebookConnected, setFacebookUsername, setFacebookDetected, setFacebookDetectedInfo, setFacebookLoading)
     void initMarketplace('depop', setDepopConnected, setDepopUsername, setDepopDetected, setDepopDetectedInfo, setDepopLoading)
   }, [])
 
@@ -664,7 +674,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     etsyConnected, etsyDetected, etsyUsername, etsyLoading,
     handleEtsyConnect, handleEtsyDisconnect,
     // Facebook
-    facebookConnected, facebookDetected, facebookLoading,
+    facebookConnected, facebookDetected, facebookUsername, facebookLoading,
     handleFacebookConnect, handleFacebookDisconnect,
     // Depop
     depopConnected, depopDetected, depopUsername, depopLoading,

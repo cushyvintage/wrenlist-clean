@@ -180,6 +180,7 @@ export default function PlatformConnectPage() {
         <FacebookConnect
           facebookConnected={platforms.facebookConnected}
           facebookDetected={platforms.facebookDetected}
+          facebookUsername={platforms.facebookUsername}
           facebookLoading={platforms.facebookLoading}
           onConnect={platforms.handleFacebookConnect}
           onDisconnect={platforms.handleFacebookDisconnect}

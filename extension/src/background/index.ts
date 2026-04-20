@@ -2540,6 +2540,38 @@ async function handleCheckLoginCommand(message: ExternalMessage) {
       if (marketplace === 'facebook') {
         const stored = await chrome.storage.local.get('wrenlist_fb_actorid');
         userId = stored.wrenlist_fb_actorid || undefined;
+        // Resolve display name — /me redirects to the user's profile page
+        // and the <title> is "<Name> | Facebook". Scrape the redirect-target
+        // HTML once per connect. Facebook's GraphQL endpoints require DTSG
+        // tokens and per-route schemas; the title scrape is fragile but
+        // cheap and needs no extension-side DTSG plumbing.
+        try {
+          const res = await fetch('https://www.facebook.com/me', {
+            credentials: 'include',
+            redirect: 'follow',
+            headers: { accept: 'text/html' },
+          });
+          if (res.ok) {
+            const html = await res.text();
+            // Try <title>Name | Facebook</title> first — works on the
+            // classic/desktop HTML shell.
+            const titleMatch = html.match(/<title[^>]*>([^<|]+?)\s*\|\s*Facebook<\/title>/i);
+            const ogMatch = html.match(/<meta[^>]+property="profile:first_name"[^>]+content="([^"]+)"/i);
+            const ogLastName = html.match(/<meta[^>]+property="profile:last_name"[^>]+content="([^"]+)"/i);
+            // Last-resort: the page's embedded JSON often has a NAME field
+            // on the viewer node. Narrow regex to avoid catching other names.
+            const viewerMatch = html.match(/"actor"\s*:\s*\{[^}]*"name"\s*:\s*"([^"]{1,80})"/);
+            const candidate = (titleMatch && titleMatch[1].trim())
+              || (ogMatch && ogLastName ? `${ogMatch[1]} ${ogLastName[1]}`.trim() : null)
+              || (viewerMatch && viewerMatch[1].trim())
+              || null;
+            if (candidate && candidate.length > 0 && candidate.length < 120) {
+              username = candidate;
+            }
+          }
+        } catch {
+          // Non-fatal — user still connects, just without a display name.
+        }
       } else if (marketplace === 'depop') {
         const cookie = await chrome.cookies.get({ url: 'https://www.depop.com', name: 'user_id' });
         userId = cookie?.value || undefined;

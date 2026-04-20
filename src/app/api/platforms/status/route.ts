@@ -10,7 +10,7 @@ import { withAuth } from '@/lib/with-auth'
 export const GET = withAuth(async (_req: NextRequest, user) => {
   const supabase = await createSupabaseServerClient()
 
-  const [ebayResult, vintedResult, shopifyResult, depopResult, etsyResult] = await Promise.all([
+  const [ebayResult, vintedResult, shopifyResult, depopResult, etsyResult, facebookResult] = await Promise.all([
     supabase
       .from('ebay_tokens')
       .select('ebay_user, updated_at')
@@ -34,6 +34,11 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
     supabase
       .from('etsy_connections')
       .select('etsy_username, updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('facebook_connections')
+      .select('facebook_username, updated_at')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -65,6 +70,11 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
         connected: !!etsyResult.data,
         username: etsyResult.data?.etsy_username ?? null,
         lastSync: etsyResult.data?.updated_at ?? null,
+      },
+      facebook: {
+        connected: !!facebookResult.data,
+        username: facebookResult.data?.facebook_username ?? null,
+        lastSync: facebookResult.data?.updated_at ?? null,
       },
     },
   })

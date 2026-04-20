@@ -34,11 +34,19 @@ export const GET = withAuth(async (req, user) => {
  * POST /api/facebook/connect
  * Save Facebook connection (called after extension detects login)
  *
- * Body: { facebookUserId }
+ * Body: { facebookUserId, facebookUsername? }
+ *
+ * Username resolution: the extension scrapes facebook.com/me and pulls the
+ * user's display name from <title> / og:profile meta tags. If that fails
+ * we'd rather leave the previous value in place than overwrite it with
+ * null — matches the protection on the other marketplace routes.
  */
 export const POST = withAuth(async (req, user) => {
   const body = await req.json()
   const { facebookUserId } = body
+  let facebookUsername: string | null = typeof body.facebookUsername === 'string' && body.facebookUsername.trim()
+    ? body.facebookUsername.trim()
+    : null
 
   if (!facebookUserId) {
     return ApiResponseHelper.badRequest('Missing facebookUserId')
@@ -46,15 +54,24 @@ export const POST = withAuth(async (req, user) => {
 
   const supabase = await createSupabaseServerClient()
 
+  if (!facebookUsername) {
+    const { data: existing } = await supabase
+      .from('facebook_connections')
+      .select('facebook_username')
+      .eq('user_id', user.id)
+      .single()
+    if (existing?.facebook_username) {
+      facebookUsername = existing.facebook_username
+    }
+  }
+
   const { data: connection, error } = await supabase
     .from('facebook_connections')
     .upsert(
       {
         user_id: user.id,
         facebook_user_id: facebookUserId,
-        // Facebook doesn't have a public username API — display name would
-        // need to be scraped from the profile page, which is fragile.
-        // We store the user ID for now; username can be added later.
+        facebook_username: facebookUsername,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }

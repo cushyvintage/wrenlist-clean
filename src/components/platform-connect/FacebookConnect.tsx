@@ -6,12 +6,13 @@ import { Badge } from '@/components/wren/Badge'
 interface FacebookConnectProps {
   facebookConnected: boolean
   facebookDetected: boolean
+  facebookUsername: string | null
   facebookLoading: boolean
   onConnect: () => Promise<void>
   onDisconnect: () => Promise<void>
 }
 
-export function FacebookConnect({ facebookConnected, facebookDetected, facebookLoading, onConnect, onDisconnect }: FacebookConnectProps) {
+export function FacebookConnect({ facebookConnected, facebookDetected, facebookUsername, facebookLoading, onConnect, onDisconnect }: FacebookConnectProps) {
   return (
     <div>
       <div className="flex items-center gap-4 mb-4">
@@ -28,7 +29,7 @@ export function FacebookConnect({ facebookConnected, facebookDetected, facebookL
             {facebookLoading
               ? 'Checking...'
               : facebookConnected
-                ? 'Ready to post local pickup listings'
+                ? (facebookUsername ? `Signed in as ${facebookUsername}` : 'Ready to post local pickup listings')
                 : facebookDetected
                   ? 'We detected an active Facebook session in your browser. Click Connect to link it.'
                   : 'Log in to facebook.com, then click Check connection'}
