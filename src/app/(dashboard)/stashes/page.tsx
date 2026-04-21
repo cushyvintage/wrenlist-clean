@@ -64,7 +64,7 @@ export default function StashesPage() {
         }),
       })
       const result = await res.json()
-      if (!res.ok || !result.success) {
+      if (!res.ok) {
         setFormError(result.error || 'Failed to create stash')
         return
       }
@@ -107,7 +107,7 @@ export default function StashesPage() {
         }),
       })
       const result = await res.json()
-      if (!res.ok || !result.success) {
+      if (!res.ok) {
         setEditError(result.error || 'Failed to update stash')
         return
       }
@@ -123,7 +123,7 @@ export default function StashesPage() {
     try {
       const res = await fetch(`/api/stashes/${id}`, { method: 'DELETE' })
       const result = await res.json()
-      if (!res.ok || !result.success) {
+      if (!res.ok) {
         setRowError({ id, message: result.error || 'Failed to delete stash' })
         return
       }
@@ -170,7 +170,7 @@ export default function StashesPage() {
         }),
       })
       const result = await res.json()
-      if (!res.ok || !result.success) {
+      if (!res.ok) {
         setMergeError(result.error || 'Merge failed')
         return
       }
