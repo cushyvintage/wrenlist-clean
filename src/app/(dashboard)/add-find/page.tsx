@@ -20,7 +20,9 @@ import PublishReadinessChecklist from '@/components/add-find/PublishReadinessChe
 import PublishProgressPanel from '@/components/publish/PublishProgressPanel'
 import CategoryPlatformStatus from '@/components/add-find/CategoryPlatformStatus'
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
+import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
+import Link from 'next/link'
 
 declare const chrome: any
 
@@ -37,6 +39,16 @@ export default function AddFindPage() {
     setClassifyingPhotoIndex: form.setClassifyingPhotoIndex,
   })
   const { disconnected } = useConnectedPlatforms({ pollInterval: 60_000 })
+  const extensionInfo = useExtensionInfo()
+
+  // eBay publishes via server-side OAuth; every other marketplace requires
+  // the Chrome extension to drive the web form. Detect the mismatch so we
+  // can block Publish with a clear explanation instead of silently queuing
+  // a job that will never run.
+  const nonEbayPlatforms = form.formData.selectedPlatforms.filter((p) => p !== 'ebay')
+  const extensionMissing = extensionInfo.detected === false
+  const extensionOutdated = extensionInfo.detected === true && extensionInfo.isOutdated
+  const blockedByExtension = nonEbayPlatforms.length > 0 && (extensionMissing || extensionOutdated)
   const { handleSaveDraft, handlePublish } = useAddFindSubmit({
     formData: form.formData,
     fieldConfig: form.fieldConfig,
@@ -270,6 +282,28 @@ export default function AddFindPage() {
         )}
       </div>
 
+      {/* Extension-required banner — shown when the user has selected a
+          non-eBay platform but the Chrome extension is missing or out of
+          date. Without this a user could fill the form, click Publish,
+          queue a job the extension can't pick up, and watch a spinner
+          forever. eBay publishes via server OAuth so those don't need
+          the extension. */}
+      {blockedByExtension && (
+        <div className="max-w-2xl mx-auto mb-3 px-4 py-3 rounded-lg border" style={{ backgroundColor: 'rgba(217,169,56,.12)', borderColor: 'rgba(217,169,56,.3)', color: '#92700C' }}>
+          <p className="text-sm font-medium mb-1">
+            {extensionMissing ? 'Chrome extension required to publish to ' : 'Extension needs updating to publish to '}
+            {nonEbayPlatforms.map((p) => (p.charAt(0).toUpperCase() + p.slice(1))).join(', ')}
+          </p>
+          <p className="text-xs">
+            {extensionMissing
+              ? 'eBay publishes through Wrenlist directly, but every other marketplace needs our Chrome extension to drive the listing form.'
+              : 'Restart Chrome to auto-update, or reinstall the extension. eBay publishing still works in the meantime.'}
+            {' '}
+            <Link href="/platform-connect" className="underline font-medium">Go to Platform Connect →</Link>
+          </p>
+        </div>
+      )}
+
       {/* Sticky Action Bar */}
       <div className="sticky bottom-0 bg-white border-t border-sage/14 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
@@ -297,7 +331,14 @@ export default function AddFindPage() {
             </button>
             <button
               onClick={handlePublish}
-              disabled={form.isLoading}
+              disabled={form.isLoading || blockedByExtension}
+              title={
+                blockedByExtension
+                  ? extensionMissing
+                    ? 'Install the Chrome extension to publish to non-eBay marketplaces'
+                    : 'Extension is out of date — restart Chrome to update'
+                  : undefined
+              }
               className="flex-1 sm:flex-none px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.isLoading ? (
