@@ -1336,7 +1336,16 @@ export class VintedClient {
 
       const text = await res.text();
       if (!res.ok) {
-        console.error("[Vinted] postListing failed", res.status, text);
+        // 401 is an expected transient — Vinted access tokens rotate
+        // frequently and publishViaVinted catches it, calls bootstrap
+        // with force=true, and retries. Log at warn level so the
+        // service-worker console doesn't look on fire when auto-refresh
+        // is doing its job. Everything else stays at error.
+        if (res.status === 401) {
+          console.warn("[Vinted] postListing 401 — token expired, will auto-refresh and retry");
+        } else {
+          console.error("[Vinted] postListing failed", res.status, text);
+        }
         
         // Check if the response contains a CAPTCHA URL (DataDome bot protection)
         try {
