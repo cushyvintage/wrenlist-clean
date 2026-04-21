@@ -13,8 +13,13 @@ import { relativeDate } from '@/lib/format-date'
  * recent assignments and the category → prefix map so the user can sanity-
  * check what's getting written.
  *
- * Custom pattern editing isn't supported yet (the current rule is fixed:
- * `WL-{CAT}-{TIMESTAMP_BASE36}`), so we explain that rather than pretend.
+ * The source prefix reflects where the find came from:
+ *   WL-  — added in Wrenlist (src/lib/sku.ts)
+ *   VT-  — imported from Vinted (src/app/api/vinted/import/route.ts)
+ *   EB-  — the seller's own SKU, kept verbatim from eBay
+ *
+ * Custom pattern editing isn't supported yet, so we explain that rather
+ * than pretend.
  */
 
 // Mirror of CATEGORY_PREFIXES in src/lib/sku.ts. Kept inline so this page
@@ -115,13 +120,27 @@ export default function SKUPage() {
                   current rule
                 </label>
                 <div className="font-mono text-sm px-3 py-2 bg-cream-md border border-sage/14 rounded text-ink">
-                  WL-{'{CATEGORY_PREFIX}'}-{'{TIMESTAMP_BASE36}'}
+                  {'{SOURCE}'}-{'{CATEGORY_PREFIX}'}-{'{TIMESTAMP_BASE36}'}
                 </div>
                 <p className="text-xs text-ink-lt mt-2">
                   Generated automatically when a find is created. Each SKU is
                   globally unique and human-readable. Custom templates are not
                   configurable yet — see <code>src/lib/sku.ts</code>.
                 </p>
+                <div className="mt-3 space-y-1 text-xs">
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">WL</span>
+                    <span className="text-ink-lt">added in Wrenlist</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">VT</span>
+                    <span className="text-ink-lt">imported from Vinted</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">EB</span>
+                    <span className="text-ink-lt">imported from eBay (keeps your seller SKU)</span>
+                  </div>
+                </div>
               </div>
 
               <div>

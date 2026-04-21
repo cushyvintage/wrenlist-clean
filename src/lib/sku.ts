@@ -1,7 +1,16 @@
 /**
- * SKU generation for Wrenlist finds
- * Format: WL-{CATEGORY_PREFIX}-{TIMESTAMP_BASE36}
+ * SKU generation for Wrenlist finds.
+ *
+ * Generator in this file produces WL-prefixed SKUs for finds added in
+ * Wrenlist itself. Format: WL-{CATEGORY_PREFIX}-{TIMESTAMP_BASE36}
  * Example: WL-CER-X2KP91
+ *
+ * Imports stamp their own source prefix so operators can trace a SKU back
+ * to where it came from at a glance:
+ *   VT-  — Vinted import (src/app/api/vinted/import/route.ts)
+ *   EB-  — eBay seller SKU kept verbatim (not generated)
+ *
+ * The /sku page mirrors this explanation in the UI.
  */
 
 const CATEGORY_PREFIXES: Record<string, string> = {
