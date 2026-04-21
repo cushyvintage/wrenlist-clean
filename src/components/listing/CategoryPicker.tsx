@@ -9,6 +9,7 @@ interface CategoryNode {
   top_level: string
   parent_group: string | null
   platforms: Record<string, { id: string; name: string; path?: string }>
+  legacy_values?: string[] | null
 }
 
 interface CategoryPickerProps {
@@ -54,15 +55,19 @@ export default function CategoryPicker({
     return tree[activeTopLevel] ?? []
   }, [activeTopLevel, tree])
 
-  // Filter subcategories by search query
+  // Filter subcategories by search query. Also matches against legacy_values
+  // so "plate" finds Kitchen & dining (legacy: ceramics_plates), "mug" finds
+  // it too, etc. — this stops the picker from feeling broken on common terms
+  // that aren't in the canonical label.
   const filteredSubcategories = useMemo(() => {
     if (!search.trim()) return subcategories
     const q = search.toLowerCase().trim()
-    return subcategories.filter(
-      (node) =>
-        node.label.toLowerCase().includes(q) ||
-        node.value.toLowerCase().includes(q)
-    )
+    return subcategories.filter((node) => {
+      if (node.label.toLowerCase().includes(q)) return true
+      if (node.value.toLowerCase().includes(q)) return true
+      if (node.legacy_values?.some((v) => v.toLowerCase().includes(q))) return true
+      return false
+    })
   }, [subcategories, search])
 
   // Group subcategories by parent_group when the list is large

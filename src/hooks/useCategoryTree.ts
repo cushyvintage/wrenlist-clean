@@ -7,6 +7,9 @@ interface CategoryData {
   parent_group: string | null
   platforms: Record<string, { id: string; name: string; path?: string }>
   sort_order: number
+  /** Historical aliases (e.g. "ceramics_plates") kept so picker search still finds
+   *  categories under their old names. Not shown in UI; used by search filter. */
+  legacy_values: string[] | null
 }
 
 type CategoryTree = Record<string, CategoryData[]>

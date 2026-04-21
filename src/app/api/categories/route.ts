@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('categories')
-    .select('value, label, top_level, parent_group, platforms, sort_order')
+    .select('value, label, top_level, parent_group, platforms, sort_order, legacy_values')
     .order('sort_order')
 
   if (topLevel) {
