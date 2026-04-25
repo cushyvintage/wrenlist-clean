@@ -23,10 +23,6 @@ export default function CategoryConfigAdminPage() {
     }
   }, [user, router])
 
-  if (!user || !isAdmin(user.email)) {
-    return null
-  }
-
   // Fetch all configs
   useEffect(() => {
     const fetchConfigs = async () => {
@@ -96,6 +92,11 @@ export default function CategoryConfigAdminPage() {
   const handleCancel = () => {
     setEditingId(null)
     setEditingFields('')
+  }
+
+  // Auth guard: only render for authenticated admins
+  if (!user || !isAdmin(user.email)) {
+    return null
   }
 
   if (!isLoading && !error && !configs.length) {
