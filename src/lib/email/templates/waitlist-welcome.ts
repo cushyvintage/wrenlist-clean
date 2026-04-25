@@ -45,7 +45,7 @@ export function buildWaitlistWelcomeEmail(args: {
           ${painLine}
 
           <p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:#3a3a3a;">
-            Quick story on why this exists. I sell vintage on the side — Cushyvintage. I love the sourcing part. The treasure hunt. What I don't love is then spending another evening copying the same listing into multiple apps, fighting with category pickers, and forgetting to take down the listing on platform B when it sells on platform A.
+            Quick story on why this exists. I sell vintage on the side. I love the sourcing part — the treasure hunt. What I don't love is then spending another evening copying the same listing into multiple apps, fighting with category pickers, and forgetting to take down the listing on one platform when it sells on another.
           </p>
 
           <p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:#3a3a3a;">
@@ -77,7 +77,7 @@ export function buildWaitlistWelcomeEmail(args: {
           <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#7a7a7a;">
             Hit reply on this email any time — tell me what platforms you sell on, what's broken in your current setup, what you wish existed. I read every message. That feedback shapes the roadmap.
           </p>
-          <p style="margin:0;font-size:14px;line-height:1.6;color:#7a7a7a;">— Dom, Wrenlist (and Cushyvintage)</p>
+          <p style="margin:0;font-size:14px;line-height:1.6;color:#7a7a7a;">— Dom, Wrenlist</p>
         </td></tr>
 
         <tr><td style="padding:20px 40px;background-color:#fafaf4;border-top:1px solid #eae6d8;text-align:center;">
@@ -96,7 +96,7 @@ export function buildWaitlistWelcomeEmail(args: {
 
 You're in. Welcome.
 
-Quick story on why this exists. I sell vintage on the side — Cushyvintage. I love the sourcing part. What I don't love is spending another evening copying the same listing into multiple apps, fighting with category pickers, and forgetting to take down a listing when it sells elsewhere.
+Quick story on why this exists. I sell vintage on the side. I love the sourcing part — the treasure hunt. What I don't love is spending another evening copying the same listing into multiple apps, fighting with category pickers, and forgetting to take down a listing when it sells elsewhere.
 
 Wrenlist is the tool I wished existed. One inventory. Crosspost in a click. Auto-delist when something sells. Tax-ready records at year-end.
 
@@ -109,7 +109,7 @@ ${args.referralUrl}
 
 Hit reply any time — tell me what's broken in your current setup. I read every message.
 
-— Dom, Wrenlist (and Cushyvintage)
+— Dom, Wrenlist
 `
 
   return { subject, html, text }
