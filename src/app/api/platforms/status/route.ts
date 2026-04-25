@@ -10,11 +10,22 @@ import { withAuth } from '@/lib/with-auth'
 export const GET = withAuth(async (_req: NextRequest, user) => {
   const supabase = await createSupabaseServerClient()
 
-  const [ebayResult, vintedResult, shopifyResult, depopResult, etsyResult, facebookResult] = await Promise.all([
+  // For eBay we read from ebay_sync_log (every cron run inserts a row), so
+  // lastSync is the time the *cron* last polled eBay — not the time the
+  // OAuth token was last refreshed (which only happens every ~2 hours and
+  // looked stale even when the 15-min cron was running fine).
+  const [ebayResult, ebaySyncLogResult, vintedResult, shopifyResult, depopResult, etsyResult, facebookResult] = await Promise.all([
     supabase
       .from('ebay_tokens')
-      .select('ebay_user, updated_at')
+      .select('ebay_user')
       .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('ebay_sync_log')
+      .select('synced_at')
+      .eq('user_id', user.id)
+      .order('synced_at', { ascending: false })
+      .limit(1)
       .maybeSingle(),
     supabase
       .from('vinted_connections')
@@ -48,7 +59,7 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       ebay: {
         connected: !!ebayResult.data,
         username: ebayResult.data?.ebay_user ?? null,
-        lastSync: ebayResult.data?.updated_at ?? null,
+        lastSync: ebaySyncLogResult.data?.synced_at ?? null,
       },
       vinted: {
         connected: !!vintedResult.data,

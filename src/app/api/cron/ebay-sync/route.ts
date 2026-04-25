@@ -236,24 +236,26 @@ export async function GET(request: NextRequest) {
           ebayClient
         )
 
-        // Log sync completion for this user
-        if (orders.length > 0 || itemsSoldForUser > 0 || cancelledForUser > 0 || deletedForUser > 0) {
-          await supabaseAdmin
-            .from('ebay_sync_log')
-            .insert({
-              user_id: userId,
-              orders_checked: orders.length,
-              items_sold: itemsSoldForUser,
-              synced_at: new Date().toISOString(),
-            })
+        // ALWAYS log a sync row, even when nothing happened. The previous
+        // behaviour skipped the insert when orders/sales/cancellations were
+        // all zero, so the platform-connect page's "last sync" timestamp
+        // would stick at whenever the last *eventful* run was — making
+        // active 15-min syncs look like they hadn't run for days.
+        await supabaseAdmin
+          .from('ebay_sync_log')
+          .insert({
+            user_id: userId,
+            orders_checked: orders.length,
+            items_sold: itemsSoldForUser,
+            synced_at: new Date().toISOString(),
+          })
 
-          results.totalOrdersChecked += orders.length
-          results.totalItemsSold += itemsSoldForUser
-          results.totalEnriched += enrichedForUser
-          results.totalAutoCreated += autoCreatedForUser
-          results.totalCancelled += cancelledForUser
-          results.totalPermanentlyDeleted += deletedForUser
-        }
+        results.totalOrdersChecked += orders.length
+        results.totalItemsSold += itemsSoldForUser
+        results.totalEnriched += enrichedForUser
+        results.totalAutoCreated += autoCreatedForUser
+        results.totalCancelled += cancelledForUser
+        results.totalPermanentlyDeleted += deletedForUser
 
         results.usersProcessed++
       } catch (userError) {

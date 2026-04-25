@@ -13,6 +13,20 @@ import { ALL_RULES } from './rules'
 
 const TYPE_RANK: Record<Insight['type'], number> = { alert: 3, tip: 2, info: 1 }
 const ONE_HOUR_MS = 60 * 60 * 1000
+const ONE_DAY_MS = 24 * ONE_HOUR_MS
+
+/**
+ * Auto-mute thresholds. If an insight has been shown this many times in the
+ * lookback window with zero clicks and zero dismissals, the engine treats
+ * it as muted for the cool-off period — the user has clearly seen it and
+ * chosen not to act, so showing it daily becomes noise.
+ *
+ * The mute is virtual (not persisted); once enough time passes that the
+ * latest impression is older than the cool-off, the insight surfaces again.
+ */
+const AUTO_MUTE_THRESHOLD = 5
+const AUTO_MUTE_LOOKBACK_MS = 7 * ONE_DAY_MS
+const AUTO_MUTE_COOLOFF_MS = 3 * ONE_DAY_MS
 
 export interface RunRulesOptions {
   limit?: number
@@ -35,10 +49,17 @@ export async function runRules(
 ): Promise<Insight[]> {
   const limit = options.limit ?? 3
   const logEvents = options.logEvents ?? true
-  const dismissedKeys = options.dismissedKeys ?? (await loadDismissedKeys(supabase, ctx.userId))
 
+  const [dismissedKeys, autoMutedKeys] = await Promise.all([
+    options.dismissedKeys
+      ? Promise.resolve(options.dismissedKeys)
+      : loadDismissedKeys(supabase, ctx.userId),
+    loadAutoMutedKeys(supabase, ctx.userId),
+  ])
+
+  const suppressed = new Set<string>([...dismissedKeys, ...autoMutedKeys])
   const raw = ALL_RULES.map((rule) => rule.evaluate(ctx)).filter(isInsight)
-  const allowed = raw.filter((i) => !dismissedKeys.has(i.key))
+  const allowed = raw.filter((i) => !suppressed.has(i.key))
 
   allowed.sort((a, b) => {
     const rank = TYPE_RANK[b.type] - TYPE_RANK[a.type]
@@ -72,6 +93,58 @@ export async function loadDismissedKeys(
     return new Set()
   }
   return new Set((data ?? []).map((r) => r.insight_key))
+}
+
+/**
+ * Returns insight keys to virtually mute because the user has seen them
+ * AUTO_MUTE_THRESHOLD+ times in the last AUTO_MUTE_LOOKBACK_MS without ever
+ * clicking or dismissing — and the most recent impression is still inside
+ * the cool-off window. This stops the same alert reappearing every day for
+ * weeks when the user has clearly chosen not to act on it.
+ *
+ * No DB writes: the mute is computed at read time from `insight_events`,
+ * so the next impression after the cool-off naturally re-surfaces it.
+ */
+export async function loadAutoMutedKeys(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Set<string>> {
+  const lookbackStart = new Date(Date.now() - AUTO_MUTE_LOOKBACK_MS).toISOString()
+
+  const { data, error } = await supabase
+    .from('insight_events')
+    .select('insight_key, shown_at, clicked_at, dismissed_at')
+    .eq('user_id', userId)
+    .gt('shown_at', lookbackStart)
+
+  if (error) {
+    console.error('[insights] loadAutoMutedKeys failed:', error)
+    return new Set()
+  }
+
+  type Row = { insight_key: string; shown_at: string; clicked_at: string | null; dismissed_at: string | null }
+  const rows = (data ?? []) as Row[]
+  const grouped = new Map<string, { count: number; latestShown: number; touched: boolean }>()
+
+  for (const row of rows) {
+    const entry = grouped.get(row.insight_key) ?? { count: 0, latestShown: 0, touched: false }
+    entry.count += 1
+    const t = new Date(row.shown_at).getTime()
+    if (t > entry.latestShown) entry.latestShown = t
+    if (row.clicked_at || row.dismissed_at) entry.touched = true
+    grouped.set(row.insight_key, entry)
+  }
+
+  const cooloffStart = Date.now() - AUTO_MUTE_COOLOFF_MS
+  const muted = new Set<string>()
+  for (const [key, entry] of grouped) {
+    if (entry.touched) continue
+    if (entry.count < AUTO_MUTE_THRESHOLD) continue
+    // Only mute if the most recent impression is still within the cool-off.
+    // Once the user goes 3 days without seeing it, surface it again.
+    if (entry.latestShown >= cooloffStart) muted.add(key)
+  }
+  return muted
 }
 
 /**
