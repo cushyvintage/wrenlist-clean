@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/retry-failed-delists",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/waitlist-drip",
+      "schedule": "30 10 * * *"
     }
   ]
 }

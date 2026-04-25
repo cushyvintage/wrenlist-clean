@@ -1,10 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
 import { trackEvent } from '@/lib/plausible'
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -122,6 +125,30 @@ const ResearchIcon = () => (
 )
 
 export default function LandingPage() {
+  const searchParams = useSearchParams()
+  const refFromUrl = searchParams.get('ref')
+  const waitlistFromUrl = searchParams.get('waitlist')
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
+
+  // Auto-open the waitlist modal when someone lands via a referral link
+  // OR when nav buttons / external links point at /?waitlist=1.
+  useEffect(() => {
+    if (refFromUrl) {
+      setWaitlistOpen(true)
+      trackEvent('WaitlistRefLinkOpened', { ref: refFromUrl })
+      return
+    }
+    if (waitlistFromUrl) {
+      setWaitlistOpen(true)
+      trackEvent('WaitlistOpened', { source: 'url-param' })
+    }
+  }, [refFromUrl, waitlistFromUrl])
+
+  const openWaitlist = (source: string) => {
+    trackEvent('WaitlistOpened', { source })
+    setWaitlistOpen(true)
+  }
+
   const features = [
     { icon: InventoryIcon, title: 'Inventory tracker', desc: 'Every find, every status, one place' },
     { icon: MarginIcon, title: 'Cost & margin tracking', desc: 'Margin % on every find, always visible' },
@@ -148,10 +175,10 @@ export default function LandingPage() {
       {/* HERO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
         <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
-          {/* Beta badge */}
+          {/* Waitlist badge */}
           <div className="hero-fade-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3d5c3a]/10 border border-[#3d5c3a]/20 mb-5 w-fit">
             <span className="w-2 h-2 rounded-full bg-[#3d5c3a] animate-pulse" />
-            <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Open Beta — Free for 3 months</span>
+            <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Waitlist open — Beta launching soon</span>
           </div>
           <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#527050]">The thrifter&apos;s operating system</p>
           <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
@@ -167,9 +194,12 @@ export default function LandingPage() {
             A "find" is each item you source — from vintage shops, charity stores, and house clearances.
           </p>
           <div className="hero-fade-4 flex gap-4 items-center">
-            <a href="/register" onClick={() => trackEvent('CTAClicked', { source: 'landing' })} className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428]">
-              Start your free beta
-            </a>
+            <button
+              onClick={() => openWaitlist('hero')}
+              className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] rounded"
+            >
+              Join the waitlist
+            </button>
             <Link href="/pricing" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
               see pricing →
             </Link>
@@ -263,7 +293,16 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center text-xs text-[#4a6147] font-normal mt-5">
-            All features included during beta. <Link href="/pricing" className="text-[#5a7a57] underline">See pricing after beta →</Link>
+            All features included for waitlist members at beta launch. <Link href="/pricing" className="text-[#5a7a57] underline">See pricing after beta →</Link>
+          </div>
+
+          <div className="text-center mt-8">
+            <button
+              onClick={() => openWaitlist('features-bottom')}
+              className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] rounded"
+            >
+              Save my spot →
+            </button>
           </div>
         </div>
       </section>
@@ -283,6 +322,12 @@ export default function LandingPage() {
       </Reveal>
 
       <MarketingFooter />
+
+      <WaitlistModal
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+        referralCode={refFromUrl}
+      />
     </div>
   )
 }

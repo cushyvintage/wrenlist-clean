@@ -74,10 +74,10 @@ export function MarketingNav() {
             log in
           </a>
           <a
-            href="/register"
+            href="/?waitlist=1"
             className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-4 py-2 hover:bg-[#2c4428] whitespace-nowrap"
           >
-            start free
+            join waitlist
           </a>
 
           {/* Mobile hamburger */}
