@@ -336,10 +336,10 @@ export default function GlossaryClient() {
                 Marketplace Guide
               </a>
               <a
-                href="/register"
+                href="/?waitlist=1"
                 className="inline-block bg-[#3d5c3a] text-[#f5f0e8] rounded font-medium px-6 py-2 hover:bg-[#2c4428] transition-colors text-center text-sm"
               >
-                Start Selling Free
+                Join the Waitlist
               </a>
             </div>
           </div>

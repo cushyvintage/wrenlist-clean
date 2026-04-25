@@ -126,7 +126,7 @@ export default function StoryPage() {
             If any of this sounds familiar — the spreadsheet, the guesswork, the Sunday hauls — you&apos;re who this was built for.
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
-            <a href="/register" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-6 py-2.5 hover:bg-[#2c4428]">start free — no card needed</a>
+            <a href="/?waitlist=1" className="bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-6 py-2.5 hover:bg-[#2c4428]">join the waitlist</a>
             <Link href="/pricing" className="border border-[rgba(61,92,58,0.22)] rounded text-xs font-normal text-[#4a6147] px-6 py-2.5 hover:bg-[#ede8de] hover:text-[#1e2e1c]">see pricing</Link>
           </div>
         </div>

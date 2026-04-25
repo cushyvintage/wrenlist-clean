@@ -304,11 +304,11 @@ export default function CalculatorPage() {
             Wrenlist calculates your actual profit on every find — across every platform — so you always know your margin before you list.
           </p>
           <a
-            href="/register"
+            href="/?waitlist=1"
             onClick={() => trackEvent('CTAClicked', { source: 'fee-calculator' })}
             className="inline-block bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-8 py-3 hover:bg-[#2c4428]"
           >
-            Start free — no card needed
+            Join the waitlist
           </a>
         </div>
       </div>

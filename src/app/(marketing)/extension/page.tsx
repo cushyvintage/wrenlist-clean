@@ -290,8 +290,8 @@ export default function ExtensionPage() {
             >
               Install for Chrome
             </a>
-            <Link href="/register" className="text-sm font-light text-[#5A7A57] underline hover:text-[#3D5C3A]">
-              or start with the web app
+            <Link href="/?waitlist=1" className="text-sm font-light text-[#5A7A57] underline hover:text-[#3D5C3A]">
+              or join the waitlist
             </Link>
           </div>
         </div>

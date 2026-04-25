@@ -330,10 +330,10 @@ export default function TaxEstimatorClient() {
             Wrenlist logs every sale, every fee, every mile — so when tax season lands, your numbers are ready. Export to CSV for your accountant.
           </p>
           <a
-            href="/register"
+            href="/?waitlist=1"
             className="inline-block bg-[#3d5c3a] text-[#f5f0e8] rounded text-xs font-medium px-8 py-3 hover:bg-[#2c4428]"
           >
-            Start free — no card needed
+            Join the waitlist
           </a>
         </div>
       </div>
