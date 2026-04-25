@@ -256,28 +256,67 @@ export default function TaxPage() {
       <div className="grid grid-cols-2 gap-6">
         <Panel title="income summary">
           <div className="p-4 space-y-3 text-sm">
-            {(['vinted', 'ebay', 'other'] as const).map((platform) => {
-              const platformRevenue = sells
-                .filter((s) => {
-                  const fields = s.platform_fields as Record<string, unknown> | null
-                  const hasVinted = !!fields?.['vinted']
-                  const hasEbay = !!fields?.['ebay']
-                  if (platform === 'vinted') return hasVinted
-                  if (platform === 'ebay') return hasEbay
-                  return !hasVinted && !hasEbay
+            {(() => {
+              // Attribute each sold find to a platform. Preference order:
+              // 1. The single key in `platform_fields` (where it was listed).
+              // 2. The single value in `selected_marketplaces`.
+              // 3. "Unattributed" — historic or hand-entered finds with no
+              //    marketplace metadata; we can't blame a specific platform.
+              //
+              // Previously this only recognised `vinted` and `ebay` and
+              // bucketed Etsy/Depop/Shopify/Facebook into "Other", which made
+              // 86% of revenue look mysterious. Now every supported platform
+              // gets its own line and the leftovers are honestly labelled.
+              const PLATFORM_LABELS: Record<string, string> = {
+                vinted: 'Vinted',
+                ebay: 'eBay UK',
+                etsy: 'Etsy',
+                shopify: 'Shopify',
+                depop: 'Depop',
+                facebook: 'Facebook Marketplace',
+                poshmark: 'Poshmark',
+                mercari: 'Mercari',
+                whatnot: 'Whatnot',
+                grailed: 'Grailed',
+              }
+
+              const totals = new Map<string, number>()
+              for (const s of sells) {
+                const fields = (s.platform_fields ?? null) as Record<string, unknown> | null
+                const fromFields = fields ? Object.keys(fields).filter((k) => k in PLATFORM_LABELS) : []
+                const fromSelected = (s.selected_marketplaces ?? []).filter((k) => k in PLATFORM_LABELS)
+
+                let key: string
+                if (fromFields.length === 1) key = fromFields[0]!
+                else if (fromFields.length > 1) key = fromFields[0]! // first listed
+                else if (fromSelected.length >= 1) key = fromSelected[0]!
+                else key = '__unattributed'
+
+                totals.set(key, (totals.get(key) ?? 0) + (s.sold_price_gbp || 0))
+              }
+
+              // Sort: known platforms first (descending revenue), unattributed last
+              const rows = [...totals.entries()]
+                .filter(([, amount]) => amount > 0)
+                .sort((a, b) => {
+                  if (a[0] === '__unattributed') return 1
+                  if (b[0] === '__unattributed') return -1
+                  return b[1] - a[1]
                 })
-                .reduce((sum, s) => sum + (s.sold_price_gbp || 0), 0)
-              if (platformRevenue === 0) return null
-              return (
-                <div key={platform} className="flex justify-between">
-                  <span className="text-ink-lt">{platform === 'ebay' ? 'eBay UK' : platform === 'vinted' ? 'Vinted' : 'Other'}</span>
-                  <span className="font-mono font-medium text-ink">£{platformRevenue.toLocaleString()}</span>
+
+              if (rows.length === 0) {
+                return <p className="text-ink-lt text-xs">No sales recorded in this period</p>
+              }
+
+              return rows.map(([key, amount]) => (
+                <div key={key} className="flex justify-between">
+                  <span className="text-ink-lt">
+                    {key === '__unattributed' ? 'Unattributed' : (PLATFORM_LABELS[key] ?? key)}
+                  </span>
+                  <span className="font-mono font-medium text-ink">£{amount.toLocaleString()}</span>
                 </div>
-              )
-            })}
-            {sells.length === 0 && (
-              <p className="text-ink-lt text-xs">No sales recorded in this period</p>
-            )}
+              ))
+            })()}
             <div className="flex justify-between border-t border-sage/14 pt-3 font-medium text-ink">
               <span>Total income</span>
               <span className="font-mono">£{revenue.toLocaleString()}</span>

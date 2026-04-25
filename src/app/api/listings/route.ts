@@ -230,10 +230,34 @@ export const GET = withAuth(async (req, user) => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
-    // Apply pagination after filtering/sorting
-    const paginatedFiltered = filtered.slice(offset, offset + limit)
+    // Cursor-based pagination. The cursor is the created_at of the last
+    // row from the previous page; we drop everything at-or-newer than it
+    // (since the list is desc-sorted) before slicing the next page.
+    // Falls back to plain offset/limit when no cursor is supplied so older
+    // callers keep working unchanged.
+    const cursor = searchParams.get('cursor')
+    let pageSource = filtered
+    if (cursor) {
+      const cursorTime = new Date(cursor).getTime()
+      if (Number.isFinite(cursorTime)) {
+        pageSource = filtered.filter((item) => new Date(item.created_at).getTime() < cursorTime)
+      }
+    }
+    const startIndex = cursor ? 0 : offset
+    const page = pageSource.slice(startIndex, startIndex + limit)
+    const last = page[page.length - 1]
+    const nextCursor = page.length === limit && last ? last.created_at : null
 
-    return ApiResponseHelper.success(paginatedFiltered)
+    return ApiResponseHelper.success({
+      items: page,
+      pagination: {
+        limit,
+        // total reflects the *filtered* set, not the whole table — which is
+        // what the UI needs for "showing X of Y" copy.
+        total: filtered.length,
+        nextCursor,
+      },
+    })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('GET /api/listings error:', error)

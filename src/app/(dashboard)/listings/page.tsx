@@ -115,9 +115,16 @@ export default function ListingsPage() {
         throw new Error(result.error || 'Failed to load listings')
       }
 
-      // Handle ApiResponseHelper envelope: result.data || result
-      const data = result.data || result
-      setListings(Array.isArray(data) ? data : [])
+      // Handle both response shapes:
+      //   - new: { data: { items: [...], pagination: {...} } }
+      //   - legacy: { data: [...] } (kept temporarily; safe to drop later)
+      const payload = result.data ?? result
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : []
+      setListings(items)
     } catch (err) {
       if (!silent) {
         console.error('Failed to load listings:', err)
