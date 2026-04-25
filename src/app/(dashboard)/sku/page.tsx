@@ -17,6 +17,10 @@ import { relativeDate } from '@/lib/format-date'
  *   WL-  — added in Wrenlist (src/lib/sku.ts)
  *   VT-  — imported from Vinted (src/app/api/vinted/import/route.ts)
  *   EB-  — the seller's own SKU, kept verbatim from eBay
+ *   ET-  — imported from Etsy (src/app/api/etsy/import/route.ts)
+ *   DP-  — imported from Depop (src/app/api/depop/import/route.ts)
+ *   FB-  — imported from Facebook (src/app/api/facebook/import/route.ts)
+ *   SH-  — imported from Shopify (src/app/api/shopify/import/route.ts)
  *
  * Custom pattern editing isn't supported yet, so we explain that rather
  * than pretend.
@@ -139,6 +143,22 @@ export default function SKUPage() {
                   <div className="flex gap-2">
                     <span className="font-mono text-ink font-medium w-8">EB</span>
                     <span className="text-ink-lt">imported from eBay (keeps your seller SKU)</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">ET</span>
+                    <span className="text-ink-lt">imported from Etsy</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">DP</span>
+                    <span className="text-ink-lt">imported from Depop</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">FB</span>
+                    <span className="text-ink-lt">imported from Facebook Marketplace</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-ink font-medium w-8">SH</span>
+                    <span className="text-ink-lt">imported from Shopify</span>
                   </div>
                 </div>
               </div>

@@ -22,6 +22,10 @@ const SIZE_MAP: Record<IconSize, number> = {
  */
 export function MarketplaceIcon({ platform, size = 'md', className }: MarketplaceIconProps) {
   const px = SIZE_MAP[size]
+  // role="img" + aria-label is the WAI-ARIA pattern for accessible SVGs.
+  // Without role="img", screen readers (and document.textContent) leak the
+  // inner <text> glyphs — e.g. "ebayeBay UK", "dDepop", "EEtsy" — because
+  // SVG <text> elements contribute to the accessibility tree by default.
   const svgProps = {
     width: px,
     height: px,
@@ -29,6 +33,7 @@ export function MarketplaceIcon({ platform, size = 'md', className }: Marketplac
     fill: 'none',
     xmlns: 'http://www.w3.org/2000/svg',
     className,
+    role: 'img',
     'aria-label': `${platform} logo`,
   } as const
 

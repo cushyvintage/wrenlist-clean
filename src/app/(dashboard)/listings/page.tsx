@@ -105,7 +105,10 @@ export default function ListingsPage() {
         setIsLoading(true)
         setError(null)
       }
-      const response = await fetch('/api/listings')
+      // Explicit large limit because the page does client-side grouping by
+      // find_id and needs the full set. The API default is now 100 to protect
+      // ad-hoc callers from accidentally pulling multi-MB payloads.
+      const response = await fetch('/api/listings?limit=5000')
       const result = await response.json()
 
       if (!response.ok) {

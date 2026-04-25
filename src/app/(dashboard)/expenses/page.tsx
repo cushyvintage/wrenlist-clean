@@ -39,7 +39,10 @@ export default function ExpensesPage() {
         const response = await fetch(`/api/expenses?${queryParams}`)
         if (!response.ok) throw new Error('Failed to fetch expenses')
         const data = await response.json()
-        setExpenses(unwrapApiResponse<Expense[]>(data))
+        const payload = unwrapApiResponse<{ items: Expense[] } | Expense[]>(data)
+        // Tolerate both old (array) and new ({items, pagination}) shapes
+        // until any callers still expecting the legacy shape are updated.
+        setExpenses(Array.isArray(payload) ? payload : (payload?.items ?? []))
       } catch (err) {
         console.error('Failed to fetch expenses:', err)
         setError(err instanceof Error ? err.message : 'Failed to load expenses')
@@ -63,7 +66,10 @@ export default function ExpensesPage() {
         const response = await fetch(`/api/expenses?${queryParams}`)
         if (!response.ok) throw new Error('Failed to fetch expenses')
         const data = await response.json()
-        setExpenses(unwrapApiResponse<Expense[]>(data))
+        const payload = unwrapApiResponse<{ items: Expense[] } | Expense[]>(data)
+        // Tolerate both old (array) and new ({items, pagination}) shapes
+        // until any callers still expecting the legacy shape are updated.
+        setExpenses(Array.isArray(payload) ? payload : (payload?.items ?? []))
       } catch (err) {
         console.error('Failed to refetch expenses:', err)
       }

@@ -63,6 +63,15 @@ function InventoryPageContent() {
   const [bulkMarkingSold, setBulkMarkingSold] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [statusCounts, setStatusCounts] = useState({ all: 0, draft: 0, listed: 0, on_hold: 0, sold: 0, unpriced: 0, aging: 0 })
+  // Aggregate stats from /api/analytics/summary — must come from the
+  // server because the page only loads one page (LIMIT) of finds at a
+  // time. Summing client-side gives wildly wrong numbers (e.g. £1,275
+  // instead of £57,218) when inventory exceeds the page size.
+  const [aggregateStats, setAggregateStats] = useState<{
+    stockListedValue: number
+    stockCost: number
+    profitMarginPct: number | null
+  } | null>(null)
   const [stashes, setStashes] = useState<Array<{ id: string; name: string; item_count: number }>>([])
   const [stashFilter, setStashFilter] = useState<string>('all')
   const [showBulkMoveStash, setShowBulkMoveStash] = useState(false)
@@ -138,6 +147,17 @@ function InventoryPageContent() {
         if (ebayRes.ok) {
           const ebayData = await ebayRes.json()
           setEbayConnected(ebayData.data?.connected || false)
+        }
+
+        // Aggregate stats for the header (covers ALL finds, not just this page)
+        const summaryRes = await fetch('/api/analytics/summary')
+        if (summaryRes.ok) {
+          const s = await summaryRes.json()
+          setAggregateStats({
+            stockListedValue: Number(s.stock_listed_value ?? 0),
+            stockCost: Number(s.stock_cost ?? 0),
+            profitMarginPct: s.profit_margin_pct == null ? null : Number(s.profit_margin_pct),
+          })
         }
 
         // Build query params
@@ -571,12 +591,18 @@ function InventoryPageContent() {
   const totalPages = Math.ceil(totalCount / LIMIT)
   const currentPage = Math.floor(currentOffset / LIMIT) + 1
 
-  // Computed stats
-  const totalStockValue = finds.reduce((sum, f) => sum + (f.asking_price_gbp || 0), 0)
-  const totalCostBasis = finds.reduce((sum, f) => sum + (f.cost_gbp || 0), 0)
-  const avgMargin = totalCostBasis > 0 && totalStockValue > 0
-    ? Math.round(((totalStockValue - totalCostBasis) / totalStockValue) * 100)
-    : null
+  // Header stats use the aggregate from /api/analytics/summary so they
+  // reflect the whole inventory, not just the current page (LIMIT items).
+  // Falls back to the visible page total only while the summary loads.
+  const totalStockValue = aggregateStats?.stockListedValue
+    ?? finds.reduce((sum, f) => sum + (f.asking_price_gbp || 0), 0)
+  const totalCostBasis = aggregateStats?.stockCost
+    ?? finds.reduce((sum, f) => sum + (f.cost_gbp || 0), 0)
+  const avgMargin = aggregateStats?.profitMarginPct ?? (
+    totalCostBasis > 0 && totalStockValue > 0
+      ? Math.round(((totalStockValue - totalCostBasis) / totalStockValue) * 100)
+      : null
+  )
   const needsActionCount = finds.filter((f) =>
     f.status === 'draft' && (!f.asking_price_gbp || !f.photos || f.photos.length === 0 || !f.description)
   ).length

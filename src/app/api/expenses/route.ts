@@ -20,9 +20,11 @@ export const GET = withAuth(async (req, user) => {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
+    // count: 'exact' is required for `.count` to be populated. Without it
+    // pagination.total reads as 0 even when rows exist.
     let query = supabase
       .from('expenses')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
       .order('date', { ascending: false })
 
@@ -47,8 +49,11 @@ export const GET = withAuth(async (req, user) => {
       return ApiResponseHelper.internalError()
     }
 
+    // Use `items` (not `data`) inside the success envelope so the response
+    // shape matches /api/finds and stops `unwrapApiResponse` from looking
+    // at a doubly-nested `data.data`.
     return ApiResponseHelper.success({
-      data: data as Expense[],
+      items: data as Expense[],
       pagination: {
         limit,
         offset,

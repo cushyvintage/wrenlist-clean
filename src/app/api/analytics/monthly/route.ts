@@ -61,10 +61,15 @@ export const GET = withAuth(async (_req, user) => {
           }
         }
 
-        // Sourced in this month
-        const sourcedDate = new Date(f.sourced_at || f.created_at)
-        if (sourcedDate >= monthStart && sourcedDate <= monthEnd) {
-          itemsSourced++
+        // Sourced in this month — only count items with explicit sourced_at.
+        // Falling back to created_at makes bulk imports look like they were
+        // all sourced on the day the import ran (e.g. 2,716 imported finds
+        // all dated April when imported in April).
+        if (f.sourced_at) {
+          const sourcedDate = new Date(f.sourced_at)
+          if (sourcedDate >= monthStart && sourcedDate <= monthEnd) {
+            itemsSourced++
+          }
         }
       })
 

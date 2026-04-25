@@ -39,7 +39,9 @@ export default function MileagePage() {
       const response = await fetch('/api/mileage')
       if (!response.ok) throw new Error('Failed to fetch mileage')
       const data = await response.json()
-      const entries: Mileage[] = unwrapApiResponse<Mileage[]>(data)
+      const payload = unwrapApiResponse<{ items: Mileage[] } | Mileage[]>(data)
+      // Tolerate both legacy (array) and new ({items, pagination}) shapes
+      const entries: Mileage[] = Array.isArray(payload) ? payload : (payload?.items ?? [])
       setMileages(entries)
 
       const uniqueVehicles = Array.from(new Set(entries.map((e: Mileage) => e.vehicle)))

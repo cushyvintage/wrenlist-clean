@@ -62,7 +62,11 @@ export const GET = withAuth(async (req, user) => {
     const marketplace = searchParams.get('marketplace')
     const status = searchParams.get('status')
     const search = searchParams.get('search')
-    const limit = parseInt(searchParams.get('limit') || '5000', 10)
+    // Cap default at 100 to avoid 4MB+ payloads on large inventories.
+    // Caller can override with ?limit=N up to MAX_LIMIT for legacy use cases.
+    const MAX_LIMIT = 5000
+    const requestedLimit = parseInt(searchParams.get('limit') || '100', 10)
+    const limit = Math.min(Math.max(1, requestedLimit), MAX_LIMIT)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     // 1. Query product_marketplace_data joined with finds — paginate to bypass

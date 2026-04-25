@@ -60,17 +60,40 @@ export async function POST(request: NextRequest) {
     // is numeric (or falsy). Matches the Vinted route's protection — if
     // the client's user-detail lookup fails, we'd rather keep "cushyvintage"
     // than clobber it with "396908643".
-    const incomingLooksNumeric = !depopUsername || /^\d+$/.test(String(depopUsername))
-    if (incomingLooksNumeric) {
+    const looksNumeric = (v: string | null | undefined) =>
+      !v || /^\d+$/.test(String(v))
+    if (looksNumeric(depopUsername)) {
       const { data: existing } = await supabase
         .from('depop_connections')
         .select('depop_username')
         .eq('user_id', user.id)
         .single()
-      if (existing?.depop_username && !/^\d+$/.test(existing.depop_username)) {
+      if (existing?.depop_username && !looksNumeric(existing.depop_username)) {
         depopUsername = existing.depop_username
       }
+
+      // Last resort: another user account on this same Depop seller may
+      // have resolved the real handle. Borrow it instead of persisting the
+      // numeric ID, which renders as "@396908643" in the UI.
+      if (looksNumeric(depopUsername)) {
+        const { data: shared } = await supabase
+          .from('depop_connections')
+          .select('depop_username')
+          .eq('depop_user_id', depopUserId)
+          .neq('user_id', user.id)
+          .not('depop_username', 'is', null)
+          .limit(1)
+          .maybeSingle()
+        if (shared?.depop_username && !looksNumeric(shared.depop_username)) {
+          depopUsername = shared.depop_username
+        }
+      }
     }
+
+    // Persist null rather than the numeric user_id when no real handle
+    // resolved. The UI must show a placeholder ("Depop seller") instead
+    // of rendering "@<numeric>".
+    const finalUsername = looksNumeric(depopUsername) ? null : depopUsername
 
     const { data: connection, error } = await supabase
       .from('depop_connections')
@@ -78,7 +101,7 @@ export async function POST(request: NextRequest) {
         {
           user_id: user.id,
           depop_user_id: depopUserId,
-          depop_username: depopUsername || depopUserId,
+          depop_username: finalUsername,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }

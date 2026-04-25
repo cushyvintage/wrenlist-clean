@@ -19,9 +19,11 @@ export const GET = withAuth(async (req, user) => {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
+    // count: 'exact' makes Supabase return the total row count; without it
+    // pagination.total reads as 0 even when rows exist.
     let query = supabase
       .from('mileage')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
       .order('date', { ascending: false })
 
@@ -40,8 +42,10 @@ export const GET = withAuth(async (req, user) => {
       return ApiResponseHelper.internalError(error.message)
     }
 
+    // Use `items` (not `data`) inside the success envelope to avoid the
+    // `data.data` double-nesting that confuses unwrapApiResponse.
     return ApiResponseHelper.success({
-      data: data as Mileage[],
+      items: data as Mileage[],
       pagination: {
         limit,
         offset,

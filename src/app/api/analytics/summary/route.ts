@@ -161,9 +161,16 @@ export const GET = withAuth(async (req: NextRequest, user) => {
     const thisMonthCogs = thisMonthSold.reduce((sum, f) => sum + (f.cost_gbp || 0), 0)
     const thisMonthHasAnyCost = thisMonthSold.some((f) => (f.cost_gbp || 0) > 0)
 
+    // Only count items the user explicitly marked as sourced this month —
+    // never fall back to created_at, otherwise bulk imports show every find
+    // as "sourced this month" (e.g. importing 2,716 eBay listings made the
+    // dashboard claim 2,716 items sourced in April).
+    const monthStartDate = new Date(monthStart)
+    const monthEndDate = new Date(monthEnd)
     const thisMonthSourced = finds.filter((f) => {
-      const d = f.sourced_at ? new Date(f.sourced_at) : new Date(f.created_at)
-      return d >= new Date(monthStart) && d <= new Date(monthEnd)
+      if (!f.sourced_at) return false
+      const d = new Date(f.sourced_at)
+      return d >= monthStartDate && d <= monthEndDate
     }).length
 
     // Fetch expenses for this month
