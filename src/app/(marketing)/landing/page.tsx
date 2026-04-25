@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MarketingNav } from '@/components/layout/MarketingNav'
 import { MarketingFooter } from '@/components/layout/MarketingFooter'
@@ -125,6 +125,16 @@ const ResearchIcon = () => (
 )
 
 export default function LandingPage() {
+  // useSearchParams must run inside a Suspense boundary or the page can't
+  // be statically generated. Delegate to an inner component.
+  return (
+    <Suspense fallback={null}>
+      <LandingPageInner />
+    </Suspense>
+  )
+}
+
+function LandingPageInner() {
   const searchParams = useSearchParams()
   const refFromUrl = searchParams.get('ref')
   const waitlistFromUrl = searchParams.get('waitlist')

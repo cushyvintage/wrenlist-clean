@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
-export default function Home() {
+function HomeRedirect() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -24,6 +24,10 @@ export default function Home() {
     }
   }, [user, isLoading, router, searchParams])
 
+  return null
+}
+
+function LoadingShell() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
@@ -31,5 +35,16 @@ export default function Home() {
         <p className="text-gray-600">Loading...</p>
       </div>
     </div>
+  )
+}
+
+export default function Home() {
+  // useSearchParams must be wrapped in Suspense so Next can statically
+  // generate this page's shell while bailing out of CSR for the redirect.
+  return (
+    <Suspense fallback={<LoadingShell />}>
+      <HomeRedirect />
+      <LoadingShell />
+    </Suspense>
   )
 }
