@@ -6,13 +6,21 @@ inserts into `synthetic_test_results`.
 
 ## Safety conventions
 
-Every test artefact MUST be marked so it can be cleaned up and so that
-nothing is mistaken for a real listing if cleanup somehow fails:
+Every test artefact must be marked so it can be cleaned up and so that
+nothing is mistaken for a real listing if cleanup somehow fails. The
+markers live in fields buyers don't see — the title looks like a
+normal listing on purpose, because marketplace bot-spam classifiers
+(Vinted especially) flag obvious "TEST" / "DO NOT BUY" strings and
+that can hurt the seller's account standing.
 
-- **Title prefix**: `__WRENLIST_SYNTHETIC_DELETE__`
-- **Asking price**: `999` GBP (high enough that no buyer would bid)
-- **Description**: includes the run_id + "automated test, will be deleted"
-- **SKU**: prefix `WL-SYN-` so DB queries can grep them out
+- **Title**: a generic, plausible product name (`Vintage Decorative
+  Glass Vase — Mid Century Style`). No "TEST" or marker text.
+- **Asking price**: `999` GBP — the actual un-sellable signal.
+- **Description**: politely mentions "internal QA listing — please do
+  not order" for the curious passer-by, without screaming TEST.
+- **SKU**: prefix `WL-SYN-` — DB-side only, never seen by buyers,
+  used by cleanup queries to find any leaked artefacts.
+- **Brand**: `Internal QA` — internal sanity check, not bot-trippy.
 
 The runner is responsible for cleanup whether the run passes or fails:
 delete the find via DELETE /api/finds/[id], which cascades to PMD rows

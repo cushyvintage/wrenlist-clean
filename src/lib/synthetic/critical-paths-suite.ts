@@ -12,9 +12,10 @@ import {
   api,
   cleanupArtefacts,
   runStep,
-  SAFETY_NAME_PREFIX,
+  SAFETY_DESCRIPTION,
   SAFETY_PRICE,
   SAFETY_SKU_PREFIX,
+  SAFETY_TITLE,
   type RunnerContext,
   type StepResult,
 } from './runner'
@@ -36,15 +37,19 @@ async function stepCreateFind(ctx: RunnerContext, state: SuiteState) {
     const stamp = Date.now().toString(36).toUpperCase()
     const sku = SAFETY_SKU_PREFIX + stamp
     const { status, body } = await api(ctx, 'POST', '/api/finds', {
-      name: SAFETY_NAME_PREFIX + ' ' + stamp,
+      // Title looks like a normal listing — bot-spam classifiers on
+      // marketplaces (Vinted especially) flag obvious "TEST" strings
+      // and can hurt seller reputation. The £999 price + DB-side SKU
+      // prefix do the safety work instead.
+      name: SAFETY_TITLE,
       asking_price_gbp: SAFETY_PRICE,
       category: 'other',
       sku,
       status: 'draft',
       selected_marketplaces: ['ebay'],
-      brand: 'Synthetic',
+      brand: 'Internal QA',
       condition: 'good',
-      description: 'Automated synthetic test. Do NOT bid.',
+      description: SAFETY_DESCRIPTION,
       shipping_weight_grams: 200,
       shipping_length_cm: 10,
       shipping_width_cm: 10,
@@ -309,7 +314,10 @@ async function stepVintedQueueRoundtrip(ctx: RunnerContext, state: SuiteState) {
 async function stepStashCrud(ctx: RunnerContext) {
   return runStep(ctx, 'stash.crud', async () => {
     const stamp = Date.now().toString(36).toUpperCase()
-    const name = '__SYN_STASH__ ' + stamp
+    // Stashes never leave Wrenlist (not pushed to any marketplace), so the
+    // bot-spam concern doesn't apply — but using SAFETY_SKU_PREFIX keeps
+    // the cleanup query consistent across artefact types.
+    const name = SAFETY_SKU_PREFIX + 'STASH-' + stamp
     const cleanupIds: string[] = []
     try {
       // Create
@@ -378,15 +386,19 @@ async function stepMarkSoldAutoDelist(ctx: RunnerContext) {
     const stamp = Date.now().toString(36).toUpperCase()
     const sku = SAFETY_SKU_PREFIX + 'SOLD-' + stamp
 
-    // Create the find via the API so we exercise the same insert path
+    // Create the find via the API so we exercise the same insert path.
+    // Note: this find never goes live on any marketplace (only seeded
+    // PMDs are inserted), but we still use the bot-spam-safe naming
+    // for consistency.
     const created = await api(ctx, 'POST', '/api/finds', {
-      name: SAFETY_NAME_PREFIX + ' SOLD ' + stamp,
+      name: SAFETY_TITLE,
       asking_price_gbp: SAFETY_PRICE,
       category: 'other',
       sku,
       status: 'listed',
-      brand: 'Synthetic',
+      brand: 'Internal QA',
       condition: 'good',
+      description: SAFETY_DESCRIPTION,
     })
     if (created.status !== 201) {
       return { status: 'failed', details: { stage: 'create', http_status: created.status, body: created.body } }
@@ -468,14 +480,17 @@ async function stepBulkDelist(ctx: RunnerContext) {
     const stamp = Date.now().toString(36).toUpperCase()
     const findIds: string[] = []
     try {
-      // Create 3 cheap test finds with seeded vinted PMD rows
+      // Create 3 cheap test finds with seeded vinted PMD rows. Same
+      // bot-spam-safe naming — these never go live on any marketplace
+      // but consistency keeps the cleanup queries simple.
       for (let i = 0; i < 3; i++) {
         const created = await api(ctx, 'POST', '/api/finds', {
-          name: SAFETY_NAME_PREFIX + ' BULK-' + i + ' ' + stamp,
+          name: SAFETY_TITLE,
           asking_price_gbp: SAFETY_PRICE,
           category: 'other',
           sku: SAFETY_SKU_PREFIX + 'BULK' + i + '-' + stamp,
           status: 'listed',
+          description: SAFETY_DESCRIPTION,
         })
         if (created.status !== 201) {
           return { status: 'failed', details: { stage: 'create_' + i, http_status: created.status } }
@@ -538,11 +553,12 @@ async function stepFinanceCrud(ctx: RunnerContext) {
   return runStep(ctx, 'finance.crud', async () => {
     const today = new Date().toISOString().slice(0, 10)
 
-    // Expense create
+    // Expense create. Description carries the SKU-prefix marker so the
+    // cleanup query can find leaks even if the API delete fails.
     const exp = await api(ctx, 'POST', '/api/expenses', {
       amount_gbp: 0.01,
       category: 'packaging',
-      description: '__SYN_EXPENSE__ ' + Date.now(),
+      description: SAFETY_SKU_PREFIX + 'expense ' + Date.now(),
       date: today,
     })
     if (exp.status !== 201) {
@@ -553,10 +569,10 @@ async function stepFinanceCrud(ctx: RunnerContext) {
       return { status: 'failed', details: { stage: 'expense_create', reason: 'no id', body: exp.body } }
     }
 
-    // Mileage create
+    // Mileage create — vehicle name carries the SKU-prefix marker for cleanup.
     const mileage = await api(ctx, 'POST', '/api/mileage', {
       miles: 0.1,
-      vehicle: '__SYN_VEHICLE__',
+      vehicle: SAFETY_SKU_PREFIX + 'vehicle',
       vehicle_type: 'car',
       purpose: 'sourcing',
       date: today,

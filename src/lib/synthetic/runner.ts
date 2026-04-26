@@ -12,10 +12,16 @@
  * without a session. The user_id is bound at runtime from the cron
  * config (which user owns the test artefacts).
  *
- * Safety:
- *   - All test finds prefixed with `__WRENLIST_SYNTHETIC_DELETE__`
+ * Safety (see SAFETY_TITLE / SAFETY_DESCRIPTION / SAFETY_SKU_PREFIX
+ * below for the full conventions):
+ *   - Test finds use a normal-looking listing title — marketplace
+ *     bot-spam classifiers (Vinted especially) flag obvious "TEST"
+ *     strings and can hurt seller standing
  *   - asking_price_gbp = 999 (un-sellable safety net)
- *   - SKU prefix WL-SYN- so a stray cleanup query catches them
+ *   - SKU prefix WL-SYN- — DB-side only, never seen by buyers, used
+ *     by cleanup queries to find any leaked artefacts
+ *   - Description politely flags "internal QA listing — do not order"
+ *     for the curious passer-by, without screaming TEST at the algorithm
  *   - Cleanup runs in a finally block — even a thrown error must
  *     not leave artefacts behind
  *
@@ -27,8 +33,34 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+/**
+ * Safety conventions for synthetic test artefacts.
+ *
+ *   Title — must look like a normal vintage listing. Marketplace
+ *   bot-spam detection (Vinted especially) flags titles with obvious
+ *   "TEST", "DO NOT BUY", "INTERNAL" strings, which can hurt the
+ *   seller's account standing. Instead we use a generic plausible
+ *   product name and rely on the price + SKU + description for
+ *   safety/cleanup.
+ *
+ *   Price — £999 is the un-sellable signal. Real buyers will scroll
+ *   past at that price for a generic vintage item.
+ *
+ *   SKU — DB-side marker, never visible to buyers. The cleanup query
+ *   filters by SKU prefix so even if a stamp is reused, we won't
+ *   delete a real find.
+ *
+ *   Description — short, polite, mentions internal QA so a curious
+ *   passer-by understands. Doesn't shout "TEST" at the algorithm.
+ */
 export const SAFETY_PRICE = 999
-export const SAFETY_NAME_PREFIX = '__WRENLIST_SYNTHETIC_DELETE__'
+
+/** Buyer-facing — looks like a normal listing. */
+export const SAFETY_TITLE = 'Vintage Decorative Glass Vase — Mid Century Style'
+export const SAFETY_DESCRIPTION =
+  'Internal QA listing — please do not order. Item is not in stock and the price is intentionally above market. Listed temporarily for automated platform-integration testing only.'
+
+/** DB-side only — never seen by buyers. */
 export const SAFETY_SKU_PREFIX = 'WL-SYN-'
 
 export interface RunnerContext {
