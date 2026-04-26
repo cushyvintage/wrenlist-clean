@@ -1257,19 +1257,22 @@ export class EtsyClient {
       // follow-up PUT after create — but the create POST itself fails
       // before the PUT can run, so inventory must be inline in the create
       // body. Shape mirrors what `getListingInventory` reads back.
-      // Etsy's create-listing API expects `inventory` as an Array of products
-      // (not the envelope object the standalone PUT endpoint accepts). Sending
-      // `{products:[...], price_on_property:[], ...}` produces:
-      // `400 Inventory payload issue: Array contains invalid keys: products,
-      // price_on_property, quantity_on_property, sku_on_property` — Etsy is
-      // iterating the value as an array and complaining the object keys aren't
-      // valid array indices. So pass the products array directly.
-      const inventoryBody = this.buildInventoryBody({
+      // Etsy's internal AJAX create-listing endpoint validates that `inventory`
+      // is present (omitting it returns `400 missing_inventory`), but it
+      // refuses any populated shape we can come up with — every key in an
+      // object or every index in an array is reported as "invalid". The only
+      // values that pass validation are `[]` (empty array) and `{}` (empty
+      // object). Etsy's seller-tools React form posts an empty inventory at
+      // create time and PUTs the real inventory immediately after via the
+      // `/listings/{id}/inventory` endpoint. We do the same: empty `[]` here
+      // to satisfy the create check, then `setListingInventoryAfterCreate`
+      // PUTs the real shape with sku/price/quantity. Verified by direct
+      // reconnaissance against the live endpoint 2026-04-26.
+      const inventoryBodyAfterCreate = this.buildInventoryBody({
         sku: product.sku ?? null,
         price: product.price,
         quantity: product.quantity ?? 1,
       });
-      const inventoryProducts = (inventoryBody.products as unknown[]) ?? [];
 
       const createBody: Record<string, unknown> = {
         title: product.title?.slice(0, 140) || "",
@@ -1279,14 +1282,13 @@ export class EtsyClient {
         when_made: whenMade,
         is_supply: false,
         taxonomy_id: taxonomyId,
-        inventory: inventoryProducts,
+        inventory: [],
       };
 
-      await remoteLog("info", "etsy.api-publish", "Creating draft listing with inline inventory (array shape)", {
+      await remoteLog("info", "etsy.api-publish", "Creating draft listing (empty inventory, will PUT real shape after)", {
         title: createBody.title,
         price: createBody.price,
         taxonomy_id: taxonomyId,
-        inventory: inventoryProducts,
       });
 
       const createResp = await fetch(
@@ -1321,14 +1323,34 @@ export class EtsyClient {
       const listingId = String(createData.listing_id);
       await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
 
-      // 4b. Verify inventory took. Etsy's create endpoint accepts inline
-      // inventory but has shown silent-200 patterns elsewhere (delist
-      // returns 200 with unchanged body, inventory PUT same), so we
-      // re-read via `getListingInventory` and confirm price+quantity
-      // match what we sent. Cheap insurance — one extra GET — and gives
-      // us a clear failure signal before we waste a PATCH/activate on a
-      // listing whose inventory silently didn't take.
+      // 4b. PUT the real inventory. We sent `inventory: []` at create time
+      // because that's the only shape Etsy's internal AJAX create-listing
+      // endpoint accepts (any populated object/array fails with "invalid
+      // keys"). Now PUT the full envelope shape (with sku/price/quantity/
+      // offerings) to the standalone `/listings/{id}/inventory` endpoint —
+      // that endpoint DOES accept the populated envelope. Then verify by
+      // re-reading via `getListingInventory` to guard against Etsy's known
+      // silent-200 pattern on PATCH/PUT endpoints.
       try {
+        const inventoryPutResp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}/inventory`,
+          {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "x-csrf-token": csrfNonce,
+            },
+            body: JSON.stringify(inventoryBodyAfterCreate),
+          },
+        );
+        if (!inventoryPutResp.ok) {
+          const putErr = await inventoryPutResp.text().catch(() => "");
+          throw new Error(
+            `PUT inventory returned ${inventoryPutResp.status}: ${putErr.substring(0, 200)}`,
+          );
+        }
+
         const confirmed = await this.getListingInventory(listingId);
         const expectedPrice = product.price;
         const expectedQty = Math.max(1, Math.floor(product.quantity ?? 1));
@@ -1340,7 +1362,7 @@ export class EtsyClient {
           await remoteLog(
             "warn",
             "etsy.api-publish-inventory",
-            "Inline inventory created but verifier mismatch",
+            "Inventory PUT returned 200 but verifier mismatch",
             {
               listingId,
               expectedPrice,
@@ -1353,14 +1375,14 @@ export class EtsyClient {
             `Inventory verifier mismatch: expected price=${expectedPrice} qty=${expectedQty}, got price=${confirmed.price} qty=${confirmed.quantity}`,
           );
         }
-        await remoteLog("info", "etsy.api-publish-inventory", "Verified inventory matches", {
+        await remoteLog("info", "etsy.api-publish-inventory", "Inventory PUT + verified", {
           listingId,
           price: confirmed.price,
           quantity: confirmed.quantity,
         });
       } catch (invErr) {
         const invMsg = invErr instanceof Error ? invErr.message : String(invErr);
-        await remoteLog("error", "etsy.api-publish-inventory", `Inventory verify failed: ${invMsg}`, {
+        await remoteLog("error", "etsy.api-publish-inventory", `Inventory write failed: ${invMsg}`, {
           listingId,
         });
         // Throw so the outer publishProduct catches and falls back to form-fill.
