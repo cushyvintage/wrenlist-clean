@@ -1248,7 +1248,21 @@ export class EtsyClient {
         }
       }
 
-      // 4. Create draft listing via API
+      // 4. Create draft listing via API.
+      //
+      // Etsy's `POST /shop/{shopId}/listings` rejects with
+      // 400 `[{path:/inventory, type:missing_inventory, message:"Inventory
+      // is required when creating a listing."}]` if `inventory` is omitted
+      // from the request body. The previous fix sent inventory as a
+      // follow-up PUT after create — but the create POST itself fails
+      // before the PUT can run, so inventory must be inline in the create
+      // body. Shape mirrors what `getListingInventory` reads back.
+      const inventoryBody = this.buildInventoryBody({
+        sku: product.sku ?? null,
+        price: product.price,
+        quantity: product.quantity ?? 1,
+      });
+
       const createBody: Record<string, unknown> = {
         title: product.title?.slice(0, 140) || "",
         price: product.price,
@@ -1257,12 +1271,14 @@ export class EtsyClient {
         when_made: whenMade,
         is_supply: false,
         taxonomy_id: taxonomyId,
+        inventory: inventoryBody,
       };
 
-      await remoteLog("info", "etsy.api-publish", "Creating draft listing", {
+      await remoteLog("info", "etsy.api-publish", "Creating draft listing with inline inventory", {
         title: createBody.title,
         price: createBody.price,
         taxonomy_id: taxonomyId,
+        inventory: inventoryBody,
       });
 
       const createResp = await fetch(
@@ -1297,31 +1313,50 @@ export class EtsyClient {
       const listingId = String(createData.listing_id);
       await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
 
-      // 4b. Write inventory immediately. Etsy's create-listing endpoint
-      // does NOT auto-create the inventory record — without this, every
-      // subsequent operation (especially activating to "active") fails with
-      // 400 missing_inventory. The form-fill path doesn't need this because
-      // Etsy's React form posts the inventory shape implicitly when you hit
-      // "Save"; the API path leaves the listing in an inventory-less state.
+      // 4b. Verify inventory took. Etsy's create endpoint accepts inline
+      // inventory but has shown silent-200 patterns elsewhere (delist
+      // returns 200 with unchanged body, inventory PUT same), so we
+      // re-read via `getListingInventory` and confirm price+quantity
+      // match what we sent. Cheap insurance — one extra GET — and gives
+      // us a clear failure signal before we waste a PATCH/activate on a
+      // listing whose inventory silently didn't take.
       try {
-        await this.setListingInventory(shopId, csrfNonce, listingId, {
-          sku: product.sku ?? null,
-          price: product.price,
-          quantity: product.quantity ?? 1,
-        });
-        await remoteLog("info", "etsy.api-publish-inventory", "Inventory set successfully", {
+        const confirmed = await this.getListingInventory(listingId);
+        const expectedPrice = product.price;
+        const expectedQty = Math.max(1, Math.floor(product.quantity ?? 1));
+        const priceMatches =
+          confirmed.price !== null &&
+          Math.abs(confirmed.price - expectedPrice) < 0.01;
+        const qtyMatches = confirmed.quantity === expectedQty;
+        if (!priceMatches || !qtyMatches) {
+          await remoteLog(
+            "warn",
+            "etsy.api-publish-inventory",
+            "Inline inventory created but verifier mismatch",
+            {
+              listingId,
+              expectedPrice,
+              observedPrice: confirmed.price,
+              expectedQuantity: expectedQty,
+              observedQuantity: confirmed.quantity,
+            },
+          );
+          throw new Error(
+            `Inventory verifier mismatch: expected price=${expectedPrice} qty=${expectedQty}, got price=${confirmed.price} qty=${confirmed.quantity}`,
+          );
+        }
+        await remoteLog("info", "etsy.api-publish-inventory", "Verified inventory matches", {
           listingId,
-          sku: product.sku ?? null,
-          price: product.price,
-          quantity: product.quantity ?? 1,
+          price: confirmed.price,
+          quantity: confirmed.quantity,
         });
       } catch (invErr) {
         const invMsg = invErr instanceof Error ? invErr.message : String(invErr);
-        await remoteLog("error", "etsy.api-publish-inventory", `Inventory write failed: ${invMsg}`, {
+        await remoteLog("error", "etsy.api-publish-inventory", `Inventory verify failed: ${invMsg}`, {
           listingId,
         });
         // Throw so the outer publishProduct catches and falls back to form-fill.
-        throw new Error(`Inventory write failed for listing ${listingId}: ${invMsg}`);
+        throw new Error(`Inventory verify failed for listing ${listingId}: ${invMsg}`);
       }
 
       // 5. PATCH with description, tags, materials, images, SKU, shipping
@@ -1475,10 +1510,10 @@ export class EtsyClient {
   // ─── Inventory & Auto-Renew ─────────────────────────────────────
 
   /**
-   * Write the single-product inventory shape required by Etsy after
-   * `POST /shop/{shopId}/listings`. Without this, every newly-created
-   * listing returns 400 `missing_inventory` on subsequent operations
-   * (e.g. activating, fetching from the listing manager).
+   * Build the single-product inventory shape Etsy requires inline in the
+   * `POST /shop/{shopId}/listings` create body. Without an `inventory`
+   * field on create, Etsy returns 400 `missing_inventory` ("Inventory is
+   * required when creating a listing").
    *
    * Shape mirrors what `getListingInventory` reads back: a single
    * `products[0]` with one `offerings[0]` carrying price + quantity +
@@ -1486,25 +1521,25 @@ export class EtsyClient {
    * Wrenlist is GBP-only today; if multi-currency lands we should pull
    * the shop currency from `getShopConfig` instead.
    *
-   * Etsy returns 200 with the updated inventory body on success; like the
-   * delist endpoint it can also 200 with an unchanged or error envelope,
-   * so we verify by re-reading via `getListingInventory` and confirming
-   * the price+quantity actually took.
+   * `property_values: []` is required even with no variations; the form
+   * path always sends it. `is_enabled: 1` is a 0/1 int, not a bool.
+   *
+   * Uncertainty: Etsy may want this nested differently in the create body
+   * vs the standalone PUT — the standalone PUT shape is what we know works
+   * (the form-fill path uses it). If create returns 400 with a path like
+   * `/inventory/products` or similar, the shape is wrong and the log line
+   * "Creating draft listing with inline inventory" will show what we sent.
    */
-  private async setListingInventory(
-    shopId: string,
-    csrfNonce: string,
-    listingId: string,
-    inventory: { sku: string | null; price: number; quantity: number },
-  ): Promise<void> {
+  private buildInventoryBody(inventory: {
+    sku: string | null;
+    price: number;
+    quantity: number;
+  }): Record<string, unknown> {
     const sku = inventory.sku ?? "";
     const quantity = Math.max(1, Math.floor(inventory.quantity));
     const priceAmount = Math.round(inventory.price * 100);
 
-    // Etsy's inventory shape (matches what getListingInventory reads back).
-    // `property_values: []` is required even with no variations; the form
-    // path always sends it. `is_enabled: 1` is a 0/1 int, not a bool.
-    const body = {
+    return {
       products: [
         {
           sku,
@@ -1526,71 +1561,6 @@ export class EtsyClient {
       quantity_on_property: [],
       sku_on_property: [],
     };
-
-    // Etsy's internal endpoint accepts PUT for inventory writes (the
-    // form-fill path uses PUT here). If PUT 405s on some shops we'll see
-    // it in the logs and can add a POST fallback.
-    const resp = await fetch(
-      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}/inventory`,
-      {
-        method: "PUT",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "x-csrf-token": csrfNonce,
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      throw new Error(
-        `Etsy inventory PUT returned ${resp.status}: ${errText.substring(0, 300)}`,
-      );
-    }
-
-    // 200 doesn't guarantee the write took — Etsy sometimes 200s with an
-    // unchanged body. Re-read inventory and confirm price+quantity match.
-    let confirmed: Awaited<ReturnType<typeof this.getListingInventory>> | null = null;
-    try {
-      confirmed = await this.getListingInventory(listingId);
-    } catch (readErr) {
-      const readMsg = readErr instanceof Error ? readErr.message : String(readErr);
-      await remoteLog(
-        "warn",
-        "etsy.api-publish-inventory",
-        `Inventory write returned 200 but verifier read failed: ${readMsg}`,
-        { listingId },
-      );
-      // Treat as success — the write 200'd. If it really failed, the
-      // subsequent activate-to-active PATCH will surface the error and
-      // the outer catch will fall back to form-fill.
-      return;
-    }
-
-    const priceMatches =
-      confirmed.price !== null &&
-      Math.abs(confirmed.price - inventory.price) < 0.01;
-    const quantityMatches = confirmed.quantity === quantity;
-
-    if (!priceMatches || !quantityMatches) {
-      await remoteLog(
-        "warn",
-        "etsy.api-publish-inventory",
-        "Inventory write returned 200 but body did not confirm",
-        {
-          listingId,
-          expectedPrice: inventory.price,
-          observedPrice: confirmed.price,
-          expectedQuantity: quantity,
-          observedQuantity: confirmed.quantity,
-        },
-      );
-      throw new Error(
-        `Inventory verifier mismatch: expected price=${inventory.price} qty=${quantity}, got price=${confirmed.price} qty=${confirmed.quantity}`,
-      );
-    }
   }
 
   /** Fetch inventory data for a single listing via Etsy's internal inventory endpoint */
