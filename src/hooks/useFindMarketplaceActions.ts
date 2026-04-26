@@ -137,28 +137,15 @@ export function useFindMarketplaceActions({
     setVintedListResult(null)
 
     try {
-      const vintedPmd = marketplaceData.find((m) => m.marketplace === 'vinted')
-      if (!vintedPmd) {
-        setVintedListResult({ ok: false, message: 'Vinted listing not found' })
-        setIsListingOnVinted(false)
-        return
-      }
-
-      const pmdRes = await fetch(`/api/finds/${id}/marketplace?marketplace=vinted`, {
-        method: 'PATCH',
+      const res = await fetch('/api/crosslist/delist', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'needs_delist' }),
+        body: JSON.stringify({ findId: find.id, marketplace: 'vinted' }),
       })
 
-      if (!pmdRes.ok) throw new Error('Failed to queue delist')
-
-      const runtime = getChromeRuntime()
-      if (runtime?.sendMessage) {
-        runtime.sendMessage(
-          EXTENSION_ID,
-          { action: 'delistlistingfrommarketplace', marketplace: 'vinted', listingId: vintedPmd.platform_listing_id },
-          () => { /* non-fatal */ }
-        )
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delist from Vinted')
       }
 
       refreshMarketplaceData()
@@ -168,7 +155,7 @@ export function useFindMarketplaceActions({
     } finally {
       setIsListingOnVinted(false)
     }
-  }, [find, id, marketplaceData, refreshMarketplaceData])
+  }, [find, id, refreshMarketplaceData])
 
   const handleDelistFromPlatform = useCallback(async (marketplace: string) => {
     if (!find) return

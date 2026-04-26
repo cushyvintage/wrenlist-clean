@@ -170,6 +170,12 @@ export const POST = withAuth(async (req: NextRequest, user) => {
         if (marketplace === 'etsy' && publishMode) {
           queueFields.publishMode = publishMode
         }
+        // Always write listing_price explicitly: a per-platform override if
+        // present, otherwise NULL so the extension falls back to the find's
+        // current asking_price_gbp. Without the explicit NULL, an upsert on
+        // an existing PMD row would keep the stale price from the previous
+        // listing — so changing asking_price_gbp + republishing would silently
+        // re-list at the OLD price.
         const { error: queueError } = await supabase
           .from('product_marketplace_data')
           .upsert(
@@ -177,7 +183,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
               find_id: findId,
               marketplace,
               status: 'needs_publish',
-              ...(perPlatformPrice != null ? { listing_price: perPlatformPrice } : {}),
+              listing_price: perPlatformPrice,
               ...(Object.keys(queueFields).length > 0 ? { fields: queueFields } : {}),
               updated_at: new Date().toISOString(),
             },

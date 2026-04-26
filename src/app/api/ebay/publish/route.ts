@@ -220,9 +220,11 @@ export async function POST(request: NextRequest) {
 
     // Book Title — required for books on eBay. Same universal fallback
     // as Department/Language: harmless on non-book listings (ignored),
-    // critical when eBay's classifier picks a books category.
+    // critical when eBay's classifier picks a books category. eBay caps
+    // Book Title at 65 chars, so truncate (the main listing title can be
+    // up to 80 chars but Book Title aspect can't).
     if (!aspects['Book Title']) {
-      aspects['Book Title'] = find.name
+      aspects['Book Title'] = find.name.substring(0, 65)
     }
 
     // Author — required for books too. Default to "Unknown" rather than
@@ -329,7 +331,7 @@ export async function POST(request: NextRequest) {
       } else if (field.name === 'Language') {
         aspects['Language'] = 'English'
       } else if (field.name === 'Book Title') {
-        aspects['Book Title'] = find.name
+        aspects['Book Title'] = find.name.substring(0, 65)
       } else if (field.name === 'Model') {
         aspects['Model'] = find.name.substring(0, 65)
       } else if (field.name === 'Type') {
