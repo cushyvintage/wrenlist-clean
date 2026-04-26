@@ -235,6 +235,183 @@ async function stepValidationGuards(ctx: RunnerContext) {
 }
 
 /**
+ * Step 9 — verify the publish-queue mechanism for non-eBay platforms.
+ * Vinted/Etsy/Depop publish goes via the desktop extension, which the
+ * synthetic runner can't drive headless. But we CAN verify the queue
+ * write/read contract — the part the extension polls — without ever
+ * touching the live marketplace. Catches regressions in:
+ *   - PMD upsert when the UI queues a publish
+ *   - The needs_publish → listed status flip on extension reporting back
+ *   - find lookup + ownership filter
+ */
+async function stepVintedQueueRoundtrip(ctx: RunnerContext, state: SuiteState) {
+  return runStep(ctx, 'publish.queue.vinted', async () => {
+    if (!state.findId) return { status: 'skipped', details: { reason: 'no find' } }
+
+    // 1. Insert a needs_publish PMD row directly (the UI's queue path
+    //    goes through a different endpoint per platform; we test the
+    //    extension's view of the queue here, not the UI's writer).
+    const { error: insertErr } = await ctx.supabase
+      .from('product_marketplace_data')
+      .upsert(
+        { find_id: state.findId, marketplace: 'vinted', status: 'needs_publish' },
+        { onConflict: 'find_id,marketplace' },
+      )
+    if (insertErr) {
+      return { status: 'failed', details: { stage: 'queue_insert', error: insertErr.message } }
+    }
+
+    // 2. Hit the extension-facing queue endpoint as the user — we should
+    //    see our find_id in the returned list.
+    const { status: getStatus, body: getBody } = await api(ctx, 'GET', '/api/marketplace/publish-queue')
+    if (getStatus !== 200) {
+      return { status: 'failed', details: { stage: 'queue_read', http_status: getStatus, body: getBody } }
+    }
+    const items = ((getBody as { data?: unknown[] })?.data ?? []) as Array<{ find_id: string; marketplace: string }>
+    const found = items.find((i) => i.find_id === state.findId && i.marketplace === 'vinted')
+    if (!found) {
+      return { status: 'failed', details: { stage: 'queue_read', reason: 'find not in queue', queue_size: items.length } }
+    }
+
+    // 3. Simulate extension reporting back success (the POST endpoint
+    //    flips status to 'listed' and stores listing_id/url).
+    const { status: postStatus, body: postBody } = await api(ctx, 'POST', '/api/marketplace/publish-queue', {
+      find_id: state.findId,
+      marketplace: 'vinted',
+      status: 'listed',
+      platform_listing_id: 'SYN-VINTED-' + Date.now(),
+      platform_listing_url: 'https://www.vinted.co.uk/items/synthetic',
+    })
+    if (postStatus !== 200) {
+      return { status: 'failed', details: { stage: 'queue_report', http_status: postStatus, body: postBody } }
+    }
+
+    // 4. Read PMD back to confirm the flip.
+    const { data: pmd, error: readErr } = await ctx.supabase
+      .from('product_marketplace_data')
+      .select('status, platform_listing_id')
+      .eq('find_id', state.findId)
+      .eq('marketplace', 'vinted')
+      .maybeSingle()
+    if (readErr || !pmd || pmd.status !== 'listed') {
+      return { status: 'failed', details: { stage: 'verify_listed', pmd_row: pmd, db_error: readErr?.message } }
+    }
+
+    return { status: 'passed', details: { final_pmd_status: pmd.status, listing_id: pmd.platform_listing_id } }
+  })
+}
+
+/**
+ * Step 10 — stash CRUD: create → list → rename → delete.
+ * Stashes back the inventory location feature on /finds; if create
+ * silently breaks the user can't organise anything physical.
+ */
+async function stepStashCrud(ctx: RunnerContext) {
+  return runStep(ctx, 'stash.crud', async () => {
+    const stamp = Date.now().toString(36).toUpperCase()
+    const name = '__SYN_STASH__ ' + stamp
+    const cleanupIds: string[] = []
+    try {
+      // Create
+      const create = await api(ctx, 'POST', '/api/stashes', { name, capacity: 50 })
+      if (create.status !== 201) {
+        return { status: 'failed', details: { stage: 'create', http_status: create.status, body: create.body } }
+      }
+      const stash = (create.body as { data?: { id?: string } })?.data
+      if (!stash?.id) {
+        return { status: 'failed', details: { stage: 'create', reason: 'no id', body: create.body } }
+      }
+      cleanupIds.push(stash.id)
+
+      // List — must include our stash
+      const list = await api(ctx, 'GET', '/api/stashes')
+      const listed = ((list.body as { data?: unknown[] })?.data ?? []) as Array<{ id: string }>
+      if (!listed.find((s) => s.id === stash.id)) {
+        return { status: 'failed', details: { stage: 'list', reason: 'created stash not in list' } }
+      }
+
+      // Rename via PATCH
+      const renamed = name + ' renamed'
+      const patch = await api(ctx, 'PATCH', `/api/stashes/${stash.id}`, { name: renamed })
+      if (patch.status !== 200) {
+        return { status: 'failed', details: { stage: 'rename', http_status: patch.status, body: patch.body } }
+      }
+
+      // Delete
+      const del = await api(ctx, 'DELETE', `/api/stashes/${stash.id}`)
+      if (del.status !== 200) {
+        return { status: 'failed', details: { stage: 'delete', http_status: del.status, body: del.body } }
+      }
+
+      return { status: 'passed', details: { lifecycle: 'create→list→rename→delete', stash_id: stash.id } }
+    } finally {
+      // Best-effort cleanup if we bailed before delete
+      for (const id of cleanupIds) {
+        try {
+          await ctx.supabase.from('stashes').delete().eq('id', id).eq('user_id', ctx.userId)
+        } catch { /* ignore */ }
+      }
+    }
+  })
+}
+
+/**
+ * Step 11 — expense + mileage create/delete. Smaller scope than stash
+ * CRUD because neither has a rename, but they're hot paths for the
+ * tax page so they deserve a smoke check.
+ */
+async function stepFinanceCrud(ctx: RunnerContext) {
+  return runStep(ctx, 'finance.crud', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Expense create
+    const exp = await api(ctx, 'POST', '/api/expenses', {
+      amount_gbp: 0.01,
+      category: 'packaging',
+      description: '__SYN_EXPENSE__ ' + Date.now(),
+      date: today,
+    })
+    if (exp.status !== 201) {
+      return { status: 'failed', details: { stage: 'expense_create', http_status: exp.status, body: exp.body } }
+    }
+    const expId = (exp.body as { data?: { id?: string } })?.data?.id
+    if (!expId) {
+      return { status: 'failed', details: { stage: 'expense_create', reason: 'no id', body: exp.body } }
+    }
+
+    // Mileage create
+    const mileage = await api(ctx, 'POST', '/api/mileage', {
+      miles: 0.1,
+      vehicle: '__SYN_VEHICLE__',
+      vehicle_type: 'car',
+      purpose: 'sourcing',
+      date: today,
+    })
+    if (mileage.status !== 201) {
+      // Best-effort cleanup of the expense we did create
+      await ctx.supabase.from('expenses').delete().eq('id', expId).eq('user_id', ctx.userId)
+      return { status: 'failed', details: { stage: 'mileage_create', http_status: mileage.status, body: mileage.body } }
+    }
+    const mileageId = (mileage.body as { data?: { id?: string } })?.data?.id
+
+    // Cleanup both via the API (tests the DELETE handlers too)
+    const expDel = await api(ctx, 'DELETE', `/api/expenses/${expId}`)
+    const mileageDel = mileageId
+      ? await api(ctx, 'DELETE', `/api/mileage/${mileageId}`)
+      : { status: 200 }
+
+    if (expDel.status !== 200 || mileageDel.status !== 200) {
+      return {
+        status: 'failed',
+        details: { stage: 'cleanup', expense_delete: expDel.status, mileage_delete: mileageDel.status },
+      }
+    }
+
+    return { status: 'passed', details: { expense_id: expId, mileage_id: mileageId } }
+  })
+}
+
+/**
  * Run the full suite. Returns the per-step results and the overall outcome.
  * Cleanup is always attempted, even after thrown errors.
  */
@@ -254,6 +431,9 @@ export async function runSuite(ctx: RunnerContext): Promise<{ steps: StepResult[
     steps.push(await stepDelistEbay(ctx, state))
     steps.push(await stepVerifyDelisted(ctx, state))
     steps.push(await stepEditFind(ctx, state))
+    steps.push(await stepVintedQueueRoundtrip(ctx, state))
+    steps.push(await stepStashCrud(ctx))
+    steps.push(await stepFinanceCrud(ctx))
     steps.push(await stepValidationGuards(ctx))
   } finally {
     // Cleanup unconditionally — even an uncaught throw must not leave
