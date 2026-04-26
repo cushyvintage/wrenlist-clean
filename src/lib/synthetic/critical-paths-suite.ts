@@ -520,14 +520,19 @@ async function stepBulkDelist(ctx: RunnerContext) {
         return { status: 'failed', details: { stage: 'delist_loop', http_statuses: results } }
       }
 
-      // Verify all 3 PMD rows flipped
+      // Verify all 3 PMD rows transitioned to a delist state. Vinted
+      // delists are extension-driven — the API endpoint flips PMD to
+      // 'needs_delist' so the extension picks it up; only after the
+      // extension reports back does it become 'delisted' or 'ended'.
+      // Either status proves the queue contract worked.
       await new Promise((r) => setTimeout(r, 800))
       const { data: pmd } = await ctx.supabase
         .from('product_marketplace_data')
         .select('find_id, status')
         .in('find_id', findIds)
         .eq('marketplace', 'vinted')
-      const stillListed = (pmd ?? []).filter((p) => p.status !== 'delisted' && p.status !== 'ended')
+      const DELIST_STATES = new Set(['needs_delist', 'delisted', 'ended'])
+      const stillListed = (pmd ?? []).filter((p) => !DELIST_STATES.has(p.status))
       if (stillListed.length > 0) {
         return { status: 'failed', details: { stage: 'verify', still_listed: stillListed } }
       }
