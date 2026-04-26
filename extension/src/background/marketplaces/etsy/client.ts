@@ -1257,11 +1257,19 @@ export class EtsyClient {
       // follow-up PUT after create — but the create POST itself fails
       // before the PUT can run, so inventory must be inline in the create
       // body. Shape mirrors what `getListingInventory` reads back.
+      // Etsy's create-listing API expects `inventory` as an Array of products
+      // (not the envelope object the standalone PUT endpoint accepts). Sending
+      // `{products:[...], price_on_property:[], ...}` produces:
+      // `400 Inventory payload issue: Array contains invalid keys: products,
+      // price_on_property, quantity_on_property, sku_on_property` — Etsy is
+      // iterating the value as an array and complaining the object keys aren't
+      // valid array indices. So pass the products array directly.
       const inventoryBody = this.buildInventoryBody({
         sku: product.sku ?? null,
         price: product.price,
         quantity: product.quantity ?? 1,
       });
+      const inventoryProducts = (inventoryBody.products as unknown[]) ?? [];
 
       const createBody: Record<string, unknown> = {
         title: product.title?.slice(0, 140) || "",
@@ -1271,14 +1279,14 @@ export class EtsyClient {
         when_made: whenMade,
         is_supply: false,
         taxonomy_id: taxonomyId,
-        inventory: inventoryBody,
+        inventory: inventoryProducts,
       };
 
-      await remoteLog("info", "etsy.api-publish", "Creating draft listing with inline inventory", {
+      await remoteLog("info", "etsy.api-publish", "Creating draft listing with inline inventory (array shape)", {
         title: createBody.title,
         price: createBody.price,
         taxonomy_id: taxonomyId,
-        inventory: inventoryBody,
+        inventory: inventoryProducts,
       });
 
       const createResp = await fetch(
