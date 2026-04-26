@@ -209,14 +209,26 @@ export async function POST(request: NextRequest) {
         : 'Unisex'
     }
 
-    // Language — required for books
-    if (!aspects['Language'] && (category.startsWith('books') || category.includes('book'))) {
+    // Language — required for books. Always default; eBay ignores it on
+    // non-book categories. Without the universal fallback we'd hit the
+    // same "X is missing" 400 the Department bug had whenever eBay's
+    // getCategorySuggestion picked a books leaf despite our slug being
+    // 'other'.
+    if (!aspects['Language']) {
       aspects['Language'] = 'English'
     }
 
-    // Book Title — required for books on eBay
-    if (!aspects['Book Title'] && category.startsWith('books')) {
+    // Book Title — required for books on eBay. Same universal fallback
+    // as Department/Language: harmless on non-book listings (ignored),
+    // critical when eBay's classifier picks a books category.
+    if (!aspects['Book Title']) {
       aspects['Book Title'] = find.name
+    }
+
+    // Author — required for books too. Default to "Unknown" rather than
+    // a real-looking string so the seller spots it on edit.
+    if (!aspects['Author']) {
+      aspects['Author'] = 'Unknown'
     }
 
     // Model — required for electronics, musical instruments
