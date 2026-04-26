@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/waitlist-drip",
       "schedule": "30 10 * * *"
+    },
+    {
+      "path": "/api/cron/synthetic-tests",
+      "schedule": "0 6 * * *"
     }
   ]
 }
