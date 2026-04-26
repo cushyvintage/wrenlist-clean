@@ -159,23 +159,23 @@ export async function PATCH(
       return ApiResponseHelper.notFound()
     }
 
-    // Allow partial updates for: status, sold_at, sold_price_gbp
+    // Validate the partial update against the same schema PUT uses, so
+    // PATCH and PUT can't drift on what's allowed. Previously PATCH only
+    // accepted status / sold_at / sold_price_gbp and silently DROPPED
+    // every other field — caller would get 200 OK while their brand/
+    // condition/name/description update never landed.
+    const validation = validateBody(UpdateFindSchema, body)
+    if (!validation.success) {
+      return ApiResponseHelper.badRequest(validation.error)
+    }
+
     const updateData: Record<string, unknown> = {
+      ...validation.data,
       updated_at: new Date().toISOString(),
     }
 
-    const isStatusChanging = 'status' in body
-    const newStatus = body.status
-
-    if (isStatusChanging) {
-      updateData.status = newStatus
-    }
-    if ('sold_at' in body) {
-      updateData.sold_at = body.sold_at
-    }
-    if ('sold_price_gbp' in body) {
-      updateData.sold_price_gbp = body.sold_price_gbp
-    }
+    const isStatusChanging = 'status' in validation.data
+    const newStatus = validation.data.status
 
     const { data, error } = await supabase
       .from('finds')
