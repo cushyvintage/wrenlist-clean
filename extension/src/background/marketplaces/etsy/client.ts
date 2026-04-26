@@ -1297,6 +1297,33 @@ export class EtsyClient {
       const listingId = String(createData.listing_id);
       await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
 
+      // 4b. Write inventory immediately. Etsy's create-listing endpoint
+      // does NOT auto-create the inventory record — without this, every
+      // subsequent operation (especially activating to "active") fails with
+      // 400 missing_inventory. The form-fill path doesn't need this because
+      // Etsy's React form posts the inventory shape implicitly when you hit
+      // "Save"; the API path leaves the listing in an inventory-less state.
+      try {
+        await this.setListingInventory(shopId, csrfNonce, listingId, {
+          sku: product.sku ?? null,
+          price: product.price,
+          quantity: product.quantity ?? 1,
+        });
+        await remoteLog("info", "etsy.api-publish-inventory", "Inventory set successfully", {
+          listingId,
+          sku: product.sku ?? null,
+          price: product.price,
+          quantity: product.quantity ?? 1,
+        });
+      } catch (invErr) {
+        const invMsg = invErr instanceof Error ? invErr.message : String(invErr);
+        await remoteLog("error", "etsy.api-publish-inventory", `Inventory write failed: ${invMsg}`, {
+          listingId,
+        });
+        // Throw so the outer publishProduct catches and falls back to form-fill.
+        throw new Error(`Inventory write failed for listing ${listingId}: ${invMsg}`);
+      }
+
       // 5. PATCH with description, tags, materials, images, SKU, shipping
       const patchBody: Record<string, unknown> = {};
 
@@ -1446,6 +1473,125 @@ export class EtsyClient {
   }
 
   // ─── Inventory & Auto-Renew ─────────────────────────────────────
+
+  /**
+   * Write the single-product inventory shape required by Etsy after
+   * `POST /shop/{shopId}/listings`. Without this, every newly-created
+   * listing returns 400 `missing_inventory` on subsequent operations
+   * (e.g. activating, fetching from the listing manager).
+   *
+   * Shape mirrors what `getListingInventory` reads back: a single
+   * `products[0]` with one `offerings[0]` carrying price + quantity +
+   * is_enabled, no `property_values`. We send GBP @ divisor=100 because
+   * Wrenlist is GBP-only today; if multi-currency lands we should pull
+   * the shop currency from `getShopConfig` instead.
+   *
+   * Etsy returns 200 with the updated inventory body on success; like the
+   * delist endpoint it can also 200 with an unchanged or error envelope,
+   * so we verify by re-reading via `getListingInventory` and confirming
+   * the price+quantity actually took.
+   */
+  private async setListingInventory(
+    shopId: string,
+    csrfNonce: string,
+    listingId: string,
+    inventory: { sku: string | null; price: number; quantity: number },
+  ): Promise<void> {
+    const sku = inventory.sku ?? "";
+    const quantity = Math.max(1, Math.floor(inventory.quantity));
+    const priceAmount = Math.round(inventory.price * 100);
+
+    // Etsy's inventory shape (matches what getListingInventory reads back).
+    // `property_values: []` is required even with no variations; the form
+    // path always sends it. `is_enabled: 1` is a 0/1 int, not a bool.
+    const body = {
+      products: [
+        {
+          sku,
+          property_values: [],
+          offerings: [
+            {
+              price: {
+                amount: priceAmount,
+                divisor: 100,
+                currency_code: "GBP",
+              },
+              quantity,
+              is_enabled: 1,
+            },
+          ],
+        },
+      ],
+      price_on_property: [],
+      quantity_on_property: [],
+      sku_on_property: [],
+    };
+
+    // Etsy's internal endpoint accepts PUT for inventory writes (the
+    // form-fill path uses PUT here). If PUT 405s on some shops we'll see
+    // it in the logs and can add a POST fallback.
+    const resp = await fetch(
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}/inventory`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfNonce,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      throw new Error(
+        `Etsy inventory PUT returned ${resp.status}: ${errText.substring(0, 300)}`,
+      );
+    }
+
+    // 200 doesn't guarantee the write took — Etsy sometimes 200s with an
+    // unchanged body. Re-read inventory and confirm price+quantity match.
+    let confirmed: Awaited<ReturnType<typeof this.getListingInventory>> | null = null;
+    try {
+      confirmed = await this.getListingInventory(listingId);
+    } catch (readErr) {
+      const readMsg = readErr instanceof Error ? readErr.message : String(readErr);
+      await remoteLog(
+        "warn",
+        "etsy.api-publish-inventory",
+        `Inventory write returned 200 but verifier read failed: ${readMsg}`,
+        { listingId },
+      );
+      // Treat as success — the write 200'd. If it really failed, the
+      // subsequent activate-to-active PATCH will surface the error and
+      // the outer catch will fall back to form-fill.
+      return;
+    }
+
+    const priceMatches =
+      confirmed.price !== null &&
+      Math.abs(confirmed.price - inventory.price) < 0.01;
+    const quantityMatches = confirmed.quantity === quantity;
+
+    if (!priceMatches || !quantityMatches) {
+      await remoteLog(
+        "warn",
+        "etsy.api-publish-inventory",
+        "Inventory write returned 200 but body did not confirm",
+        {
+          listingId,
+          expectedPrice: inventory.price,
+          observedPrice: confirmed.price,
+          expectedQuantity: quantity,
+          observedQuantity: confirmed.quantity,
+        },
+      );
+      throw new Error(
+        `Inventory verifier mismatch: expected price=${inventory.price} qty=${quantity}, got price=${confirmed.price} qty=${confirmed.quantity}`,
+      );
+    }
+  }
 
   /** Fetch inventory data for a single listing via Etsy's internal inventory endpoint */
   public async getListingInventory(listingId: string): Promise<{
