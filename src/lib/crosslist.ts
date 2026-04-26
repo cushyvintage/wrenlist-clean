@@ -68,6 +68,11 @@ export async function crosslistFind(
     body: JSON.stringify({
       findId,
       marketplaces: valid,
+      // The Crosslist picker button literally says "Publish now" — match that
+      // intent. Without this, Etsy listings end as drafts (state=3) because
+      // the extension's publishMode defaults to "draft". Users expect their
+      // listings to be live to buyers after clicking Publish.
+      publishMode: 'publish',
       ...(options?.scheduled_for ? { scheduled_for: options.scheduled_for } : {}),
       ...(options?.stale_policy ? { stale_policy: options.stale_policy } : {}),
     }),
