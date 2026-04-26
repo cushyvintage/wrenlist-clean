@@ -16,7 +16,7 @@ export default function PricingPage() {
             Built for thrifters.<br />
             <em className="italic">Priced fairly.</em>
           </h1>
-          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Vinted, eBay, Etsy, Shopify & more on every paid plan. No add-ons.</p>
+          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Every supported marketplace on every paid plan. No add-ons.</p>
         </div>
 
         <PricingSection />

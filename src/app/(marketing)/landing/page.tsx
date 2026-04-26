@@ -162,7 +162,7 @@ function LandingPageInner() {
   const features = [
     { icon: InventoryIcon, title: 'Inventory tracker', desc: 'Every find, every status, one place' },
     { icon: MarginIcon, title: 'Cost & margin tracking', desc: 'Margin % on every find, always visible' },
-    { icon: CrosslistIcon, title: 'Crosslist to 5 platforms', desc: 'Vinted, eBay, Etsy, Shopify & Depop' },
+    { icon: CrosslistIcon, title: 'Crosslist everywhere', desc: 'List once, post to every marketplace you sell on' },
     { icon: DelistIcon, title: 'Auto-delist on sale', desc: 'Sold on one platform? All others come down' },
     { icon: AIListingIcon, title: 'AI listing writer', desc: 'Wren AI drafts titles & descriptions' },
     { icon: PriceIcon, title: 'Price suggestions', desc: 'Live comp data across UK marketplaces' },
@@ -198,7 +198,7 @@ function LandingPageInner() {
             for.
           </h1>
           <p className="hero-fade-3 mb-2 max-w-sm font-normal leading-relaxed text-[#4a6147]">
-            Wrenlist tracks your inventory, prices your pieces, and crosslists to Vinted, eBay, Etsy, Shopify & more — so you can spend more time at the rack.
+            Wrenlist tracks your inventory, prices your pieces, and crosslists across the marketplaces you already sell on — so you can spend more time at the rack.
           </p>
           <p className="hero-fade-3 mb-7 max-w-sm font-normal text-xs text-[#527050]">
             A "find" is each item you source — from vintage shops, charity stores, and house clearances.
@@ -265,7 +265,7 @@ function LandingPageInner() {
         {[
           { num: '01', title: 'Log every find instantly', body: 'Snap a photo, enter cost, done. Wrenlist fills in category, condition, and comparable sold prices before you leave the shop floor.' },
           { num: '02', title: 'Price with confidence', body: 'Live comp data from Vinted, eBay, Etsy and more. Know what your piece is worth before you list it, not after it sits for 60 days.' },
-          { num: '03', title: 'List everywhere at once', body: 'Cross-post to Vinted, eBay, Etsy, Shopify & more from one screen. When it sells, every other listing comes down automatically.' },
+          { num: '03', title: 'List everywhere at once', body: 'Cross-post across the marketplaces you already use, from one screen. When it sells, every other listing comes down automatically.' },
         ].map((feat, i) => (
           <div key={i} className={`px-5 sm:px-10 py-9 ${i < 2 ? 'border-b md:border-b-0 md:border-r border-[rgba(61,92,58,0.12)]' : ''}`}>
             <div className="font-serif text-4xl md:text-5xl text-[#e0d9cc] mb-2.5">{feat.num}</div>

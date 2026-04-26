@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Chrome Extension — Wrenlist',
-  description: 'Import finds from Vinted, eBay, Depop and more. Crosslist to 5 platforms with one click. The thrifter\'s operating system.',
+  description: 'Import finds from any marketplace. Crosslist with one click. Auto-delist when something sells. The thrifter\'s operating system.',
 }
 
 /* Small inline SVG icons for this page only */
@@ -240,7 +240,7 @@ export default function ExtensionPage() {
           </div>
 
           <p className="text-center text-xs font-light text-[#8A9E88] mt-4">
-            Import from all 10. Crosslist publish to Vinted, eBay, Etsy, Depop & Shopify.
+            Import from any supported marketplace. Crosslist publish from one screen.
           </p>
         </Reveal>
       </section>

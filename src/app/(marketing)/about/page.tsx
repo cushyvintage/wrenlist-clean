@@ -47,7 +47,7 @@ export default function AboutPage() {
               {
                 num: '2',
                 title: 'UK platforms, UK pricing, UK sellers',
-                desc: 'Vinted, eBay UK, Etsy and Shopify — natively. Pricing in pounds. Built from day one for the UK market.'
+                desc: 'Built natively for the marketplaces UK thrifters actually use. Pricing in pounds. Tax-ready records out of the box.'
               },
               {
                 num: '3',
@@ -83,8 +83,8 @@ export default function AboutPage() {
           <p className="mt-4 text-xs text-[#527050]">— Early access user · UK reseller</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center">
-          <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">5</div>
-          <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mt-2">marketplaces supported</div>
+          <div className="font-serif text-4xl sm:text-5xl font-medium text-[#3d5c3a]">68%</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-[#527050] mt-2">avg user margin</div>
         </div>
       </div>
 

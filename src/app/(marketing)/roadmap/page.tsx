@@ -78,11 +78,11 @@ export default function RoadmapPage() {
 
   async function handleVote(item: RoadmapItemDTO) {
     if (!user) {
-      toast.info('Sign in to vote', {
-        description: 'Create a free account to upvote ideas.',
+      toast.info('Join the waitlist to vote', {
+        description: "Beta isn't open yet, but waitlist members shape what we build.",
         action: {
-          label: 'Sign in',
-          onClick: () => (window.location.href = '/login?next=/roadmap'),
+          label: 'Join waitlist',
+          onClick: () => (window.location.href = '/?waitlist=1'),
         },
       })
       return
@@ -131,7 +131,7 @@ export default function RoadmapPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!user) {
-      toast.info('Sign in to submit ideas')
+      toast.info('Beta members can submit ideas — join the waitlist to be first in.')
       return
     }
     if (title.trim().length < 3) {
@@ -183,7 +183,7 @@ export default function RoadmapPage() {
                 See what&apos;s shipped, what&apos;s in progress, and what&apos;s coming next.
                 {user
                   ? ' Upvote the ideas you want most, or suggest your own.'
-                  : ' Sign in to upvote and submit ideas.'}
+                  : ' Join the waitlist to upvote and shape what we ship.'}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -196,10 +196,10 @@ export default function RoadmapPage() {
                 </button>
               ) : (
                 <Link
-                  href="/login?next=/roadmap"
+                  href="/?waitlist=1"
                   className="text-xs font-medium px-3 py-2 rounded-md bg-[#5a7a57] text-white hover:bg-[#4a6147] transition-colors"
                 >
-                  Sign in to vote
+                  Join waitlist to vote
                 </Link>
               )}
             </div>
