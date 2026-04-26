@@ -14,10 +14,10 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
   // lastSync is the time the *cron* last polled eBay — not the time the
   // OAuth token was last refreshed (which only happens every ~2 hours and
   // looked stale even when the 15-min cron was running fine).
-  const [ebayResult, ebaySyncLogResult, vintedResult, shopifyResult, depopResult, etsyResult, facebookResult] = await Promise.all([
+  const [ebayTokenResult, ebaySyncLogResult, vintedResult, shopifyResult, depopResult, etsyResult, facebookResult] = await Promise.all([
     supabase
       .from('ebay_tokens')
-      .select('ebay_user')
+      .select('ebay_user, expires_at')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
@@ -54,11 +54,27 @@ export const GET = withAuth(async (_req: NextRequest, user) => {
       .maybeSingle(),
   ])
 
+  // eBay is the only OAuth-backed marketplace where we know the token
+  // expiry server-side. If the access token has expired AND we have a
+  // refresh token (the row still exists), surface "needs_reconnect" so the
+  // UI doesn't show a misleading green "Connected" tick. Other marketplaces
+  // are session-cookie based and the extension manages their freshness.
+  const ebayHasRow = !!ebayTokenResult.data
+  const ebayExpiresAt = ebayTokenResult.data?.expires_at
+    ? new Date(ebayTokenResult.data.expires_at)
+    : null
+  const ebayExpired = !!ebayExpiresAt && ebayExpiresAt <= new Date()
+
   return ApiResponseHelper.success({
     platforms: {
       ebay: {
-        connected: !!ebayResult.data,
-        username: ebayResult.data?.ebay_user ?? null,
+        connected: ebayHasRow,
+        // Pre-launch: be honest. A connected-but-expired row is functionally
+        // disconnected — every publish/delist/sync call will fail until the
+        // user reconnects via Platform Connect.
+        needsReconnect: ebayHasRow && ebayExpired,
+        tokenExpiresAt: ebayExpiresAt?.toISOString() ?? null,
+        username: ebayTokenResult.data?.ebay_user ?? null,
         lastSync: ebaySyncLogResult.data?.synced_at ?? null,
       },
       vinted: {

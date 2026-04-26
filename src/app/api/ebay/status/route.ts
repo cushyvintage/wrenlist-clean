@@ -35,8 +35,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Lazily fetch eBay username if not yet stored
+    // Track whether the access token is currently usable. If it expired and
+    // we couldn't refresh, the UI must show "Reconnect required" instead of
+    // a misleading green tick. Default to "expired if past expires_at".
+    let tokenUsable = new Date(tokens.expires_at) > new Date()
     let ebayUsername = tokens.ebay_user
+
+    // Lazily fetch eBay username if not yet stored. As a side effect, this
+    // also attempts a token refresh — keep tokenUsable in sync with that.
     if (!ebayUsername) {
       try {
         const ebayConfig = config
@@ -57,6 +63,7 @@ export async function GET(request: NextRequest) {
           try {
             const newTokens = await client.refreshAccessToken(refreshTokenPlain)
             accessToken = newTokens.accessToken
+            tokenUsable = true
             await supabase
               .from('ebay_tokens')
               .update({
@@ -68,22 +75,25 @@ export async function GET(request: NextRequest) {
               .eq('user_id', user.id)
               .eq('marketplace_id', 'EBAY_GB')
           } catch {
-            // Token refresh failed — skip username fetch
+            // Token refresh failed — token is dead. Surface to UI.
+            tokenUsable = false
           }
         }
 
-        client.setTokens({
-          accessToken,
-          refreshToken: refreshTokenPlain,
-          expiresAt: new Date(Date.now() + 7200000), // treat as valid after refresh
-        })
-        ebayUsername = await client.fetchUsername()
-        if (ebayUsername) {
-          await supabase
-            .from('ebay_tokens')
-            .update({ ebay_user: ebayUsername })
-            .eq('user_id', user.id)
-            .eq('marketplace_id', 'EBAY_GB')
+        if (tokenUsable) {
+          client.setTokens({
+            accessToken,
+            refreshToken: refreshTokenPlain,
+            expiresAt: new Date(Date.now() + 7200000), // treat as valid after refresh
+          })
+          ebayUsername = await client.fetchUsername()
+          if (ebayUsername) {
+            await supabase
+              .from('ebay_tokens')
+              .update({ ebay_user: ebayUsername })
+              .eq('user_id', user.id)
+              .eq('marketplace_id', 'EBAY_GB')
+          }
         }
       } catch {
         // Non-critical — username will show as null
@@ -106,6 +116,10 @@ export async function GET(request: NextRequest) {
 
     return ApiResponseHelper.success({
       connected: true,
+      // needsReconnect lets the UI distinguish "row exists in DB" from
+      // "actually usable" — the green tick had been lying when the token
+      // was dead and refresh kept failing.
+      needsReconnect: !tokenUsable,
       setupComplete: sellerConfig?.setup_complete || false,
       username: ebayUsername || null,
       expiresAt: connectionExpiresAt,

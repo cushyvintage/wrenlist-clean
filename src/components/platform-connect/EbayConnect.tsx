@@ -20,6 +20,12 @@ interface EbayPolicies {
 
 interface EbayConnectionState {
   connected: boolean
+  /**
+   * True when the access token has expired AND auto-refresh failed. The
+   * row still exists in DB but every eBay API call will return 400/500.
+   * UI must show "Reconnect required" instead of a green tick.
+   */
+  needsReconnect: boolean
   setupComplete: boolean
   username: string | null
   expiresAt: string | null
@@ -198,11 +204,36 @@ export function EbayConnect({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <div className="font-medium text-sm text-ink flex items-center gap-1.5">eBay UK — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
+              {ebay.needsReconnect ? (
+                <div className="font-medium text-sm text-amber-700 flex items-center gap-1.5">
+                  eBay UK — Reconnect required
+                </div>
+              ) : (
+                <div className="font-medium text-sm text-ink flex items-center gap-1.5">eBay UK — Connected <CheckCircle2 size={15} className="text-green-600" /></div>
+              )}
             </div>
             <div className="text-xs text-ink-lt">Account: {ebay.username}</div>
           </div>
         </div>
+
+        {ebay.needsReconnect && (
+          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="font-medium mb-1">Your eBay session has expired.</div>
+            <div className="text-xs mb-3">
+              Auto-sync, publish and delist are paused until you sign in again.
+              Click Reconnect below to restore the connection — your policies
+              and listing history are preserved.
+            </div>
+            <button
+              type="button"
+              onClick={ebay.connectEbay}
+              disabled={ebay.isLoading}
+              className="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {ebay.isLoading ? 'Redirecting…' : 'Reconnect eBay'}
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
           <div>

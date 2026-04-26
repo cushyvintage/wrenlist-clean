@@ -5,6 +5,13 @@ import { useConfirm } from '@/components/wren/ConfirmProvider'
 
 export interface EbayConnectionStatus {
   connected: boolean
+  /**
+   * True when a token row exists but the access token expired AND the
+   * refresh attempt failed. Functionally disconnected — every publish/
+   * delist/sync call will fail until the user reconnects via OAuth.
+   * UI should show "Reconnect required" instead of a green "Connected" tick.
+   */
+  needsReconnect: boolean
   setupComplete: boolean
   username: string | null
   expiresAt: string | null
@@ -24,6 +31,7 @@ export interface UseEbayConnectionReturn extends EbayConnectionStatus {
  */
 export function useEbayConnection(): UseEbayConnectionReturn {
   const [connected, setConnected] = useState(false)
+  const [needsReconnect, setNeedsReconnect] = useState(false)
   const [setupComplete, setSetupComplete] = useState(false)
   const [username, setUsername] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
@@ -38,6 +46,7 @@ export function useEbayConnection(): UseEbayConnectionReturn {
       if (response.ok) {
         const data = await response.json()
         setConnected(data.data?.connected || false)
+        setNeedsReconnect(data.data?.needsReconnect || false)
         setSetupComplete(data.data?.setupComplete || false)
         setUsername(data.data?.username || null)
         setExpiresAt(data.data?.expiresAt || null)
@@ -102,6 +111,7 @@ export function useEbayConnection(): UseEbayConnectionReturn {
       }
 
       setConnected(false)
+      setNeedsReconnect(false)
       setSetupComplete(false)
       setUsername(null)
       setExpiresAt(null)
@@ -115,6 +125,7 @@ export function useEbayConnection(): UseEbayConnectionReturn {
 
   return {
     connected,
+    needsReconnect,
     setupComplete,
     username,
     expiresAt,
