@@ -813,8 +813,11 @@ export async function getEbayClientForUser(
 
   // Load tokens and refresh if needed
   if (refreshTokenPlain) {
-    // If token expires within next 2 hours, refresh it (conservative)
-    if (new Date(tokens.expires_at) <= new Date(Date.now() + 7200000)) {
+    const expiresAt = new Date(tokens.expires_at)
+    const isExpired = expiresAt <= new Date()
+    const expiresWithin2hr = expiresAt <= new Date(Date.now() + 7200000)
+
+    if (expiresWithin2hr) {
       try {
         const newTokens = await client.refreshAccessToken(refreshTokenPlain)
 
@@ -834,12 +837,26 @@ export async function getEbayClientForUser(
         // Load refreshed tokens into client
         client.setTokens(newTokens)
       } catch (error) {
-        // Log refresh error but don't throw — use existing token (might still work)
-        console.error('eBay token refresh failed:', error instanceof Error ? error.message : 'Unknown error')
+        const refreshMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('eBay token refresh failed:', refreshMsg)
+
+        // If the existing access token has ALREADY expired and the refresh
+        // call failed, every downstream eBay call will return a confusing
+        // "Token expired" 500. Fail loudly here instead so callers can
+        // surface "please reconnect eBay" to the user. Only fall back to
+        // the existing token when it hasn't expired yet (refresh was a
+        // proactive top-up that failed but we can still use the live one).
+        if (isExpired) {
+          throw new Error(
+            `eBay session has expired and could not be refreshed. ` +
+            `Please reconnect eBay in Platform Connect. (refresh error: ${refreshMsg})`
+          )
+        }
+
         client.setTokens({
           accessToken: accessTokenPlain,
           refreshToken: refreshTokenPlain,
-          expiresAt: new Date(tokens.expires_at),
+          expiresAt,
         })
       }
     } else {
@@ -847,7 +864,7 @@ export async function getEbayClientForUser(
       client.setTokens({
         accessToken: accessTokenPlain,
         refreshToken: refreshTokenPlain,
-        expiresAt: new Date(tokens.expires_at),
+        expiresAt,
       })
     }
   }
