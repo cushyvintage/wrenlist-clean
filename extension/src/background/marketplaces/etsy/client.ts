@@ -1586,6 +1586,15 @@ export class EtsyClient {
   /**
    * Deactivate a listing via Etsy's internal v3 AJAX API.
    * PATCHes the listing with state="inactive". No tab needed.
+   *
+   * IMPORTANT: Etsy's internal AJAX endpoint sometimes returns 200 with a body
+   * that does NOT reflect the requested state change (e.g. when the CSRF nonce
+   * is from a context Etsy doesn't trust for write ops, when the listing is in
+   * a state Etsy refuses to transition, or when the endpoint silently no-ops).
+   * We MUST verify the response body confirms `state === "inactive"` (Etsy
+   * returns the canonical state string in the listing object) before declaring
+   * success — otherwise the caller's form-fill fallback will never run and we
+   * silently lie about delisting. See `isEtsyResponseInactive` below.
    */
   public async delistProductViaApi(
     marketplaceId: string,
@@ -1620,10 +1629,42 @@ export class EtsyClient {
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => "");
+        await remoteLog("warn", "etsy.api-delist", `PATCH non-2xx ${resp.status}`, {
+          listingId: marketplaceId,
+          status: resp.status,
+          bodyPreview: errText.substring(0, 300),
+        });
         throw new Error(`Etsy delist API returned ${resp.status}: ${errText.substring(0, 200)}`);
       }
 
-      await remoteLog("info", "etsy.api-delist", `Listing ${marketplaceId} deactivated via API`);
+      // Etsy returns 200 with the updated listing object on success — but it
+      // also returns 200 with the unchanged listing (or an error envelope) when
+      // the request is silently rejected. Read the body and verify state.
+      const rawBody = await resp.text().catch(() => "");
+      let parsed: unknown;
+      try {
+        parsed = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        parsed = null;
+      }
+
+      const inactive = isEtsyResponseInactive(parsed);
+
+      if (!inactive.confirmed) {
+        // Silent failure — body did not confirm state=inactive. Throw so
+        // the caller falls back to the working form-fill path.
+        await remoteLog("warn", "etsy.api-delist", `PATCH 200 but body did not confirm state=inactive`, {
+          listingId: marketplaceId,
+          reason: inactive.reason,
+          observedState: inactive.observedState,
+          bodyPreview: rawBody.substring(0, 300),
+        });
+        throw new Error(
+          `Etsy delist API returned 200 but listing state is ${inactive.observedState ?? "unknown"} (expected inactive). Falling back to form.`,
+        );
+      }
+
+      await remoteLog("info", "etsy.api-delist", `Listing ${marketplaceId} deactivated via API (verified state=${inactive.observedState ?? "inactive"})`);
       return { success: true, message: "Listing deactivated on Etsy via API." };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
@@ -3207,4 +3248,105 @@ async function deactivateListingFromSellerTools(): Promise<{
       message: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+/**
+ * Validate that an Etsy AJAX response body confirms a listing transitioned
+ * to the inactive state. Etsy's internal v3 endpoint returns 200 in several
+ * "no-op" cases (stale CSRF nonce accepted but request silently rejected,
+ * unsupported state transition, error envelopes, etc.) so we cannot trust
+ * the HTTP status alone.
+ *
+ * Etsy represents listing state in a few different shapes across endpoints:
+ *  - canonical string: `state: "inactive" | "active" | "draft" | ...`
+ *  - integer enum (legacy): `state: 0 (active) | 1 (inactive) | 2 (draft) | ...`
+ *    (we accept either 1 or "inactive"; numeric semantics vary by endpoint
+ *    so we additionally accept any state where the body explicitly says the
+ *    listing is no longer active — i.e. `is_active === false` if present)
+ *  - nested under `listing` or `data` envelope: `{ listing: { state: ... } }`
+ *
+ * If we can't find a state field at all, treat as unconfirmed (caller falls
+ * back to the form path). False negatives here just trigger the slower but
+ * known-good seller-tools click flow — never a silent lie.
+ */
+function isEtsyResponseInactive(body: unknown): {
+  confirmed: boolean;
+  observedState: string | number | null;
+  reason: string;
+} {
+  if (body === null || body === undefined) {
+    return { confirmed: false, observedState: null, reason: "empty body" };
+  }
+  if (typeof body !== "object") {
+    return { confirmed: false, observedState: null, reason: `non-object body (${typeof body})` };
+  }
+
+  const record = body as Record<string, unknown>;
+
+  // Unwrap common envelopes: { listing: {...} } or { data: {...} }
+  const candidates: Record<string, unknown>[] = [record];
+  for (const key of ["listing", "data", "result"]) {
+    const nested = record[key];
+    if (nested && typeof nested === "object") {
+      candidates.push(nested as Record<string, unknown>);
+    }
+  }
+
+  let observedState: string | number | null = null;
+  let observedIsActive: boolean | null = null;
+
+  for (const obj of candidates) {
+    const s = obj.state;
+    if (typeof s === "string" || typeof s === "number") {
+      observedState = s;
+    }
+    const ia = obj.is_active;
+    if (typeof ia === "boolean") {
+      observedIsActive = ia;
+    }
+    // Some error envelopes carry `error` / `error_message`
+    if (typeof obj.error === "string" || typeof obj.error_message === "string") {
+      return {
+        confirmed: false,
+        observedState,
+        reason: `error envelope: ${String(obj.error ?? obj.error_message).substring(0, 100)}`,
+      };
+    }
+  }
+
+  if (typeof observedState === "string") {
+    if (observedState.toLowerCase() === "inactive") {
+      return { confirmed: true, observedState, reason: "state string === inactive" };
+    }
+    return {
+      confirmed: false,
+      observedState,
+      reason: `state string is "${observedState}", not "inactive"`,
+    };
+  }
+
+  if (typeof observedState === "number") {
+    // Etsy's numeric state codes vary: in the listings/v3/search response,
+    // state is the string. In create-draft response we've seen `state: number`.
+    // Be conservative — only accept the known "active" code (0) being absent
+    // combined with an explicit is_active=false. Otherwise unconfirmed.
+    if (observedIsActive === false) {
+      return { confirmed: true, observedState, reason: "is_active === false" };
+    }
+    return {
+      confirmed: false,
+      observedState,
+      reason: `numeric state ${observedState} without is_active===false confirmation`,
+    };
+  }
+
+  if (observedIsActive === false) {
+    return { confirmed: true, observedState, reason: "is_active === false (no state field)" };
+  }
+
+  return {
+    confirmed: false,
+    observedState,
+    reason: "no state or is_active field found in response",
+  };
 }
