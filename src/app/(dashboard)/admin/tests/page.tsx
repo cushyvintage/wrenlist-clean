@@ -82,6 +82,34 @@ export default function SyntheticTestsAdminPage() {
 
   if (!user || !isAdmin(user.email)) return null
 
+  // Headline stats — let an admin see the trend at a glance without
+  // expanding individual runs. "Newly failing" highlights anything red
+  // in the latest run that was green in the previous one — the
+  // "what did the last commit break" question.
+  const last30 = runs.filter((r) => r.status === 'passed' || r.status === 'failed')
+  const passRate = last30.length === 0 ? null : Math.round((last30.filter((r) => r.status === 'passed').length / last30.length) * 100)
+  const latest = last30[0]
+  const previous = last30[1]
+  const newlyFailingSteps =
+    latest && previous
+      ? latest.results
+          .filter((r) => r.status === 'failed')
+          .map((r) => r.step)
+          .filter((step) => {
+            const prev = previous.results.find((p) => p.step === step)
+            return prev?.status === 'passed'
+          })
+      : []
+  const avgEbayPublishMs = (() => {
+    const samples = runs
+      .flatMap((r) => r.results.filter((s) => s.step === 'publish.ebay' && s.status === 'passed'))
+      .map((s) => s.duration_ms ?? 0)
+      .filter((n) => n > 0)
+      .slice(0, 10)
+    if (samples.length === 0) return null
+    return Math.round(samples.reduce((a, b) => a + b, 0) / samples.length)
+  })()
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -99,6 +127,51 @@ export default function SyntheticTestsAdminPage() {
           {isRunning ? 'Running…' : '▶ Run now'}
         </button>
       </div>
+
+      {/* Headline metrics */}
+      {last30.length > 0 && (
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">pass rate</div>
+            <div className="font-serif text-2xl text-ink mb-1">
+              {passRate !== null ? `${passRate}%` : '—'}
+            </div>
+            <div className="text-xs text-ink-lt">last {last30.length} runs</div>
+          </div>
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">latest</div>
+            <div className={`font-serif text-2xl mb-1 ${latest?.status === 'passed' ? 'text-green-700' : 'text-red-700'}`}>
+              {latest?.status === 'passed' ? 'green' : 'red'}
+            </div>
+            <div className="text-xs text-ink-lt">
+              {latest && new Date(latest.started_at).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+            </div>
+          </div>
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">newly failing</div>
+            <div className={`font-serif text-2xl mb-1 ${newlyFailingSteps.length > 0 ? 'text-red-700' : 'text-ink'}`}>
+              {newlyFailingSteps.length}
+            </div>
+            <div className="text-xs text-ink-lt truncate" title={newlyFailingSteps.join(', ')}>
+              {newlyFailingSteps.length > 0 ? newlyFailingSteps[0] : 'no regressions'}
+            </div>
+          </div>
+          <div className="bg-cream border border-sage/14 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-sage-dim font-medium mb-2">eBay publish</div>
+            <div className="font-serif text-2xl text-ink mb-1">
+              {avgEbayPublishMs !== null ? `${(avgEbayPublishMs / 1000).toFixed(1)}s` : '—'}
+            </div>
+            <div className="text-xs text-ink-lt">avg of last 10 passes</div>
+          </div>
+        </div>
+      )}
+
+      {newlyFailingSteps.length > 0 && (
+        <div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+          <strong>{newlyFailingSteps.length} step{newlyFailingSteps.length !== 1 ? 's' : ''} newly failing</strong> — the latest run regressed against the previous run.
+          Check the latest run below for details. Likely culprit: the most recent deploy.
+        </div>
+      )}
 
       {runError && (
         <div className="p-3 rounded border border-red-200 bg-red-50 text-sm text-red-700">{runError}</div>

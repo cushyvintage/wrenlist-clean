@@ -356,6 +356,180 @@ async function stepStashCrud(ctx: RunnerContext) {
 }
 
 /**
+ * Step 12 — mark-sold cross-marketplace auto-delist propagation.
+ *
+ * The most stressful user moment: a sale comes in on Vinted, the user
+ * marks the find sold, and EVERY other marketplace must auto-queue a
+ * delist so the cross-listed item doesn't sell twice. This test:
+ *
+ *   1. Creates a fresh "sold-test" find (separate from the eBay live
+ *      publish find so we don't entangle the two flows)
+ *   2. Seeds two synthetic PMD rows (vinted + etsy, status='listed')
+ *      to simulate the find being live on multiple platforms
+ *   3. PATCHes find status → 'sold'
+ *   4. Verifies BOTH PMD rows flipped to 'needs_delist' (which is what
+ *      the extension polls to do the platform-side delist)
+ *
+ * If this step ever goes red, double-selling is a real possibility —
+ * page the user immediately.
+ */
+async function stepMarkSoldAutoDelist(ctx: RunnerContext) {
+  return runStep(ctx, 'mark_sold.auto_delist', async () => {
+    const stamp = Date.now().toString(36).toUpperCase()
+    const sku = SAFETY_SKU_PREFIX + 'SOLD-' + stamp
+
+    // Create the find via the API so we exercise the same insert path
+    const created = await api(ctx, 'POST', '/api/finds', {
+      name: SAFETY_NAME_PREFIX + ' SOLD ' + stamp,
+      asking_price_gbp: SAFETY_PRICE,
+      category: 'other',
+      sku,
+      status: 'listed',
+      brand: 'Synthetic',
+      condition: 'good',
+    })
+    if (created.status !== 201) {
+      return { status: 'failed', details: { stage: 'create', http_status: created.status, body: created.body } }
+    }
+    const findId = (created.body as { data?: { id?: string } })?.data?.id
+    if (!findId) {
+      return { status: 'failed', details: { stage: 'create', reason: 'no id', body: created.body } }
+    }
+
+    try {
+      // Seed two PMD rows — listed on vinted + etsy. These simulate the
+      // cross-listing state without touching live marketplaces.
+      const seedRows = [
+        { find_id: findId, marketplace: 'vinted', status: 'listed', platform_listing_id: 'SYN-V-' + stamp },
+        { find_id: findId, marketplace: 'etsy', status: 'listed', platform_listing_id: 'SYN-E-' + stamp },
+      ]
+      const { error: seedErr } = await ctx.supabase
+        .from('product_marketplace_data')
+        .insert(seedRows)
+      if (seedErr) {
+        return { status: 'failed', details: { stage: 'seed_pmd', error: seedErr.message } }
+      }
+
+      // Trigger the sold transition. PATCH route fires markMarketplacesForDelist.
+      const patch = await api(ctx, 'PATCH', `/api/finds/${findId}`, {
+        status: 'sold',
+        sold_price_gbp: SAFETY_PRICE,
+        sold_at: new Date().toISOString(),
+      })
+      if (patch.status !== 200) {
+        return { status: 'failed', details: { stage: 'patch_sold', http_status: patch.status, body: patch.body } }
+      }
+
+      // Brief wait for the auto-delist write — same race window as the
+      // delist verify_pmd step. Without it the read-after-write can miss
+      // under concurrent load.
+      await new Promise((r) => setTimeout(r, 1500))
+
+      // Verify both PMD rows now show needs_delist
+      const { data: pmd, error: readErr } = await ctx.supabase
+        .from('product_marketplace_data')
+        .select('marketplace, status')
+        .eq('find_id', findId)
+      if (readErr) return { status: 'failed', details: { stage: 'read_pmd', error: readErr.message } }
+      if (!pmd || pmd.length !== 2) {
+        return { status: 'failed', details: { stage: 'read_pmd', reason: 'wrong row count', rows: pmd } }
+      }
+      const stillListed = pmd.filter((p) => p.status !== 'needs_delist')
+      if (stillListed.length > 0) {
+        return {
+          status: 'failed',
+          details: {
+            stage: 'verify_propagation',
+            reason: 'cross-marketplace delist did not propagate',
+            still_listed: stillListed,
+          },
+        }
+      }
+
+      return { status: 'passed', details: { propagated_to: pmd.map((p) => p.marketplace) } }
+    } finally {
+      // Always tear down — cascade deletes the PMD rows we seeded
+      try {
+        await ctx.supabase.from('finds').delete().eq('id', findId).eq('user_id', ctx.userId)
+      } catch { /* ignore */ }
+    }
+  })
+}
+
+/**
+ * Step 13 — bulk delist of multiple finds via /api/crosslist/delist
+ * called once per find (matches the UI's bulk-delist loop). Verifies
+ * the per-find delist works in sequence and that PMD rows for all
+ * targeted finds flip — catches regressions where delist works on
+ * one find but a side-effect breaks the next iteration.
+ */
+async function stepBulkDelist(ctx: RunnerContext) {
+  return runStep(ctx, 'delist.bulk', async () => {
+    const stamp = Date.now().toString(36).toUpperCase()
+    const findIds: string[] = []
+    try {
+      // Create 3 cheap test finds with seeded vinted PMD rows
+      for (let i = 0; i < 3; i++) {
+        const created = await api(ctx, 'POST', '/api/finds', {
+          name: SAFETY_NAME_PREFIX + ' BULK-' + i + ' ' + stamp,
+          asking_price_gbp: SAFETY_PRICE,
+          category: 'other',
+          sku: SAFETY_SKU_PREFIX + 'BULK' + i + '-' + stamp,
+          status: 'listed',
+        })
+        if (created.status !== 201) {
+          return { status: 'failed', details: { stage: 'create_' + i, http_status: created.status } }
+        }
+        const id = (created.body as { data?: { id?: string } })?.data?.id
+        if (!id) return { status: 'failed', details: { stage: 'create_' + i, reason: 'no id' } }
+        findIds.push(id)
+
+        await ctx.supabase
+          .from('product_marketplace_data')
+          .insert({
+            find_id: id,
+            marketplace: 'vinted',
+            status: 'listed',
+            platform_listing_id: 'SYN-BULK-' + i + '-' + stamp,
+          })
+      }
+
+      // Bulk delist (sequential calls, mirrors UI loop)
+      const results: number[] = []
+      for (const id of findIds) {
+        const r = await api(ctx, 'POST', '/api/crosslist/delist', { findId: id, marketplace: 'vinted' })
+        results.push(r.status)
+      }
+      const allOk = results.every((s) => s === 200)
+      if (!allOk) {
+        return { status: 'failed', details: { stage: 'delist_loop', http_statuses: results } }
+      }
+
+      // Verify all 3 PMD rows flipped
+      await new Promise((r) => setTimeout(r, 800))
+      const { data: pmd } = await ctx.supabase
+        .from('product_marketplace_data')
+        .select('find_id, status')
+        .in('find_id', findIds)
+        .eq('marketplace', 'vinted')
+      const stillListed = (pmd ?? []).filter((p) => p.status !== 'delisted' && p.status !== 'ended')
+      if (stillListed.length > 0) {
+        return { status: 'failed', details: { stage: 'verify', still_listed: stillListed } }
+      }
+
+      return { status: 'passed', details: { count: findIds.length, http_statuses: results } }
+    } finally {
+      // Cleanup — cascade removes PMD rows
+      for (const id of findIds) {
+        try {
+          await ctx.supabase.from('finds').delete().eq('id', id).eq('user_id', ctx.userId)
+        } catch { /* ignore */ }
+      }
+    }
+  })
+}
+
+/**
  * Step 11 — expense + mileage create/delete. Smaller scope than stash
  * CRUD because neither has a rename, but they're hot paths for the
  * tax page so they deserve a smoke check.
@@ -434,6 +608,8 @@ export async function runSuite(ctx: RunnerContext): Promise<{ steps: StepResult[
     steps.push(await stepVintedQueueRoundtrip(ctx, state))
     steps.push(await stepStashCrud(ctx))
     steps.push(await stepFinanceCrud(ctx))
+    steps.push(await stepMarkSoldAutoDelist(ctx))
+    steps.push(await stepBulkDelist(ctx))
     steps.push(await stepValidationGuards(ctx))
   } finally {
     // Cleanup unconditionally — even an uncaught throw must not leave
