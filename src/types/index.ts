@@ -128,13 +128,58 @@ export interface PackagingMaterial {
 // MARKETPLACE PLATFORM FIELDS
 // ============================================================================
 
+/**
+ * eBay item-specific aspects (a.k.a. "item specifics") that the seller
+ * provides per-find to satisfy the category's required attributes. eBay's
+ * required set varies per leaf category — Department for clothing, Author
+ * for books, Model for electronics, etc.
+ *
+ * Wrenlist accepts these aspects in TWO equivalent shapes inside
+ * platform_fields.ebay. The publish endpoint reads both:
+ *
+ *   1. Nested under .aspects (preferred — clearer intent):
+ *      platform_fields.ebay.aspects.Department = "Unisex"
+ *
+ *   2. Flat on platform_fields.ebay (legacy):
+ *      platform_fields.ebay.Department = "Unisex"
+ *
+ * Use the nested form for new code. The flat form is preserved so existing
+ * imports / extension payloads keep working without migration.
+ */
+export interface EbayAspects {
+  Department?: string
+  Brand?: string
+  Type?: string
+  Style?: string
+  Material?: string
+  Colour?: string
+  Size?: string
+  MPN?: string
+  EAN?: string
+  Author?: string
+  ISBN?: string
+  Language?: string
+  Model?: string
+  // Any other eBay aspect can be passed as a free-form string. Required
+  // aspects vary per leaf category — see eBay's getItemAspectsForCategory.
+  [aspectName: string]: string | undefined
+}
+
 export interface EbayPlatformData {
-  listingId: string
+  // Publish-state fields (set by the publish handler after a successful list)
+  listingId?: string
   offerId?: string
-  status: 'live' | 'draft' | 'ended'
-  url: string
-  publishedAt: string
+  status?: 'live' | 'draft' | 'ended'
+  url?: string
+  publishedAt?: string
   categoryId?: number
+  // Pre-publish form inputs
+  acceptOffers?: boolean
+  /** Preferred home for item-specific aspects (Department, Brand, etc.). */
+  aspects?: EbayAspects
+  // Legacy flat-key form. The publish endpoint still iterates these for
+  // back-compat with existing imports and the extension payload.
+  [legacyAspectKey: string]: unknown
 }
 
 export interface VintedPlatformData {

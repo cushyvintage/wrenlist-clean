@@ -156,14 +156,31 @@ export async function POST(request: NextRequest) {
     if (find.colour) aspects['Colour'] = find.colour
     if (find.size) aspects['Size'] = find.size
 
-    // Read user-provided aspect values from platform_fields (ebay-specific + shared)
+    // Read user-provided aspect values from platform_fields. Two shapes
+    // are supported (see EbayPlatformData/EbayAspects type docs):
+    //   nested:  platform_fields.ebay.aspects.Department = "Unisex"
+    //   flat:    platform_fields.ebay.Department = "Unisex"
+    // The nested form is preferred for new code; flat is kept for
+    // back-compat with existing imports and the extension payload.
     const sharedFields = (find.platform_fields as Record<string, unknown>)?.shared as
       Record<string, unknown> | undefined
+    const RESERVED_EBAY_KEYS = new Set([
+      'acceptOffers', 'listingId', 'offerId', 'status', 'url',
+      'publishedAt', 'categoryId', 'aspects',
+    ])
     if (ebayFields) {
-      for (const [key, val] of Object.entries(ebayFields)) {
-        if (val && typeof val === 'string' && !['acceptOffers', 'listingId', 'offerId', 'status', 'url', 'publishedAt'].includes(key)) {
-          aspects[key] = val
+      // Nested form first — wins on conflict because it's the explicit shape.
+      const nestedAspects = (ebayFields.aspects ?? null) as Record<string, unknown> | null
+      if (nestedAspects && typeof nestedAspects === 'object') {
+        for (const [key, val] of Object.entries(nestedAspects)) {
+          if (val && typeof val === 'string') aspects[key] = val
         }
+      }
+      // Then flat keys (skipping reserved + already-set).
+      for (const [key, val] of Object.entries(ebayFields)) {
+        if (RESERVED_EBAY_KEYS.has(key)) continue
+        if (aspects[key]) continue
+        if (val && typeof val === 'string') aspects[key] = val
       }
     }
     // Also read common fields from shared (author, isbn, language set by form)
@@ -177,9 +194,19 @@ export async function POST(request: NextRequest) {
     // common eBay-required aspects directly from the category slug.
     const category = find.category || ''
 
-    // Department — required for all clothing/fashion categories
-    if (!aspects['Department'] && category.startsWith('clothing')) {
-      aspects['Department'] = inferDepartment(category)
+    // Department — required for all clothing/fashion categories.
+    // We add it whenever the user's category looks fashion-y, AND as a
+    // safe universal default ("Unisex") otherwise. This guards against the
+    // case where eBay's getCategorySuggestion picks a fashion category
+    // even though the user's slug isn't 'clothing*' (e.g. our category is
+    // 'other' but eBay infers 'Women's Clothing' from the photo). Without
+    // the default, the publish 400s with "Department is missing".
+    // Setting it on non-fashion categories is harmless — eBay ignores
+    // aspects that aren't recognised for the chosen category.
+    if (!aspects['Department']) {
+      aspects['Department'] = category.startsWith('clothing')
+        ? inferDepartment(category)
+        : 'Unisex'
     }
 
     // Language — required for books
