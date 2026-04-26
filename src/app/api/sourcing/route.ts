@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
+import { CreateSourcingSchema, validateBody } from '@/lib/validation'
 import type { SourcingTrip, SourcingTripWithStats } from '@/types'
 
 /**
@@ -88,12 +89,15 @@ export const POST = withAuth(async (req, user) => {
     const supabase = await createSupabaseServerClient()
     const body = await req.json()
 
-    const { name, type, location, date, miles, entry_fee_gbp, notes } = body
-
-    // Validate required fields
-    if (!name || !type || !date) {
-      return ApiResponseHelper.badRequest('Missing required fields: name, type, date')
+    // Zod schema validates required fields, name length, and rejects
+    // negative miles / entry_fee_gbp. The previous inline check only
+    // verified name/type/date were truthy and silently accepted negative
+    // numbers (which then poisoned tax + analytics summaries).
+    const validation = validateBody(CreateSourcingSchema, body)
+    if (!validation.success) {
+      return ApiResponseHelper.badRequest(validation.error)
     }
+    const { name, type, location, date, miles, entry_fee_gbp, notes } = validation.data
 
     // NOTE: supplier_id used to be a column on sourcing_trips but was
     // removed at some point without updating this handler. Writing it
@@ -107,8 +111,8 @@ export const POST = withAuth(async (req, user) => {
       type,
       location: location || null,
       date,
-      miles: miles ? parseFloat(miles) : null,
-      entry_fee_gbp: entry_fee_gbp ? parseFloat(entry_fee_gbp) : null,
+      miles: miles ?? null,
+      entry_fee_gbp: entry_fee_gbp ?? null,
       notes: notes || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

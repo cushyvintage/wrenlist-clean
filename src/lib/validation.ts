@@ -13,14 +13,18 @@ export const PlatformEnum = z.enum(['vinted', 'ebay', 'etsy', 'shopify', 'depop'
 // FINDS (Products)
 // ============================================================================
 
+// Caps mirror the UI counters on /add-find ("0/255" for title, "0/12000"
+// for description). Without these the API would happily accept a 1MB
+// string and the row would render fine in the table but break things like
+// CSV export and search indexes.
 export const CreateFindSchema = z.object({
-  name: z.string().min(1, 'Item name is required'),
-  category: z.string().optional().nullable(),
-  brand: z.string().optional().nullable(),
-  size: z.string().optional().nullable(),
-  colour: z.string().optional().nullable(),
+  name: z.string().min(1, 'Item name is required').max(255, 'Title too long (max 255 chars)'),
+  category: z.string().max(100).optional().nullable(),
+  brand: z.string().max(120).optional().nullable(),
+  size: z.string().max(60).optional().nullable(),
+  colour: z.string().max(60).optional().nullable(),
   condition: ConditionEnum.optional().nullable(),
-  description: z.string().optional().nullable(),
+  description: z.string().max(12000, 'Description too long (max 12000 chars)').optional().nullable(),
   source_type: SourceTypeEnum.optional().default('other'),
   source_name: z.string().optional().nullable(),
   sourced_at: z.string().optional().nullable(),
@@ -110,6 +114,64 @@ export const UpdateListingTemplateSchema = CreateListingTemplateSchema.partial()
 
 export type CreateListingTemplateInput = z.infer<typeof CreateListingTemplateSchema>
 export type UpdateListingTemplateInput = z.infer<typeof UpdateListingTemplateSchema>
+
+// ============================================================================
+// PROFILE
+// ============================================================================
+
+// Phone: digits, spaces, +, (), - allowed; 7-20 chars. Permissive on purpose
+// — sellers paste numbers in many formats and we don't dial them.
+const PhoneSchema = z.string().regex(/^[\d +()-]{7,20}$/, 'Phone format looks invalid')
+
+export const UpdateProfileSchema = z.object({
+  full_name: z.string().min(1, 'Name cannot be empty').max(200, 'Name too long').optional().nullable(),
+  business_name: z.string().max(200, 'Business name too long').optional().nullable(),
+  phone: PhoneSchema.optional().nullable(),
+  address: z.string().max(500, 'Address too long').optional().nullable(),
+  // Avatar is uploaded via Supabase Storage; the URL must be a valid http(s)
+  // URL but we don't lock it to a specific host because storage may move.
+  avatar_url: z.string().url('Avatar URL must be a valid URL').optional().nullable(),
+})
+
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>
+
+// ============================================================================
+// SOURCING TRIPS
+// ============================================================================
+
+export const CreateSourcingSchema = z.object({
+  name: z.string().min(1, 'Trip name is required').max(120, 'Trip name too long'),
+  type: z.string().min(1, 'Trip type is required'),
+  date: z.string().date('Date must be YYYY-MM-DD'),
+  location: z.string().max(200).optional().nullable(),
+  miles: z.number().nonnegative('Miles must be zero or positive').optional().nullable(),
+  entry_fee_gbp: z.number().nonnegative('Entry fee must be zero or positive').optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+})
+
+export type CreateSourcingInput = z.infer<typeof CreateSourcingSchema>
+
+// ============================================================================
+// SUPPLIERS
+// ============================================================================
+
+// SupplierType matches the CHECK constraint in the suppliers table.
+// Keep these in sync — the API returns 400 if the client sends anything else.
+export const SupplierTypeEnum = z.enum([
+  'house_clearance', 'charity_shop', 'car_boot', 'flea_market', 'online', 'other',
+])
+
+export const CreateSupplierSchema = z.object({
+  name: z.string().min(1, 'Supplier name is required').max(200),
+  type: SupplierTypeEnum,
+  location: z.string().max(200).optional().nullable(),
+  contact_name: z.string().max(200).optional().nullable(),
+  phone: PhoneSchema.optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
+})
+
+export type CreateSupplierInput = z.infer<typeof CreateSupplierSchema>
 
 // ============================================================================
 // HELPER FUNCTIONS

@@ -1,5 +1,6 @@
 import { withAuth } from '@/lib/api-helpers'
 import { ApiResponseHelper } from '@/lib/api-response'
+import { UpdateProfileSchema, validateBody } from '@/lib/validation'
 import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -30,15 +31,23 @@ export async function PATCH(request: NextRequest) {
   return withAuth(request, async (req, user, supabase) => {
     try {
       const body = await request.json()
-      const { full_name, business_name, phone, address, avatar_url } = body
+
+      // Validate format/length before touching the DB. Previously this
+      // route trusted any input — that's how strings like phone="555"
+      // and 1MB-long full_names could land in production rows.
+      const validation = validateBody(UpdateProfileSchema, body)
+      if (!validation.success) {
+        return ApiResponseHelper.badRequest(validation.error)
+      }
+      const { full_name, business_name, phone, address, avatar_url } = validation.data
 
       // Build update object with only provided fields
       const updates: Record<string, string | null> = {}
-      if (full_name !== undefined) updates.full_name = full_name
-      if (business_name !== undefined) updates.business_name = business_name
-      if (phone !== undefined) updates.phone = phone
-      if (address !== undefined) updates.address = address
-      if (avatar_url !== undefined) updates.avatar_url = avatar_url
+      if (full_name !== undefined) updates.full_name = full_name ?? null
+      if (business_name !== undefined) updates.business_name = business_name ?? null
+      if (phone !== undefined) updates.phone = phone ?? null
+      if (address !== undefined) updates.address = address ?? null
+      if (avatar_url !== undefined) updates.avatar_url = avatar_url ?? null
 
       const { data: profile, error } = await supabase
         .from('profiles')

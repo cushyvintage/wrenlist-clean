@@ -83,6 +83,20 @@ export const POST = withAuth(async (req, user) => {
       return ApiResponseHelper.badRequest(validation.error)
     }
 
+    // Validate category against the DB list. The Zod schema only checks
+    // it's a non-empty string — without this guard the API was happy to
+    // accept literally anything (e.g. "totally_made_up_category"), which
+    // breaks the expense-summary breakdown on /tax that groups by it.
+    const { data: cats } = await supabase
+      .from('expense_categories')
+      .select('id')
+    const allowedCategories = new Set((cats ?? []).map((c) => c.id))
+    if (!allowedCategories.has(validation.data.category)) {
+      return ApiResponseHelper.badRequest(
+        `category: must be one of ${[...allowedCategories].sort().join(', ')}`
+      )
+    }
+
     // If find_id is provided, verify it exists
     if (validation.data.find_id) {
       const { data: find, error: findError } = await supabase

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { withAuth } from '@/lib/with-auth'
+import { CreateSupplierSchema, validateBody } from '@/lib/validation'
 import type { Supplier } from '@/types'
 
 /**
@@ -50,26 +51,26 @@ export const POST = withAuth(async (req, user) => {
   try {
     const body = await req.json()
 
-    // Validate required fields
-    if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
-      return ApiResponseHelper.badRequest('Supplier name is required')
+    // Zod schema validates: required name+type, length caps, phone format,
+    // rating in [1,5]. The previous inline check only verified name/type
+    // and let "phone": "🤖" / "rating": 999 through.
+    const validation = validateBody(CreateSupplierSchema, body)
+    if (!validation.success) {
+      return ApiResponseHelper.badRequest(validation.error)
     }
-
-    if (!body.type || !['house_clearance', 'charity_shop', 'car_boot', 'flea_market', 'online', 'other'].includes(body.type)) {
-      return ApiResponseHelper.badRequest('Valid supplier type is required')
-    }
+    const { name, type, location, contact_name, phone, notes, rating } = validation.data
 
     const supabase = await createSupabaseServerClient()
 
     const supplier = {
       user_id: user.id,
-      name: body.name.trim(),
-      type: body.type,
-      location: body.location || null,
-      contact_name: body.contact_name || null,
-      phone: body.phone || null,
-      notes: body.notes || null,
-      rating: body.rating || null,
+      name: name.trim(),
+      type,
+      location: location || null,
+      contact_name: contact_name || null,
+      phone: phone || null,
+      notes: notes || null,
+      rating: rating ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
