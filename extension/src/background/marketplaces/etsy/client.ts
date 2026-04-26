@@ -1323,31 +1323,35 @@ export class EtsyClient {
       const listingId = String(createData.listing_id);
       await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
 
-      // 4b. PUT the real inventory. We sent `inventory: []` at create time
-      // because that's the only shape Etsy's internal AJAX create-listing
-      // endpoint accepts (any populated object/array fails with "invalid
-      // keys"). Now PUT the full envelope shape (with sku/price/quantity/
-      // offerings) to the standalone `/listings/{id}/inventory` endpoint —
-      // that endpoint DOES accept the populated envelope. Then verify by
-      // re-reading via `getListingInventory` to guard against Etsy's known
-      // silent-200 pattern on PATCH/PUT endpoints.
+      // 4b. Set inventory via PATCH on the listing root with {price, quantity,
+      // sku}. Etsy's internal AJAX endpoint fans these root fields into the
+      // inventory record automatically — no separate /inventory PUT endpoint
+      // exists for write (only GET). Direct probe against the live endpoint
+      // 2026-04-26 confirmed: PATCH /listings/{id} with {price:499, quantity:
+      // 1, sku:"X"} returns 200 and the subsequent GET /listings/{id}/
+      // inventory shows price=£499 + sku="X" + quantity=1. We then verify by
+      // re-reading to guard against silent-200 patterns Etsy has elsewhere.
       try {
-        const inventoryPutResp = await fetch(
-          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}/inventory`,
+        const inventoryPatchResp = await fetch(
+          `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
           {
-            method: "PUT",
+            method: "PATCH",
             credentials: "include",
             headers: {
               "Content-Type": "application/json",
               "x-csrf-token": csrfNonce,
             },
-            body: JSON.stringify(inventoryBodyAfterCreate),
+            body: JSON.stringify({
+              price: product.price,
+              quantity: Math.max(1, Math.floor(product.quantity ?? 1)),
+              ...(product.sku ? { sku: product.sku } : {}),
+            }),
           },
         );
-        if (!inventoryPutResp.ok) {
-          const putErr = await inventoryPutResp.text().catch(() => "");
+        if (!inventoryPatchResp.ok) {
+          const patchErr = await inventoryPatchResp.text().catch(() => "");
           throw new Error(
-            `PUT inventory returned ${inventoryPutResp.status}: ${putErr.substring(0, 200)}`,
+            `PATCH inventory returned ${inventoryPatchResp.status}: ${patchErr.substring(0, 200)}`,
           );
         }
 
@@ -1362,7 +1366,7 @@ export class EtsyClient {
           await remoteLog(
             "warn",
             "etsy.api-publish-inventory",
-            "Inventory PUT returned 200 but verifier mismatch",
+            "Inventory PATCH returned 200 but verifier mismatch",
             {
               listingId,
               expectedPrice,
@@ -1375,7 +1379,7 @@ export class EtsyClient {
             `Inventory verifier mismatch: expected price=${expectedPrice} qty=${expectedQty}, got price=${confirmed.price} qty=${confirmed.quantity}`,
           );
         }
-        await remoteLog("info", "etsy.api-publish-inventory", "Inventory PUT + verified", {
+        await remoteLog("info", "etsy.api-publish-inventory", "Inventory PATCH + verified", {
           listingId,
           price: confirmed.price,
           quantity: confirmed.quantity,
