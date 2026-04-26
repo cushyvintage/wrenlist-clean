@@ -1479,7 +1479,19 @@ export class EtsyClient {
         }
       }
 
-      // 6. If publishMode is "publish", activate the listing
+      // 6. If publishMode is "publish", activate the listing.
+      //
+      // CRITICAL: Etsy's PATCH /listings/{id} with {state:"active"} returns 200
+      // OK but silently does NOT change the listing state — activation requires
+      // confirming the £0.20 listing fee via Etsy's UI dialog (which the
+      // form-fill path handles by clicking through the alertdialog). The API
+      // PATCH appears to succeed but the listing stays in state=3 (draft).
+      //
+      // To preserve the speedup when (one day) Etsy adds an API path AND give
+      // us correct fallback behaviour today, we re-read the listing state
+      // after the PATCH and throw if it didn't transition to active. The
+      // outer publishProduct catches and falls through to form-fill which
+      // DOES handle the fee confirmation correctly.
       if (mode === "publish") {
         await remoteLog("info", "etsy.api-publish", "Activating listing (state=active)");
 
@@ -1498,21 +1510,46 @@ export class EtsyClient {
 
         if (!activateResp.ok) {
           const errText = await activateResp.text().catch(() => "");
-          await remoteLog("warn", "etsy.api-publish", `Activate failed: ${activateResp.status}`, {
+          await remoteLog("warn", "etsy.api-publish", `Activate PATCH non-2xx: ${activateResp.status}`, {
             error: errText.substring(0, 200),
           });
-          // Listing exists as draft — still a partial success
           clearInterval(keepAlive);
-          return {
-            success: true,
-            publishMode: "draft",
-            message: `Listing saved as draft on Etsy (activation failed: ${activateResp.status}). Check your Etsy dashboard.`,
-            product: {
-              id: listingId,
-              url: `${ETSY_EDIT_LISTING_URL}/edit/${listingId}`,
-            },
-          };
+          throw new Error(
+            `Etsy activate PATCH returned ${activateResp.status}: ${errText.substring(0, 200)}`,
+          );
         }
+
+        // Verify the activation actually took. State 0 = active, 3 = draft.
+        try {
+          const verifyResp = await fetch(
+            `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+            { credentials: "include", headers: { Accept: "application/json" } },
+          );
+          const verifyData = (await verifyResp.json()) as { state?: number; is_available?: boolean };
+          const observedState = verifyData?.state;
+          const isAvailable = verifyData?.is_available;
+          if (observedState !== 0 && isAvailable !== true) {
+            await remoteLog(
+              "warn",
+              "etsy.api-publish",
+              "Activate PATCH returned 200 but listing still draft (silent-200, fee dialog needed)",
+              { listingId, observedState, isAvailable },
+            );
+            clearInterval(keepAlive);
+            throw new Error(
+              `Etsy activate silently failed: PATCH returned 200 but listing state=${observedState} (expected 0=active). Falling back to form-fill which handles the £0.20 fee confirmation dialog.`,
+            );
+          }
+          await remoteLog("info", "etsy.api-publish", "Activation verified: state=active", {
+            listingId,
+            observedState,
+            isAvailable,
+          });
+        } catch (verifyErr) {
+          // Re-throw — the outer catch handles fall-back to form-fill.
+          throw verifyErr;
+        }
+
       }
 
       clearInterval(keepAlive);
