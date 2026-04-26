@@ -24,6 +24,13 @@ interface InventoryItemHeaderProps {
   crosslistTargets?: Platform[]
   availableForCrosslist?: Platform[]
   platformUsernames?: Map<Platform, string | undefined>
+  /**
+   * Platforms that are connected at the DB level but currently lack a
+   * live extension session (cookie missing on this device). Render these
+   * disabled, with a "Log in to <Platform> to publish" chip — the same
+   * pattern we use for the extension-not-installed warnings.
+   */
+  needsLoginPlatforms?: Set<Platform>
   extensionDetected?: boolean | null
   /** True when installed but below MIN_EXTENSION_VERSION */
   extensionOutdated?: boolean
@@ -52,6 +59,7 @@ export default function InventoryItemHeader({
   crosslistTargets = [],
   availableForCrosslist = [],
   platformUsernames,
+  needsLoginPlatforms,
   extensionDetected,
   extensionOutdated = false,
   extensionOnline,
@@ -217,27 +225,51 @@ export default function InventoryItemHeader({
             {availableForCrosslist.map((platform) => {
               const isSelected = crosslistTargets.includes(platform)
               const username = platformUsernames?.get(platform)
+              const needsLogin = needsLoginPlatforms?.has(platform) ?? false
               return (
                 <label
                   key={platform}
-                  className="flex items-center gap-2 py-1.5 cursor-pointer"
+                  className={`flex items-center gap-2 py-1.5 ${needsLogin ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   <input
                     type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onCrosslistTargetToggle?.(platform)}
-                    className="rounded"
+                    checked={isSelected && !needsLogin}
+                    onChange={() => !needsLogin && onCrosslistTargetToggle?.(platform)}
+                    disabled={needsLogin}
+                    className="rounded disabled:cursor-not-allowed"
                   />
                   <MarketplaceIcon platform={platform} size="sm" />
-                  <span className="text-sm font-medium" style={{ color: '#1E2E1C' }}>
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: needsLogin ? '#8A9E88' : '#1E2E1C' }}
+                  >
                     {formatPlatformName(platform)}
                     {username && (
                       <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {username}</span>
                     )}
                   </span>
+                  {needsLogin && (
+                    <span
+                      className="ml-auto text-[11px] font-medium"
+                      style={{ color: '#92700C' }}
+                      title={`Log in to ${formatPlatformName(platform)} in Chrome so the extension can publish on your behalf.`}
+                    >
+                      log in to publish
+                    </span>
+                  )}
                 </label>
               )
             })}
+            {needsLoginPlatforms && needsLoginPlatforms.size > 0 && (
+              <div
+                className="mt-2 px-2.5 py-2 rounded text-xs"
+                style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}
+              >
+                <span className="font-medium">Log in required</span>
+                {' — '}
+                Open {Array.from(needsLoginPlatforms).map(formatPlatformName).join(', ')} in Chrome and sign in. The Wrenlist extension publishes for you using that session.
+              </div>
+            )}
             {extensionDetected === false && (
               <div className="mt-2 px-2.5 py-2 rounded text-xs" style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}>
                 <span className="font-medium">Extension required</span> — Install the Wrenlist Chrome extension to publish to Vinted, Etsy, Depop, Shopify, and Facebook. eBay works without it.

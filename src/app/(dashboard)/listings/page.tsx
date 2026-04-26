@@ -957,8 +957,14 @@ export default function ListingsPage() {
         // Block if all items are listed/queued (not draft)
         const allFullyListed = connectedPlatforms.length > 0 && connectedPlatforms.every((cp) => alreadyListedCounts[cp.platform] === totalSelected)
 
-        // Selectable = connected platforms that aren't fully listed
-        const selectablePlatforms = connectedPlatforms.filter((cp) => (alreadyListedCounts[cp.platform] ?? 0) < totalSelected && !sessionExpired.includes(cp.platform))
+        // Selectable = connected platforms that aren't fully listed AND have a live session.
+        // `cp.needsLogin` (DB-connected, extension cookie missing) is treated the same as
+        // a mid-flight session expiry: the platform shows up but can't be picked.
+        const selectablePlatforms = connectedPlatforms.filter((cp) =>
+          (alreadyListedCounts[cp.platform] ?? 0) < totalSelected
+          && !sessionExpired.includes(cp.platform)
+          && !cp.needsLogin
+        )
         const allSelected = selectablePlatforms.length > 0 && selectablePlatforms.every((cp) => crosslistTargets.includes(cp.platform))
 
         const handleSelectAll = () => {
@@ -1075,32 +1081,55 @@ export default function ListingsPage() {
                           const allListed = listedCount === totalSelected
                           const someListed = listedCount > 0 && !allListed
                           const isExpired = sessionExpired.includes(cp.platform)
+                          // `cp.needsLogin` is set by useConnectedPlatforms when the user is
+                          // DB-connected to this marketplace but the extension cookie probe
+                          // came back unauthenticated. Surface it the same way as a
+                          // mid-flight session expiry so the row stays visible (Bug 2:
+                          // Depop used to vanish entirely) and a publish-blocked warning
+                          // is shown (Bug 1: Shopify used to lie that it was ready).
+                          const needsLogin = Boolean(cp.needsLogin)
+                          const blocked = allListed || isExpired || needsLogin
+                          const platformLabel = formatPlatformName(cp.platform)
 
                           return (
                             <label
                               key={cp.platform}
-                              className={`flex items-center gap-2 py-0.5 ${allListed || isExpired ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                              className={`flex items-center gap-2 py-0.5 ${blocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                             >
                               <input
                                 type="checkbox"
-                                checked={crosslistTargets.includes(cp.platform)}
+                                checked={crosslistTargets.includes(cp.platform) && !needsLogin && !isExpired}
                                 onChange={() =>
-                                  !allListed && !isExpired && setCrosslistTargets((prev) =>
+                                  !blocked && setCrosslistTargets((prev) =>
                                     prev.includes(cp.platform) ? prev.filter((p) => p !== cp.platform) : [...prev, cp.platform]
                                   )
                                 }
-                                disabled={allListed || isExpired}
+                                disabled={blocked}
                                 className="rounded disabled:cursor-not-allowed"
                               />
                               <MarketplaceIcon platform={cp.platform} size="sm" />
-                              <span className="text-sm font-medium" style={{ color: allListed || isExpired ? '#8A9E88' : '#1E2E1C' }}>
-                                {formatPlatformName(cp.platform)}
+                              <span className="text-sm font-medium" style={{ color: blocked ? '#8A9E88' : '#1E2E1C' }}>
+                                {platformLabel}
                                 {cp.username && (
                                   <span className="font-normal ml-1" style={{ color: '#8A9E88' }}>· {cp.username}</span>
                                 )}
                               </span>
-                              <span className="text-xs ml-auto" style={{ color: isExpired ? '#C0392B' : '#8A9E88' }}>
-                                {isExpired ? 'session expired' : allListed ? 'all listed' : someListed ? `${listedCount} of ${totalSelected} listed` : drafts > 0 ? `${drafts} draft` : ''}
+                              <span
+                                className="text-xs ml-auto"
+                                style={{ color: isExpired || needsLogin ? '#92700C' : '#8A9E88' }}
+                                title={needsLogin ? `Log in to ${platformLabel} in Chrome so the extension can publish on your behalf.` : undefined}
+                              >
+                                {isExpired
+                                  ? 'session expired'
+                                  : needsLogin
+                                    ? `log in to ${platformLabel}`
+                                    : allListed
+                                      ? 'all listed'
+                                      : someListed
+                                        ? `${listedCount} of ${totalSelected} listed`
+                                        : drafts > 0
+                                          ? `${drafts} draft`
+                                          : ''}
                               </span>
                             </label>
                           )
@@ -1128,6 +1157,17 @@ export default function ListingsPage() {
                               ? 'Update the Wrenlist extension — restart Chrome to auto-update'
                               : 'Install the Wrenlist extension to connect Vinted, Etsy, Facebook and Depop'}
                           </p>
+                        )}
+                        {/* Needs-login hint — DB-connected platforms whose extension cookie has lapsed */}
+                        {connectedPlatforms.some((cp) => cp.needsLogin) && (
+                          <div
+                            className="mt-2 px-2.5 py-2 rounded text-xs"
+                            style={{ backgroundColor: 'rgba(217,169,56,.12)', border: '1px solid rgba(217,169,56,.3)', color: '#92700C' }}
+                          >
+                            <span className="font-medium">Log in required</span>
+                            {' — '}
+                            Open {connectedPlatforms.filter((cp) => cp.needsLogin).map((cp) => formatPlatformName(cp.platform)).join(', ')} in Chrome and sign in. The Wrenlist extension publishes for you using that session.
+                          </div>
                         )}
                       </>
                     )}

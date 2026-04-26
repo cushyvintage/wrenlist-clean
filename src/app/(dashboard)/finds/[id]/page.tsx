@@ -230,6 +230,9 @@ export default function InventoryDetailPage() {
 
   const listedMarketplaces = new Set(marketplaceData.filter((m) => CROSSLIST_BLOCKED_STATUSES.has(m.status)).map((m) => m.marketplace))
   const availableForCrosslist: Platform[] = allConnectedPlatforms.map((cp) => cp.platform).filter((m) => !listedMarketplaces.has(m))
+  const needsLoginPlatforms = new Set<Platform>(
+    allConnectedPlatforms.filter((cp) => cp.needsLogin).map((cp) => cp.platform)
+  )
 
   const handleInputChange = useCallback((field: keyof FormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -601,6 +604,7 @@ export default function InventoryDetailPage() {
         crosslistTargets={crosslistTargets}
         availableForCrosslist={availableForCrosslist}
         platformUsernames={new Map(allConnectedPlatforms.map((cp) => [cp.platform, cp.username]))}
+        needsLoginPlatforms={needsLoginPlatforms}
         extensionDetected={extensionInfo.detected}
         extensionOutdated={extensionInfo.isOutdated}
         extensionOnline={heartbeat.online}
