@@ -2,6 +2,7 @@ import {
   checkAlreadyExecuted,
   getLoggingInfo,
   log,
+  remoteLog,
   wait,
 } from "../../shared/api.js";
 import { Condition, Color, isColor } from "../../shared/enums.js";
@@ -123,6 +124,30 @@ function isVintedLoginUrl(url: string): boolean {
   );
 }
 
+/**
+ * Optional behaviour switches for token-refresh paths. All fields are
+ * opt-in — omitting them preserves the original silent-bootstrap semantics
+ * used by background sync alarms.
+ */
+export interface VintedRefreshOptions {
+  /**
+   * The user just clicked Publish/Delist. When true, the cooldown gate that
+   * stops the background sync alarm from spamming tab opens is bypassed —
+   * we MUST get fresh cookies right now or the user sees a hard failure.
+   * The alarm-driven `vinted_sales_sync` path leaves this false so its
+   * cooldown still works as designed.
+   */
+  userTriggered?: boolean;
+  /**
+   * Fired right before the extension opens a hidden Vinted tab for token
+   * refresh. The queue handler uses this to write a transient
+   * `Refreshing Vinted session…` PMD `error_message` so the user sees their
+   * click was acknowledged during the 1–2s the tab is opening + closing.
+   * Errors thrown from the callback are swallowed — never block the refresh.
+   */
+  onTabFallbackOpen?: () => void | Promise<void>;
+}
+
 export class VintedClient {
   private baseUrl: string;
   private apiUrl: string;
@@ -140,6 +165,18 @@ export class VintedClient {
    *  token refresh. Set by `bootstrap()` and inherited by all subsequent
    *  `setTokens()` calls on this instance. Default false (silent). */
   private tabFallbackAllowed = false;
+
+  /** Whether this client instance was created from a user-triggered action
+   *  (Publish/Delist click, external message from Wrenlist tab, queue poll
+   *  for an item the user explicitly queued). When true, `refreshTokens()`
+   *  bypasses the inter-tab cooldown — the user is waiting on a result,
+   *  so deferring "until the next cycle" would surface as a hard failure. */
+  private userTriggered = false;
+
+  /** Optional callback fired immediately before opening a background Vinted
+   *  tab for token refresh. Used by the queue handler to write a transient
+   *  status the user can see. Set by `bootstrap()`. */
+  private onTabFallbackOpen?: () => void | Promise<void>;
 
   /** Read-only accessors for sync operations */
   public getUsername(): string { return this.username; }
@@ -166,9 +203,11 @@ export class VintedClient {
   // Prevent concurrent bootstrap operations - share the promise across all instances
   private static bootstrapPromise: Promise<void> | null = null;
   
-  // Cooldown for tab-based refreshes (to prevent tab spam)
+  // Cooldown for tab-based refreshes (to prevent tab spam from background
+  // sync alarms). User-triggered actions bypass this gate via
+  // `VintedRefreshOptions.userTriggered=true` — see `refreshTokens()`.
   private static lastTabRefresh = 0;
-  private static readonly TAB_REFRESH_COOLDOWN_MS = 10 * 1000; // 10s — only user-initiated callers reach this now
+  private static readonly TAB_REFRESH_COOLDOWN_MS = 10 * 1000;
 
   constructor(private tld: string) {
     const urls = buildVintedUrls(this.tld);
@@ -181,10 +220,16 @@ export class VintedClient {
     void this.updateHeaderRules();
   }
 
-  public async bootstrap(force = false, allowTabFallback = false): Promise<void> {
-    // Persist tab-fallback preference for this instance so subsequent
-    // setTokens() calls (from getListings, getSales, etc.) inherit it.
+  public async bootstrap(
+    force = false,
+    allowTabFallback = false,
+    options: VintedRefreshOptions = {},
+  ): Promise<void> {
+    // Persist refresh preferences for this instance so subsequent
+    // setTokens() calls (from getListings, getSales, etc.) inherit them.
     this.tabFallbackAllowed = allowTabFallback;
+    this.userTriggered = options.userTriggered === true;
+    this.onTabFallbackOpen = options.onTabFallbackOpen;
     // Check if we can use cached global tokens (same TLD, not expired, not forced)
     if (
       !force &&
@@ -557,18 +602,40 @@ export class VintedClient {
   }
 
   private async refreshTokens(): Promise<string> {
-    // Check cooldown to prevent tab spam. If we're inside the cooldown
-    // window, throw a distinct error so the caller can treat it as a soft
-    // "retry later" rather than a hard "both paths failed" error.
+    // Cooldown gate. The cooldown exists so the background `vinted_sales_sync`
+    // alarm can't spam tab opens when the cookie has aged out. But it
+    // becomes harmful when the user has just clicked Publish/Delist — they
+    // see "Vinted session expired" with no recovery, even though the
+    // cookies are recoverable by opening a tab. So when this client was
+    // created from a user-triggered action, bypass the cooldown.
     const timeSinceLastTab = Date.now() - VintedClient.lastTabRefresh;
-    if (timeSinceLastTab < VintedClient.TAB_REFRESH_COOLDOWN_MS) {
+    const onCooldown = timeSinceLastTab < VintedClient.TAB_REFRESH_COOLDOWN_MS;
+    if (onCooldown) {
       const secondsRemaining = Math.round(
         (VintedClient.TAB_REFRESH_COOLDOWN_MS - timeSinceLastTab) / 1000,
       );
-      console.log(
-        `[Vinted] Tab refresh on cooldown, ${secondsRemaining}s remaining`,
-      );
-      throw new VintedCooldownError(secondsRemaining);
+      if (this.userTriggered) {
+        console.log(
+          `[Vinted] Tab refresh cooldown active (${secondsRemaining}s) but bypassed — user-triggered action`,
+        );
+        await remoteLog(
+          "info",
+          "vinted-auth",
+          "Tab refresh cooldown bypassed (user-triggered)",
+          { secondsRemaining },
+        );
+      } else {
+        console.log(
+          `[Vinted] Tab refresh on cooldown, ${secondsRemaining}s remaining (background path — respecting cooldown)`,
+        );
+        await remoteLog(
+          "info",
+          "vinted-auth",
+          "Tab refresh cooldown active and respected (background path)",
+          { secondsRemaining },
+        );
+        throw new VintedCooldownError(secondsRemaining);
+      }
     }
 
     VintedClient.lastTabRefresh = Date.now();
@@ -611,6 +678,22 @@ export class VintedClient {
     }
 
     console.log("[Vinted] No reusable Vinted tab found, opening background tab for token refresh...");
+    await remoteLog(
+      "info",
+      "vinted-auth",
+      "Tab fallback opened — refreshing Vinted session in background tab",
+      { userTriggered: this.userTriggered },
+    );
+    // Fire the tab-fallback callback so the queue handler can write a
+    // transient "Refreshing Vinted session…" status the user sees while
+    // the tab opens + closes. Errors are swallowed — never block refresh.
+    if (this.onTabFallbackOpen) {
+      try {
+        await this.onTabFallbackOpen();
+      } catch (cbErr) {
+        console.warn("[Vinted] onTabFallbackOpen callback threw:", cbErr);
+      }
+    }
 
     return new Promise(async (resolve, reject) => {
       const tab = await chrome.tabs.create({
@@ -626,6 +709,11 @@ export class VintedClient {
       const timeout = setTimeout(async () => {
         completed = true;
         await chrome.tabs.remove(tab.id!).catch(() => {}); // Handle tab already closed
+        await remoteLog(
+          "warn",
+          "vinted-auth",
+          "Tab fallback failed — 40s timeout (Cloudflare challenge or slow page)",
+        );
         resolve("");
       }, 40000);
 
@@ -682,11 +770,26 @@ export class VintedClient {
             }
           }
         } while (!extractCsrfToken(html) && attempts < maxAttempts);
-        
+
         completed = true;
         await chrome.tabs.remove(tab.id!).catch(() => {}); // Handle tab already closed
         chrome.tabs.onUpdated.removeListener(listener);
         clearTimeout(timeout);
+        if (extractCsrfToken(html)) {
+          await remoteLog(
+            "info",
+            "vinted-auth",
+            "Tab fallback succeeded with fresh cookies",
+            { attempts },
+          );
+        } else {
+          await remoteLog(
+            "warn",
+            "vinted-auth",
+            "Tab fallback failed — exhausted attempts without CSRF token",
+            { attempts },
+          );
+        }
         resolve(html);
       };
 
