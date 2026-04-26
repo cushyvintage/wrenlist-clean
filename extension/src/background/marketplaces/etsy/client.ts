@@ -1619,25 +1619,46 @@ export class EtsyClient {
     }
 
     const data = (await resp.json()) as Record<string, unknown>;
-    // Etsy returns { products: [{ offerings: [{ price, quantity }], sku }], ...listing fields }
+    // Etsy's internal AJAX returns one of two shapes depending on whether
+    // the listing has variations:
+    //  - Single-variant: { sku, channels: [{ price:{amount,divisor}, quantity, channel_id }] }
+    //  - Multi-variant: { products: [{ offerings: [{ price, quantity }], sku }], ... }
+    // Probe the channels shape first — that's what single-variant listings
+    // (the common case for vintage resale) return. Fall back to the
+    // products/offerings shape for variant listings.
+    const channelsArr = Array.isArray(data.channels) ? data.channels : [];
+    const firstChannel = (channelsArr[0] ?? null) as Record<string, unknown> | null;
+
     const products = Array.isArray(data.products) ? data.products : [];
     const firstProduct = (products[0] ?? {}) as Record<string, unknown>;
     const offerings = Array.isArray(firstProduct.offerings) ? firstProduct.offerings : [];
     const firstOffering = (offerings[0] ?? {}) as Record<string, unknown>;
 
-    const priceObj = firstOffering.price as Record<string, unknown> | undefined;
-    const priceAmount = priceObj?.amount as number | undefined;
-    const priceDivisor = (priceObj?.divisor as number) || 100;
+    const priceSource =
+      (firstChannel?.price as Record<string, unknown> | undefined) ??
+      (firstOffering.price as Record<string, unknown> | undefined);
+    const priceAmount = priceSource?.amount as number | undefined;
+    const priceDivisor = (priceSource?.divisor as number) || 100;
 
-    const channels: string[] = [];
-    if (data.channelRetail) channels.push("retail");
-    if (data.channelWholesale) channels.push("wholesale");
+    const quantity =
+      (firstChannel?.quantity as number | undefined) ??
+      (firstOffering.quantity as number | undefined) ??
+      0;
+
+    const sku =
+      (data.sku as string | undefined) ??
+      (firstProduct.sku as string | undefined) ??
+      null;
+
+    const channelLabels: string[] = [];
+    if (data.channelRetail) channelLabels.push("retail");
+    if (data.channelWholesale) channelLabels.push("wholesale");
 
     return {
-      sku: (firstProduct.sku as string) || null,
-      quantity: (firstOffering.quantity as number) ?? 0,
+      sku: sku || null,
+      quantity,
       price: priceAmount != null ? priceAmount / priceDivisor : null,
-      channels,
+      channels: channelLabels,
       shouldAutoRenew: data.should_auto_renew === true,
     };
   }
