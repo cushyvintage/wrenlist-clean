@@ -37,6 +37,14 @@ export default function SyntheticTestsAdminPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
+  // UI suite state — driven by JS injected into a /add-find tab. We
+  // open that tab, post the script over via window.opener-style
+  // messaging, and poll its window.__wlUiTest until done.
+  const [isRunningUi, setIsRunningUi] = useState(false)
+  const [uiResult, setUiResult] = useState<{
+    overall: 'passed' | 'failed'
+    steps: Array<{ step: string; status: string }>
+  } | null>(null)
 
   // Admin-gate side-effect must precede the conditional render below to
   // keep React's hook order stable. The conditional return at the bottom
@@ -80,6 +88,96 @@ export default function SyntheticTestsAdminPage() {
     }
   }
 
+  /**
+   * Drive the UI synthetic suite. Unlike the API suite (server-side),
+   * this opens /add-find in a new tab, fetches the script body from
+   * /api/admin/synthetic-ui-script, injects + executes it via
+   * window.eval, then polls the new tab's window.__wlUiTest until done.
+   *
+   * Browser security: same-origin only. The opener can read window.*
+   * on the popup because both are app.wrenlist.com.
+   */
+  const runUiSuite = async () => {
+    setIsRunningUi(true)
+    setUiResult(null)
+    try {
+      const scriptRes = await fetch('/api/admin/synthetic-ui-script')
+      if (!scriptRes.ok) {
+        setUiResult({ overall: 'failed', steps: [{ step: 'fetch_script', status: 'failed' }] })
+        return
+      }
+      const scriptJson = await scriptRes.json()
+      const script: string | undefined = scriptJson?.data?.script
+      if (!script) {
+        setUiResult({ overall: 'failed', steps: [{ step: 'fetch_script', status: 'failed' }] })
+        return
+      }
+
+      const popup = window.open('/add-find', '_blank', 'noopener=no')
+      if (!popup) {
+        setUiResult({
+          overall: 'failed',
+          steps: [{ step: 'open_popup', status: 'failed' }],
+        })
+        setRunError('Popup blocked — allow popups for app.wrenlist.com to use the UI suite')
+        return
+      }
+
+      // Wait for the popup to navigate + render. Then inject the script.
+      const t0 = Date.now()
+      const TIMEOUT = 60000
+      while (Date.now() - t0 < TIMEOUT) {
+        await new Promise((r) => setTimeout(r, 500))
+        try {
+          if (popup.closed) {
+            setUiResult({ overall: 'failed', steps: [{ step: 'popup_closed_early', status: 'failed' }] })
+            return
+          }
+          const popupWin = popup as unknown as {
+            __wlUiTest?: { state: string; steps: Array<{ step: string; status: string }>; overall?: 'passed' | 'failed' }
+            location?: { pathname?: string }
+            eval?: (s: string) => unknown
+            HTMLInputElement?: unknown
+          }
+          // Wait until popup is on /add-find AND we can access its eval
+          if (
+            popupWin.location?.pathname?.startsWith('/add-find') &&
+            !popupWin.__wlUiTest &&
+            typeof popupWin.eval === 'function'
+          ) {
+            popupWin.eval(script)
+          }
+          if (popupWin.__wlUiTest?.state === 'done') {
+            setUiResult({
+              overall: popupWin.__wlUiTest.overall ?? 'failed',
+              steps: popupWin.__wlUiTest.steps,
+            })
+            popup.close()
+            return
+          }
+        } catch {
+          // Cross-origin transient errors during navigation — ignore + retry
+        }
+      }
+
+      // Timed out
+      try {
+        popup.close()
+      } catch {
+        /* ignore */
+      }
+      setUiResult({ overall: 'failed', steps: [{ step: 'timeout', status: 'failed' }] })
+    } catch (err) {
+      setUiResult({
+        overall: 'failed',
+        steps: [{ step: 'exception', status: 'failed' }],
+      })
+      setRunError(err instanceof Error ? err.message : 'UI run failed')
+    } finally {
+      setIsRunningUi(false)
+    }
+  }
+
   if (!user || !isAdmin(user.email)) return null
 
   // Headline stats — let an admin see the trend at a glance without
@@ -119,14 +217,34 @@ export default function SyntheticTestsAdminPage() {
             Critical-path checks run nightly at 06:00 UK and on every manual trigger below. Each run creates a £999 test find, publishes to eBay, delists, and cleans up.
           </p>
         </div>
-        <button
-          onClick={triggerRun}
-          disabled={isRunning}
-          className="px-4 py-2 bg-sage text-white text-sm font-medium rounded hover:bg-sage-dk disabled:opacity-50"
-        >
-          {isRunning ? 'Running…' : '▶ Run now'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={runUiSuite}
+            disabled={isRunningUi}
+            title="Opens /add-find in a new tab and drives the form like a real user. Verifies the publish flow works through the React UI, not just the API."
+            className="px-4 py-2 border border-sage/22 text-sage-dk text-sm font-medium rounded hover:bg-cream-md disabled:opacity-50"
+          >
+            {isRunningUi ? 'UI run in /add-find tab…' : '▶ Run UI suite'}
+          </button>
+          <button
+            onClick={triggerRun}
+            disabled={isRunning}
+            className="px-4 py-2 bg-sage text-white text-sm font-medium rounded hover:bg-sage-dk disabled:opacity-50"
+          >
+            {isRunning ? 'Running…' : '▶ Run API suite'}
+          </button>
+        </div>
       </div>
+      {uiResult && (
+        <div className={`p-3 rounded border text-sm ${uiResult.overall === 'passed' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+          <div className="font-medium mb-1">
+            UI suite — {uiResult.overall === 'passed' ? '✅ passed' : '❌ failed'} ({uiResult.steps.filter((s) => s.status === 'passed').length}/{uiResult.steps.length} green)
+          </div>
+          <div className="text-xs font-mono whitespace-pre-wrap">
+            {uiResult.steps.map((s) => `${s.status === 'passed' ? '✓' : s.status === 'failed' ? '✗' : '○'} ${s.step}`).join('\n')}
+          </div>
+        </div>
+      )}
 
       {/* Headline metrics */}
       {last30.length > 0 && (
