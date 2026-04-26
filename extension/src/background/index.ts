@@ -1413,6 +1413,44 @@ type ExternalMessage = Record<string, unknown>;
               facebookTld: "co.uk",
             },
             publishMode: (itemFields?.publishMode as "draft" | "publish" | undefined) ?? "publish",
+            // Items in the publish-queue were explicitly added by the user
+            // (clicked Publish, queued a bulk publish). Bypassing the Vinted
+            // tab-refresh cooldown is correct here — the user is waiting
+            // on a result, so deferring to "next cycle" surfaces as the
+            // dreaded "Vinted session expired" with no recovery.
+            userTriggered: true,
+            // Surface a transient status the user can see during the 1–2s
+            // the Vinted tab is opening + closing for session refresh.
+            // We write status='needs_publish' (keeps the row in the queue)
+            // with a friendly error_message — MarketplaceStatusPanel renders
+            // error_message for both 'error' AND 'needs_publish'.
+            onVintedTabFallbackOpen: mp === "vinted"
+              ? async () => {
+                  try {
+                    await queueFetch(`${baseUrl}/api/marketplace/publish-queue`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        find_id: item.find_id,
+                        marketplace: "vinted",
+                        status: "needs_publish",
+                        error_message: "Refreshing Vinted session…",
+                        fields: { ...existingFields, refreshing_session: true },
+                      }),
+                    });
+                    await remoteLog(
+                      "info",
+                      "queue",
+                      "Wrote transient 'Refreshing Vinted session…' status",
+                      { findId: item.find_id },
+                    );
+                  } catch (cbErr) {
+                    // Never block the actual session refresh on a
+                    // status-update fetch failure.
+                    console.warn("[QueuePoll] Failed to write transient Vinted refresh status:", cbErr);
+                  }
+                }
+              : undefined,
           };
           let result: Awaited<ReturnType<typeof publishToMarketplace>>;
           try {
@@ -1615,7 +1653,36 @@ type ExternalMessage = Record<string, unknown>;
           console.log(`[QueuePoll] Delisting ${listingId} from ${mp} (attempt ${retryCount + 1}/${MAX_PUBLISH_RETRIES})...`);
 
           // Pass settings (e.g. shopifyShopUrl) from the queue item
-          const delistOptions = item.settings ? { settings: item.settings } : {};
+          const delistOptions: Parameters<typeof delistFromMarketplace>[2] = {
+            ...(item.settings ? { settings: item.settings } : {}),
+            // User-explicit action — bypass Vinted cooldown (see publish path).
+            userTriggered: true,
+            onVintedTabFallbackOpen: mp === "vinted"
+              ? async () => {
+                  try {
+                    await queueFetch(`${baseUrl}/api/marketplace/delist-queue`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        find_id: item.find_id,
+                        marketplace: "vinted",
+                        status: "needs_delist",
+                        error_message: "Refreshing Vinted session…",
+                        fields: { ...existingFields, refreshing_session: true },
+                      }),
+                    });
+                    await remoteLog(
+                      "info",
+                      "queue",
+                      "Wrote transient 'Refreshing Vinted session…' status (delist)",
+                      { findId: item.find_id },
+                    );
+                  } catch (cbErr) {
+                    console.warn("[QueuePoll] Failed to write transient Vinted refresh status (delist):", cbErr);
+                  }
+                }
+              : undefined,
+          };
           let result: Awaited<ReturnType<typeof delistFromMarketplace>>;
           try {
             result = await delistFromMarketplace(mp, listingId, delistOptions);
@@ -1825,7 +1892,12 @@ type ExternalMessage = Record<string, unknown>;
               dynamicProperties: {},
             };
 
-            const publishOptions: Record<string, any> = {};
+            const publishOptions: Record<string, any> = {
+              // Jobs in publish_jobs were created by an explicit user action
+              // (Publish click, bulk-publish). Bypass Vinted cooldown — see
+              // PublishOptions.userTriggered docs.
+              userTriggered: true,
+            };
             if (mp === "shopify" && payload.settings?.shopifyShopUrl) {
               publishOptions.shopifyShopUrl = payload.settings.shopifyShopUrl;
             }
@@ -1892,7 +1964,10 @@ type ExternalMessage = Record<string, unknown>;
               continue;
             }
 
-            const delistOptions: Record<string, any> = {};
+            const delistOptions: Record<string, any> = {
+              // Jobs in publish_jobs were created by an explicit user action.
+              userTriggered: true,
+            };
             if (mp === "shopify" && payload.settings?.shopifyShopUrl) {
               delistOptions.shopifyShopUrl = payload.settings.shopifyShopUrl;
             }
@@ -2425,6 +2500,10 @@ async function handlePublishCommand(message: ExternalMessage) {
       settings: resolveSettings(message),
       tld: resolveTldFromMessage(message, marketplace),
       publishMode,
+      // External messages come from the Wrenlist tab — always user-triggered.
+      // Lets the Vinted client bypass the inter-tab cooldown (which exists
+      // for the silent sales-sync alarm path, not for explicit user clicks).
+      userTriggered: true,
     }),
   );
 }
@@ -2454,6 +2533,8 @@ async function handleDelistCommand(message: ExternalMessage) {
     await delistFromMarketplace(marketplace, listingId, {
       settings: resolveSettings(message),
       tld: resolveTldFromMessage(message, marketplace),
+      // External messages come from the Wrenlist tab — always user-triggered.
+      userTriggered: true,
     }),
   );
 }

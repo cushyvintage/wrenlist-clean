@@ -28,7 +28,7 @@ export async function publishToMarketplace(
       case "depop":
         return publishViaDepop(product, tld);
       case "vinted":
-        return publishViaVinted(product, tld);
+        return publishViaVinted(product, tld, options);
       case "facebook":
         return publishViaFacebook(product, tld);
       case "shopify":
@@ -54,7 +54,7 @@ export async function delistFromMarketplace(
       case "depop":
         return delistViaDepop(marketplaceId, tld);
       case "vinted":
-        return delistViaVinted(marketplaceId, tld);
+        return delistViaVinted(marketplaceId, tld, options);
       case "facebook":
         return delistViaFacebook(marketplaceId, tld);
       case "shopify":
@@ -89,7 +89,11 @@ async function publishViaDepop(product: Product, tld: string) {
   });
 }
 
-async function publishViaVinted(product: Product, tld: string) {
+async function publishViaVinted(
+  product: Product,
+  tld: string,
+  options: PublishOptions = {},
+) {
   console.log('[DEBUG publishViaVinted] product:', JSON.stringify({
     vintedCatalogId: (product as any).vintedCatalogId,
     category: product.category,
@@ -100,13 +104,17 @@ async function publishViaVinted(product: Product, tld: string) {
     title: product.title?.substring(0, 40),
   }));
   const services = createVintedServices({ tld });
-  await services.client.bootstrap(false, true);
+  const refreshOptions = {
+    userTriggered: options.userTriggered === true,
+    onTabFallbackOpen: options.onVintedTabFallbackOpen,
+  };
+  await services.client.bootstrap(false, true, refreshOptions);
   let payload = await services.mapProduct(product);
   console.log('[DEBUG publishViaVinted] payload keys:', Object.keys(payload), 'item keys:', payload.item ? Object.keys(payload.item) : 'NO ITEM');
   let result = await services.client.postListing(payload);
 
   if (!result.success && needsVintedTokenRefresh(result)) {
-    await services.client.bootstrap(true, true);
+    await services.client.bootstrap(true, true, refreshOptions);
     payload = await services.mapProduct(product);
     result = await services.client.postListing(payload);
   }
@@ -172,12 +180,20 @@ async function delistViaDepop(id: string, tld: string) {
   return withAuthRetry("depop", () => services.client.delistListing(id));
 }
 
-async function delistViaVinted(id: string, tld: string) {
+async function delistViaVinted(
+  id: string,
+  tld: string,
+  options: PublishOptions = {},
+) {
   const services = createVintedServices({ tld });
-  await services.client.bootstrap(false, true);
+  const refreshOptions = {
+    userTriggered: options.userTriggered === true,
+    onTabFallbackOpen: options.onVintedTabFallbackOpen,
+  };
+  await services.client.bootstrap(false, true, refreshOptions);
   let result = await services.client.delistListing(id);
   if (!result.success && needsVintedTokenRefresh(result)) {
-    await services.client.bootstrap(true, true);
+    await services.client.bootstrap(true, true, refreshOptions);
     result = await services.client.delistListing(id);
   }
   return result;
