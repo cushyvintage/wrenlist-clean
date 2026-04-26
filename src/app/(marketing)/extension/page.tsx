@@ -121,11 +121,11 @@ export default function ExtensionPage() {
             <p className="hero-fade-3 mb-7 max-w-sm font-light leading-relaxed text-[#6B7D6A]">
               Import finds from any marketplace with one click. Crosslist to Vinted, eBay, Etsy, Depop & Shopify. Auto-delist when something sells. All from your browser.
             </p>
+            {/* Pre-launch: extension is in Chrome Web Store review. Send people to the
+                waitlist instead of a 404 chrome store URL. */}
             <div className="flex flex-col sm:flex-row gap-3 items-start">
-              <a
-                href="https://chromewebstore.google.com/detail/wrenlist"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/?waitlist=1"
                 className="inline-flex items-center gap-2.5 bg-[#3D5C3A] text-[#F5F0E8] px-7 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2C4428] rounded"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -133,9 +133,9 @@ export default function ExtensionPage() {
                   <circle cx="8" cy="8" r="2.5" fill="#F5F0E8" />
                   <path d="M8 1a7 7 0 014.9 2H8" stroke="#F5F0E8" strokeWidth="1" />
                 </svg>
-                Install for Chrome
-              </a>
-              <span className="text-xs font-light text-[#8A9E88] self-center">Free with any Wrenlist plan</span>
+                Notify me when it&apos;s live
+              </Link>
+              <span className="text-xs font-light text-[#8A9E88] self-center">Pending Chrome Web Store review</span>
             </div>
           </div>
 
@@ -220,7 +220,7 @@ export default function ExtensionPage() {
           <div className="text-center mb-8">
             <div className="mb-2.5 text-xs font-medium uppercase tracking-wider text-[#8A9E88]">Works with</div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1E2E1C]">
-              10 marketplaces. <em className="italic">One extension.</em>
+              Every marketplace you sell on. <em className="italic">One extension.</em>
             </h2>
           </div>
 
@@ -279,19 +279,17 @@ export default function ExtensionPage() {
             Ready to <em className="italic">connect</em>?
           </h2>
           <p className="text-sm font-light text-[#6B7D6A] mb-7">
-            Install the extension, sign in to Wrenlist, and start importing from any marketplace in under a minute.
+            The extension is in Chrome Web Store review. Join the waitlist and you&apos;ll be among the first to install it the moment it&apos;s approved.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <a
-              href="https://chromewebstore.google.com/detail/wrenlist"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/?waitlist=1"
               className="inline-flex items-center gap-2.5 bg-[#3D5C3A] text-[#F5F0E8] px-7 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2C4428] rounded"
             >
-              Install for Chrome
-            </a>
-            <Link href="/?waitlist=1" className="text-sm font-light text-[#5A7A57] underline hover:text-[#3D5C3A]">
-              or join the waitlist
+              Notify me when it&apos;s live
+            </Link>
+            <Link href="/pricing" className="text-sm font-light text-[#5A7A57] underline hover:text-[#3D5C3A]">
+              or see pricing
             </Link>
           </div>
         </div>

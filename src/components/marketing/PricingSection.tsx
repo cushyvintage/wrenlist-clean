@@ -44,7 +44,7 @@ const PricingCard = ({ tier, price, postLaunchPrice, annualMonthly, description,
       <div className="text-2xl font-serif font-medium text-ink">{limit}</div>
       <div className="text-10px font-semibold uppercase text-sage-dim">finds / month</div>
     </div>
-    <a href="/register" onClick={handleCtaClick} className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Get started</a>
+    <a href="/?waitlist=1" onClick={handleCtaClick} className="w-full block text-center rounded bg-sage text-cream py-2.5 text-xs font-medium mb-6 hover:bg-sage-dk">Join the waitlist</a>
     <div className="border-t border-[rgba(61,92,58,0.14)] pt-6 mb-4">
       <div className="text-10px font-semibold uppercase text-sage-dim mb-4">includes</div>
       <div className="space-y-3">
