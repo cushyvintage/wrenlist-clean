@@ -173,6 +173,10 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     updateData.platform_listing_id = platform_listing_id || null
     updateData.platform_listing_url = platform_listing_url || null
     updateData.last_synced_at = new Date().toISOString()
+    // Clear any lingering error_message from prior failed attempts so the UI
+    // doesn't keep showing stale things like "Refreshing Vinted session…"
+    // on a row that's actually now successfully listed.
+    updateData.error_message = null
   }
 
   // Always persist the error message when we have one, even for
