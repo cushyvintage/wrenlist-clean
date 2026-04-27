@@ -1152,6 +1152,14 @@ export class EtsyClient {
       void chrome.storage.local.set({ _keepAlive: Date.now() });
     }, 5000);
 
+    // Track the API-created listing so we can clean it up on fall-through.
+    // Etsy's internal AJAX activate endpoint silent-no-ops (needs the £0.20
+    // fee dialog click that only the form-fill path handles), so we end up
+    // creating a draft via API, throwing, falling back to form-fill, and
+    // form-fill creates a SECOND listing it activates. Without the cleanup
+    // below, the API-created draft accumulates as junk in the seller's shop.
+    let orphanListingId: string | null = null;
+
     try {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
@@ -1321,6 +1329,7 @@ export class EtsyClient {
       }
 
       const listingId = String(createData.listing_id);
+      orphanListingId = listingId; // mark for cleanup if anything below throws
       await remoteLog("info", "etsy.api-publish", `Draft created: listing_id=${listingId}`);
 
       // 4b. Set inventory via PATCH on the listing root with {price, quantity,
@@ -1545,12 +1554,18 @@ export class EtsyClient {
             observedState,
             isAvailable,
           });
+          orphanListingId = null; // success — don't clean up
         } catch (verifyErr) {
-          // Re-throw — the outer catch handles fall-back to form-fill.
+          // Re-throw — the outer catch handles fall-back to form-fill AND the
+          // orphan-draft cleanup we wired up at the top of this method.
           throw verifyErr;
         }
 
       }
+
+      // Made it through everything (including activate) without throwing.
+      // Mark as not-orphan so the catch handler doesn't delete it.
+      orphanListingId = null;
 
       clearInterval(keepAlive);
 
@@ -1574,6 +1589,47 @@ export class EtsyClient {
       await remoteLog("error", "etsy.api-publish", `API publish failed: ${errMsg}`, {
         stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
       });
+
+      // Clean up the orphan API-created draft before falling through to
+      // form-fill. PATCH state="inactive" is what Etsy's standard delist path
+      // uses and is verified working against this endpoint. If the cleanup
+      // itself fails (network blip, listing already gone), that's non-fatal —
+      // we still propagate the original error so form-fill takes over.
+      if (orphanListingId) {
+        try {
+          const shopId = await this.getShopId();
+          const csrfNonce = await this.getCsrfNonce();
+          const cleanupResp = await fetch(
+            `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${orphanListingId}`,
+            {
+              method: "PATCH",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "x-csrf-token": csrfNonce,
+              },
+              body: JSON.stringify({ state: "inactive" }),
+            },
+          );
+          await remoteLog(
+            cleanupResp.ok ? "info" : "warn",
+            "etsy.api-publish-cleanup",
+            cleanupResp.ok
+              ? `Cleaned up orphan API draft ${orphanListingId} before fallback`
+              : `Orphan cleanup non-2xx: ${cleanupResp.status}`,
+            { orphanListingId },
+          );
+        } catch (cleanupErr) {
+          const cleanupMsg = cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr);
+          await remoteLog(
+            "warn",
+            "etsy.api-publish-cleanup",
+            `Orphan cleanup threw (non-fatal): ${cleanupMsg}`,
+            { orphanListingId },
+          );
+        }
+      }
+
       throw error; // Re-throw so the caller (publishProduct) can catch and fall back
     }
   }
