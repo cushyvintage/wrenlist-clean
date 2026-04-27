@@ -47,3 +47,7 @@ wrenlist-ext-v*/
 extension/store-assets/screenshots/*.png
 !extension/store-assets/screenshots/originals/
 !extension/store-assets/screenshots/1280x800/
+
+# Claude Code agent state (local only, not for repo)
+.claude/worktrees/
+.claude/scheduled_tasks.lock
