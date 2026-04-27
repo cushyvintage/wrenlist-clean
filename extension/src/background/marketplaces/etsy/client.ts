@@ -1485,6 +1485,82 @@ export class EtsyClient {
             error: errText.substring(0, 200),
           });
           // Non-fatal: listing was created, just missing some fields
+        } else {
+          // Silent-200 guard. We don't validate every field — focus on the
+          // ones whose absence would silently break the listing for buyers:
+          //  - shipping_profile_id: Etsy requires one before activate; a
+          //    silently-dropped profile means the listing publishes without
+          //    delivery options.
+          //  - description: visible to buyers; if dropped the listing looks
+          //    half-finished.
+          // Other fields (tags, materials, image_ids) are nice-to-have —
+          // a silent drop is annoying but not buyer-blocking, so we skip.
+          const expectedShippingProfile = patchBody.shipping_profile_id as
+            | number | undefined;
+          const expectedDescriptionPrefix =
+            typeof patchBody.description === "string"
+              ? patchBody.description.slice(0, 64)
+              : null;
+          if (expectedShippingProfile != null || expectedDescriptionPrefix != null) {
+            try {
+              await this.verifyEtsyMutationResult({
+                listingId,
+                context: "api-publish-details",
+                expected: [
+                  expectedShippingProfile != null
+                    ? `shipping_profile_id=${expectedShippingProfile}`
+                    : null,
+                  expectedDescriptionPrefix != null
+                    ? `description starts with "${expectedDescriptionPrefix.substring(0, 32)}…"`
+                    : null,
+                ].filter(Boolean).join(", "),
+                reread: async () => {
+                  const verifyResp = await fetch(
+                    `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+                    { credentials: "include", headers: { Accept: "application/json" } },
+                  );
+                  if (!verifyResp.ok) {
+                    throw new Error(
+                      `Re-read after details PATCH returned ${verifyResp.status}`,
+                    );
+                  }
+                  return (await verifyResp.json()) as {
+                    shipping_profile_id?: number | null;
+                    description?: string | null;
+                  };
+                },
+                matches: (read) => {
+                  if (
+                    expectedShippingProfile != null &&
+                    Number(read.shipping_profile_id) !== expectedShippingProfile
+                  ) {
+                    return false;
+                  }
+                  if (
+                    expectedDescriptionPrefix != null &&
+                    !(read.description ?? "").startsWith(expectedDescriptionPrefix)
+                  ) {
+                    return false;
+                  }
+                  return true;
+                },
+                observed: (read) => ({
+                  shipping_profile_id: read.shipping_profile_id ?? null,
+                  descriptionPrefix:
+                    typeof read.description === "string"
+                      ? read.description.slice(0, 64)
+                      : null,
+                }),
+              });
+            } catch (verifyErr) {
+              // Verifier already remoteLogged warn+error. Re-throw so the
+              // outer catch deletes the orphan draft + falls back to
+              // form-fill. A silently-dropped shipping profile would
+              // otherwise let activate proceed against an incomplete
+              // listing.
+              throw verifyErr;
+            }
+          }
         }
       }
 
@@ -1529,35 +1605,43 @@ export class EtsyClient {
         }
 
         // Verify the activation actually took. State 0 = active, 3 = draft.
+        // The PATCH returns 200 even when Etsy silently no-ops because
+        // the £0.20 fee dialog (UI-only) hasn't been confirmed. Re-read
+        // and check state/is_available — on mismatch the verifier helper
+        // throws, the outer catch deletes the orphan API draft, and the
+        // outer publishProduct falls back to form-fill which DOES handle
+        // the fee confirmation dialog.
         try {
-          const verifyResp = await fetch(
-            `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
-            { credentials: "include", headers: { Accept: "application/json" } },
-          );
-          const verifyData = (await verifyResp.json()) as { state?: number; is_available?: boolean };
-          const observedState = verifyData?.state;
-          const isAvailable = verifyData?.is_available;
-          if (observedState !== 0 && isAvailable !== true) {
-            await remoteLog(
-              "warn",
-              "etsy.api-publish",
-              "Activate PATCH returned 200 but listing still draft (silent-200, fee dialog needed)",
-              { listingId, observedState, isAvailable },
-            );
-            clearInterval(keepAlive);
-            throw new Error(
-              `Etsy activate silently failed: PATCH returned 200 but listing state=${observedState} (expected 0=active). Falling back to form-fill which handles the £0.20 fee confirmation dialog.`,
-            );
-          }
+          const verified = await this.verifyEtsyMutationResult({
+            listingId,
+            context: "api-publish-activate",
+            expected: "state=0 (active) or is_available=true",
+            reread: async () => {
+              const verifyResp = await fetch(
+                `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+                { credentials: "include", headers: { Accept: "application/json" } },
+              );
+              return (await verifyResp.json()) as {
+                state?: number;
+                is_available?: boolean;
+              };
+            },
+            matches: (read) => read.state === 0 || read.is_available === true,
+            observed: (read) => ({
+              observedState: read.state,
+              isAvailable: read.is_available,
+            }),
+          });
           await remoteLog("info", "etsy.api-publish", "Activation verified: state=active", {
             listingId,
-            observedState,
-            isAvailable,
+            observedState: verified.state,
+            isAvailable: verified.is_available,
           });
           orphanListingId = null; // success — don't clean up
         } catch (verifyErr) {
           // Re-throw — the outer catch handles fall-back to form-fill AND the
           // orphan-draft cleanup we wired up at the top of this method.
+          clearInterval(keepAlive);
           throw verifyErr;
         }
 
@@ -1805,9 +1889,110 @@ export class EtsyClient {
     return results;
   }
 
+  // ─── Silent-200 mutation verifier ────────────────────────────────
+  //
+  // Etsy's internal AJAX endpoints regularly return HTTP 200 with bodies
+  // that don't reflect the requested mutation — known cases include
+  // activate-PATCH (requires the £0.20 fee dialog click), delist-PATCH on
+  // drafts, and any PATCH made with a stale or wrong-context CSRF nonce.
+  // Trusting the 2xx leads to silent DB-lies (row updated, listing
+  // unchanged on the platform).
+  //
+  // Pattern: every mutation that we care about should re-read after the
+  // PATCH/PUT and confirm the change actually took. This helper
+  // standardises that check. Caller supplies the re-read fn (so we don't
+  // hard-code the re-read endpoint — different mutations need different
+  // GETs), the predicate that decides "did it stick?", and a context
+  // label for logs. On mismatch we emit a structured warn line and
+  // throw — the caller's existing fallback catch then takes over
+  // (form-fill for publish/delist, or just propagates the throw for
+  // setAutoRenew which has no fallback).
+
+  /**
+   * Generic silent-200 verifier. Re-reads the listing via the supplied
+   * `reread` function, runs `matches` against the result, throws if the
+   * mutation didn't stick. Logs a structured warn on mismatch so the
+   * trail in remote logs always has the same shape regardless of caller.
+   *
+   * Returns the re-read result on success so callers can reuse it
+   * (avoids a second GET if they need other fields from the same body).
+   */
+  private async verifyEtsyMutationResult<T>(opts: {
+    listingId: string;
+    /** Short label that scopes the log source, e.g. "setAutoRenew", "bulk-deactivate". */
+    context: string;
+    /** Human-readable description of what was asked, e.g. `state=active`, `auto_renew=false`. */
+    expected: string;
+    /** Re-read after the PATCH. Throws are propagated. */
+    reread: () => Promise<T>;
+    /**
+     * Predicate over the re-read result. Return true when the mutation
+     * is reflected. Return false to trigger the silent-200 throw.
+     */
+    matches: (result: T) => boolean;
+    /**
+     * Optional — extract a small "observed" diagnostic blob from the
+     * re-read result for the warn log. Keeps log sizes bounded.
+     */
+    observed?: (result: T) => Record<string, unknown>;
+  }): Promise<T> {
+    const result = await opts.reread();
+    if (opts.matches(result)) {
+      return result;
+    }
+
+    const observed = opts.observed ? opts.observed(result) : undefined;
+    await remoteLog(
+      "warn",
+      `etsy.${opts.context}-verify`,
+      "200 OK but mutation didn't take",
+      {
+        listingId: opts.listingId,
+        context: opts.context,
+        expected: opts.expected,
+        observed,
+      },
+    );
+    await remoteLog(
+      "error",
+      `etsy.${opts.context}-verify`,
+      `Etsy ${opts.context} silent-200: expected ${opts.expected} but re-read disagreed`,
+      { listingId: opts.listingId },
+    );
+    throw new Error(
+      `Etsy ${opts.context} silent-200 for listing ${opts.listingId}: expected ${opts.expected}; re-read did not confirm.`,
+    );
+  }
+
+  /**
+   * Read the raw listing-root state for activation / delist verification.
+   * Returns `state` (numeric: 0=active, 3=draft, etc.) and `is_active`
+   * if present. This is the same GET the activate verifier inlined.
+   */
+  private async getListingRootState(listingId: string): Promise<{
+    state?: number;
+    is_active?: boolean;
+  }> {
+    const shopId = await this.getShopId();
+    const resp = await fetch(
+      `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+      { credentials: "include", headers: { Accept: "application/json" } },
+    );
+    if (!resp.ok) {
+      throw new Error(`Etsy listing GET returned ${resp.status} for ${listingId}`);
+    }
+    return (await resp.json()) as { state?: number; is_active?: boolean };
+  }
+
   /**
    * Set the auto-renew flag on a listing via Etsy's internal PATCH API.
    * When auto-renew is off, Etsy won't charge the 0.20 renewal fee when it expires.
+   *
+   * Verifies the PATCH actually took by re-reading via `getListingInventory`
+   * (which returns `shouldAutoRenew`). Etsy's internal AJAX has a documented
+   * silent-200 pattern — a 2xx response does not guarantee the mutation
+   * persisted (stale CSRF nonce, gated transition, etc.). Without this
+   * check we'd report success while the auto-renew flag stayed unchanged.
    */
   public async setAutoRenew(
     listingId: string,
@@ -1839,7 +2024,16 @@ export class EtsyClient {
       throw new Error(`Etsy auto-renew PATCH returned ${resp.status}: ${errText.substring(0, 200)}`);
     }
 
-    await remoteLog("info", "etsy.auto-renew", `Set auto_renew=${autoRenew} for listing ${listingId}`);
+    await this.verifyEtsyMutationResult({
+      listingId,
+      context: "setAutoRenew",
+      expected: `should_auto_renew=${autoRenew}`,
+      reread: () => this.getListingInventory(listingId),
+      matches: (inv) => inv.shouldAutoRenew === autoRenew,
+      observed: (inv) => ({ shouldAutoRenew: inv.shouldAutoRenew }),
+    });
+
+    await remoteLog("info", "etsy.auto-renew", `Set auto_renew=${autoRenew} for listing ${listingId} (verified)`);
     return {
       success: true,
       message: `Auto-renew ${autoRenew ? "enabled" : "disabled"} for listing ${listingId}.`,
@@ -2951,6 +3145,16 @@ export class EtsyClient {
   /**
    * Generic bulk PATCH — sends a PATCH for each item with the given fields.
    * Gets CSRF nonce once, then processes sequentially with rate-limiting delay.
+   *
+   * SILENT-200 GUARD: Etsy's internal AJAX PATCH endpoint regularly returns
+   * 200 OK with no actual state change (stale CSRF, gated activate
+   * transition, draft delist no-ops, etc.). Trusting 2xx for bulk
+   * operations is dangerous — bulkDeactivate could report "100 deactivated"
+   * while every listing stayed live. After the PATCH loop we re-read each
+   * "successfully" PATCHed listing and confirm the mutation took. Items
+   * whose 2xx didn't stick are demoted from `updated` to `failed` with a
+   * `silent-200` error tag so callers (and the test harness) can spot
+   * the regression.
    */
   public async bulkPatchListings(
     items: Array<{ listingId: string; fields: Record<string, unknown> }>,
@@ -2958,6 +3162,9 @@ export class EtsyClient {
     const shopId = await this.getShopId();
     const csrfNonce = await this.getCsrfNonce();
 
+    // Tracks which listings returned 2xx so we only re-read those. The
+    // others already failed loudly — no point checking them again.
+    const patchedOk: Array<{ listingId: string; fields: Record<string, unknown> }> = [];
     let updated = 0;
     let failed = 0;
     const errors: string[] = [];
@@ -2984,7 +3191,7 @@ export class EtsyClient {
         );
 
         if (resp.ok) {
-          updated++;
+          patchedOk.push(item);
         } else {
           const errText = await resp.text().catch(() => "");
           const msg = `Listing ${item.listingId}: ${resp.status} ${errText.substring(0, 150)}`;
@@ -3003,12 +3210,183 @@ export class EtsyClient {
 
       // Log progress every 10 items
       if ((i + 1) % 10 === 0) {
-        await remoteLog("info", "etsy.bulk-patch", `Progress: ${i + 1}/${items.length} (${updated} ok, ${failed} err)`);
+        await remoteLog(
+          "info",
+          "etsy.bulk-patch",
+          `PATCH progress: ${i + 1}/${items.length} (${patchedOk.length} ok-so-far, ${failed} err)`,
+        );
+      }
+    }
+
+    // ─── Verification pass ──────────────────────────────────────
+    // For each listing that returned 2xx, re-read and confirm the
+    // mutation actually persisted. Anything that silent-200'd flips
+    // from updated → failed.
+    if (patchedOk.length > 0) {
+      await remoteLog(
+        "info",
+        "etsy.bulk-patch",
+        `Verifying ${patchedOk.length} PATCHes against re-read…`,
+      );
+      const silentNoOps: string[] = [];
+      for (let i = 0; i < patchedOk.length; i++) {
+        const item = patchedOk[i];
+        void chrome.storage.local.set({ _keepAlive: Date.now() });
+        try {
+          await this.verifyBulkPatchTook(item.listingId, item.fields);
+          updated++;
+        } catch (verifyErr) {
+          const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+          errors.push(`Listing ${item.listingId} silent-200: ${msg}`);
+          silentNoOps.push(item.listingId);
+          failed++;
+        }
+        if (i < patchedOk.length - 1) {
+          await wait(EtsyClient.BULK_DELAY_MS);
+        }
+      }
+      if (silentNoOps.length > 0) {
+        await remoteLog(
+          "warn",
+          "etsy.bulk-patch-verify",
+          `${silentNoOps.length} bulk PATCH(es) silently no-op'd — Etsy returned 200 but mutation didn't take`,
+          { silentNoOpListingIds: silentNoOps.slice(0, 50) },
+        );
       }
     }
 
     await remoteLog("info", "etsy.bulk-patch", `Complete: ${updated} updated, ${failed} failed`);
     return { updated, failed, errors };
+  }
+
+  /**
+   * Verify a bulk PATCH actually took for one listing. Re-reads the
+   * appropriate endpoint based on which fields were patched. Throws on
+   * mismatch (caller demotes the listing from "updated" to "failed").
+   *
+   * Supported fields (only the ones used by the four bulk callers and
+   * the easy-to-verify ones):
+   *  - state: "active" | "inactive"  → re-read listing root, check `state`
+   *  - price: number                 → re-read inventory, compare £
+   *  - quantity: number              → re-read inventory, compare qty
+   *  - sku: string                   → re-read inventory, compare sku
+   *  - tags: string[]                → re-read listing root, compare tags
+   *  - should_auto_renew: boolean    → re-read inventory, compare flag
+   *
+   * Anything else is a silent pass-through with a debug log — we'd
+   * rather miss-verify than crash bulk operations on unknown fields.
+   * If you add a new bulk operation, add the verification arm here too.
+   */
+  private async verifyBulkPatchTook(
+    listingId: string,
+    fields: Record<string, unknown>,
+  ): Promise<void> {
+    // STATE — most important: bulkDeactivate / bulkRenew rely on this.
+    if (typeof fields.state === "string") {
+      const expected = fields.state.toLowerCase();
+      await this.verifyEtsyMutationResult({
+        listingId,
+        context: "bulk-patch-state",
+        expected: `state=${expected}`,
+        reread: () => this.getListingRootState(listingId),
+        matches: (read) => {
+          // Etsy's GET listing-root returns `state` as a numeric enum
+          // (0=active, 3=draft, etc.) on this endpoint. We accept either
+          // the numeric "0/active" pairing or `is_active` semantics.
+          if (expected === "active") {
+            return read.state === 0 || read.is_active === true;
+          }
+          if (expected === "inactive") {
+            return read.state !== 0 && read.is_active !== true;
+          }
+          // Unknown state value — be permissive (don't fail success).
+          return true;
+        },
+        observed: (read) => ({ state: read.state, is_active: read.is_active }),
+      });
+    }
+
+    // INVENTORY-shaped fields: price, quantity, sku, should_auto_renew.
+    const expectedPrice = typeof fields.price === "number" ? fields.price : null;
+    const expectedQty =
+      typeof fields.quantity === "number"
+        ? Math.max(1, Math.floor(fields.quantity))
+        : null;
+    const expectedSku = typeof fields.sku === "string" ? fields.sku : null;
+    const expectedAutoRenew =
+      typeof fields.should_auto_renew === "boolean" ? fields.should_auto_renew : null;
+
+    if (
+      expectedPrice != null ||
+      expectedQty != null ||
+      expectedSku != null ||
+      expectedAutoRenew != null
+    ) {
+      await this.verifyEtsyMutationResult({
+        listingId,
+        context: "bulk-patch-inventory",
+        expected: [
+          expectedPrice != null ? `price≈${expectedPrice}` : null,
+          expectedQty != null ? `qty=${expectedQty}` : null,
+          expectedSku != null ? `sku="${expectedSku}"` : null,
+          expectedAutoRenew != null ? `auto_renew=${expectedAutoRenew}` : null,
+        ].filter(Boolean).join(", "),
+        reread: () => this.getListingInventory(listingId),
+        matches: (inv) => {
+          if (
+            expectedPrice != null &&
+            (inv.price === null || Math.abs(inv.price - expectedPrice) >= 0.01)
+          ) {
+            return false;
+          }
+          if (expectedQty != null && inv.quantity !== expectedQty) {
+            return false;
+          }
+          if (expectedSku != null && inv.sku !== expectedSku) {
+            return false;
+          }
+          if (expectedAutoRenew != null && inv.shouldAutoRenew !== expectedAutoRenew) {
+            return false;
+          }
+          return true;
+        },
+        observed: (inv) => ({
+          price: inv.price,
+          quantity: inv.quantity,
+          sku: inv.sku,
+          shouldAutoRenew: inv.shouldAutoRenew,
+        }),
+      });
+    }
+
+    // TAGS — re-read listing root, compare set membership.
+    if (Array.isArray(fields.tags)) {
+      const expectedTags = (fields.tags as unknown[])
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.toLowerCase());
+      const shopId = await this.getShopId();
+      await this.verifyEtsyMutationResult({
+        listingId,
+        context: "bulk-patch-tags",
+        expected: `tags=[${expectedTags.slice(0, 5).join(",")}${expectedTags.length > 5 ? ",…" : ""}]`,
+        reread: async () => {
+          const resp = await fetch(
+            `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${listingId}`,
+            { credentials: "include", headers: { Accept: "application/json" } },
+          );
+          if (!resp.ok) {
+            throw new Error(`Tag verify GET returned ${resp.status}`);
+          }
+          return (await resp.json()) as { tags?: string[] };
+        },
+        matches: (read) => {
+          const observed = (read.tags ?? []).map((t) => t.toLowerCase());
+          // Require all expected tags present; allow extras.
+          return expectedTags.every((t) => observed.includes(t));
+        },
+        observed: (read) => ({ tags: read.tags ?? [] }),
+      });
+    }
   }
 
   /**
