@@ -62,8 +62,16 @@ export async function checkMarketplaceLogin(
         throw new Error(`${marketplace} is not supported`);
     }
   } catch (error) {
+    // Probe failed — assume NOT logged in. The previous code returned
+    // `true` for shopify here as a "defensive default" but that meant the
+    // /platform-connect picker promised a green checkmark to users whose
+    // Shopify session was actually missing, and they only discovered it
+    // when their first publish bombed with "Please check you are logged
+    // in to your Shopify account in another tab." Returning false now
+    // surfaces that state to the picker, which renders the orange
+    // "log in to Shopify" chip + warning banner just like Depop.
     console.warn(`[${marketplace}] checkLogin failed`, error);
-    return marketplace === "shopify";
+    return false;
   }
 }
 

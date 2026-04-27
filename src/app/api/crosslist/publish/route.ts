@@ -30,10 +30,15 @@ interface MarketplaceResult {
  * POST /api/crosslist/publish
  *
  * Publishes a find to one or more marketplaces.
- * - eBay / Shopify: calls their publish APIs directly
- * - Vinted: queues via product_marketplace_data (extension polls publish-queue)
+ * - eBay: calls /api/ebay/publish directly (server-side OAuth API).
+ * - Shopify, Vinted, Etsy, Depop, Facebook: queue a `needs_publish` row in
+ *   product_marketplace_data; the Chrome extension polls publish-queue and
+ *   handles the actual publish via session cookies. Etsy keys are
+ *   registered (see comment above API_MARKETPLACES) but pending Etsy app
+ *   approval — until then, all non-eBay platforms route through the
+ *   extension.
  *
- * Body: { findId: string, marketplaces: string[] }
+ * Body: { findId: string, marketplaces: string[], publishMode?: 'draft' | 'publish' }
  * Returns: { results: Record<string, MarketplaceResult> }
  */
 export const POST = withAuth(async (req: NextRequest, user) => {
