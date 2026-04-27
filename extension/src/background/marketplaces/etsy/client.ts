@@ -1591,10 +1591,13 @@ export class EtsyClient {
       });
 
       // Clean up the orphan API-created draft before falling through to
-      // form-fill. PATCH state="inactive" is what Etsy's standard delist path
-      // uses and is verified working against this endpoint. If the cleanup
-      // itself fails (network blip, listing already gone), that's non-fatal —
-      // we still propagate the original error so form-fill takes over.
+      // form-fill. Use HTTP DELETE on the listing — verified by direct probe
+      // to return 204 No Content and the subsequent GET returns "Listing not
+      // found" for both state=3 drafts and state=0 active listings. PATCH
+      // state="inactive" was tried first but silent-no-ops on drafts (and
+      // sometimes flips them ACTIVE — really bad) so DELETE it is.
+      // If the cleanup fails for any reason it's non-fatal — we still
+      // propagate the original error so form-fill takes over.
       if (orphanListingId) {
         try {
           const shopId = await this.getShopId();
@@ -1602,20 +1605,16 @@ export class EtsyClient {
           const cleanupResp = await fetch(
             `${this.baseUrl}/api/v3/ajax/shop/${shopId}/listings/${orphanListingId}`,
             {
-              method: "PATCH",
+              method: "DELETE",
               credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-                "x-csrf-token": csrfNonce,
-              },
-              body: JSON.stringify({ state: "inactive" }),
+              headers: { "x-csrf-token": csrfNonce },
             },
           );
           await remoteLog(
             cleanupResp.ok ? "info" : "warn",
             "etsy.api-publish-cleanup",
             cleanupResp.ok
-              ? `Cleaned up orphan API draft ${orphanListingId} before fallback`
+              ? `Cleaned up orphan API draft ${orphanListingId} before fallback (HTTP ${cleanupResp.status})`
               : `Orphan cleanup non-2xx: ${cleanupResp.status}`,
             { orphanListingId },
           );
