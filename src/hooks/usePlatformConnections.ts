@@ -560,7 +560,7 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
   const handleShopifyConnect = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    if (!shopifyFormData.storeDomain) { setShopifyError('Store domain is required'); return }
+    if (!shopifyFormData.storeDomain.trim()) { setShopifyError('Store domain is required'); return }
     setShopifyLoading(true)
     setShopifyError(null)
     setPageError(null)

@@ -47,8 +47,7 @@ function checkPlatformReadiness(
   if (!title.trim()) errors.push('title')
   if (photoCount === 0) errors.push('photos')
 
-  const effectivePrice = platformPrices[platform] ?? price
-  if (effectivePrice === null || effectivePrice <= 0) errors.push('price')
+  if (price === null || price <= 0) errors.push('price')
 
   // Category check
   if (!category) {
