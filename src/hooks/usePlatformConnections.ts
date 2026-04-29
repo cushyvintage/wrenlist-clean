@@ -117,9 +117,9 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     marketplace: 'etsy' | 'facebook' | 'depop',
     setDetected: (v: boolean) => void,
     setInfo: (v: SessionInfo) => void,
-  ): Promise<void> => {
+  ): Promise<SessionInfo | null> => {
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return null
       const response = await new Promise<{ loggedIn: boolean; userId?: string; username?: string }>((resolve) => {
         const timeout = setTimeout(() => resolve({ loggedIn: false }), 8000)
         chrome.runtime.sendMessage(EXTENSION_ID, { action: 'check_marketplace_login', marketplace }, (response) => {
@@ -129,13 +129,17 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         })
       })
       if (response.loggedIn) {
+        const info: SessionInfo = { userId: response.userId ?? null, username: response.username ?? null }
         setDetected(true)
-        setInfo({ userId: response.userId ?? null, username: response.username ?? null })
+        setInfo(info)
+        return info
       } else {
         setDetected(false)
+        return null
       }
     } catch {
       setDetected(false)
+      return null
     }
   }
 
@@ -219,9 +223,11 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const handleEtsyConnect = async (): Promise<void> => {
     setEtsyLoading(true)
     try {
-      const info = etsyDetectedInfo
+      let info = etsyDetectedInfo
       if (!info.userId && !info.username) {
-        throw new Error('No Etsy session detected. Log in to etsy.com first.')
+        const fresh = await detectMarketplaceSession('etsy', setEtsyDetected, setEtsyDetectedInfo)
+        if (!fresh) throw new Error('No Etsy session detected. Log in to etsy.com first.')
+        info = fresh
       }
 
       // Resolve shop name via the extension's SSR scrape. check_marketplace_login
@@ -280,9 +286,11 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const handleFacebookConnect = async (): Promise<void> => {
     setFacebookLoading(true)
     try {
-      const info = facebookDetectedInfo
+      let info = facebookDetectedInfo
       if (!info.userId) {
-        throw new Error('No Facebook session detected. Log in to facebook.com first.')
+        const fresh = await detectMarketplaceSession('facebook', setFacebookDetected, setFacebookDetectedInfo)
+        if (!fresh) throw new Error('No Facebook session detected. Log in to facebook.com first.')
+        info = fresh
       }
       // Extension's check_marketplace_login now scrapes /me for the display
       // name (see handleCheckLoginCommand, facebook branch). If that
@@ -312,9 +320,11 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
   const handleDepopConnect = async (): Promise<void> => {
     setDepopLoading(true)
     try {
-      const info = depopDetectedInfo
+      let info = depopDetectedInfo
       if (!info.userId) {
-        throw new Error('No Depop session detected. Log in to depop.com first.')
+        const fresh = await detectMarketplaceSession('depop', setDepopDetected, setDepopDetectedInfo)
+        if (!fresh) throw new Error('No Depop session detected. Log in to depop.com first.')
+        info = fresh
       }
 
       // Resolve real display handle via the authenticated users/me endpoint.
