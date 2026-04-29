@@ -8,23 +8,26 @@ import { selectKeeper } from '@/lib/dedup-keeper'
 import { useConfirm } from '@/components/wren/ConfirmProvider'
 import type { DedupCandidate } from '@/types'
 
-/**
- * High-confidence pairs are eligible for one-click bulk merge. We keep the
- * threshold high (≥0.95) because the bulk action is irreversible: the loser
- * find is deleted, its PMD rows reassigned. Anything below 0.95 still
- * requires the per-card decision.
- */
+type Strategy = 'conservative' | 'progressive' | 'aggressive'
+
 const BULK_MERGE_THRESHOLD = 0.95
 
 interface CandidatesResponse {
   candidates: DedupCandidate[]
   count: number
+  results?: {
+    merged: Array<{ keeperId: string; duplicateId: string }>
+    skipped: Array<{ keeperId: string; duplicateId: string; reason: string }>
+    failed: Array<{ keeperId: string; duplicateId: string; reason: string }>
+  }
 }
 
 export default function DuplicatesPage() {
   const { data, isLoading, error, call, setData } = useApiCall<CandidatesResponse>(null)
   const [resolved, setResolved] = useState(0)
   const [bulkMerging, setBulkMerging] = useState(false)
+  const [strategy, setStrategy] = useState<Strategy>('progressive')
+  const [currentPairIndex, setCurrentPairIndex] = useState(0)
   const confirm = useConfirm()
 
   const loadCandidates = useCallback(() => {
@@ -41,6 +44,7 @@ export default function DuplicatesPage() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const highConfidencePairs = candidates.filter((c) => c.similarityScore >= BULK_MERGE_THRESHOLD)
+  const currentPair = strategy === 'conservative' && candidates.length > 0 ? candidates[currentPairIndex] : null
 
   const handleMerge = async (keeperId: string, duplicateId: string) => {
     setActionError(null)
@@ -51,17 +55,77 @@ export default function DuplicatesPage() {
         body: JSON.stringify({ keeperId, duplicateId }),
       })
       if (data) {
+        const newCandidates = data.candidates.filter(
+          c => c.findA.id !== duplicateId && c.findB.id !== duplicateId
+        )
         setData({
           ...data,
-          candidates: data.candidates.filter(
-            c => c.findA.id !== duplicateId && c.findB.id !== duplicateId
-          ),
+          candidates: newCandidates,
           count: data.count - 1,
         })
         setResolved(r => r + 1)
+
+        // Move to next pair in conservative mode
+        if (strategy === 'conservative') {
+          setCurrentPairIndex(idx => Math.min(idx, newCandidates.length - 1))
+        }
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Merge failed')
+    }
+  }
+
+  const handleAggressive = async () => {
+    if (candidates.length === 0) return
+    const ok = await confirm({
+      title: `Merge all ${candidates.length} high-confidence duplicates?`,
+      message:
+        'This will merge ALL remaining pairs at once. Wrenlist keeps the find with richer data and deletes the other. This cannot be undone.',
+      confirmLabel: 'Merge all',
+      tone: 'danger',
+    })
+    if (!ok) return
+
+    setActionError(null)
+    setBulkMerging(true)
+    try {
+      const pairs = candidates.map((c) => {
+        const { keeper, duplicate } = selectKeeper(c.findA, c.findB)
+        return { keeperId: keeper.id, duplicateId: duplicate.id }
+      })
+      const res = await fetchApi<{
+        merged: number
+        skipped: number
+        failed: number
+        results: {
+          merged: Array<{ keeperId: string; duplicateId: string }>
+          skipped: Array<{ keeperId: string; duplicateId: string; reason: string }>
+          failed: Array<{ keeperId: string; duplicateId: string; reason: string }>
+        }
+      }>('/api/dedup/bulk-merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pairs }),
+      })
+      const mergedIds = new Set(res.results.merged.map((m) => m.duplicateId))
+      if (data) {
+        setData({
+          ...data,
+          candidates: [],
+          count: 0,
+        })
+        setResolved((r) => r + res.merged)
+      }
+      if (res.failed > 0 || res.skipped > 0) {
+        const failedReasons = res.results.failed.map(f => `${f.reason}`).join('; ')
+        const summary = `${res.merged} merged${res.skipped > 0 ? `, ${res.skipped} skipped` : ''}${res.failed > 0 ? `, ${res.failed} failed` : ''}.`
+        const detail = res.failed > 0 ? ` Failures: ${failedReasons}` : ''
+        setActionError(summary + detail)
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Merge failed')
+    } finally {
+      setBulkMerging(false)
     }
   }
 
@@ -130,17 +194,23 @@ export default function DuplicatesPage() {
         body: JSON.stringify({ findIdA, findIdB }),
       })
       if (data) {
+        const newCandidates = data.candidates.filter(
+          c => !(
+            (c.findA.id === findIdA && c.findB.id === findIdB) ||
+            (c.findA.id === findIdB && c.findB.id === findIdA)
+          )
+        )
         setData({
           ...data,
-          candidates: data.candidates.filter(
-            c => !(
-              (c.findA.id === findIdA && c.findB.id === findIdB) ||
-              (c.findA.id === findIdB && c.findB.id === findIdA)
-            )
-          ),
+          candidates: newCandidates,
           count: data.count - 1,
         })
         setResolved(r => r + 1)
+
+        // Move to next pair in conservative mode
+        if (strategy === 'conservative') {
+          setCurrentPairIndex(idx => Math.min(idx, newCandidates.length - 1))
+        }
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Dismiss failed')
@@ -149,9 +219,57 @@ export default function DuplicatesPage() {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-ink-lt">
-        Same item imported from different marketplaces? Review and merge duplicates.
-      </p>
+      <div className="space-y-3">
+        <p className="text-xs text-ink-lt">
+          Same item imported from different marketplaces? Review and merge duplicates.
+        </p>
+
+        {!isLoading && candidates.length > 0 && (
+          <div className="rounded-lg border border-border bg-white p-3 space-y-3">
+            <div>
+              <p className="text-xs font-medium text-ink mb-2">Review Strategy</p>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="strategy"
+                    value="conservative"
+                    checked={strategy === 'conservative'}
+                    onChange={(e) => {
+                      setStrategy('conservative')
+                      setCurrentPairIndex(0)
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-ink">Conservative: review each pair individually</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="strategy"
+                    value="progressive"
+                    checked={strategy === 'progressive'}
+                    onChange={() => setStrategy('progressive')}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-ink">Progressive: merge 30 at a time, review next batch</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="strategy"
+                    value="aggressive"
+                    checked={strategy === 'aggressive'}
+                    onChange={() => setStrategy('aggressive')}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-ink">Aggressive: merge all {candidates.length} high-confidence at once</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {(error || actionError) && (
         <div className="bg-red-lt border border-red-dk/20 rounded-lg p-3 text-sm text-red-dk">{error || actionError}</div>
@@ -177,11 +295,13 @@ export default function DuplicatesPage() {
 
       {!isLoading && candidates.length > 0 && (
         <>
-          {/* Progress bar + bulk action */}
+          {/* Progress bar + action buttons */}
           <div className="rounded-lg border border-border bg-white p-3">
             <div className="flex items-center justify-between mb-2 gap-3">
               <span className="text-xs font-medium text-ink">
-                {resolved > 0 ? `${resolved} resolved` : `${candidates.length} pair${candidates.length !== 1 ? 's' : ''} to review`}
+                {strategy === 'conservative'
+                  ? `Pair ${currentPairIndex + 1} of ${candidates.length}`
+                  : `${resolved > 0 ? `${resolved} resolved, ` : ''}${candidates.length} pair${candidates.length !== 1 ? 's' : ''} to review`}
               </span>
               <div className="flex items-center gap-3">
                 {resolved > 0 && (
@@ -189,7 +309,7 @@ export default function DuplicatesPage() {
                     {candidates.length} remaining
                   </span>
                 )}
-                {highConfidencePairs.length > 0 && (
+                {strategy === 'progressive' && highConfidencePairs.length > 0 && (
                   <button
                     type="button"
                     onClick={handleBulkMerge}
@@ -199,6 +319,16 @@ export default function DuplicatesPage() {
                     {bulkMerging
                       ? 'Merging...'
                       : `Merge ${highConfidencePairs.length} high-confidence (≥${Math.round(BULK_MERGE_THRESHOLD * 100)}%)`}
+                  </button>
+                )}
+                {strategy === 'aggressive' && candidates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAggressive}
+                    disabled={bulkMerging}
+                    className="text-[11px] px-2.5 py-1 rounded border border-red text-red hover:bg-red/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bulkMerging ? 'Merging...' : `Merge all ${candidates.length}`}
                   </button>
                 )}
               </div>
@@ -212,14 +342,35 @@ export default function DuplicatesPage() {
           </div>
 
           <div className="space-y-3">
-            {candidates.map((candidate) => (
-              <DedupPairCard
-                key={`${candidate.findA.id}-${candidate.findB.id}`}
-                candidate={candidate}
-                onMerge={handleMerge}
-                onDismiss={handleDismiss}
-              />
-            ))}
+            {strategy === 'conservative' && currentPair ? (
+              <>
+                <DedupPairCard
+                  candidate={currentPair}
+                  onMerge={handleMerge}
+                  onDismiss={handleDismiss}
+                />
+                {currentPairIndex < candidates.length - 1 && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPairIndex(idx => idx + 1)}
+                      className="text-xs px-3 py-1.5 rounded border border-border text-ink hover:bg-cream-dk/20 transition-colors"
+                    >
+                      Next pair
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              candidates.map((candidate) => (
+                <DedupPairCard
+                  key={`${candidate.findA.id}-${candidate.findB.id}`}
+                  candidate={candidate}
+                  onMerge={handleMerge}
+                  onDismiss={handleDismiss}
+                />
+              ))
+            )}
           </div>
         </>
       )}
