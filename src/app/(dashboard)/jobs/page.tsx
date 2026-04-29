@@ -13,6 +13,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { useExtensionHeartbeat } from '@/hooks/useExtensionHeartbeat'
 import { fetchApi } from '@/lib/api-utils'
@@ -248,9 +249,11 @@ export default function JobsPage() {
               {jobs.map((job) => (
                 <tr key={job.id} className="hover:bg-cream/50">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-ink truncate max-w-[200px]">
-                      {job.finds?.name || job.find_id.slice(0, 8)}
-                    </div>
+                    <Link href={`/finds/${job.find_id}`}>
+                      <div className="font-medium text-ink truncate max-w-[200px]" title={job.finds?.name || job.find_id}>
+                        {job.finds?.name || job.find_id.slice(0, 8)}
+                      </div>
+                    </Link>
                     {job.finds?.sku && (
                       <div className="text-xs text-ink-lt">{job.finds.sku}</div>
                     )}
@@ -298,7 +301,7 @@ export default function JobsPage() {
                           Retry
                         </button>
                       )}
-                      {job.error_message && (
+                      {job.error_message && job.status !== 'completed' && (
                         <button
                           onClick={() => setExpandedError(expandedError === job.id ? null : job.id)}
                           className="text-xs text-ink-lt hover:text-ink"
