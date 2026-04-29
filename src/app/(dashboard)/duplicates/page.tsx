@@ -83,14 +83,20 @@ export default function DuplicatesPage() {
         const { keeper, duplicate } = selectKeeper(c.findA, c.findB)
         return { keeperId: keeper.id, duplicateId: duplicate.id }
       })
-      const res = await fetchApi<{ merged: number; skipped: number; failed: number }>(
-        '/api/dedup/bulk-merge',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pairs }),
-        },
-      )
+      const res = await fetchApi<{
+        merged: number
+        skipped: number
+        failed: number
+        results: {
+          merged: Array<{ keeperId: string; duplicateId: string }>
+          skipped: Array<{ keeperId: string; duplicateId: string; reason: string }>
+          failed: Array<{ keeperId: string; duplicateId: string; reason: string }>
+        }
+      }>('/api/dedup/bulk-merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pairs }),
+      })
       const mergedIds = new Set(pairs.map((p) => p.duplicateId))
       if (data) {
         setData({
@@ -102,10 +108,11 @@ export default function DuplicatesPage() {
         })
         setResolved((r) => r + res.merged)
       }
-      if (res.failed > 0) {
-        setActionError(
-          `${res.merged} merged, ${res.failed} failed${res.skipped > 0 ? `, ${res.skipped} skipped` : ''}.`,
-        )
+      if (res.failed > 0 || res.skipped > 0) {
+        const failedReasons = res.results.failed.map(f => `${f.reason}`).join('; ')
+        const summary = `${res.merged} merged${res.skipped > 0 ? `, ${res.skipped} skipped` : ''}${res.failed > 0 ? `, ${res.failed} failed` : ''}.`
+        const detail = res.failed > 0 ? ` Failures: ${failedReasons}` : ''
+        setActionError(summary + detail)
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Bulk merge failed')
