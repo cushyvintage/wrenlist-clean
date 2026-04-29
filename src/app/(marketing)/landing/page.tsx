@@ -8,6 +8,11 @@ import { MarketingFooter } from '@/components/layout/MarketingFooter'
 import { Reveal } from '@/components/motion'
 import { trackEvent } from '@/lib/plausible'
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
+import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { StickyMobileCta } from '@/components/waitlist/StickyMobileCta'
+import type { Platform } from '@/types'
+
+const HERO_MARKETPLACES: Platform[] = ['vinted', 'ebay', 'etsy', 'depop', 'shopify', 'facebook']
 
 const InventoryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -127,6 +132,11 @@ const ResearchIcon = () => (
 export default function LandingPage() {
   // useSearchParams must run inside a Suspense boundary or the page can't
   // be statically generated. Delegate to an inner component.
+  //
+  // Also rendered directly at "/" by app/page.tsx so the root URL serves the
+  // marketing landing instantly (no auth-check round-trip, no "Loading…"
+  // flash). Authed users are bounced to /dashboard by middleware.ts before
+  // any HTML for "/" is sent.
   return (
     <Suspense fallback={null}>
       <LandingPageInner />
@@ -185,11 +195,16 @@ function LandingPageInner() {
       {/* HERO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 border-b border-[rgba(61,92,58,0.12)]">
         <div className="flex flex-col justify-center px-5 sm:px-8 lg:px-12 py-10 lg:py-16">
-          {/* Waitlist badge */}
-          <div className="hero-fade-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3d5c3a]/10 border border-[#3d5c3a]/20 mb-5 w-fit">
-            <span className="w-2 h-2 rounded-full bg-[#3d5c3a] animate-pulse" />
-            <span className="text-xs font-medium text-[#3d5c3a] uppercase tracking-wider">Waitlist open — Beta launching soon</span>
-          </div>
+          {/* Founding Flock badge — surfaces the live launch offer instead of the
+              generic "Beta launching soon" copy. Canonical wording lives in
+              src/components/marketing/PricingSection.tsx and src/config/plans.ts. */}
+          <Link
+            href="/pricing#founding-flock"
+            className="hero-fade-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e8dcc2] border border-[#c9a96a]/40 mb-5 w-fit hover:bg-[#dfd0a8] transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#7a5a2a] animate-pulse" />
+            <span className="text-xs font-medium text-[#7a5a2a] uppercase tracking-wider">Founding Flock — lock in launch pricing for life</span>
+          </Link>
           <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#527050]">The thrifter&apos;s operating system</p>
           <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
             Every find,<br />
@@ -200,19 +215,32 @@ function LandingPageInner() {
           <p className="hero-fade-3 mb-2 max-w-sm font-normal leading-relaxed text-[#4a6147]">
             Wrenlist tracks your inventory, prices your pieces, and crosslists across the marketplaces you already sell on — so you can spend more time at the rack.
           </p>
-          <p className="hero-fade-3 mb-7 max-w-sm font-normal text-xs text-[#527050]">
+          <p className="hero-fade-3 mb-5 max-w-sm font-normal text-xs text-[#527050]">
             A "find" is each item you source — from vintage shops, charity stores, and house clearances.
           </p>
+
+          {/* Marketplace logos strip — visual social proof for the platforms
+              we already cover. Greyscale-ish opacity so they support the hero
+              instead of fighting the headline. */}
+          <div className="hero-fade-3 mb-7 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-[#527050] whitespace-nowrap">Works with</span>
+            <div className="flex flex-wrap items-center gap-2 opacity-80">
+              {HERO_MARKETPLACES.map((p) => (
+                <MarketplaceIcon key={p} platform={p} size="md" />
+              ))}
+            </div>
+          </div>
+
           <div className="hero-fade-4 flex gap-4 items-center">
             <button
               onClick={() => openWaitlist('hero')}
               className="bg-[#3d5c3a] text-[#f5f0e8] px-8 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] rounded"
             >
-              Join the waitlist
+              Save my spot →
             </button>
-            <Link href="/pricing" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
-              see pricing →
-            </Link>
+            <a href="#how-it-works" className="text-sm font-normal text-[#5a7a57] underline cursor-pointer hover:text-[#3d5c3a]">
+              how it works ↓
+            </a>
           </div>
         </div>
 
@@ -261,7 +289,7 @@ function LandingPageInner() {
       </div>
 
       {/* FEATURES STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-[rgba(61,92,58,0.12)]">
+      <div id="how-it-works" className="grid grid-cols-1 md:grid-cols-3 border-b border-[rgba(61,92,58,0.12)] scroll-mt-20">
         {[
           { num: '01', title: 'Log every find instantly', body: 'Snap a photo, enter cost, done. Wrenlist fills in category, condition, and comparable sold prices before you leave the shop floor.' },
           { num: '02', title: 'Price with confidence', body: 'Live comp data from Vinted, eBay, Etsy and more. Know what your piece is worth before you list it, not after it sits for 60 days.' },
@@ -338,6 +366,10 @@ function LandingPageInner() {
         onClose={() => setWaitlistOpen(false)}
         referralCode={refFromUrl}
       />
+
+      {/* Sticky bottom-bar CTA on mobile only. Catches users who scroll
+          past the hero CTA without re-engaging. */}
+      <StickyMobileCta onOpen={() => openWaitlist('sticky-mobile')} />
     </div>
   )
 }

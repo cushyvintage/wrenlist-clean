@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { trackEvent } from '@/lib/plausible'
 
 /**
  * WaitlistModal — pre-launch signup capture, styled to match the landing page
- * (sage/cream palette, serif headline, indie tone). Multi-field form: email,
- * name, where they sell, biggest blocker, business stage, scale, free-text
- * frustration. On success, swaps to a confirmation view with the user's
- * referral link.
+ * (sage/cream palette, serif headline, indie tone). Two-step flow:
+ *
+ *   step 1 → name + email only. Submitting saves the row immediately so the
+ *            user is on the list even if they bail before step 2.
+ *   step 2 → optional profile (platforms, pain point, stage, scale, blocker).
+ *            Skippable. Either path lands on the confirmation view with the
+ *            referral link + share buttons.
  */
 
 const PLATFORMS = [
@@ -50,12 +54,16 @@ interface WaitlistModalProps {
 }
 
 interface SignupResult {
+  email: string
   referralUrl: string
   referralCode: string
   alreadyOnList?: boolean
 }
 
+type Step = 'signup' | 'profile' | 'confirmation'
+
 export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProps) {
+  const [step, setStep] = useState<Step>('signup')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
@@ -91,6 +99,7 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
   useEffect(() => {
     if (open) return
     const t = setTimeout(() => {
+      setStep('signup')
       setEmail('')
       setName('')
       setPlatforms([])
@@ -114,7 +123,9 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
     )
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Step 1 — capture the row with just name + email so they're definitely on
+  // the list even if they bail before answering the profile questions.
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (submitting) return
     setError(null)
@@ -132,11 +143,6 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
         body: JSON.stringify({
           email: email.trim(),
           name: name.trim(),
-          platforms,
-          pain_point: painPoint,
-          business_stage: stage,
-          scale,
-          blocker: blocker.trim() || null,
           ref: referralCode || null,
         }),
       })
@@ -146,16 +152,65 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
         setSubmitting(false)
         return
       }
-      setResult({
+      const signup: SignupResult = {
+        email: email.trim(),
         referralUrl: data.referralUrl,
         referralCode: data.referralCode,
         alreadyOnList: data.alreadyOnList,
+      }
+      setResult(signup)
+      trackEvent('WaitlistStep1Submitted', {
+        alreadyOnList: signup.alreadyOnList ? 'yes' : 'no',
       })
+
+      // Skip the profile step for users we already had on the list — they've
+      // most likely already given us this data once. Send them straight to
+      // the share screen.
+      setStep(signup.alreadyOnList ? 'confirmation' : 'profile')
     } catch {
       setError('Network error. Please try again.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Step 2 — enrich the existing row with optional profile data.
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (submitting || !result) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/waitlist/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: result.email,
+          platforms,
+          pain_point: painPoint,
+          business_stage: stage,
+          scale,
+          blocker: blocker.trim() || null,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Couldn't save those answers. Try again or skip.")
+        setSubmitting(false)
+        return
+      }
+      trackEvent('WaitlistStep2Submitted')
+      setStep('confirmation')
+    } catch {
+      setError('Network error. Try again or skip.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSkipProfile = () => {
+    trackEvent('WaitlistStep2Skipped')
+    setStep('confirmation')
   }
 
   const copyReferral = async () => {
@@ -168,6 +223,23 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
       // Clipboard API can fail in some browsers — fall through silently.
     }
   }
+
+  const headerLabel =
+    step === 'confirmation' ? "you're in" : step === 'profile' ? '30 seconds (optional)' : 'join the waitlist'
+  const headerHeadline =
+    step === 'confirmation' ? (
+      <>
+        Welcome to the <em className="italic text-[#5a7a57]">flock</em>.
+      </>
+    ) : step === 'profile' ? (
+      <>
+        Help us <em className="italic text-[#5a7a57]">build for you</em>.
+      </>
+    ) : (
+      <>
+        Be first when <em className="italic text-[#5a7a57]">Wrenlist</em> opens up.
+      </>
+    )
 
   return (
     <div
@@ -183,18 +255,10 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
         <div className="flex items-start justify-between px-6 sm:px-8 py-5 border-b border-[rgba(61,92,58,0.14)]">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-[#527050] mb-1">
-              {result ? "you're in" : 'join the waitlist'}
+              {headerLabel}
             </p>
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-[#1e2e1c] leading-tight">
-              {result ? (
-                <>
-                  Welcome to the <em className="italic text-[#5a7a57]">flock</em>.
-                </>
-              ) : (
-                <>
-                  Be first when <em className="italic text-[#5a7a57]">Wrenlist</em> opens up.
-                </>
-              )}
+              {headerHeadline}
             </h2>
           </div>
           <button
@@ -208,15 +272,12 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
 
         {/* Body */}
         <div className="px-6 sm:px-8 py-6">
-          {result ? (
-            <ConfirmationView result={result} copied={copied} onCopy={copyReferral} />
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {step === 'signup' && (
+            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-5">
               <p className="text-sm leading-relaxed text-[#4a6147]">
-                We're putting the finishing touches on the Chrome extension and waiting on the store review. Pop your details in below — we'll send you a few notes between now and beta launch, then invite you in first.
+                We're putting the finishing touches on the Chrome extension and waiting on the store review. Drop your name and email below — you'll lock in Founding Flock pricing and we'll invite you to the beta first.
               </p>
 
-              {/* Name + email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Your name" required>
                   <input
@@ -241,7 +302,39 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
                 </Field>
               </div>
 
-              {/* Platforms */}
+              {error && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  {error}
+                </div>
+              )}
+
+              {referralCode && (
+                <div className="text-xs text-[#5a7a57] bg-[#d4e2d2] border border-[#5a7a57]/20 rounded px-3 py-2">
+                  Joined via a friend's invite — you'll both jump the beta queue.
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-[#3d5c3a] text-[#f5f0e8] px-6 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] disabled:opacity-60 disabled:cursor-not-allowed rounded"
+              >
+                {submitting ? 'Saving…' : 'Save my spot →'}
+              </button>
+
+              <p className="text-xs text-[#527050] leading-relaxed">
+                We'll email you a couple of times before beta opens. Reply to any email or
+                unsubscribe at any point — no funny business.
+              </p>
+            </form>
+          )}
+
+          {step === 'profile' && (
+            <form onSubmit={handleProfileSubmit} className="flex flex-col gap-5">
+              <p className="text-sm leading-relaxed text-[#4a6147]">
+                You're on the list. Want us to build the right things first? Tell us a bit about how you sell — takes 30 seconds.
+              </p>
+
               <Field label="Where do you sell now?" hint="Tick any that apply">
                 <div className="flex flex-wrap gap-2">
                   {PLATFORMS.map((p) => {
@@ -264,12 +357,10 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
                 </div>
               </Field>
 
-              {/* Pain point */}
               <Field label="Biggest frustration with selling right now?">
                 <Pills options={PAIN_POINTS} selected={painPoint} onSelect={setPainPoint} />
               </Field>
 
-              {/* Stage + scale */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="How do you sell?">
                   <Pills options={STAGES} selected={stage} onSelect={setStage} small />
@@ -279,7 +370,6 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
                 </Field>
               </div>
 
-              {/* Blocker */}
               <Field
                 label="Anything else holding you back?"
                 hint="Optional — just a sentence is fine"
@@ -300,25 +390,27 @@ export function WaitlistModal({ open, onClose, referralCode }: WaitlistModalProp
                 </div>
               )}
 
-              {referralCode && (
-                <div className="text-xs text-[#5a7a57] bg-[#d4e2d2] border border-[#5a7a57]/20 rounded px-3 py-2">
-                  Joined via a friend's invite — you'll both jump the beta queue.
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-[#3d5c3a] text-[#f5f0e8] px-6 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] disabled:opacity-60 disabled:cursor-not-allowed rounded"
-              >
-                {submitting ? 'Joining…' : 'Save my spot →'}
-              </button>
-
-              <p className="text-xs text-[#527050] leading-relaxed">
-                We'll email you a couple of times before beta opens. Reply to any email or
-                unsubscribe at any point — no funny business.
-              </p>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:items-center">
+                <button
+                  type="button"
+                  onClick={handleSkipProfile}
+                  className="text-xs font-medium text-[#5a7a57] underline hover:text-[#3d5c3a]"
+                >
+                  Skip for now
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 sm:flex-none bg-[#3d5c3a] text-[#f5f0e8] px-6 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2c4428] disabled:opacity-60 disabled:cursor-not-allowed rounded"
+                >
+                  {submitting ? 'Saving…' : 'Save & continue →'}
+                </button>
+              </div>
             </form>
+          )}
+
+          {step === 'confirmation' && result && (
+            <ConfirmationView result={result} copied={copied} onCopy={copyReferral} />
           )}
         </div>
       </div>

@@ -120,6 +120,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(dashUrl)
   }
 
+  // If user is authenticated and lands on the root URL (which now server-renders
+  // the marketing landing page rather than client-redirecting), kick them to
+  // their dashboard so they don't see the marketing site by accident. Done at
+  // the edge so no HTML is sent.
+  if (session && pathname === '/') {
+    const dashUrl = new URL('/dashboard', req.url)
+    if (isMarketingDomain) {
+      dashUrl.hostname = APP_SUBDOMAIN
+      dashUrl.port = ''
+    }
+    return NextResponse.redirect(dashUrl)
+  }
+
   // If user is authenticated and NOT on onboarding/public pages, check onboarding status.
   //
   // Caching: once a user completes onboarding we set a cookie `wl_onboarded=<userId>`.

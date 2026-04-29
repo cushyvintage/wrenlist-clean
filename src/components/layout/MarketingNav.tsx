@@ -1,24 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const navItems = [
+// Top-level items always visible on desktop. The remaining items live in a
+// "Resources" dropdown so the marketing nav doesn't dilute attention away
+// from the waitlist CTA on the right.
+const primaryNavItems = [
   { href: '/landing', label: 'home' },
   { href: '/pricing', label: 'pricing' },
   { href: '/about', label: 'why wrenlist' },
   { href: '/extension', label: 'extension' },
+] as const
+
+const resourcesNavItems = [
   { href: '/calculator', label: 'fee calculator' },
   { href: '/tax-estimator', label: 'tax estimator' },
   { href: '/blog', label: 'blog' },
   { href: '/roadmap', label: 'roadmap' },
-]
+] as const
+
+// Mobile hamburger keeps the flat list — no nested submenu on phones.
+const mobileNavItems = [...primaryNavItems, ...resourcesNavItems]
 
 export function MarketingNav() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [resourcesOpen, setResourcesOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const resourcesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onScroll = () => {
@@ -30,6 +41,20 @@ export function MarketingNav() {
       window.removeEventListener('scroll', onScroll)
     }
   }, [])
+
+  // Click outside closes the desktop Resources dropdown.
+  useEffect(() => {
+    if (!resourcesOpen) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (resourcesRef.current && !resourcesRef.current.contains(e.target as Node)) {
+        setResourcesOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [resourcesOpen])
+
+  const resourcesActive = resourcesNavItems.some((item) => pathname === item.href)
 
   return (
     <nav
@@ -52,7 +77,7 @@ export function MarketingNav() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => {
+          {primaryNavItems.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
@@ -64,6 +89,48 @@ export function MarketingNav() {
               </Link>
             )
           })}
+
+          {/* Resources dropdown */}
+          <div className="relative" ref={resourcesRef}>
+            <button
+              type="button"
+              onClick={() => setResourcesOpen((o) => !o)}
+              aria-haspopup="true"
+              aria-expanded={resourcesOpen}
+              className={`flex items-center gap-1 text-xs ${resourcesActive ? 'font-medium text-[#1e2e1c]' : 'font-light text-[#4a6147] hover:text-[#1e2e1c]'}`}
+            >
+              resources
+              <svg
+                width="9"
+                height="9"
+                viewBox="0 0 9 9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                className={`transition-transform ${resourcesOpen ? 'rotate-180' : ''}`}
+              >
+                <path d="M2 3.5L4.5 6L7 3.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {resourcesOpen && (
+              <div className="absolute right-0 top-full mt-2 min-w-[170px] rounded-md border border-[rgba(61,92,58,0.18)] bg-[#f5f0e8] shadow-sm py-1.5">
+                {resourcesNavItems.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setResourcesOpen(false)}
+                      className={`block px-4 py-2 text-xs ${isActive ? 'font-medium text-[#1e2e1c] bg-[#ede8de]' : 'font-light text-[#4a6147] hover:text-[#1e2e1c] hover:bg-[#ede8de]'}`}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-2 items-center flex-shrink-0">
@@ -99,10 +166,10 @@ export function MarketingNav() {
         </div>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Mobile dropdown — flat list, no nested submenu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-[rgba(61,92,58,0.14)] bg-[#f5f0e8] px-5 py-4 space-y-3">
-          {navItems.map((item) => {
+          {mobileNavItems.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
