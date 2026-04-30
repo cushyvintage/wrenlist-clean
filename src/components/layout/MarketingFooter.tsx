@@ -14,7 +14,7 @@ export function MarketingFooter() {
           <div className="text-xs font-medium uppercase text-[#f5f0e8] mb-3">Platform</div>
           <div className="flex flex-col gap-2 text-sm font-normal text-[#7a9a78]">
             <Link href="/pricing" className="hover:text-[#f5f0e8] transition-colors">Pricing</Link>
-            <Link href="/about" className="hover:text-[#f5f0e8] transition-colors">Why Wrenlist</Link>
+            <Link href="/story" className="hover:text-[#f5f0e8] transition-colors">Why Wrenlist</Link>
             <Link href="/roadmap" className="hover:text-[#f5f0e8] transition-colors">Roadmap</Link>
           </div>
         </div>
