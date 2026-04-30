@@ -222,9 +222,9 @@ function LandingPageInner() {
           {/* Marketplace logos strip — visual social proof for the platforms
               we already cover. Greyscale-ish opacity so they support the hero
               instead of fighting the headline. */}
-          <div className="hero-fade-3 mb-7 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="hero-fade-3 mb-7 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <span className="text-xs font-medium uppercase tracking-wider text-[#527050] whitespace-nowrap">Works with</span>
-            <div className="flex flex-wrap items-center gap-2 opacity-80">
+            <div className="flex items-center gap-2.5 opacity-85">
               {HERO_MARKETPLACES.map((p) => (
                 <MarketplaceIcon key={p} platform={p} size="md" />
               ))}
