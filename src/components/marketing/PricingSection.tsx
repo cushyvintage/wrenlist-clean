@@ -108,7 +108,7 @@ export function PricingSection() {
       {founding && (
         <div className="mb-8 text-center">
           <div className="inline-block rounded-full bg-[#e8dcc2] text-[#7a5a2a] px-4 py-2 text-xs font-medium">
-            Founding Flock — lock in £14/mo for life. Offer ends 30 June 2026.
+            Founding Flock — lock in founder pricing at £14/mo. Offer ends 30 June 2026.
           </div>
         </div>
       )}

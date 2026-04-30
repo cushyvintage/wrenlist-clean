@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.notFound('User profile not found')
     }
 
-    // Founding Flock window locks signups in at the lower price for life.
+    // Founding Flock window locks signups in at the founder rate.
     // After the deadline, new signups see the standard price. Existing
     // subscriptions keep their original price ID — Stripe never auto-migrates.
     const founding = isFoundingFlockWindow()

@@ -203,7 +203,7 @@ function LandingPageInner() {
             className="hero-fade-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e8dcc2] border border-[#c9a96a]/40 mb-5 w-fit hover:bg-[#dfd0a8] transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-[#7a5a2a] animate-pulse" />
-            <span className="text-xs font-medium text-[#7a5a2a] uppercase tracking-wider">Founding Flock — lock in launch pricing for life</span>
+            <span className="text-xs font-medium text-[#7a5a2a] uppercase tracking-wider">Founding Flock — lock in founder pricing</span>
           </Link>
           <p className="hero-fade-1 mb-4 text-xs font-medium uppercase tracking-wider text-[#527050]">The thrifter&apos;s operating system</p>
           <h1 className="hero-fade-2 mb-5 font-serif text-[36px] sm:text-[44px] lg:text-[56px] font-normal leading-[1.04] text-[#1e2e1c]">
