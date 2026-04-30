@@ -1,10 +1,11 @@
 'use client'
 
+import { useRef, useState, useEffect } from 'react'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
 import AutoDetectedCategoryBanner from '@/components/add-find/AutoDetectedCategoryBanner'
-import AIAutoFillBanner, { type AIAutoFillResult } from '@/components/add-find/AIAutoFillBanner'
+import PhotosAIInline from '@/components/add-find/PhotosAIInline'
 import TitleDescriptionSection from '@/components/add-find/TitleDescriptionSection'
 import PricingSection from '@/components/add-find/PricingSection'
 import ItemDetailsSection from '@/components/add-find/ItemDetailsSection'
@@ -60,6 +61,29 @@ export default function AddFindPage() {
     setIncompleteRequiredFields: form.setIncompleteRequiredFields,
   })
 
+  // Track whether photos card has scrolled out of view (for sticky AI bar on mobile)
+  const photosCardRef = useRef<HTMLDivElement>(null)
+  const [photosOutOfView, setPhotosOutOfView] = useState(false)
+  useEffect(() => {
+    const el = photosCardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver((entries) => setPhotosOutOfView(!(entries[0]?.isIntersecting ?? true)), { threshold: 0 })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const scrollToPhotos = () => photosCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  const handleApplyAI = (fields: { title?: string; description?: string; category?: string; condition?: string; price?: number }) => {
+    if (fields.title) handlers.handleInputChange('title', fields.title)
+    if (fields.description) handlers.handleInputChange('description', fields.description)
+    if (fields.category) handlers.handleInputChange('category', fields.category)
+    if (fields.condition) handlers.handleInputChange('condition', fields.condition as import('@/types').FindCondition)
+    if (fields.price) handlers.handleInputChange('price', fields.price)
+    form.setAiAutoFill(null)
+    form.setDismissedAutoFill(true)
+    form.setAutoDetectedCategory(null)
+  }
+
   return (
     <>
       {/* Publish progress panel */}
@@ -101,61 +125,10 @@ export default function AddFindPage() {
           onDismissTemplateBanner={() => form.setTemplateAppliedBanner(null)}
         />
 
-        {/* AI Auto-Fill banner */}
-        {form.aiAutoFill && !form.dismissedAutoFill ? (
-          <AIAutoFillBanner
-            data={form.aiAutoFill}
-            hasTitle={!!form.formData.title}
-            hasDescription={!!form.formData.description}
-            hasCategory={!!form.formData.category}
-            hasCondition={true}
-            hasPrice={!!form.formData.price}
-            onApply={(fields: AIAutoFillResult) => {
-              if (fields.title) handlers.handleInputChange('title', fields.title)
-              if (fields.description) handlers.handleInputChange('description', fields.description)
-              if (fields.category) handlers.handleInputChange('category', fields.category)
-              if (fields.condition) handlers.handleInputChange('condition', fields.condition)
-              if (fields.price) handlers.handleInputChange('price', fields.price)
-              form.setAiAutoFill(null)
-              form.setDismissedAutoFill(true)
-              form.setAutoDetectedCategory(null)
-            }}
-            onDismiss={() => {
-              form.setDismissedAutoFill(true)
-              form.setAiAutoFill(null)
-            }}
-          />
-        ) : form.isIdentifying ? (
-          <div className="rounded-lg border border-sage/10 bg-sage/5 p-4 text-sm text-sage-dim flex items-center gap-2">
-            <span className="animate-pulse">⏳</span> AI is identifying your item...
-          </div>
-        ) : (
-          <AutoDetectedCategoryBanner
-            autoDetectedCategory={form.autoDetectedCategory}
-            hasCategory={!!form.formData.category}
-            dismissedAutoDetection={form.dismissedAutoDetection}
-            onApply={(cat) => {
-              handlers.handleInputChange('category', cat)
-              form.setAutoDetectedCategory(null)
-            }}
-            onDismiss={() => form.setDismissedAutoDetection(true)}
-          />
-        )}
-
-        {/* Photos */}
-        <div className="bg-white rounded-lg border border-sage/14 p-6">
+        {/* Photos — AI identification lives inline here */}
+        <div ref={photosCardRef} className="bg-white rounded-lg border border-sage/14 p-6">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-sm font-semibold text-ink">Photos</h3>
-            {form.formData.photoPreviews.length > 0 && !form.formData.category && (
-              <button
-                type="button"
-                onClick={() => form.formData.photoPreviews[0] && handlers.handleClassifyPhoto(0)}
-                disabled={form.classifyingPhotoIndex === 0}
-                className="text-xs text-sage-lt hover:text-sage disabled:opacity-50 disabled:cursor-not-allowed transition-colors underline underline-offset-2"
-              >
-                {form.classifyingPhotoIndex === 0 ? '⏳ Identifying...' : '🔍 Identify item'}
-              </button>
-            )}
           </div>
           <PhotoUpload
             photos={form.formData.photos}
@@ -169,7 +142,38 @@ export default function AddFindPage() {
             onUpdatePhoto={handlers.handleUpdatePhoto}
             selectedPlatforms={form.formData.selectedPlatforms}
           />
+          <PhotosAIInline
+            photoCount={form.formData.photoPreviews.length}
+            isIdentifying={form.isIdentifying}
+            aiAutoFill={form.aiAutoFill}
+            dismissed={form.dismissedAutoFill}
+            hasTitle={!!form.formData.title}
+            hasDescription={!!form.formData.description}
+            hasCategory={!!form.formData.category}
+            hasPrice={!!form.formData.price}
+            onAnalyse={() => {
+              form.setDismissedAutoFill(false)
+              form.setAiAutoFill(null)
+              form.identifyPhotos()
+            }}
+            onApply={handleApplyAI}
+            onDismiss={() => {
+              form.setDismissedAutoFill(true)
+              form.setAiAutoFill(null)
+            }}
+          />
         </div>
+
+        <AutoDetectedCategoryBanner
+          autoDetectedCategory={form.autoDetectedCategory}
+          hasCategory={!!form.formData.category}
+          dismissedAutoDetection={form.dismissedAutoDetection}
+          onApply={(cat) => {
+            handlers.handleInputChange('category', cat)
+            form.setAutoDetectedCategory(null)
+          }}
+          onDismiss={() => form.setDismissedAutoDetection(true)}
+        />
 
         <TitleDescriptionSection
           title={form.formData.title}
@@ -354,6 +358,19 @@ export default function AddFindPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky AI bar — mobile only, appears when AI has results and photos card has scrolled off screen */}
+      {form.aiAutoFill && !form.dismissedAutoFill && photosOutOfView && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-3 bg-white border-t border-sage/14 sm:hidden">
+          <button
+            type="button"
+            onClick={scrollToPhotos}
+            className="w-full rounded-lg bg-sage text-white text-sm px-4 py-3 flex items-center justify-center gap-2"
+          >
+            ✨ AI suggestions ready — tap to view
+          </button>
+        </div>
+      )}
     </>
   )
 }

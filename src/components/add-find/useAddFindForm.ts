@@ -83,7 +83,6 @@ export function useAddFindForm() {
   const [aiAutoFill, setAiAutoFill] = useState<AIAutoFillData | null>(null)
   const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
   const [isIdentifying, setIsIdentifying] = useState(false)
-  const [aiPrefs, setAiPrefs] = useState<AIPrefs | null>(null)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -216,125 +215,96 @@ export function useAddFindForm() {
     return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
-  // ── Load AI preferences ──
-  useEffect(() => {
-    fetch('/api/user/preferences')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setAiPrefs(data) })
-      .catch(() => {})
-  }, [])
+  // ── Explicit AI identification (triggered by user button click) ──
+  const identifyPhotos = async () => {
+    if (!formData.photoPreviews.length || isIdentifying) return
 
-  // ── Auto-identify from first photo ──
-  useEffect(() => {
-    let cancelled = false
-    const abortController = new AbortController()
+    const firstPhoto = formData.photoPreviews[0]
+    if (!firstPhoto) return
+    const additionalPreviews = formData.photoPreviews.slice(1, 3)
 
-    const identifyFromPhoto = async () => {
-      if (!formData.photoPreviews.length || dismissedAutoFill) return
-      if (aiPrefs === null) return
-      if (!aiPrefs.enabled) return
-      if (formData.title && formData.category) return
-      const firstPhoto = formData.photoPreviews[0]
-      if (!firstPhoto) return
-
-      // Collect up to 3 photos for multi-image identification
-      const additionalPreviews = formData.photoPreviews.slice(1, 3)
-
-      let imageUrl = firstPhoto
-      if (firstPhoto.startsWith('blob:') || firstPhoto.startsWith('data:')) {
-        try {
-          const img = new Image()
-          img.crossOrigin = 'anonymous'
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve()
-            img.onerror = reject
-            img.src = firstPhoto
-          })
-          if (cancelled) return
-          const MAX = 1024
-          let { width, height } = img
-          if (width > MAX || height > MAX) {
-            const scale = MAX / Math.max(width, height)
-            width = Math.round(width * scale)
-            height = Math.round(height * scale)
-          }
-          const canvas = document.createElement('canvas')
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          if (!ctx) return
-          ctx.drawImage(img, 0, 0, width, height)
-          imageUrl = canvas.toDataURL('image/jpeg', 0.8)
-        } catch {
-          return
+    let imageUrl = firstPhoto
+    if (firstPhoto.startsWith('blob:') || firstPhoto.startsWith('data:')) {
+      try {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = reject
+          img.src = firstPhoto
+        })
+        const MAX = 1024
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          const scale = MAX / Math.max(width, height)
+          width = Math.round(width * scale)
+          height = Math.round(height * scale)
         }
-      } else if (!firstPhoto.startsWith('http')) {
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0, width, height)
+        imageUrl = canvas.toDataURL('image/jpeg', 0.8)
+      } catch {
         return
       }
-
-      if (cancelled) return
-      setIsIdentifying(true)
-      try {
-        const response = await fetch('/api/ai/identify-from-photo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))] }),
-          signal: abortController.signal,
-        })
-        if (cancelled) return
-        if (response.ok) {
-          const data = await response.json()
-          setAiAutoFill({
-            title: data.title,
-            description: data.description,
-            category: data.category,
-            condition: data.condition,
-            suggestedQuery: data.suggestedQuery,
-            confidence: data.confidence,
-            priceLoading: !!data.suggestedQuery,
-          })
-          if (data.category && !formData.category) {
-            setAutoDetectedCategory({ category: data.category, confidence: data.confidence })
-          }
-
-          if (data.suggestedQuery && !cancelled) {
-            try {
-              const priceRes = await fetch('/api/price-research', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: data.suggestedQuery }),
-                signal: abortController.signal,
-              })
-              if (!cancelled && priceRes.ok) {
-                const priceData = await priceRes.json()
-                const suggested = priceData?.recommendation?.suggested_price
-                const reasoning = priceData?.recommendation?.reasoning
-                setAiAutoFill(prev => prev ? {
-                  ...prev,
-                  suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
-                  priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
-                  priceLoading: false,
-                } : null)
-              } else if (!cancelled) {
-                setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-              }
-            } catch {
-              if (!cancelled) {
-                setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-              }
-            }
-          }
-        }
-      } catch (err) {
-        if (!cancelled) console.error('Failed to identify from photo:', err)
-      } finally {
-        if (!cancelled) setIsIdentifying(false)
-      }
+    } else if (!firstPhoto.startsWith('http')) {
+      return
     }
 
-    identifyFromPhoto()
-    return () => { cancelled = true; abortController.abort() }
-  }, [formData.photoPreviews, formData.title, formData.category, dismissedAutoFill, aiPrefs])
+    setIsIdentifying(true)
+    try {
+      const response = await fetch('/api/ai/identify-from-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))],
+        }),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAiAutoFill({
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          condition: data.condition,
+          suggestedQuery: data.suggestedQuery,
+          confidence: data.confidence,
+          priceLoading: !!data.suggestedQuery,
+        })
+        if (data.suggestedQuery) {
+          try {
+            const priceRes = await fetch('/api/price-research', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: data.suggestedQuery }),
+            })
+            if (priceRes.ok) {
+              const priceData = await priceRes.json()
+              const suggested = priceData?.recommendation?.suggested_price
+              const reasoning = priceData?.recommendation?.reasoning
+              setAiAutoFill(prev => prev ? {
+                ...prev,
+                suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
+                priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
+                priceLoading: false,
+              } : null)
+            } else {
+              setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+            }
+          } catch {
+            setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to identify from photo:', err)
+    } finally {
+      setIsIdentifying(false)
+    }
+  }
 
   return {
     router,
@@ -366,7 +336,7 @@ export function useAddFindForm() {
     dismissedAutoFill,
     setDismissedAutoFill,
     isIdentifying,
-    aiPrefs,
+    identifyPhotos,
     sourcingTripName,
     setSourcingTripName,
     isbnLookupOpen,
