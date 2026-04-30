@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getServerUser, createSupabaseServerClient } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
-import { isBetaActive } from '@/config/plans'
+import { isBetaActive, isFoundingFlockWindow } from '@/config/plans'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,27 +45,18 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.notFound('User profile not found')
     }
 
-    // Map plan to price ID
+    // Founding Flock window locks signups in at the lower price for life.
+    // After the deadline, new signups see the standard price. Existing
+    // subscriptions keep their original price ID — Stripe never auto-migrates.
+    const founding = isFoundingFlockWindow()
     const priceMap: Record<string, Record<string, string>> = {
-      nester: {
-        monthly: process.env.STRIPE_PRICE_NESTER_MONTHLY!,
-        annual: process.env.STRIPE_PRICE_NESTER_ANNUAL!,
-      },
-      flourish: {
-        monthly: process.env.STRIPE_PRICE_FLOURISH_MONTHLY!,
-        annual: process.env.STRIPE_PRICE_FLOURISH_ANNUAL!,
-      },
-      forager: {
-        monthly: process.env.STRIPE_PRICE_FORAGER_MONTHLY!,
-        annual: process.env.STRIPE_PRICE_FORAGER_ANNUAL!,
-      },
-      soar: {
-        monthly: process.env.STRIPE_PRICE_SOAR_MONTHLY!,
-        annual: process.env.STRIPE_PRICE_SOAR_ANNUAL!,
-      },
       flock: {
-        monthly: process.env.STRIPE_PRICE_FLOCK_MONTHLY!,
-        annual: process.env.STRIPE_PRICE_FLOCK_ANNUAL!,
+        monthly: founding
+          ? process.env.STRIPE_PRICE_FLOCK_FOUNDING_MONTHLY!
+          : process.env.STRIPE_PRICE_FLOCK_STANDARD_MONTHLY!,
+        annual: founding
+          ? process.env.STRIPE_PRICE_FLOCK_FOUNDING_ANNUAL!
+          : process.env.STRIPE_PRICE_FLOCK_STANDARD_ANNUAL!,
       },
     }
 

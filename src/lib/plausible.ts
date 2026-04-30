@@ -1,5 +1,5 @@
 // Plausible custom event helper
-// Usage: trackEvent("Signup", { plan: "nester" })
+// Usage: trackEvent("Signup", { plan: "flock" })
 
 declare global {
   interface Window {

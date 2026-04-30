@@ -16,7 +16,7 @@ export default function PricingPage() {
             Built for thrifters.<br />
             <em className="italic">Priced fairly.</em>
           </h1>
-          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Every supported marketplace on every paid plan. No add-ons.</p>
+          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Every supported marketplace on every plan. Free for 25 finds a month, no card required.</p>
         </div>
 
         <PricingSection />
@@ -39,10 +39,11 @@ export default function PricingPage() {
               </thead>
               <tbody>
                 {[
+                  { feat: 'Free tier', wr: '✓ 25 finds/mo', other1: '✗', other2: '✗' },
                   { feat: 'Entry price (UK)', wr: '£14/mo', other1: '£17/mo', other2: '~£24/mo' },
-                  { feat: 'Vinted, eBay, Etsy, Shopify', wr: '✓', other1: '✓', other2: '✓' },
-                  { feat: 'AI listings included in base price', wr: '✓ from £29', other1: 'paid add-on', other2: '+£4/mo extra' },
-                  { feat: 'Auto-delist on sale', wr: '✓ from £14', other1: '✓', other2: '✓' },
+                  { feat: 'All marketplaces on every plan', wr: '✓', other1: '✗', other2: '✗' },
+                  { feat: 'AI listings included', wr: '✓', other1: 'paid add-on', other2: '+£4/mo extra' },
+                  { feat: 'Auto-delist on sale', wr: '✓', other1: '✓', other2: '✓' },
                   { feat: 'Full inventory OS', wr: '✓', other1: '✗', other2: '✗' },
                   { feat: 'Margin & ROI analytics', wr: '✓', other1: 'basic only', other2: '✗' },
                 ].map((row, i) => (

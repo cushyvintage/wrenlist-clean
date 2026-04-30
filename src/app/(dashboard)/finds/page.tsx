@@ -309,7 +309,7 @@ function InventoryPageContent() {
     router.push('/add-find')
   }
 
-  const handleUpgradeToNester = () => {
+  const handleUpgrade = () => {
     router.push('/billing')
   }
 
@@ -648,7 +648,7 @@ function InventoryPageContent() {
                   <>
                     <span className="text-amber-500">●</span>
                     <button
-                      onClick={handleUpgradeToNester}
+                      onClick={handleUpgrade}
                       className="text-amber-600 underline hover:text-amber-900 transition-colors"
                     >
                       upgrade
@@ -793,7 +793,7 @@ function InventoryPageContent() {
         <div className="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-700 space-y-2">
           <p className="font-medium">{planLimitError}</p>
           <button
-            onClick={handleUpgradeToNester}
+            onClick={handleUpgrade}
             className="text-xs underline hover:text-amber-900 transition-colors"
           >
             Upgrade plan →
@@ -1479,7 +1479,7 @@ function InventoryPageContent() {
               <div className="text-sm" style={{ color: '#6B7D6A' }}>
                 {totalCount === 1 ? '1 find' : `${totalCount} finds`}
                 {planLimit !== null && totalCount > planLimit && (
-                  <span style={{ color: '#B5813A' }}> (unlimited on Nester)</span>
+                  <span style={{ color: '#B5813A' }}> (unlimited on Flock)</span>
                 )}
               </div>
               <div className="flex items-center gap-2">

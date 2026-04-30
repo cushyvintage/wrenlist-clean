@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import type { PlanId } from '@/types'
 
@@ -19,7 +20,6 @@ function createAdminClient() {
 /**
  * POST /api/billing/webhook
  * Handle Stripe webhook events
- * Events: checkout.session.completed, customer.subscription.deleted, invoice.payment_failed
  */
 export async function POST(request: NextRequest) {
   try {
@@ -44,8 +44,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify Stripe signature
-    let event: any
+    let event: Stripe.Event
     try {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
     } catch (error) {
@@ -58,25 +57,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Handle events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object)
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
+        break
+
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
+        break
+
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object)
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'invoice.payment_failed':
-        // Log but don't take action yet
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Payment failed for invoice:', event.data.object.id)
+          console.log('Payment failed for invoice:', (event.data.object as Stripe.Invoice).id)
         }
         break
 
       default:
-        // Ignore other event types
         break
     }
 
@@ -92,39 +96,42 @@ export async function POST(request: NextRequest) {
   }
 }
 
+const VALID_PLAN_IDS: ReadonlySet<PlanId> = new Set(['free', 'flock'])
+
+function isValidPlanId(value: unknown): value is PlanId {
+  return typeof value === 'string' && VALID_PLAN_IDS.has(value as PlanId)
+}
+
 /**
- * Handle checkout.session.completed event
- * Update user's plan when subscription succeeds
+ * checkout.session.completed — first successful payment. Sets the user's
+ * plan from session metadata and resets their monthly counter.
  */
-async function handleCheckoutSessionCompleted(session: any) {
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
     const userId = session.metadata?.user_id
     const planId = session.metadata?.plan_id
 
-    if (!userId || !planId) {
+    if (!userId || !isValidPlanId(planId)) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error('Checkout session missing user_id or plan_id', session.id)
+        console.error('Checkout session missing or invalid metadata', session.id, { userId, planId })
       }
       return
     }
 
-    // Update user profile with new plan
     const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
       .update({
-        plan: planId as PlanId,
-        stripe_customer_id: session.customer,
+        plan: planId,
+        stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
         finds_reset_at: new Date().toISOString(),
         finds_this_month: 0,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
 
-    if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Failed to update profile after checkout:', error)
-      }
+    if (error && process.env.NODE_ENV !== 'production') {
+      console.error('Failed to update profile after checkout:', error)
     }
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -134,21 +141,92 @@ async function handleCheckoutSessionCompleted(session: any) {
 }
 
 /**
- * Handle customer.subscription.deleted event
- * Downgrade user to free plan when subscription is cancelled
+ * invoice.payment_succeeded — fires on every successful renewal. Resets the
+ * monthly finds counter so paying users don't stay capped after their first
+ * billing period. Stripe also emits this event on the initial subscription
+ * charge; the reset is idempotent so the duplicate is harmless.
  */
-async function handleSubscriptionDeleted(subscription: any) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
-    const customerId = subscription.customer
+    const customerId = typeof invoice.customer === 'string'
+      ? invoice.customer
+      : invoice.customer?.id
 
-    if (!customerId) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Subscription deletion missing customer_id')
-      }
-      return
+    if (!customerId) return
+
+    // Only reset on subscription invoices (skip one-off charges if any).
+    // Stripe API 2026-03-25 moved this from `invoice.subscription` to
+    // `invoice.parent.subscription_details.subscription`.
+    const subscriptionRef = invoice.parent?.subscription_details?.subscription
+    if (!subscriptionRef) return
+
+    const supabase = createAdminClient()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        finds_this_month: 0,
+        finds_reset_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_customer_id', customerId)
+
+    if (error && process.env.NODE_ENV !== 'production') {
+      console.error('Failed to reset finds counter after renewal:', error)
     }
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('handleInvoicePaymentSucceeded error:', error)
+    }
+  }
+}
 
-    // Find user by Stripe customer ID and downgrade to free
+/**
+ * customer.subscription.updated — fires when a subscription's price or status
+ * changes (e.g. user switches monthly↔annual via the portal). Re-syncs the
+ * plan tag on the profile. With only one paid plan today the price-side
+ * change is mostly cosmetic, but this guards against future tier additions.
+ */
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer?.id
+    if (!customerId) return
+
+    // Active states keep the user on their paid plan; anything else falls back to free.
+    const activeStates: Stripe.Subscription.Status[] = ['active', 'trialing', 'past_due']
+    const planId: PlanId = activeStates.includes(subscription.status) ? 'flock' : 'free'
+
+    const supabase = createAdminClient()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        plan: planId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_customer_id', customerId)
+
+    if (error && process.env.NODE_ENV !== 'production') {
+      console.error('Failed to sync subscription update:', error)
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('handleSubscriptionUpdated error:', error)
+    }
+  }
+}
+
+/**
+ * customer.subscription.deleted — subscription fully cancelled. Drop user
+ * back to the free plan.
+ */
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer?.id
+    if (!customerId) return
+
     const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
@@ -158,10 +236,8 @@ async function handleSubscriptionDeleted(subscription: any) {
       })
       .eq('stripe_customer_id', customerId)
 
-    if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Failed to downgrade profile after subscription deletion:', error)
-      }
+    if (error && process.env.NODE_ENV !== 'production') {
+      console.error('Failed to downgrade profile after subscription deletion:', error)
     }
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {

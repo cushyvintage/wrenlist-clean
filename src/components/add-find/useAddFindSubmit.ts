@@ -127,7 +127,7 @@ export function useAddFindSubmit(deps: SubmitDeps) {
     if (!planCheck.ok) return
     const planData = await planCheck.json()
     const total = planData?.data?.pagination?.total ?? 0
-    const planLimits: Record<string, number | null> = { free: 10, nester: 100, forager: 500, flock: null }
+    const planLimits: Record<string, number | null> = { free: 25, flock: null }
     const profileRes = await fetch('/api/profile')
     if (!profileRes.ok) return
     const profile = await profileRes.json()
