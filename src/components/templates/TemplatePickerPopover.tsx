@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronDown, Loader2, LayoutTemplate } from 'lucide-react'
 import type { ListingTemplate, Platform } from '@/types'
 import { PLATFORM_LABELS } from '@/types'
 
@@ -86,7 +86,7 @@ export default function TemplatePickerPopover({ onSelectTemplate }: TemplatePick
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span>📋</span>
+        <LayoutTemplate width={14} height={14} />
         <span>Use template</span>
         <ChevronDown width={14} height={14} />
       </button>

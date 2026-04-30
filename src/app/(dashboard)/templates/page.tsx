@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Edit2, X, Copy } from 'lucide-react'
+import { Trash2, Edit2, X, Copy, LayoutTemplate } from 'lucide-react'
 
 interface Template {
   id: string
@@ -203,7 +203,7 @@ export default function TemplatesPage() {
       {/* Empty State */}
       {!isLoading && templates.length === 0 && !error && (
         <div className="text-center py-12 px-6 bg-white border border-sage/14 rounded-md">
-          <p className="text-2xl mb-2">📋</p>
+          <LayoutTemplate className="w-8 h-8 text-sage/40 mx-auto mb-2" />
           <p className="text-sage-dim text-sm mb-4">No templates yet</p>
           <button
             onClick={() => router.push('/add-find?saveAsTemplate=true')}

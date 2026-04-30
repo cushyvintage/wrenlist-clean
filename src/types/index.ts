@@ -327,6 +327,7 @@ export interface DedupFindSummary {
   selectedMarketplaces: string[]
   status: string
   description: string | null
+  category?: string
   createdAt?: string
 }
 

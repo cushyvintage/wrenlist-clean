@@ -8,6 +8,7 @@ import { useCategoryTree } from '@/hooks/useCategoryTree'
 import type { FindCondition, Platform, ListingTemplate } from '@/types'
 import type { ListingFormData, PlatformFieldsData } from '@/types/listing-form'
 import { useMemo } from 'react'
+import { Bookmark } from 'lucide-react'
 import StashTypeahead from '@/components/stash/StashTypeahead'
 
 interface FormData {
@@ -547,7 +548,7 @@ export function FindEditMode({
                 onClick={() => onShowSaveAsTemplate(true)}
                 className="text-sm text-sage hover:text-sage-dk transition underline underline-offset-2"
               >
-                💾 Save as template
+                <Bookmark className="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" /> Save as template
               </button>
             </div>
           )}

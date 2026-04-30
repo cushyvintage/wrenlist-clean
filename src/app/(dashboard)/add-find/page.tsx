@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { Bookmark } from 'lucide-react'
+import WrenIcon from '@/components/ui/WrenIcon'
 import PhotoUpload from '@/components/listing/PhotoUpload'
 import CategoryPicker from '@/components/listing/CategoryPicker'
 import SaveAsTemplateInput from '@/components/templates/SaveAsTemplateInput'
@@ -273,7 +275,7 @@ export default function AddFindPage() {
             onClick={() => form.setShowSaveAsTemplate(true)}
             className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
           >
-            💾 Save this as a template →
+            <Bookmark className="inline-block w-3 h-3 mr-1 -mt-0.5" /> Save this as a template →
           </button>
         ) : (
           <div className="bg-white rounded-lg border border-sage/14 p-4 sm:p-6">
@@ -367,7 +369,7 @@ export default function AddFindPage() {
             onClick={scrollToPhotos}
             className="w-full rounded-lg bg-sage text-white text-sm px-4 py-3 flex items-center justify-center gap-2"
           >
-            ✨ AI suggestions ready — tap to view
+            <WrenIcon size="sm" /> Wren has suggestions — tap to view
           </button>
         </div>
       )}

@@ -12,6 +12,7 @@ interface DedupPairCardProps {
   candidate: DedupCandidate
   onMerge: (keeperId: string, duplicateId: string) => Promise<void>
   onDismiss: (findIdA: string, findIdB: string) => Promise<void>
+  highlightAsHighConfidence?: boolean
 }
 
 function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 'duplicate' }) {
@@ -19,9 +20,16 @@ function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 
   const marketplaces = find.selectedMarketplaces || []
 
   return (
-    <div className={`flex-1 min-w-0 rounded-lg p-3 ${
-      role === 'keeper' ? 'bg-sage/5 border border-sage/15' : 'bg-cream-dk/30 border border-border'
+    <div className={`flex-1 min-w-0 rounded-lg p-3 relative ${
+      role === 'keeper'
+        ? 'bg-sage/5 border border-sage/15'
+        : 'bg-cream-dk/30 border border-border'
     }`}>
+      {role === 'keeper' && (
+        <div className="absolute top-2 right-2 text-[10px] font-semibold text-sage bg-sage/10 px-2 py-0.5 rounded">
+          KEEPER
+        </div>
+      )}
       <div className="flex gap-3">
         {photo ? (
           <img
@@ -56,7 +64,12 @@ function FindSummary({ find, role }: { find: DedupFindSummary; role: 'keeper' | 
   )
 }
 
-export function DedupPairCard({ candidate, onMerge, onDismiss }: DedupPairCardProps) {
+export function DedupPairCard({
+  candidate,
+  onMerge,
+  onDismiss,
+  highlightAsHighConfidence,
+}: DedupPairCardProps) {
   const confirm = useConfirm()
   const [merging, setMerging] = useState(false)
   const [dismissing, setDismissing] = useState(false)
@@ -91,17 +104,28 @@ export function DedupPairCard({ candidate, onMerge, onDismiss }: DedupPairCardPr
   }
 
   return (
-    <div className="rounded-lg border border-border bg-white p-4">
+    <div className={`rounded-lg border bg-white p-4 ${
+      highlightAsHighConfidence
+        ? 'border-sage/30 bg-sage/[0.02]'
+        : 'border-border'
+    }`}>
       {/* Header row */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
             similarityPct === 100
               ? 'bg-sage/10 text-sage'
-              : 'bg-amber/10 text-amber-dark'
+              : similarityPct >= 95
+              ? 'bg-amber/10 text-amber-dark'
+              : 'bg-red/10 text-red-dk'
           }`}>
             {similarityPct}% match
           </span>
+          {highlightAsHighConfidence && (
+            <span className="text-[10px] font-semibold text-sage bg-sage/10 px-2 py-0.5 rounded">
+              HIGH CONFIDENCE
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <Button

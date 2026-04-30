@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { LayoutTemplate } from 'lucide-react'
 /* eslint-disable @next/next/no-img-element */
 import { Badge } from '@/components/wren/Badge'
 import { PlatformTag } from '@/components/wren/PlatformTag'
@@ -1295,7 +1296,7 @@ export default function ListingsPage() {
           <div className="bg-white border border-sage/14 rounded-lg">
             {listings.length === 0 ? (
               <div className="text-center py-16 px-6">
-                <div className="text-4xl mb-3">📋</div>
+                <LayoutTemplate className="w-10 h-10 text-sage/40 mx-auto mb-3" />
                 <p className="text-ink font-medium mb-1">No listings yet</p>
                 <p className="text-ink-lt text-sm mb-6 max-w-sm mx-auto">
                   Go to Finds, select items, and crosslist them to Vinted, eBay, Etsy, or Shopify. They&apos;ll appear here once published.

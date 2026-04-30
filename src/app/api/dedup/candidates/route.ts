@@ -39,6 +39,7 @@ export const GET = withAuth(async (req, user) => {
       selectedMarketplaces: row.find_a_marketplaces || [],
       status: row.find_a_status,
       description: row.find_a_description,
+      category: row.find_a_category,
       createdAt: row.find_a_created_at,
     },
     findB: {
@@ -49,6 +50,7 @@ export const GET = withAuth(async (req, user) => {
       selectedMarketplaces: row.find_b_marketplaces || [],
       status: row.find_b_status,
       description: row.find_b_description,
+      category: row.find_b_category,
       createdAt: row.find_b_created_at,
     },
     similarityScore: row.similarity_score,

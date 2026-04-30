@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useCategoryTree } from '@/hooks/useCategoryTree'
 import { WRENLIST_CONDITIONS } from '@/data/marketplace-conditions'
+import WrenIcon from '@/components/ui/WrenIcon'
 
 export interface AIAutoFillData {
   title?: string
@@ -151,18 +152,18 @@ export default function AIAutoFillBanner({
       ? 'bg-amber-50 border-amber-200'
       : 'bg-slate-50 border-slate-200'
 
-  const confidenceIcon = data.confidence === 'high' ? '✓' : '?'
   const confidenceText = data.confidence === 'high'
-    ? 'AI identified this item'
+    ? 'Wren found this'
     : data.confidence === 'medium'
-      ? 'AI thinks this might be'
-      : 'AI made a guess'
+      ? 'Wren suggests'
+      : "Wren isn't sure"
 
   return (
     <div className={`rounded-lg border p-4 ${confidenceColor}`}>
       <div className="flex items-start justify-between mb-3">
-        <span className="text-sm font-medium text-ink">
-          {confidenceIcon} {confidenceText}
+        <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+          <WrenIcon size="sm" />
+          {confidenceText}
         </span>
         <button
           type="button"

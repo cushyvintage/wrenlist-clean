@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import BarcodeScanner from '@/components/barcode/BarcodeScanner'
 import { Platform } from '@/types'
 
@@ -190,7 +191,7 @@ export default function ISBNLookup({
               disabled={isbnLooking || !isbnInput.trim()}
               className="px-2 py-2 text-xs bg-sage text-white rounded hover:bg-sage-lt disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isbnLooking ? '⏳' : 'Look up'}
+              {isbnLooking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Look up'}
             </button>
           </div>
         </div>

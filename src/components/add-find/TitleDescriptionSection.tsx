@@ -3,6 +3,8 @@
 import ISBNLookup from '@/components/add-find/ISBNLookup'
 import { Platform } from '@/types'
 import { PLATFORM_DESCRIPTION_LIMITS } from '@/data/unified-colours'
+import WrenIcon from '@/components/ui/WrenIcon'
+import { Loader2 } from 'lucide-react'
 
 interface TitleDescriptionSectionProps {
   title: string
@@ -88,11 +90,9 @@ export default function TitleDescriptionSection({
             className="text-xs px-2 py-1 rounded border border-sage/14 text-sage-lt hover:text-sage hover:border-sage/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
           >
             {isGeneratingDescription ? (
-              <>
-                <span className="inline-block animate-spin">⏳</span> Generating...
-              </>
+              <><Loader2 className="w-3 h-3 animate-spin" /> Writing…</>
             ) : (
-              <>✨ Generate</>
+              <><WrenIcon size="xs" /> Ask Wren</>
             )}
           </button>
         </div>

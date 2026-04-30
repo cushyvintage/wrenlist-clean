@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/wren/Badge'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { formatPlatformName } from '@/lib/crosslist'
+import WrenIcon from '@/components/ui/WrenIcon'
 import type { Find, Platform } from '@/types'
 
 interface MarketplaceDataItem {
@@ -138,7 +139,7 @@ export default function InventoryItemHeader({
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EDE8DE')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            ✨ Wren AI
+            <WrenIcon size="xs" className="inline-block mr-1" /> Wren
           </button>
         )}
         {!isEditing && find.status === 'listed' && (

@@ -4,6 +4,7 @@ import AIAutoFillBanner, {
   type AIAutoFillData,
   type AIAutoFillResult,
 } from '@/components/add-find/AIAutoFillBanner'
+import WrenIcon from '@/components/ui/WrenIcon'
 
 interface Props {
   photoCount: number
@@ -37,8 +38,8 @@ export default function PhotosAIInline({
   if (isIdentifying) {
     return (
       <div className="mt-4 rounded-lg bg-sage/5 border border-sage/10 px-4 py-3 text-sm text-sage-dim flex items-center gap-2">
-        <span className="animate-spin inline-block">⏳</span>
-        AI analysing {photoCount} photo{photoCount !== 1 ? 's' : ''}…
+        <WrenIcon size="sm" className="animate-pulse" />
+        Wren is looking at {photoCount} photo{photoCount !== 1 ? 's' : ''}…
       </div>
     )
   }
@@ -68,7 +69,8 @@ export default function PhotosAIInline({
           onClick={onAnalyse}
           className="w-full rounded-lg border border-sage/20 bg-sage/5 px-4 py-2.5 text-sm text-sage hover:bg-sage/10 transition-colors flex items-center justify-center gap-2"
         >
-          ✨ Analyse {photoCount} photo{photoCount !== 1 ? 's' : ''} with AI
+          <WrenIcon size="sm" />
+          Ask Wren about {photoCount === 1 ? 'this photo' : `these ${photoCount} photos`}
         </button>
       </div>
     )
@@ -82,7 +84,7 @@ export default function PhotosAIInline({
         onClick={onAnalyse}
         className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2"
       >
-        Re-analyse with AI
+        Ask Wren again
       </button>
     </div>
   )
