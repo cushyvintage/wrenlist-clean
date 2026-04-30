@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import type { PlanId } from '@/types'
+import { isFoundingFlockWindow, getFindsLimit } from '@/config/plans'
+import { sendEmail } from '@/lib/email/client'
+import { buildSubscriptionWelcomeEmail } from '@/lib/email/templates/subscription-welcome'
 
 /**
  * Stripe webhooks carry no cookies, so the cookie-based SSR client has no
@@ -104,7 +107,8 @@ function isValidPlanId(value: unknown): value is PlanId {
 
 /**
  * checkout.session.completed — first successful payment. Sets the user's
- * plan from session metadata and resets their monthly counter.
+ * plan from session metadata, resets their monthly counter, and fires a
+ * one-shot welcome email (deduped via subscription_welcome_sent_at).
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
@@ -119,6 +123,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
 
     const supabase = createAdminClient()
+
+    // Fetch existing profile so we can (a) read the welcome-sent timestamp
+    // for dedup and (b) get the user's full_name for the email greeting.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, subscription_welcome_sent_at')
+      .eq('user_id', userId)
+      .single()
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -132,6 +145,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
     if (error && process.env.NODE_ENV !== 'production') {
       console.error('Failed to update profile after checkout:', error)
+    }
+
+    // Send welcome email — only on paid plans, only once per user
+    if (planId !== 'free' && !profile?.subscription_welcome_sent_at) {
+      await sendSubscriptionWelcomeEmail({
+        userId,
+        toEmail: session.customer_details?.email || session.customer_email || null,
+        firstName: profile?.full_name?.split(' ')[0] || null,
+        planId,
+      })
     }
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -246,4 +269,59 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       console.error('handleSubscriptionDeleted error:', error)
     }
   }
+}
+
+/**
+ * Send the one-shot subscription welcome email and stamp
+ * subscription_welcome_sent_at so duplicate webhook deliveries don't
+ * re-send. Failures are logged, never thrown — Stripe expects a 2xx,
+ * and email send hiccups should not retry the whole webhook.
+ */
+async function sendSubscriptionWelcomeEmail(args: {
+  userId: string
+  toEmail: string | null
+  firstName: string | null
+  planId: 'nester' | 'forager' | 'flock'
+}) {
+  if (!args.toEmail) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[email] No recipient email on session, skipping welcome send', args.userId)
+    }
+    return
+  }
+
+  const tierLabels = { nester: 'Nester', forager: 'Forager', flock: 'Flock' } as const
+  const findsLimit = getFindsLimit(args.planId) ?? 0
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.wrenlist.com'
+
+  const { subject, html, text } = buildSubscriptionWelcomeEmail({
+    firstName: args.firstName,
+    appUrl,
+    tier: tierLabels[args.planId],
+    isFoundingMember: isFoundingFlockWindow(),
+    findsLimit,
+  })
+
+  const result = await sendEmail({
+    to: args.toEmail,
+    subject,
+    html,
+    text,
+    tags: [
+      { name: 'kind', value: 'subscription_welcome' },
+      { name: 'plan', value: args.planId },
+    ],
+  })
+
+  if (!result.ok) {
+    console.error('[email] subscription welcome failed:', result.error, args.userId)
+    return
+  }
+
+  // Stamp dedup timestamp only on successful send
+  const supabase = createAdminClient()
+  await supabase
+    .from('profiles')
+    .update({ subscription_welcome_sent_at: new Date().toISOString() })
+    .eq('user_id', args.userId)
 }

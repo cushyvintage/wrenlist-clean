@@ -4,6 +4,9 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getTopLevelKeys } from '@/lib/category-db'
 import { refineToLeafCategory } from '@/lib/ai-category-refine'
 import { modelFor } from '@/lib/ai/router'
+import { withImageCache } from '@/lib/ai/image-cache'
+
+const PROMPT_VERSION = 1 // bump when system prompt changes meaningfully
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -25,29 +28,54 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ error: 'At least one image is required' }, { status: 400 })
     }
 
-    const imageContent = images.slice(0, 3).map((dataUrl: string) => ({
+    const inputImages = images.slice(0, 3)
+    const imageContent = inputImages.map((dataUrl: string) => ({
       type: 'image_url' as const,
       image_url: { url: dataUrl, detail: 'high' as const },
     }))
 
-    // Step 1: Identify item + top-level category
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Composite cache key: all input images joined. Same set of images +
+    // same prompt version + same model + same user → cached result. Different
+    // photo count for the same item still re-runs (e.g. 1 photo first time,
+    // 3 photos second time produce different prompts).
+    const cacheInput = inputImages.join('|')
+
+    type IdentifyResult = {
+      title: string
+      description: string
+      suggestedQuery: string
+      category: string
+      condition?: string
+      confidence: 'high' | 'medium' | 'low'
+    }
+
+    // Step 1: Identify item + top-level category (cached by image hash)
+    const result = await withImageCache<IdentifyResult>(
+      {
+        userId: user.id,
+        imageBuffer: cacheInput,
+        purpose: 'identify_from_photo',
         model: modelFor('identify_from_photo'),
-        max_tokens: 500,
-        response_format: { type: 'json_object' },
-        messages: [{
-          role: 'user',
-          content: [
-            ...imageContent,
-            {
-              type: 'text',
-              text: `You are an expert vintage and antiques dealer in the UK. Identify this item for a reseller.
+        promptVersion: PROMPT_VERSION,
+      },
+      async () => {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelFor('identify_from_photo'),
+            max_tokens: 500,
+            response_format: { type: 'json_object' },
+            messages: [{
+              role: 'user',
+              content: [
+                ...imageContent,
+                {
+                  type: 'text',
+                  text: `You are an expert vintage and antiques dealer in the UK. Identify this item for a reseller.
 
 Return ONLY valid JSON:
 {
@@ -58,33 +86,20 @@ Return ONLY valid JSON:
   "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor — assess from visible wear, patina, chips, cracks, stains, fading. Default to good if unclear.",
   "confidence": "high if you can identify maker/brand, medium if you can identify the type but not maker, low if unsure"
 }`,
-            },
-          ],
-        }],
-      }),
-    })
+                },
+              ],
+            }],
+          }),
+        })
 
-    if (!response.ok) {
-      throw new Error(`OpenAI error: ${response.status}`)
-    }
+        if (!response.ok) throw new Error(`OpenAI error: ${response.status}`)
 
-    const data = await response.json() as {
-      choices: Array<{ message: { content: string } }>
-    }
-    const raw = data.choices[0]?.message?.content?.trim() ?? '{}'
-    const content = raw
-      .replace(/^```(?:json)?\n?/, '')
-      .replace(/\n?```$/, '')
-      .trim()
-
-    const result = JSON.parse(content) as {
-      title: string
-      description: string
-      suggestedQuery: string
-      category: string
-      condition?: string
-      confidence: 'high' | 'medium' | 'low'
-    }
+        const data = await response.json() as { choices: Array<{ message: { content: string } }> }
+        const raw = data.choices[0]?.message?.content?.trim() ?? '{}'
+        const content = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+        return JSON.parse(content) as IdentifyResult
+      },
+    )
 
     // Validate condition
     const VALID_CONDITIONS = ['new_with_tags', 'new_without_tags', 'very_good', 'good', 'fair', 'poor']
