@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { modelFor } from '@/lib/ai/router'
 
 // ------------------------------------------------------------------
 // Types
@@ -242,7 +243,7 @@ Respond with ONLY a JSON object:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: modelFor('category_match'),
       max_tokens: 200,
       temperature: 0.1,
       messages: [

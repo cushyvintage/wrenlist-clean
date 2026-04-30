@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { modelFor } from '@/lib/ai/router'
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`generate-desc:${user.id}`, 15)
@@ -45,7 +46,7 @@ Write ONLY the description. No title, no preamble.`
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: modelFor('generate_description'),
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       }),

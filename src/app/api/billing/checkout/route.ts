@@ -49,14 +49,19 @@ export async function POST(request: NextRequest) {
     // After the deadline, new signups see the standard price. Existing
     // subscriptions keep their original price ID — Stripe never auto-migrates.
     const founding = isFoundingFlockWindow()
-    const priceMap: Record<string, Record<string, string>> = {
+    const tier = founding ? 'FOUNDING' : 'STANDARD'
+    const priceMap: Record<string, Record<string, string | undefined>> = {
+      nester: {
+        monthly: process.env[`STRIPE_PRICE_NESTER_${tier}_MONTHLY`],
+        annual:  process.env[`STRIPE_PRICE_NESTER_${tier}_ANNUAL`],
+      },
+      forager: {
+        monthly: process.env[`STRIPE_PRICE_FORAGER_${tier}_MONTHLY`],
+        annual:  process.env[`STRIPE_PRICE_FORAGER_${tier}_ANNUAL`],
+      },
       flock: {
-        monthly: founding
-          ? process.env.STRIPE_PRICE_FLOCK_FOUNDING_MONTHLY!
-          : process.env.STRIPE_PRICE_FLOCK_STANDARD_MONTHLY!,
-        annual: founding
-          ? process.env.STRIPE_PRICE_FLOCK_FOUNDING_ANNUAL!
-          : process.env.STRIPE_PRICE_FLOCK_STANDARD_ANNUAL!,
+        monthly: process.env[`STRIPE_PRICE_FLOCK_${tier}_MONTHLY`],
+        annual:  process.env[`STRIPE_PRICE_FLOCK_${tier}_ANNUAL`],
       },
     }
 

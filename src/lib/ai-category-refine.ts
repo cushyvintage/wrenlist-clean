@@ -8,6 +8,7 @@
  */
 
 import { getAllCategories, type CategoryRow } from '@/lib/category-db'
+import { modelFor } from '@/lib/ai/router'
 
 const MAX_DIRECT_SUBCATS = 50
 
@@ -57,7 +58,7 @@ async function llmCall(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: modelFor('category_refine'),
       max_tokens: maxTokens,
       messages: [{
         role: 'user',

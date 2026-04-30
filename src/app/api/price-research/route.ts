@@ -5,6 +5,7 @@ import { searchSoldItems, EbayListingStats } from '@/lib/ebay-finding'
 import { searchEtsy, EtsySearchStats } from '@/lib/etsy-search'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getWrenlistSoldComps, WrenlistSoldCompsResult } from '@/lib/wrenlist-sold-comps'
+import { modelFor } from '@/lib/ai/router'
 
 interface SampleListing {
   title: string
@@ -162,7 +163,7 @@ Provide 3-5 sample listings for Vinted. Base prices on realistic UK market data.
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: modelFor('price_research'),
             max_tokens: 2000,
             response_format: { type: 'json_object' },
             messages: [{ role: 'user', content: prompt }],

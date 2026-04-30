@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { modelFor } from '@/lib/ai/router'
 
 export type GeneratedPlatformCopy = {
   title: string
@@ -104,7 +105,7 @@ Return ONLY valid JSON matching this exact shape:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: modelFor('generate_listing'),
         max_tokens: 2400,
         response_format: { type: 'json_object' },
         messages: [{ role: 'user', content: prompt }],

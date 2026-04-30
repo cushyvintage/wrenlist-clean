@@ -9,14 +9,14 @@ export default function PricingPage() {
       <MarketingNav />
 
       {/* HEADER */}
-      <div className="px-5 sm:px-8 lg:px-12 py-12 max-w-4xl mx-auto">
+      <div className="px-5 sm:px-8 lg:px-12 py-12 max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="hero-fade-1 text-xs font-medium uppercase tracking-wider text-sage-dim mb-2.5">simple, honest pricing</div>
           <h1 className="hero-fade-2 font-serif text-3xl font-normal text-ink mb-2">
             Built for thrifters.<br />
             <em className="italic">Priced fairly.</em>
           </h1>
-          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Every supported marketplace on every plan. Free for 25 finds a month, no card required.</p>
+          <p className="hero-fade-3 text-sm font-normal text-ink-lt">Every marketplace, every feature, AI built in — on every plan. Free for 25 finds a month, no card required.</p>
         </div>
 
         <PricingSection />
@@ -40,9 +40,10 @@ export default function PricingPage() {
               <tbody>
                 {[
                   { feat: 'Free tier', wr: '✓ 25 finds/mo', other1: '✗', other2: '✗' },
-                  { feat: 'Entry price (UK)', wr: '£14/mo', other1: '£17/mo', other2: '~£24/mo' },
+                  { feat: 'Entry price (UK)', wr: '£9/mo', other1: '£17/mo', other2: '~£24/mo' },
                   { feat: 'All marketplaces on every plan', wr: '✓', other1: '✗', other2: '✗' },
-                  { feat: 'AI listings included', wr: '✓', other1: 'paid add-on', other2: '+£4/mo extra' },
+                  { feat: 'AI listings included — no credits', wr: '✓', other1: 'paid add-on', other2: '+£4/mo extra' },
+                  { feat: 'AI for vintage/antique identification', wr: '✓ premium model', other1: '✗', other2: '✗' },
                   { feat: 'Auto-delist on sale', wr: '✓', other1: '✓', other2: '✓' },
                   { feat: 'Full inventory OS', wr: '✓', other1: '✗', other2: '✗' },
                   { feat: 'Margin & ROI analytics', wr: '✓', other1: 'basic only', other2: '✗' },

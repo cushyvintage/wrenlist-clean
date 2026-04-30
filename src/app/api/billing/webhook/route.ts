@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-const VALID_PLAN_IDS: ReadonlySet<PlanId> = new Set(['free', 'flock'])
+const VALID_PLAN_IDS: ReadonlySet<PlanId> = new Set(['free', 'nester', 'forager', 'flock'])
 
 function isValidPlanId(value: unknown): value is PlanId {
   return typeof value === 'string' && VALID_PLAN_IDS.has(value as PlanId)
@@ -193,21 +193,23 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       : subscription.customer?.id
     if (!customerId) return
 
-    // Active states keep the user on their paid plan; anything else falls back to free.
-    const activeStates: Stripe.Subscription.Status[] = ['active', 'trialing', 'past_due']
-    const planId: PlanId = activeStates.includes(subscription.status) ? 'flock' : 'free'
+    // Status flip to dead → drop to free. Otherwise leave the plan alone:
+    // overwriting it from price metadata risks wiping a tier change made
+    // through our checkout (which uses session.metadata.plan_id as the
+    // source of truth).
+    const deadStates: Stripe.Subscription.Status[] = [
+      'incomplete_expired', 'canceled', 'unpaid',
+    ]
+    if (!deadStates.includes(subscription.status)) return
 
     const supabase = createAdminClient()
     const { error } = await supabase
       .from('profiles')
-      .update({
-        plan: planId,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ plan: 'free', updated_at: new Date().toISOString() })
       .eq('stripe_customer_id', customerId)
 
     if (error && process.env.NODE_ENV !== 'production') {
-      console.error('Failed to sync subscription update:', error)
+      console.error('Failed to drop profile to free after subscription died:', error)
     }
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {

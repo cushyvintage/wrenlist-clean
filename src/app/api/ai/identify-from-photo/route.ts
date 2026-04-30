@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getTopLevelKeys } from '@/lib/category-db'
 import { refineToLeafCategory } from '@/lib/ai-category-refine'
+import { modelFor } from '@/lib/ai/router'
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -37,7 +38,7 @@ export const POST = withAuth(async (request, user) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: modelFor('identify_from_photo'),
         max_tokens: 500,
         response_format: { type: 'json_object' },
         messages: [{

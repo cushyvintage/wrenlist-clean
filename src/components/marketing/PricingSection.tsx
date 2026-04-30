@@ -69,35 +69,64 @@ export function PricingSection() {
     {
       tier: 'Free',
       price: '0',
-      description: 'Log up to 25 finds a month. Every marketplace included.',
+      description: 'Try Wrenlist with 25 finds a month. AI built in.',
       limit: '25',
       featured: false,
       ctaLabel: 'Start free',
       features: [
         'Every supported marketplace',
+        'AI listing assist included',
         'Crosslisting + auto-delist',
         'Inventory tracker',
-        'Sales tracking',
         'No credit card required',
       ],
     },
     {
-      tier: 'Flock',
-      price: annual ? '134' : '14',
-      annualMonthly: '11',
-      postLaunchPrice: '24',
-      description: 'Unlimited finds for serious resellers. Every feature unlocked.',
-      limit: 'Unlimited',
-      featured: true,
+      tier: 'Nester',
+      price: annual ? '90' : '9',
+      annualMonthly: '8',
+      postLaunchPrice: '14',
+      description: 'For side-hustlers listing regularly.',
+      limit: '250',
+      featured: false,
       ctaLabel: 'Join the waitlist',
       features: [
         'Everything in Free',
-        'Unlimited finds',
-        'AI listing generator',
+        '250 finds / month',
         'Bulk actions',
+        'Priority listing queue',
+      ],
+    },
+    {
+      tier: 'Forager',
+      price: annual ? '140' : '14',
+      annualMonthly: '12',
+      postLaunchPrice: '24',
+      description: 'For real resellers building a business.',
+      limit: '750',
+      featured: true,
+      ctaLabel: 'Join the waitlist',
+      features: [
+        'Everything in Nester',
+        '750 finds / month',
         'Price suggestions',
         'Full margin & ROI analytics',
+      ],
+    },
+    {
+      tier: 'Flock',
+      price: annual ? '240' : '24',
+      annualMonthly: '20',
+      postLaunchPrice: '39',
+      description: 'For power-sellers running a real shop.',
+      limit: '2,000',
+      featured: false,
+      ctaLabel: 'Join the waitlist',
+      features: [
+        'Everything in Forager',
+        '2,000 finds / month',
         'Priority support',
+        'Early access to new features',
       ],
     },
   ]
@@ -108,10 +137,17 @@ export function PricingSection() {
       {founding && (
         <div className="mb-8 text-center">
           <div className="inline-block rounded-full bg-[#e8dcc2] text-[#7a5a2a] px-4 py-2 text-xs font-medium">
-            Founding Flock — lock in founder pricing at £14/mo. Offer ends 30 June 2026.
+            Founding Flock — lock in founder pricing for life. Offer ends 30 June 2026.
           </div>
         </div>
       )}
+
+      {/* AI INCLUDED COPY */}
+      <div className="text-center mb-8">
+        <p className="text-sm text-ink-lt italic">
+          Every plan includes AI listing assist. No credits. No counters. It just works.
+        </p>
+      </div>
 
       {/* BILLING TOGGLE */}
       <div className="flex justify-center items-center gap-4 mb-12">
@@ -123,8 +159,8 @@ export function PricingSection() {
         {annual && <span className="text-10px font-medium text-sage-lt bg-sage-pale px-2 py-1 rounded">2 months free</span>}
       </div>
 
-      {/* PRICING CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12 pt-4 max-w-3xl mx-auto">
+      {/* PRICING CARDS — 4 columns on desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pt-4 max-w-6xl mx-auto">
         {plans.map((plan, i) => {
           const delay = ((i % 4) + 1) as 1 | 2 | 3 | 4
           return (

@@ -7,8 +7,10 @@ import { PLAN_LIMITS as CONFIG_PLAN_LIMITS } from '@/config/plans'
 
 // Derive numeric limits from config (null -> effectively unlimited)
 const PLAN_LIMITS: Record<PlanId, number> = {
-  free:  CONFIG_PLAN_LIMITS.free.finds ?? 999999,
-  flock: CONFIG_PLAN_LIMITS.flock.finds ?? 999999,
+  free:    CONFIG_PLAN_LIMITS.free.finds    ?? 999999,
+  nester:  CONFIG_PLAN_LIMITS.nester.finds  ?? 999999,
+  forager: CONFIG_PLAN_LIMITS.forager.finds ?? 999999,
+  flock:   CONFIG_PLAN_LIMITS.flock.finds   ?? 999999,
 }
 
 /**

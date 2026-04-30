@@ -26,7 +26,7 @@ export interface AuthState {
 // DOMAIN TYPES (Design System)
 // ============================================================================
 
-export type PlanId = 'free' | 'flock'
+export type PlanId = 'free' | 'nester' | 'forager' | 'flock'
 export type FindStatus = 'draft' | 'listed' | 'on_hold' | 'sold'
 export type FindCondition = 'new_with_tags' | 'new_without_tags' | 'very_good' | 'good' | 'fair' | 'poor'
 export type SourceType = 'house_clearance' | 'charity_shop' | 'car_boot' | 'online_haul' | 'flea_market' | 'other'

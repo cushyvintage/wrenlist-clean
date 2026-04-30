@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/with-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { modelFor } from '@/lib/ai/router'
 
 interface BarcodeLookupResult {
   title: string
@@ -80,7 +81,7 @@ If you cannot identify the barcode, return: {"title":"","category":"other","bran
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: modelFor('barcode_lookup'),
             max_tokens: 300,
             response_format: { type: 'json_object' },
             messages: [{ role: 'user', content: prompt }],

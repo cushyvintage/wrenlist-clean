@@ -2,10 +2,11 @@
 // All OpenAI API calls for Wrenlist's AI features
 // Used for: listing generation, price suggestions, sourcing insights
 
-const MODEL = 'gpt-4o'
+import { modelFor, type AIPurpose } from '@/lib/ai/router'
+
 const API_KEY = process.env.OPENAI_API_KEY
 
-async function openaiRequest(messages: any[]): Promise<string> {
+async function openaiRequest(purpose: AIPurpose, messages: any[]): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -13,7 +14,7 @@ async function openaiRequest(messages: any[]): Promise<string> {
       Authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: modelFor(purpose),
       messages,
       temperature: 0.7,
     }),
@@ -69,7 +70,7 @@ Return JSON only, no markdown:
   "tags": ["array", "of", "8-10", "relevant", "search", "tags"]
 }`
 
-  const text = await openaiRequest([{ role: 'user', content: prompt }])
+  const text = await openaiRequest('generate_listing', [{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }
 
@@ -107,7 +108,7 @@ Return JSON only, no markdown:
   "avgDaysToSell": 0
 }`
 
-  const text = await openaiRequest([{ role: 'user', content: prompt }])
+  const text = await openaiRequest('suggest_price', [{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }
 
@@ -158,6 +159,6 @@ Return JSON only, no markdown:
   "recommendation": "One clear action they should take"
 }`
 
-  const text = await openaiRequest([{ role: 'user', content: prompt }])
+  const text = await openaiRequest('wren_chat', [{ role: 'user', content: prompt }])
   return JSON.parse(text)
 }
