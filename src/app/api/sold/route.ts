@@ -63,57 +63,29 @@ interface SoldItem {
 
 /**
  * GET /api/sold
- * Fetch all sold items for authenticated user with marketplace data
- * Query params: timeframe? ('month' | 'quarter' | 'all')
+ * Fetch all sold items for authenticated user with marketplace data.
+ * Returns the full sold history (so the workspace's history table and
+ * empty state are honest about what exists), with metrics scoped to the
+ * current calendar month so the "this month" footer matches the
+ * dashboard's "this month" panel.
+ *
+ * The full ledger view with date pickers lives at /orders.
  */
 export const GET = withAuth(async (req, user) => {
   try {
     const supabase = await createSupabaseServerClient()
-    const { searchParams } = new URL(req.url)
-    const timeframe = searchParams.get('timeframe') || 'month'
 
-    // Calculate date range
-    // UK tax year runs 6 April – 5 April
+    // Current calendar month — used to scope metrics, not the items list.
+    // Matches /api/analytics/summary so the dashboard panel and /sold
+    // footer agree on what counts as "this month".
     const now = new Date()
-    let startDate = new Date()
-
-    function ukTaxYearStart(year: number): Date {
-      return new Date(`${year}-04-06T00:00:00`)
-    }
-
-    // Current tax year start: if before 6 Apr, it started last calendar year
-    const currentTaxYearStart = now.getMonth() > 3 || (now.getMonth() === 3 && now.getDate() >= 6)
-      ? ukTaxYearStart(now.getFullYear())
-      : ukTaxYearStart(now.getFullYear() - 1)
-
-    switch (timeframe) {
-      case 'quarter':
-        startDate.setDate(now.getDate() - 90)
-        break
-      case 'tax_year':
-        startDate = currentTaxYearStart
-        break
-      case 'last_tax_year':
-        startDate = ukTaxYearStart(currentTaxYearStart.getFullYear() - 1)
-        break
-      case 'all':
-        startDate = new Date('2000-01-01')
-        break
-      case 'month':
-      default:
-        // Calendar month — matches /api/analytics/summary so the dashboard's
-        // "this month" panel and the /sold footer agree.
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-    }
-
-    // For last_tax_year, also set an end date
-    const endDate = timeframe === 'last_tax_year' ? currentTaxYearStart : null
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
     // Fetch sold finds with marketplace data — paginate to bypass 1000-row REST cap
     const PAGE_SIZE = 1000
     const finds: FindWithMarketplaceJoin[] = []
     for (let off = 0; ; off += PAGE_SIZE) {
-      let query = supabase
+      const { data: page, error: findsError } = await supabase
         .from('finds')
         .select(
           `
@@ -138,15 +110,8 @@ export const GET = withAuth(async (req, user) => {
         )
         .eq('user_id', user.id)
         .eq('status', 'sold')
-        .gte('sold_at', startDate.toISOString())
         .order('sold_at', { ascending: false })
         .range(off, off + PAGE_SIZE - 1)
-
-      if (endDate) {
-        query = query.lt('sold_at', endDate.toISOString())
-      }
-
-      const { data: page, error: findsError } = await query
 
       if (findsError) {
         if (process.env.NODE_ENV !== 'production') {
@@ -225,12 +190,19 @@ export const GET = withAuth(async (req, user) => {
     const BUNDLE_PLACEHOLDER_RE = /^Bundle\s+\d+\s+items?$/i
     const realItems = items.filter((item) => !BUNDLE_PLACEHOLDER_RE.test(item.name || ''))
 
-    // Calculate metrics
-    const itemsSold = realItems.length
-    const totalRevenue = realItems.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
-    const totalCost = realItems.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
+    // Metrics are always scoped to the current calendar month — the footer
+    // displays "this month", so the underlying figures must match. The items
+    // list itself is full history (so the workspace shows everything the
+    // user has actually sold, not just May).
+    const monthStartMs = monthStart.getTime()
+    const monthItems = realItems.filter(
+      (item) => item.sold_at && new Date(item.sold_at).getTime() >= monthStartMs,
+    )
+    const itemsSold = monthItems.length
+    const totalRevenue = monthItems.reduce((sum, item) => sum + (item.sold_price_gbp || 0), 0)
+    const totalCost = monthItems.reduce((sum, item) => sum + (item.cost_gbp || 0), 0)
     const totalProfit = totalRevenue - totalCost
-    const itemsWithMargin = realItems.filter((item) => item.margin_percent != null)
+    const itemsWithMargin = monthItems.filter((item) => item.margin_percent != null)
     const avgMargin =
       itemsWithMargin.length > 0
         ? Math.round(itemsWithMargin.reduce((sum, item) => sum + (item.margin_percent as number), 0) / itemsWithMargin.length)
@@ -244,9 +216,9 @@ export const GET = withAuth(async (req, user) => {
         totalCost,
         totalProfit,
         avgMargin,
-        avgPerItem: realItems.length > 0 ? Math.round(totalRevenue / realItems.length) : 0,
+        avgPerItem: monthItems.length > 0 ? Math.round(totalRevenue / monthItems.length) : 0,
       },
-      timeframe,
+      timeframe: 'month',
     })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
