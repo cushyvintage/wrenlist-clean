@@ -135,31 +135,6 @@ function InventoryPageContent() {
         setError(null)
         setPlanLimitError(null)
 
-        // Fetch profile
-        const profileRes = await fetch('/api/profile')
-        if (profileRes.ok) {
-          const profileData = await profileRes.json()
-          setProfile(unwrapApiResponse<Profile>(profileData))
-        }
-
-        // Check eBay connection status
-        const ebayRes = await fetch('/api/ebay/status')
-        if (ebayRes.ok) {
-          const ebayData = await ebayRes.json()
-          setEbayConnected(ebayData.data?.connected || false)
-        }
-
-        // Aggregate stats for the header (covers ALL finds, not just this page)
-        const summaryRes = await fetch('/api/analytics/summary')
-        if (summaryRes.ok) {
-          const s = await summaryRes.json()
-          setAggregateStats({
-            stockListedValue: Number(s.stock_listed_value ?? 0),
-            stockCost: Number(s.stock_cost ?? 0),
-            profitMarginPct: s.profit_margin_pct == null ? null : Number(s.profit_margin_pct),
-          })
-        }
-
         // Build query params
         const params = new URLSearchParams()
         params.set('limit', String(LIMIT))
@@ -177,8 +152,37 @@ function InventoryPageContent() {
           params.set('stash_id', stashFilter)
         }
 
-        // Fetch finds
-        const findsRes = await fetch(`/api/finds?${params.toString()}`)
+        // Fire all four in parallel — sequential awaits stacked cold-start
+        // and round-trip latency, so a fresh user with zero finds spent
+        // ~3s on the skeleton even when every request was individually
+        // cheap. Only the finds response gates the empty state; the others
+        // fail soft.
+        const [profileRes, ebayRes, summaryRes, findsRes] = await Promise.all([
+          fetch('/api/profile'),
+          fetch('/api/ebay/status'),
+          fetch('/api/analytics/summary'),
+          fetch(`/api/finds?${params.toString()}`),
+        ])
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setProfile(unwrapApiResponse<Profile>(profileData))
+        }
+
+        if (ebayRes.ok) {
+          const ebayData = await ebayRes.json()
+          setEbayConnected(ebayData.data?.connected || false)
+        }
+
+        if (summaryRes.ok) {
+          const s = await summaryRes.json()
+          setAggregateStats({
+            stockListedValue: Number(s.stock_listed_value ?? 0),
+            stockCost: Number(s.stock_cost ?? 0),
+            profitMarginPct: s.profit_margin_pct == null ? null : Number(s.profit_margin_pct),
+          })
+        }
+
         if (!findsRes.ok) {
           throw new Error('Failed to fetch finds')
         }
