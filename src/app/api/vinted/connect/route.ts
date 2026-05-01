@@ -35,6 +35,68 @@ export const GET = withAuth(async (req, user) => {
 })
 
 /**
+ * Best-effort server-side resolution of a Vinted numeric id to a login name.
+ *
+ * The extension's authenticated path (`fetch_vinted_api`) is the primary
+ * resolver, but it can fail on a fresh signup if Vinted's CSRF bootstrap is
+ * blocked by Cloudflare and the extension's tab fallback is disabled. This
+ * fallback gives the connect a second chance from the server side.
+ *
+ *  1. Try the public JSON API (`/api/v2/users/:id`). May 401 from Vercel IPs
+ *     without session cookies, but sometimes still works depending on edge
+ *     state — costs nothing to attempt.
+ *  2. Fall back to scraping the public profile page (`/member/:id`). The
+ *     marketing-facing profile HTML doesn't require auth and surfaces the
+ *     login in the og:title meta tag and the page <title>.
+ *
+ * Returns null if both attempts fail or return numeric/empty values.
+ */
+async function resolveVintedLoginServerSide(
+  numericId: string,
+  tld: string,
+): Promise<string | null> {
+  try {
+    const apiRes = await fetch(`https://www.vinted.${tld}/api/v2/users/${numericId}`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (apiRes.ok) {
+      const data = await apiRes.json()
+      const login = data?.user?.login
+      if (typeof login === 'string' && login && !/^\d+$/.test(login)) {
+        return login
+      }
+    }
+  } catch {
+    // Non-fatal — try HTML fallback below.
+  }
+
+  try {
+    const htmlRes = await fetch(`https://www.vinted.${tld}/member/${numericId}`, {
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (compatible; WrenlistBot/1.0)',
+      },
+      redirect: 'follow',
+    })
+    if (htmlRes.ok) {
+      const html = await htmlRes.text()
+      const ogMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']@?([^"'<>|]+?)["']/i)
+      const ogLogin = ogMatch?.[1]?.trim()
+      if (ogLogin && !/^\d+$/.test(ogLogin)) return ogLogin
+      const titleMatch = html.match(/<title>\s*@?([^|<]+?)\s*\|/i)
+      const titleLogin = titleMatch?.[1]?.trim()
+      if (titleLogin && !/^\d+$/.test(titleLogin) && !/vinted/i.test(titleLogin)) {
+        return titleLogin
+      }
+    }
+  } catch {
+    // Non-fatal — caller will keep the numeric id.
+  }
+
+  return null
+}
+
+/**
  * POST /api/vinted/connect
  * Save Vinted connection (called by extension after user logs in).
  *
@@ -50,6 +112,7 @@ export const GET = withAuth(async (req, user) => {
 export const POST = withAuth(async (req, user) => {
   const body = await req.json()
   let { vintedUserId, vintedUsername } = body
+  const tld: string = typeof body.tld === 'string' && body.tld ? body.tld : 'co.uk'
   const incomingIsBusiness: boolean | null =
     typeof body.isBusiness === 'boolean' ? body.isBusiness : null
 
@@ -59,9 +122,9 @@ export const POST = withAuth(async (req, user) => {
 
   const supabase = await createSupabaseServerClient()
 
-  // If incoming username is numeric, try to preserve a previously resolved
-  // display name from the DB (the extension sometimes sends the numeric id
-  // before bootstrap resolves the login).
+  // If incoming username is numeric, try to recover a real login.
+  // Order: previously-resolved DB value → server-side public lookup →
+  // give up and store the numeric id (caller will retry on next page load).
   if (/^\d+$/.test(vintedUsername)) {
     const { data: existing } = await supabase
       .from('vinted_connections')
@@ -70,6 +133,12 @@ export const POST = withAuth(async (req, user) => {
       .single()
     if (existing?.vinted_username && !/^\d+$/.test(existing.vinted_username)) {
       vintedUsername = existing.vinted_username
+    } else {
+      const numericId = String(vintedUserId).match(/^\d+$/) ? String(vintedUserId) : vintedUsername
+      const resolved = await resolveVintedLoginServerSide(numericId, tld)
+      if (resolved) {
+        vintedUsername = resolved
+      }
     }
   }
 

@@ -88,6 +88,7 @@ const TEST_MATRIX: Array<{ test_name: string; phase: TestPhase; expected: string
   { test_name: 'PC.1 Platform connect page loads', phase: 'platform-connect', expected: 'All 10 platforms shown with connect/status indicators' },
   { test_name: 'PC.2 eBay OAuth flow', phase: 'platform-connect', expected: 'Authorize → callback → connected status, username shown' },
   { test_name: 'PC.3 Vinted cookie connect', phase: 'platform-connect', expected: 'Extension detects Vinted session, shows username' },
+  { test_name: 'PC.3a Vinted username — real login, not numeric ID', phase: 'platform-connect', expected: 'Connected card "Account:" line and Username row show actual @login (e.g. "cushyvintage"), not the v_uid value (e.g. "67094636"). On fresh signup, if first connect falls back to numeric, refreshing the page should self-heal to the real login within one reload.' },
   { test_name: 'PC.4 Connected status persists', phase: 'platform-connect', expected: 'Refresh page → connected platforms still shown' },
   { test_name: 'PC.5 Disconnect platform', phase: 'platform-connect', expected: 'Disconnect eBay → status reverts to not connected' },
   { test_name: 'PC.6 Extension not installed warning', phase: 'platform-connect', expected: 'Shows install extension prompt for platforms that need it' },

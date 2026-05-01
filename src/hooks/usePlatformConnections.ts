@@ -145,6 +145,40 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
 
   // --- Explicit connect handlers (user clicked "Connect") ---
 
+  // Ask the extension to call Vinted's authenticated user detail endpoint and
+  // pull back the display login + business flag. Vinted's public user API 401s
+  // without cookies, but the extension has them — `fetch_vinted_api` proxies
+  // the call with CSRF + anon-id headers. Returns nulls if the extension
+  // isn't reachable, the bootstrap silently failed (Cloudflare blocking
+  // direct fetch with no tab fallback), or Vinted returned a non-OK status.
+  // 15s timeout — bootstrap can take >8s when the in-memory cache is cold.
+  const resolveVintedLogin = async (
+    numericId: string,
+    tld: string,
+  ): Promise<{ login: string | null; isBusiness: boolean | null }> => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      return { login: null, isBusiness: null }
+    }
+    return new Promise((resolve) => {
+      const t = setTimeout(() => resolve({ login: null, isBusiness: null }), 15000)
+      chrome.runtime.sendMessage(
+        VINTED_EXTENSION_ID,
+        { action: 'fetch_vinted_api', url: `https://www.vinted.${tld}/api/v2/users/${numericId}`, method: 'GET' },
+        (r: { success?: boolean; results?: { user?: { login?: string; business?: boolean } } } | undefined) => {
+          clearTimeout(t)
+          if (chrome.runtime.lastError || !r?.success) {
+            resolve({ login: null, isBusiness: null })
+            return
+          }
+          const rawLogin = r.results?.user?.login
+          const login = rawLogin && !/^\d+$/.test(rawLogin) ? rawLogin : null
+          const isBusiness = typeof r.results?.user?.business === 'boolean' ? r.results.user.business : null
+          resolve({ login, isBusiness })
+        },
+      )
+    })
+  }
+
   const handleVintedConnect = async (): Promise<void> => {
     setVintedLoading(true)
     setVintedActionError(null)
@@ -154,53 +188,22 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         throw new Error('No Vinted session detected. Log in to vinted.co.uk first.')
       }
 
-      // Resolve display name + business flag via the authenticated user
-      // detail endpoint. Vinted's public user API 401s without cookies, but
-      // the extension has them — `fetch_vinted_api` proxies the call. The
-      // response's `user.login` is the display name (e.g. "cushyvintage")
-      // while `user.business` flags Pro accounts. Only the session probe
-      // returns a numeric id for brand-new connects, so we *must* do this
-      // lookup to avoid storing "User №67094636" as the username.
-      let isBusiness: boolean | null = null
-      let resolvedLogin: string | null = null
+      // Only the session probe returns a numeric id for brand-new connects, so
+      // we *must* do this lookup to avoid storing "67094636" as the username.
       const tld = info.tld || 'co.uk'
       const rawId = String(info.userId ?? info.username ?? '')
       const numericId = /^\d+$/.test(rawId) ? rawId : null
-      if (numericId && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        try {
-          const apiResp = await new Promise<{ success?: boolean; results?: { user?: { login?: string; business?: boolean } } }>((resolve) => {
-            const timeout = setTimeout(() => resolve({ success: false }), 8000)
-            chrome.runtime.sendMessage(
-              VINTED_EXTENSION_ID,
-              { action: 'fetch_vinted_api', url: `https://www.vinted.${tld}/api/v2/users/${numericId}`, method: 'GET' },
-              (r) => {
-                clearTimeout(timeout)
-                if (chrome.runtime.lastError) resolve({ success: false })
-                else resolve(r || { success: false })
-              },
-            )
-          })
-          if (apiResp.success) {
-            if (typeof apiResp.results?.user?.business === 'boolean') {
-              isBusiness = apiResp.results.user.business
-            }
-            if (apiResp.results?.user?.login && !/^\d+$/.test(apiResp.results.user.login)) {
-              resolvedLogin = apiResp.results.user.login
-            }
-          }
-        } catch {
-          // Non-fatal
-        }
-      }
+      const { login: resolvedLogin, isBusiness } = numericId
+        ? await resolveVintedLogin(numericId, tld)
+        : { login: null, isBusiness: null }
 
       const connectRes = await fetch('/api/vinted/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           // Prefer the resolved login; fall back to whatever the session
-          // probe returned (may be the numeric id). The server already
-          // refuses to overwrite a previously-stored name with a numeric
-          // value — see /api/vinted/connect POST.
+          // probe returned (may be the numeric id). The server has its own
+          // fallback resolution path for the numeric case.
           vintedUsername: resolvedLogin ?? info.username,
           vintedUserId: info.userId || info.username,
           tld,
@@ -425,6 +428,8 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
     // "connected"; the session probe only decides whether to show the
     // "Detected — Connect" affordance or leave it clean.
     const init = async () => {
+      let storedUsername: string | null = null
+      let storedUserId: string | null = null
       try {
         setVintedLoading(true)
         const response = await fetch('/api/vinted/connect')
@@ -433,6 +438,8 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
           setVintedConnected(Boolean(data.data?.connected))
           setVintedUsername(data.data?.vintedUsername ?? null)
           setVintedIsBusiness(Boolean(data.data?.isBusiness))
+          storedUsername = data.data?.vintedUsername ?? null
+          storedUserId = data.data?.vintedUserId ?? null
         }
       } catch {
         // Silently fail
@@ -440,6 +447,38 @@ export function usePlatformConnections(ebay: EbayConnectionState, ebayChangingPo
         setVintedLoading(false)
       }
       void detectVintedSession()
+
+      // Self-heal: if the stored username is numeric (extension's resolution
+      // call failed at connect time — usually Cloudflare blocking the
+      // CSRF-bootstrap fetch with no tab fallback), try again now. Each page
+      // load gives the extension another shot; once Vinted accepts the API
+      // call we persist the real login and stop falling into this branch.
+      if (storedUsername && /^\d+$/.test(storedUsername) && storedUserId) {
+        const { login, isBusiness } = await resolveVintedLogin(storedUserId, 'co.uk')
+        if (login) {
+          try {
+            const res = await fetch('/api/vinted/connect', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                vintedUsername: login,
+                vintedUserId: storedUserId,
+                tld: 'co.uk',
+                isBusiness,
+              }),
+            })
+            if (res.ok) {
+              const data = await res.json()
+              setVintedUsername(data.data?.vintedUsername ?? login)
+              if (typeof data.data?.isBusiness === 'boolean') {
+                setVintedIsBusiness(Boolean(data.data.isBusiness))
+              }
+            }
+          } catch {
+            // Non-fatal — next page load will try again.
+          }
+        }
+      }
     }
     void init()
   }, [])
