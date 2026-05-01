@@ -782,9 +782,9 @@ function mapVintedSyncError(raw: string): string {
 export default function SoldHistoryPage() {
   const router = useRouter()
   const confirm = useConfirm()
-  // Sold now always fetches the current month's window. The period picker
-  // moved to /orders as part of the workspace-vs-ledger split.
-  const [timeframe] = useState<'month' | 'quarter' | 'tax_year' | 'last_tax_year' | 'all'>('month')
+  // /sold returns the full sold history (workspace view); metrics inside
+  // come pre-scoped to the current calendar month for the footer. The
+  // ledger view with date pickers lives at /orders.
   const { data, isLoading, error, call } = useApiCall<SoldResponse>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isBackfilling, setIsBackfilling] = useState(false)
@@ -804,8 +804,8 @@ export default function SoldHistoryPage() {
   const [labelOrder, setLabelOrder] = useState<SoldItem | null>(null)
 
   const loadSoldItems = useCallback(() => {
-    call(() => fetchApi<SoldResponse>(`/api/sold?timeframe=${timeframe}`))
-  }, [call, timeframe])
+    call(() => fetchApi<SoldResponse>('/api/sold'))
+  }, [call])
 
   useEffect(() => {
     loadSoldItems()
