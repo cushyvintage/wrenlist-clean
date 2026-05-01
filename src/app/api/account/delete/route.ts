@@ -15,23 +15,27 @@ import { stripe } from '@/lib/stripe'
  * leaving. The feedback is piped into a leave-notification email so
  * we can see churn reasons in real time.
  *
- * Flow:
+ * Flow (revised 2026-05-01 after a half-deletion incident):
  *   1. Verify session (cookie-based)
- *   2. Load profile for email, name, plan, stripe_customer_id
- *   3. Cancel any active Stripe subscription (best-effort — errors
- *      are logged but do not block deletion)
- *   4. Send farewell email to the user + leave notification to
- *      dom@wrenlist.com (best-effort — errors logged, not blocking)
- *   5. Delete from the three public.* tables whose user_id FKs don't
- *      cascade (marketplace_events, email_sends, profiles)
- *   6. Call supabase.auth.admin.deleteUser() — this triggers ON DELETE
- *      CASCADE on all the user-scoped tables that do cascade (finds,
- *      expenses, connections, etc.)
+ *   2. Load profile + capture email, name, plan, stripe_customer_id
+ *      INTO LOCAL VARS — we'll need them after the row is gone
+ *   3. Cancel any active Stripe subscription (best-effort)
+ *   4. Snapshot anonymised data into anonymised_sales + deleted_accounts
+ *      (best-effort — must not block GDPR erasure)
+ *   5. Call supabase.auth.admin.deleteUser() — ON DELETE CASCADE sweeps
+ *      every public.* table with a user_id FK to auth.users(id)
+ *      Every such FK is now CASCADE (see migration
+ *      20260501000001_cascade_user_id_fks); no manual deletes needed
+ *   6. Send farewell + admin notification emails — AFTER the delete
+ *      succeeds. Failure here is loggable but the user is already gone
  *
- * Why send emails BEFORE deleting the auth user: once auth.users is
- * gone, we have no guarantee of a reliable email address or full name.
- * If the email send fails we still want to proceed — the user
- * explicitly asked to be deleted and GDPR says "without undue delay".
+ * Why this order: previously emails fired before the auth delete and
+ * three tables (marketplace_events, email_sends, profiles) were wiped
+ * by hand right before. If auth.admin.deleteUser then failed (e.g.
+ * because some other table's FK didn't cascade) the user was left
+ * half-destroyed: profile gone, auth row alive, finds orphaned. Now
+ * the destructive call comes first; if it fails nothing in public.* is
+ * touched and the user can retry.
  *
  * Recipient dom@wrenlist.com is hardcoded here (not pulled from
  * ADMIN_NOTIFICATION_EMAIL which is a separate inbox used for signup
@@ -117,53 +121,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Send both emails in parallel — best effort
-    const farewellTpl = buildFarewellUserEmail({ firstName })
-    const adminTpl = buildAdminUserLeftEmail({
-      fullName,
-      email: userEmail,
-      plan,
-      userId: user.id,
-      reason,
-      feedback,
-      alternativeTool,
-      leftAt: new Date(),
-    })
-
-    const emailResults = await Promise.all([
-      userEmail
-        ? sendEmail({
-            to: userEmail,
-            subject: farewellTpl.subject,
-            html: farewellTpl.html,
-            text: farewellTpl.text,
-            replyTo: 'dom@wrenlist.com',
-            tags: [{ name: 'category', value: 'farewell' }],
-          })
-        : Promise.resolve({ ok: false as const, error: 'no user email' }),
-      sendEmail({
-        to: LEAVE_NOTIFICATION_EMAIL,
-        subject: adminTpl.subject,
-        html: adminTpl.html,
-        text: adminTpl.text,
-        // Resend tag values must match /^[a-zA-Z0-9_-]+$/ — spaces and
-        // punctuation in the raw reason ("Just testing it out") cause the
-        // entire send to 400. Normalise before sending.
-        tags: [
-          { name: 'category', value: 'admin_user_left' },
-          { name: 'reason', value: reason.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 50) },
-        ],
-      }),
-    ])
-
-    if (!emailResults[0].ok) {
-      console.error('[account/delete] farewell email failed:', emailResults[0].error)
-    }
-    if (!emailResults[1].ok) {
-      console.error('[account/delete] admin leave email failed:', emailResults[1].error)
-    }
-
-    // 6. Snapshot anonymised data BEFORE deletion (GDPR Recital 26 — anonymised data is not personal data)
+    // 5. Snapshot anonymised data BEFORE deletion (GDPR Recital 26 — anonymised data is not personal data)
     try {
       // Fetch all finds + their marketplace data for this user
       const [findsResult, pmdResult, connectionsCount] = await Promise.all([
@@ -246,25 +204,66 @@ export async function POST(request: NextRequest) {
       console.error('[account/delete] anonymisation snapshot failed:', snapErr)
     }
 
-    // 7. Delete from tables that block auth user deletion (no CASCADE on their FK)
-    //
-    // marketplace_events: user_id REFERENCES auth.users(id) — no cascade
-    // email_sends: user_id FK — no cascade
-    // profiles: user_id FK — no cascade (intentional, one-row-per-user)
-    //
-    // Everything else (finds, expenses, connections, etc.) has
-    // ON DELETE CASCADE and will be swept by auth.admin.deleteUser.
-    await admin.from('marketplace_events').delete().eq('user_id', user.id)
-    await admin.from('email_sends').delete().eq('user_id', user.id)
-    await admin.from('profiles').delete().eq('user_id', user.id)
-
-    // 7. Finally, delete the auth user — this triggers the cascades
+    // 6. Delete the auth user — every public.* user_id FK now CASCADEs,
+    //    so this single call sweeps profiles, finds, expenses, connections,
+    //    marketplace_events, email_sends, ebay_sync_log, etc. in one go.
+    //    If this fails, nothing in public.* has been touched and the user
+    //    can retry — no half-deleted state.
     const { error: deleteErr } = await admin.auth.admin.deleteUser(user.id)
     if (deleteErr) {
       console.error('[account/delete] admin.deleteUser failed:', deleteErr)
       return ApiResponseHelper.internalError(
         `Failed to delete auth user: ${deleteErr.message}`
       )
+    }
+
+    // 7. Send emails AFTER successful deletion. Best-effort — the user is
+    //    already gone, an email failure here is loggable but not blocking.
+    //    We captured email/name into local vars in step 2 before the row was
+    //    deleted, so we still have everything we need.
+    const farewellTpl = buildFarewellUserEmail({ firstName })
+    const adminTpl = buildAdminUserLeftEmail({
+      fullName,
+      email: userEmail,
+      plan,
+      userId: user.id,
+      reason,
+      feedback,
+      alternativeTool,
+      leftAt: new Date(),
+    })
+
+    const emailResults = await Promise.all([
+      userEmail
+        ? sendEmail({
+            to: userEmail,
+            subject: farewellTpl.subject,
+            html: farewellTpl.html,
+            text: farewellTpl.text,
+            replyTo: 'dom@wrenlist.com',
+            tags: [{ name: 'category', value: 'farewell' }],
+          })
+        : Promise.resolve({ ok: false as const, error: 'no user email' }),
+      sendEmail({
+        to: LEAVE_NOTIFICATION_EMAIL,
+        subject: adminTpl.subject,
+        html: adminTpl.html,
+        text: adminTpl.text,
+        // Resend tag values must match /^[a-zA-Z0-9_-]+$/ — spaces and
+        // punctuation in the raw reason ("Just testing it out") cause the
+        // entire send to 400. Normalise before sending.
+        tags: [
+          { name: 'category', value: 'admin_user_left' },
+          { name: 'reason', value: reason.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 50) },
+        ],
+      }),
+    ])
+
+    if (!emailResults[0].ok) {
+      console.error('[account/delete] farewell email failed:', emailResults[0].error)
+    }
+    if (!emailResults[1].ok) {
+      console.error('[account/delete] admin leave email failed:', emailResults[1].error)
     }
 
     return ApiResponseHelper.success({
