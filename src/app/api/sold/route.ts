@@ -101,7 +101,9 @@ export const GET = withAuth(async (req, user) => {
         break
       case 'month':
       default:
-        startDate.setDate(now.getDate() - 30)
+        // Calendar month — matches /api/analytics/summary so the dashboard's
+        // "this month" panel and the /sold footer agree.
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
     }
 
     // For last_tax_year, also set an end date
