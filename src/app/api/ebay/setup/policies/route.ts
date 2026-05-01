@@ -3,6 +3,49 @@ import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server
 import { ApiResponseHelper } from '@/lib/api-response'
 import { getEbayClientForUser } from '@/lib/ebay-client'
 
+const CURRENCY_SYMBOLS: Record<string, string> = { GBP: '£', USD: '$', EUR: '€' }
+
+function humanizeServiceCode(code: string | undefined): string {
+  if (!code) return 'Standard shipping'
+  const stripped = code.replace(/^[A-Z]{2,3}_/, '')
+  const spaced = stripped
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([A-Za-z])(\d)/g, '$1 $2')
+    .trim()
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+function formatHandling(handling: { value?: number; unit?: string } | undefined): string | null {
+  if (!handling || handling.value == null) return null
+  const days = handling.value
+  return `${days} ${days === 1 ? 'day' : 'days'} handling`
+}
+
+function buildFulfillmentLabel(p: any): string {
+  const service = p?.shippingOptions?.[0]?.shippingServices?.[0]
+  const parts: string[] = []
+
+  if (service?.shippingServiceCode) {
+    parts.push(humanizeServiceCode(service.shippingServiceCode))
+  } else if (p?.name) {
+    // Fall back to eBay's auto-generated name with the trailing policy ID stripped.
+    parts.push(p.name.replace(/\s*\(\d{6,}\)\s*$/, '').trim())
+  }
+
+  if (service?.freeShipping) {
+    parts.push('Free')
+  } else if (service?.shippingCost?.value != null) {
+    const symbol = CURRENCY_SYMBOLS[service.shippingCost.currency] ?? ''
+    parts.push(`${symbol}${Number(service.shippingCost.value).toFixed(2)}`)
+  }
+
+  const handling = formatHandling(p?.handlingTime)
+  if (handling) parts.push(handling)
+
+  return parts.length ? parts.join(' · ') : (p?.name ?? 'Shipping policy')
+}
+
 /**
  * GET /api/ebay/setup/policies
  *
@@ -79,10 +122,7 @@ export async function GET(request: NextRequest) {
     return ApiResponseHelper.success({
       fulfillmentPolicies: (fulfillmentData.fulfillmentPolicies || []).map((p: any) => ({
         id: p.fulfillmentPolicyId,
-        name: p.name,
-        summary: p.shippingOptions?.[0]?.shippingServices?.[0]?.freeShipping
-          ? `${p.shippingOptions[0].shippingServices[0].shippingServiceCode?.replace('UK_', '')} · Free · ${p.handlingTime?.value ?? 1}-${(p.handlingTime?.value ?? 1) + 1} days`
-          : p.name,
+        name: buildFulfillmentLabel(p),
       })),
       returnPolicies: (returnData.returnPolicies || []).map((p: any) => ({
         id: p.returnPolicyId,
