@@ -14,7 +14,7 @@ import { NavIcons } from '@/components/layout/NavIcons'
 import { isAdmin } from '@/lib/admin'
 
 // IDs that support nested routes (e.g. /finds/123 highlights Finds)
-const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'duplicates', 'platform-connect', 'admin-categories', 'admin-category-config', 'admin-import', 'admin-ops', 'admin-tests']
+const NESTED_NAV_IDS = ['finds', 'sold', 'analytics', 'customers', 'sourcing', 'orders', 'suppliers', 'expenses', 'mileage', 'listings', 'templates', 'duplicates', 'platform-connect', 'admin-categories', 'admin-category-config', 'admin-import', 'admin-ops', 'admin-tests', 'admin-waitlist']
 
 const ADMIN_NAV_ITEMS = [
   { id: 'admin-ops', label: 'Ops Dashboard', icon: NavIcons.admin, path: '/admin/ops', section: 'ADMIN', pageTitle: 'Admin — Ops Dashboard' },
@@ -22,6 +22,7 @@ const ADMIN_NAV_ITEMS = [
   { id: 'admin-categories', label: 'Categories', icon: NavIcons.admin, path: '/admin/categories', section: 'ADMIN', pageTitle: 'Admin — Category Management' },
   { id: 'admin-category-config', label: 'Category Config', icon: NavIcons.admin, path: '/admin/category-config', section: 'ADMIN', pageTitle: 'Admin — Category Config' },
   { id: 'admin-import', label: 'Legacy Import', icon: NavIcons.import, path: '/admin/import', section: 'ADMIN', pageTitle: 'Admin — Legacy Import' },
+  { id: 'admin-waitlist', label: 'Waitlist', icon: NavIcons.admin, path: '/admin/waitlist', section: 'ADMIN', pageTitle: 'Admin — Waitlist' },
   { id: 'testing', label: 'E2E Testing', icon: NavIcons.testing, path: '/testing', section: 'ADMIN', pageTitle: 'Admin — E2E Testing' },
 ]
 
