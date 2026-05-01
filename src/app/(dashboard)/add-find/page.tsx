@@ -52,6 +52,11 @@ export default function AddFindPage() {
   const extensionMissing = extensionInfo.detected === false
   const extensionOutdated = extensionInfo.detected === true && extensionInfo.isOutdated
   const blockedByExtension = nonEbayPlatforms.length > 0 && (extensionMissing || extensionOutdated)
+
+  // Brand-new users have no marketplaces connected yet, so selectedPlatforms
+  // is empty. Without this guard, Publish would queue a job nobody can act
+  // on. Save draft still works — it just stores the find in inventory.
+  const noPlatformsSelected = form.formData.selectedPlatforms.length === 0
   const { handleSaveDraft, handlePublish } = useAddFindSubmit({
     formData: form.formData,
     fieldConfig: form.fieldConfig,
@@ -337,13 +342,15 @@ export default function AddFindPage() {
             </button>
             <button
               onClick={handlePublish}
-              disabled={form.isLoading || blockedByExtension}
+              disabled={form.isLoading || blockedByExtension || noPlatformsSelected}
               title={
-                blockedByExtension
-                  ? extensionMissing
-                    ? 'Install the Chrome extension to publish to non-eBay marketplaces'
-                    : 'Extension is out of date — restart Chrome to update'
-                  : undefined
+                noPlatformsSelected
+                  ? 'Connect a marketplace first, or use Save draft'
+                  : blockedByExtension
+                    ? extensionMissing
+                      ? 'Install the Chrome extension to publish to non-eBay marketplaces'
+                      : 'Extension is out of date — restart Chrome to update'
+                    : undefined
               }
               className="flex-1 sm:flex-none px-4 py-2 text-sm bg-sage text-white rounded hover:bg-sage-lt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
