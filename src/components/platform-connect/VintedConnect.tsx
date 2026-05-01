@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, RefreshCw } from 'lucide-react'
 import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
+import { Badge } from '@/components/wren/Badge'
 import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { fetchApi } from '@/lib/api-utils'
 
@@ -189,6 +190,10 @@ export function VintedConnect({
                 : 'Log in to vinted.co.uk via the Wrenlist extension.'}
             </div>
           </div>
+          <Badge
+            status={vintedDetected ? 'on_hold' : 'draft'}
+            label={vintedDetected ? 'session detected' : 'not connected'}
+          />
         </div>
 
         <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber rounded mb-4">
