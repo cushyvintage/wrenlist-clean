@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getServerUser } from '@/lib/supabase-server'
 import { ApiResponseHelper } from '@/lib/api-response'
@@ -266,13 +266,35 @@ export async function POST(request: NextRequest) {
       console.error('[account/delete] admin leave email failed:', emailResults[1].error)
     }
 
-    return ApiResponseHelper.success({
-      deleted: true,
-      emails: {
-        farewell: emailResults[0].ok,
-        admin: emailResults[1].ok,
+    // 8. Clear the caller's auth cookies on this response so the now-orphaned
+    //    JWT can't be used to hit any protected page in the window before
+    //    natural expiration (~1 hour). Without this, a deleted user can still
+    //    reach /dashboard until the cookie expires — middleware sees a valid
+    //    JWT and the wl_onboarded cache cookie short-circuits the
+    //    profile-missing safety net. Also clear wl_onboarded so any other
+    //    path that somehow keeps a session alive falls through to that
+    //    safety net on the next request.
+    const response = NextResponse.json(
+      {
+        data: {
+          deleted: true,
+          emails: {
+            farewell: emailResults[0].ok,
+            admin: emailResults[1].ok,
+          },
+        },
       },
-    })
+      { status: 200 }
+    )
+
+    for (const c of request.cookies.getAll()) {
+      if (c.name.startsWith('sb-') && c.name.includes('auth')) {
+        response.cookies.delete(c.name)
+      }
+    }
+    response.cookies.delete('wl_onboarded')
+
+    return response
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[account/delete] unexpected error:', err)

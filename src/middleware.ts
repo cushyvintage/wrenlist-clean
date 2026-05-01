@@ -169,13 +169,17 @@ export async function middleware(req: NextRequest) {
               }
 
               // onboarding_completed is true — set the cache cookie so we can
-              // skip this whole branch on subsequent requests
+              // skip this whole branch on subsequent requests.
+              // TTL bounded to 1 hour so a deleted user with a still-valid
+              // JWT can't ghost the safety net longer than the JWT itself
+              // would naturally survive. The cache only exists to avoid
+              // refetching the profile on every page view within a session.
               res.cookies.set('wl_onboarded', session.user.id, {
                 httpOnly: true,
                 sameSite: 'lax',
                 secure: process.env.NODE_ENV === 'production',
                 path: '/',
-                maxAge: 60 * 60 * 24 * 30, // 30 days
+                maxAge: 60 * 60, // 1 hour
               })
             } else {
               // No profile row for this session → auth.users was deleted
