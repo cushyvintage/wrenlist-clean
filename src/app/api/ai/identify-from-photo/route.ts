@@ -9,8 +9,9 @@ import { scanMarks, formatMarksForPrompt } from '@/lib/ai/scan-marks'
 import { searchByImage, formatSimilarListingsForPrompt } from '@/lib/ebay/search-by-image'
 import { googleVisionScan, formatVisionScanForPrompt } from '@/lib/google-vision/scan'
 import { withTimeout } from '@/lib/promise-timeout'
+import { isKnownMaker } from '@/lib/ai/known-makers'
 
-const PROMPT_VERSION = 7 // v7: prompt-injection sanitisation + multi-item clause + per-pass timeouts
+const PROMPT_VERSION = 8 // v8: + structured maker field + post-hoc validation against known-makers reference
 
 // Per-pass timeout budgets. Slow vendor → empty fallback for that source,
 // identifier proceeds with whatever else made it back. All add up to ~30s
@@ -108,6 +109,10 @@ export const POST = withAuth(async (request, user) => {
       category: string
       condition?: string
       confidence: 'high' | 'medium' | 'low'
+      // Structured maker field — null when no maker visible/readable.
+      // Returned separately so we can validate it against the known-makers
+      // reference list without regexing the title/description.
+      maker?: string | null
     }
 
     // Step 2: Identify item + top-level category (cached by image hash).
@@ -163,7 +168,8 @@ Return ONLY valid JSON:
   "suggestedQuery": "best search query for comparable sold items on eBay UK.",
   "category": "one of: ${TOP_LEVEL_LIST}",
   "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor.",
-  "confidence": "high | medium | low — see priority rules above."
+  "confidence": "high | medium | low — see priority rules above.",
+  "maker": "the maker/brand/manufacturer name when readable from the evidence (e.g. 'Wedgwood', 'Royal Albert', 'Grindley'). null when no maker is identified or you're not confident enough to name one. Do NOT include era prefixes like 'Vintage' or descriptors like 'Bone China' here — just the maker. If the maker is uncertain, leave null and describe in the description instead."
 }`,
               },
               {
@@ -199,6 +205,23 @@ ${evidence}`,
     // Validate top-level category
     const topLevel = VALID_TOP_LEVELS.includes(result.category) ? result.category : 'other'
 
+    // Post-hoc maker validation. If the identifier returned a maker name,
+    // check it against our reference list of known UK pottery / ceramics /
+    // glass makers. Unknown maker + high confidence is the riskiest output
+    // (false attribution = marketplace policy violation), so demote to
+    // medium and append a note. Unknown + medium leaves the result alone
+    // but we still surface `makerValidated: false` for the dashboard.
+    const rawMaker = typeof result.maker === 'string' && result.maker.trim().length > 0
+      ? result.maker.trim()
+      : null
+    const makerValidated = rawMaker !== null && isKnownMaker(rawMaker)
+    let finalConfidence = result.confidence
+    let finalDescription = result.description
+    if (rawMaker && !makerValidated && finalConfidence === 'high') {
+      finalConfidence = 'medium'
+      finalDescription = `${finalDescription} Note: the maker name "${rawMaker}" wasn't matched against our reference list — please verify on the base before publishing.`.trim()
+    }
+
     // Step 2: Refine to leaf category
     const category = await refineToLeafCategory(
       topLevel,
@@ -209,10 +232,13 @@ ${evidence}`,
 
     return NextResponse.json({
       ...result,
+      description: finalDescription,
       category,
       topLevel,
       condition,
-      confidence: result.confidence,
+      confidence: finalConfidence,
+      maker: rawMaker,
+      makerValidated,
       // Surface all pre-pass results so clients can show what each layer
       // saw and the refine flow can re-anchor on them later.
       marks: marksResult.marks,
