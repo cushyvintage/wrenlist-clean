@@ -81,7 +81,7 @@ export default function PhotosAIInline({
 
   if (!dismissed) {
     return (
-      <div className="mt-4">
+      <div className="mt-4 space-y-2">
         <button
           type="button"
           onClick={onAnalyse}
@@ -90,6 +90,16 @@ export default function PhotosAIInline({
           <WrenIcon size="sm" />
           Ask Wren about {photoCount === 1 ? 'this photo' : `these ${photoCount} photos`}
         </button>
+        {/* Maker marks on ceramics/silver/etc. live on the base. With one
+            hero shot Wren has nothing to read — measured ~17% maker-name
+            accuracy on single-photo identifications. Two-shot runs scored
+            much higher, so it's worth nudging the user to add a base
+            close-up before they pay for a vision call. */}
+        {photoCount <= 2 && (
+          <p className="text-xs text-sage-dim text-center px-2">
+            Tip: include a close-up of any maker's mark on the base for far better identification.
+          </p>
+        )}
       </div>
     )
   }
