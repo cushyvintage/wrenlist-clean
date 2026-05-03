@@ -10,6 +10,8 @@ import { searchByImage, formatSimilarListingsForPrompt } from '@/lib/ebay/search
 import { googleVisionScan, formatVisionScanForPrompt } from '@/lib/google-vision/scan'
 import { withTimeout } from '@/lib/promise-timeout'
 import { isKnownMaker } from '@/lib/ai/known-makers'
+import { hashImage } from '@/lib/ai/image-cache'
+import { getAdminClient } from '@/lib/supabase-admin'
 
 const PROMPT_VERSION = 8 // v8: + structured maker field + post-hoc validation against known-makers reference
 
@@ -35,6 +37,7 @@ export const POST = withAuth(async (request, user) => {
     return NextResponse.json({ error: 'AI features not configured' }, { status: 503 })
   }
 
+  const runStart = Date.now()
   try {
     const VALID_TOP_LEVELS = await getTopLevelKeys()
     const TOP_LEVEL_LIST = VALID_TOP_LEVELS.join(', ')
@@ -230,6 +233,32 @@ ${evidence}`,
       result.title,
     )
 
+    // Fire-and-forget audit log. Stored in find_ai_runs and powers the
+    // /admin/ai-stats dashboard (acceptance rate by confidence, maker
+    // validation rate, per-source contribution). Failure here must
+    // never break the identify response — log and move on.
+    const latencyMs = Date.now() - runStart
+    void (async () => {
+      try {
+        await getAdminClient().from('find_ai_runs').insert({
+          user_id: user.id,
+          image_hash_set: hashImage(cacheInput),
+          photo_count: inputImages.length,
+          prompt_version: PROMPT_VERSION,
+          marks: marksResult,
+          ebay_similar: ebayResult,
+          google_vision: visionResult,
+          identify_result: { ...result, description: finalDescription, category, topLevel, condition, confidence: finalConfidence },
+          maker: rawMaker,
+          maker_validated: makerValidated,
+          confidence: finalConfidence,
+          latency_ms: latencyMs,
+        })
+      } catch (err) {
+        console.warn('[find_ai_runs] insert failed:', err)
+      }
+    })()
+
     return NextResponse.json({
       ...result,
       description: finalDescription,
@@ -247,6 +276,19 @@ ${evidence}`,
     })
   } catch (error) {
     console.error('Failed to identify from photo:', error)
+    // Log the failure too — useful for the dashboard's error-rate metric.
+    void (async () => {
+      try {
+        await getAdminClient().from('find_ai_runs').insert({
+          user_id: user.id,
+          image_hash_set: 'unknown',
+          photo_count: 0,
+          prompt_version: PROMPT_VERSION,
+          latency_ms: Date.now() - runStart,
+          error: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500),
+        })
+      } catch { /* swallow */ }
+    })()
     return NextResponse.json({ error: 'Failed to identify item' }, { status: 500 })
   }
 })
