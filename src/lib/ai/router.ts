@@ -18,6 +18,7 @@
 export type AIPurpose =
   | 'identify_from_photo'   // vision-heavy: vintage backstamps, brand labels — needs the good model
   | 'scan_marks'            // pre-pass for identify: extract verbatim text from any visible stamp/label/signature
+  | 'ebay_search_by_image'  // pre-pass for identify: eBay Browse API similar-listings search (not LLM, but cached the same way)
   | 'classify_photo'        // category classification from photo — vision but coarser, premium for accuracy
   | 'generate_title'        // text reasoning over identified data
   | 'generate_description'  // text reasoning over identified data
@@ -37,6 +38,9 @@ const MODEL_FOR: Record<AIPurpose, AIModel> = {
   identify_from_photo:  'gpt-4o',
   scan_marks:           'gpt-4o',
   classify_photo:       'gpt-4o',
+  // Not an OpenAI call — eBay Browse API. Model field is unused but the
+  // cache layer still wants a value; gpt-4o is a harmless placeholder.
+  ebay_search_by_image: 'gpt-4o',
 
   // Text-only or coarse — mini is plenty
   generate_title:       'gpt-4o-mini',

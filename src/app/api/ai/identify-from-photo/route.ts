@@ -6,8 +6,9 @@ import { refineToLeafCategory } from '@/lib/ai-category-refine'
 import { modelFor } from '@/lib/ai/router'
 import { withImageCache } from '@/lib/ai/image-cache'
 import { scanMarks, formatMarksForPrompt } from '@/lib/ai/scan-marks'
+import { searchByImage, formatSimilarListingsForPrompt } from '@/lib/ebay/search-by-image'
 
-const PROMPT_VERSION = 4 // v4: two-pass — dedicated mark scanner feeds verbatim text into identify prompt
+const PROMPT_VERSION = 5 // v5: + eBay searchByImage as third pre-pass; identifier sees scanner marks AND similar eBay listings
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -45,16 +46,28 @@ export const POST = withAuth(async (request, user) => {
     // 3 photos second time produce different prompts).
     const cacheInput = inputImages.join('|')
 
-    // Step 1: dedicated mark scanner (parallel-safe, cached by image hash).
-    // Returns verbatim text from any visible stamp/label/signature so the
-    // identify pass below can use it as ground truth instead of having to
-    // also do the OCR job. Failures fall through to an empty marks list.
-    const marksResult = await scanMarks({
-      userId: user.id,
-      images: inputImages,
-      apiKey: process.env.OPENAI_API_KEY!,
-    })
+    // Step 1: two pre-passes in parallel —
+    //   a) dedicated mark scanner (LLM OCR, returns verbatim text)
+    //   b) eBay searchByImage (returns titles of visually-similar listings)
+    // Both are cached by image hash, both are best-effort. The identify
+    // call below receives both as additional context; either failing
+    // silently is fine.
+    const [marksResult, ebayResult] = await Promise.all([
+      scanMarks({
+        userId: user.id,
+        images: inputImages,
+        apiKey: process.env.OPENAI_API_KEY!,
+      }),
+      // eBay's searchByImage takes a single image, not a set. Send the
+      // first photo (typically the seller's hero shot) — that's almost
+      // always the most distinctive view of the item.
+      searchByImage({
+        userId: user.id,
+        imageDataUrl: inputImages[0] ?? '',
+      }),
+    ])
     const marksContext = formatMarksForPrompt(marksResult)
+    const ebayContext = formatSimilarListingsForPrompt(ebayResult)
 
     type IdentifyResult = {
       title: string
@@ -93,23 +106,32 @@ export const POST = withAuth(async (request, user) => {
                   type: 'text',
                   text: `You are an expert vintage and antiques dealer in the UK. Identify this item for a reseller.
 
-A dedicated OCR pre-pass has already scanned every photo for visible marks. Use ITS readings as ground truth — it has done the careful letter-by-letter work. You should still examine the photos for context (style, colour, era cues), but defer to the scanner on what text is on the marks.
+You have THREE inputs to work from:
+1. The photos themselves (style, colour, era cues, visible damage)
+2. A dedicated OCR pre-pass that read any visible marks letter-by-letter
+3. eBay's visually-similar listings — titles other sellers wrote for items that look like this one
+
+Defer to the OCR pass on what text is on the marks. Use the eBay titles as a corroborating signal: if 3+ similar listings name the same maker AND that maker is consistent with what the scanner read (or with what's clearly visible), you can adopt it confidently. eBay titles alone (without scanner support) are weaker — sellers do mistype and misattribute.
 
 ${marksContext}
 
-NAMING MAKERS:
-1. If the scanner returned a 'clear' reading containing a maker name (e.g. "GRINDLEY ENGLAND", "Royal Albert", "WEDGWOOD"), confidently use that maker.
-2. If the scanner returned a 'partial' reading, treat the maker as unread — do NOT pattern-match to a famous similar maker. ("G_INDLEY ENGLAND" is NOT "Shelley".)
-3. If the scanner found no marks (or all illegible), omit the maker entirely. Generic descriptions ("Vintage Bone China Plate") are far better than confident misattribution.
+${ebayContext}
+
+NAMING MAKERS — priority order:
+1. Scanner returned a 'clear' reading with a maker name → use that maker, confidence = high.
+2. eBay listings strongly agree on a maker AND scanner returned a 'partial' reading consistent with it (e.g. scanner saw "G__NDLEY", eBay titles say "Grindley") → use that maker, confidence = high.
+3. eBay listings strongly agree on a maker but scanner found nothing → describe the item generically but mention "comparable eBay listings suggest this may be [maker]" in the description. Confidence = medium.
+4. Scanner returned 'partial' AND eBay disagrees or is silent → DO NOT name a maker. NEVER pattern-match to a famous similar maker.
+5. No clear marks anywhere AND eBay shows no consensus → generic description, no maker, confidence = medium.
 
 Return ONLY valid JSON:
 {
-  "title": "concise marketplace title. Include the maker name in the title when the scanner read it clearly.",
-  "description": "2-3 sentences. Reference what the scanner read (e.g. 'marked GRINDLEY ENGLAND on the base'). If the scanner found no clear mark, say so honestly.",
+  "title": "concise marketplace title. Include the maker name when you have high confidence (rule 1 or 2).",
+  "description": "2-3 sentences. Reference what the scanner read AND/OR what eBay listings consistently say.",
   "suggestedQuery": "best search query for comparable sold items on eBay UK.",
   "category": "one of: ${TOP_LEVEL_LIST}",
-  "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor — assess from visible wear, patina, chips, cracks, stains, fading. Default to good if unclear.",
-  "confidence": "high if the scanner returned a clear maker mark. medium if you can identify the type and material but the scanner found no clear mark. low if you're guessing the item type itself."
+  "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor.",
+  "confidence": "high | medium | low — see priority rules above."
 }`,
                 },
               ],
@@ -147,10 +169,12 @@ Return ONLY valid JSON:
       topLevel,
       condition,
       confidence: result.confidence,
-      // Surface the OCR pre-pass result for clients that want to show the
-      // user "this is what Wren read off the photo" — useful for debugging
-      // and for the refine flow if we later want to re-feed marks.
+      // Surface both pre-pass results so clients can show "this is what
+      // Wren saw on the photo" (marks) and "these eBay listings look like
+      // your item" (ebaySimilar). Useful for debugging and as anchor data
+      // the refine flow could re-feed later.
       marks: marksResult.marks,
+      ebaySimilar: ebayResult.listings,
     })
   } catch (error) {
     console.error('Failed to identify from photo:', error)

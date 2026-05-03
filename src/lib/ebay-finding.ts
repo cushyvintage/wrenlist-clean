@@ -67,8 +67,10 @@ let cachedAppToken: { token: string; expiresAt: number } | null = null
 
 /**
  * Get an eBay application access token (client_credentials grant).
+ * Exported so other modules (e.g. searchByImage) can reuse the same
+ * cached token instead of duplicating the auth dance.
  */
-async function getAppToken(): Promise<string | null> {
+export async function getAppToken(): Promise<string | null> {
   const { clientId, clientSecret } = config.ebay
   if (!clientId || !clientSecret) return null
 
