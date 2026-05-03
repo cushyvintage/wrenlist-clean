@@ -28,7 +28,11 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ error: 'At least one image is required' }, { status: 400 })
     }
 
-    const inputImages = images.slice(0, 3)
+    // Up to 5 images per call. Three was a cost defaults; in practice sellers
+    // upload front + multiple angles + base + macro, and the base photo is
+    // exactly where the maker mark lives. Each extra high-detail image is
+    // ~£0.005 — worth it when it lifts maker accuracy from generic to named.
+    const inputImages = images.slice(0, 5)
     const imageContent = inputImages.map((dataUrl: string) => ({
       type: 'image_url' as const,
       image_url: { url: dataUrl, detail: 'high' as const },

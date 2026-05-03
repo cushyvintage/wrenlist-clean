@@ -61,7 +61,8 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ error: 'Feedback too long (max 500 chars)' }, { status: 400 })
     }
 
-    const inputImages = images.slice(0, 3)
+    // Mirrors identify route: 5 photos so the base shot can be included.
+    const inputImages = images.slice(0, 5)
     const imageContent = inputImages.map((dataUrl: string) => ({
       type: 'image_url' as const,
       image_url: { url: dataUrl, detail: 'high' as const },
