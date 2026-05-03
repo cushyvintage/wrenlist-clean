@@ -43,12 +43,34 @@ export const GET = withAdminAuth(async () => {
     .limit(2000)
 
   // 3. Final outcomes — what shipped vs what was suggested.
-  const { data: finals } = await db
+  // Pull find_id so we can dedup multiple save events for the same find
+  // (drafts followed by publish each create a new 'final' row, which
+  // would otherwise double-count for the held-verbatim metric).
+  const { data: finalsRaw } = await db
     .from('ai_corrections')
-    .select('suggestion, final_values, confidence, created_at')
+    .select('find_id, suggestion, final_values, confidence, created_at')
     .eq('action', 'final')
     .gte('created_at', since)
+    .order('created_at', { ascending: false })
     .limit(2000)
+
+  // Dedup: keep most recent 'final' row per find_id (we ordered desc, so
+  // the first occurrence of each find_id IS the most recent). Rows
+  // without a find_id can't be deduped meaningfully — keep them all
+  // (rare path: pre-find_id-column corrections).
+  type FinalRow = NonNullable<typeof finalsRaw>[number]
+  const finalsByFind = new Map<string, FinalRow>()
+  const finalsWithoutFindId: FinalRow[] = []
+  for (const f of finalsRaw ?? []) {
+    if (!f.find_id) {
+      finalsWithoutFindId.push(f)
+      continue
+    }
+    if (!finalsByFind.has(f.find_id)) {
+      finalsByFind.set(f.find_id, f)
+    }
+  }
+  const finals: FinalRow[] = [...finalsByFind.values(), ...finalsWithoutFindId]
 
   // ── Compute metrics ──
 
@@ -171,10 +193,20 @@ export const GET = withAdminAuth(async () => {
   return NextResponse.json({
     windowDays: 30,
     runs: {
+      // total = entries in find_ai_runs (the audit log started in v9, so
+      // values may be small while older corrections data accumulates).
       total: totalRuns,
       errored,
       errorRate: totalRuns > 0 ? errored / totalRuns : null,
       byConfidence,
+    },
+    correctionsCounts: {
+      // Counts from the older ai_corrections table — used to make the
+      // dashboard's "applied" / "final" metrics legible even when the
+      // newer find_ai_runs table is still filling.
+      applied: (applied ?? []).length,
+      finalUnique: finals.length,
+      finalRaw: (finalsRaw ?? []).length,
     },
     latencyMs: { p50, p95 },
     perSourceContribution: {

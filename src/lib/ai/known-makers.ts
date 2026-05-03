@@ -59,30 +59,43 @@ const KNOWN_MAKERS_RAW = [
   // UK Pottery Society / collector
   'royal national rose society', 'national rose society',
 
-  // Others appearing in UK vintage market
-  'laura ashley', 'penguin', 'levis', 'luminarc',
-  'fait main', 'selangor pewter', 'selangor',
-  'royal national rose', 'beatrix potter',
+  // Others appearing in UK vintage homewares market
+  'laura ashley', 'luminarc', 'fait main',
+  'selangor pewter', 'selangor', 'beatrix potter',
   'newhall', 'spode copeland', 'grosvenor',
-] as const
 
-const KNOWN_MAKERS = new Set(KNOWN_MAKERS_RAW.map((m) => m.toLowerCase().trim()))
+  // Note: deliberately NOT including cross-category single-word brands
+  // like "Penguin" (publisher) or "Levi's" (jeans) — they'd false-positive
+  // for any pottery/ceramics item the AI happened to attribute to them.
+  // If we add proper category-aware validation later, those become safe.
+] as const
 
 /**
  * Normalise a maker name for comparison. Strips diacritics, collapses
  * whitespace, removes possessives ('s) and common prefixes ("Antique ",
- * "Vintage ").
+ * "Vintage "). Used for both the lookup candidate AND each entry in the
+ * reference set so they compare apples-to-apples.
+ *
+ * Diacritic strip uses an explicit \u escape range rather than literal
+ * combining characters so the regex survives any editor / git filter
+ * that decides to "clean up" non-ASCII bytes in source files.
  */
 function normalise(name: string): string {
   return name
     .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/['']s\b/g, 's')                          // smith's → smiths
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // strip combining diacritics
+    .replace(/[‘’']s\b/g, 's')                // smith's / smith’s → smiths
     .replace(/^\s*(antique|vintage|original|authentic)\s+/i, '')
     .replace(/\s+&\s+/g, ' & ')
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+// Crucial: normalise the reference set too, otherwise a candidate
+// "Sèvres" → normalises to "sevres" → fails to match a set entry stored
+// as "sèvres". We push every entry through the same normaliser so both
+// sides compare on a level playing field.
+const KNOWN_MAKERS = new Set(KNOWN_MAKERS_RAW.map(normalise))
 
 /**
  * Returns true if the candidate maker is in our known-makers reference

@@ -14,6 +14,11 @@ interface AIStats {
     errorRate: number | null
     byConfidence: Record<string, number>
   }
+  correctionsCounts: {
+    applied: number
+    finalUnique: number
+    finalRaw: number
+  }
   latencyMs: { p50: number | null; p95: number | null }
   perSourceContribution: {
     runsTotal: number
@@ -116,10 +121,17 @@ export default function AdminAIStatsPage() {
       <header>
         <h1 className="text-2xl font-semibold text-ink">AI stats</h1>
         <p className="text-sm text-sage-dim mt-1">
-          Last {stats.windowDays} days · {r.total} identify calls
+          Last {stats.windowDays} days · {r.total} audited identify call{r.total === 1 ? '' : 's'}
+          {' · '}{stats.correctionsCounts.applied} applied
+          {' · '}{stats.correctionsCounts.finalUnique} saved find{stats.correctionsCounts.finalUnique === 1 ? '' : 's'}
           {r.errored > 0 && ` · ${r.errored} errored (${pct(r.errorRate, 1)})`}
-          {' · '}p50 {stats.latencyMs.p50 ?? '—'}ms · p95 {stats.latencyMs.p95 ?? '—'}ms
+          {r.total > 0 && ` · p50 ${stats.latencyMs.p50 ?? '—'}ms · p95 ${stats.latencyMs.p95 ?? '—'}ms`}
         </p>
+        {r.total === 0 && stats.correctionsCounts.applied > 0 && (
+          <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+            The audit log (find_ai_runs) was added recently and is empty for this window. Acceptance metrics below come from the older ai_corrections table; per-source contribution and latency will populate as new identify calls happen.
+          </p>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
