@@ -32,8 +32,10 @@ interface AIAutoFillBannerProps {
   hasCategory: boolean
   hasCondition: boolean
   hasPrice: boolean
-  onApply: (fields: AIAutoFillResult) => void
+  onApply: (fields: AIAutoFillResult, outcomes: Record<string, 'kept' | 'rejected'>) => void
   onDismiss: () => void
+  onRefine?: (feedback: string) => Promise<void> | void
+  isRefining?: boolean
 }
 
 function formatCondition(value: string): string {
@@ -49,7 +51,11 @@ export default function AIAutoFillBanner({
   hasPrice,
   onApply,
   onDismiss,
+  onRefine,
+  isRefining,
 }: AIAutoFillBannerProps) {
+  const [refineOpen, setRefineOpen] = useState(false)
+  const [refineText, setRefineText] = useState('')
   const { getNode, getTopLevel } = useCategoryTree()
 
   const formatCategory = (value: string): string => {
@@ -138,12 +144,36 @@ export default function AIAutoFillBanner({
 
   const handleApply = () => {
     const result: AIAutoFillResult = {}
-    if (applyTitle && data.title) result.title = data.title
-    if (applyDescription && data.description) result.description = data.description
-    if (applyCategory && data.category) result.category = data.category
-    if (applyCondition && data.condition) result.condition = data.condition
-    if (applyPrice && data.suggestedPrice) result.price = data.suggestedPrice
-    onApply(result)
+    const outcomes: Record<string, 'kept' | 'rejected'> = {}
+    if (data.title) {
+      if (applyTitle) { result.title = data.title; outcomes.title = 'kept' }
+      else outcomes.title = 'rejected'
+    }
+    if (data.description) {
+      if (applyDescription) { result.description = data.description; outcomes.description = 'kept' }
+      else outcomes.description = 'rejected'
+    }
+    if (data.category) {
+      if (applyCategory) { result.category = data.category; outcomes.category = 'kept' }
+      else outcomes.category = 'rejected'
+    }
+    if (data.condition) {
+      if (applyCondition) { result.condition = data.condition; outcomes.condition = 'kept' }
+      else outcomes.condition = 'rejected'
+    }
+    if (data.suggestedPrice) {
+      if (applyPrice) { result.price = data.suggestedPrice; outcomes.price = 'kept' }
+      else outcomes.price = 'rejected'
+    }
+    onApply(result, outcomes)
+  }
+
+  const handleRefineSubmit = async () => {
+    const trimmed = refineText.trim()
+    if (!trimmed || !onRefine || isRefining) return
+    await onRefine(trimmed)
+    setRefineText('')
+    setRefineOpen(false)
   }
 
   const confidenceColor = data.confidence === 'high'
@@ -207,10 +237,58 @@ export default function AIAutoFillBanner({
         ))}
       </div>
 
+      {onRefine && (
+        <div className="mb-3">
+          {!refineOpen ? (
+            <button
+              type="button"
+              onClick={() => setRefineOpen(true)}
+              disabled={isRefining}
+              className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2 disabled:opacity-50"
+            >
+              Not quite right? Tell Wren what to fix →
+            </button>
+          ) : (
+            <div className="rounded border border-sage/20 bg-white p-2 space-y-2">
+              <textarea
+                value={refineText}
+                onChange={(e) => setRefineText(e.target.value)}
+                placeholder="e.g. it's actually 1970s Hornsea, not Denby. The mark on the base says Saffron."
+                rows={2}
+                maxLength={500}
+                disabled={isRefining}
+                className="w-full text-sm px-2 py-1.5 border border-sage/20 rounded resize-none focus:outline-none focus:ring-1 focus:ring-sage/30 disabled:opacity-50"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-sage-dim">{refineText.length}/500</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setRefineOpen(false); setRefineText('') }}
+                    disabled={isRefining}
+                    className="text-xs text-sage-dim hover:text-ink transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRefineSubmit}
+                    disabled={!refineText.trim() || isRefining}
+                    className="text-xs px-3 py-1.5 rounded bg-sage text-white hover:bg-sage-lt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isRefining ? 'Wren is rethinking…' : 'Send to Wren'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={handleApply}
-        disabled={!anyEnabled}
+        disabled={!anyEnabled || isRefining}
         className="w-full text-sm px-3 py-2 rounded bg-sage text-white hover:bg-sage-lt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         Apply selected

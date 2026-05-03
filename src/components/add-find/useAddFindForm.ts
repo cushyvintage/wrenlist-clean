@@ -83,6 +83,11 @@ export function useAddFindForm() {
   const [aiAutoFill, setAiAutoFill] = useState<AIAutoFillData | null>(null)
   const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
   const [isIdentifying, setIsIdentifying] = useState(false)
+  const [isRefining, setIsRefining] = useState(false)
+  // Last set of images sent to identify-from-photo, in the same form the
+  // server expects (data URLs or https URLs). Held so the refine endpoint
+  // can be called with the exact same input the user saw a suggestion for.
+  const [lastIdentifiedImages, setLastIdentifiedImages] = useState<string[]>([])
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -255,13 +260,13 @@ export function useAddFindForm() {
     }
 
     setIsIdentifying(true)
+    const allImages = [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))]
+    setLastIdentifiedImages(allImages)
     try {
       const response = await fetch('/api/ai/identify-from-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))],
-        }),
+        body: JSON.stringify({ images: allImages }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -306,6 +311,90 @@ export function useAddFindForm() {
     }
   }
 
+  // ── Refinement: user typed feedback ("it's actually 1970s") on the
+  //    AI banner. Re-runs identify with the previous suggestion + their
+  //    feedback as extra context. Logs the refinement.
+  const refinePhotos = async (userFeedback: string) => {
+    if (!aiAutoFill || lastIdentifiedImages.length === 0 || isRefining) return
+    setIsRefining(true)
+    try {
+      const previousSuggestion = {
+        title: aiAutoFill.title,
+        description: aiAutoFill.description,
+        category: aiAutoFill.category,
+        condition: aiAutoFill.condition,
+        suggestedQuery: aiAutoFill.suggestedQuery,
+        confidence: aiAutoFill.confidence,
+      }
+      const response = await fetch('/api/ai/refine-from-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: lastIdentifiedImages,
+          previousSuggestion,
+          userFeedback,
+        }),
+      })
+      if (!response.ok) return
+      const data = await response.json()
+
+      // Log the refinement (fire-and-forget — never block UI on this).
+      fetch('/api/ai/log-correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'refined',
+          suggestion: previousSuggestion,
+          userFeedback,
+          confidence: previousSuggestion.confidence,
+          photoCount: lastIdentifiedImages.length,
+        }),
+      }).catch(() => { /* logging must not break flow */ })
+
+      // Swap the banner data for the refined suggestion. Price re-research
+      // gets re-triggered if the suggestedQuery changed.
+      const newQuery = typeof data.suggestedQuery === 'string' ? data.suggestedQuery : undefined
+      setAiAutoFill({
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        condition: data.condition,
+        suggestedQuery: newQuery,
+        confidence: data.confidence,
+        priceLoading: !!newQuery,
+      })
+
+      if (newQuery) {
+        try {
+          const priceRes = await fetch('/api/price-research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: newQuery }),
+          })
+          if (priceRes.ok) {
+            const priceData = await priceRes.json()
+            const suggested = priceData?.recommendation?.suggested_price
+            const reasoning = priceData?.recommendation?.reasoning
+            setAiAutoFill(prev => prev ? {
+              ...prev,
+              suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
+              priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
+              priceLoading: false,
+            } : null)
+          } else {
+            setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+          }
+        } catch {
+          setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refine identification:', err)
+    } finally {
+      setIsRefining(false)
+    }
+  }
+
   return {
     router,
     formData,
@@ -337,6 +426,8 @@ export function useAddFindForm() {
     setDismissedAutoFill,
     isIdentifying,
     identifyPhotos,
+    isRefining,
+    refinePhotos,
     sourcingTripName,
     setSourcingTripName,
     isbnLookupOpen,

@@ -16,8 +16,10 @@ interface Props {
   hasCategory: boolean
   hasPrice: boolean
   onAnalyse: () => void
-  onApply: (fields: AIAutoFillResult) => void
+  onApply: (fields: AIAutoFillResult, outcomes: Record<string, 'kept' | 'rejected'>) => void
   onDismiss: () => void
+  onRefine?: (feedback: string) => Promise<void> | void
+  isRefining?: boolean
 }
 
 export default function PhotosAIInline({
@@ -32,6 +34,8 @@ export default function PhotosAIInline({
   onAnalyse,
   onApply,
   onDismiss,
+  onRefine,
+  isRefining,
 }: Props) {
   if (photoCount === 0) return null
 
@@ -56,6 +60,8 @@ export default function PhotosAIInline({
           hasPrice={hasPrice}
           onApply={onApply}
           onDismiss={onDismiss}
+          onRefine={onRefine}
+          isRefining={isRefining}
         />
       </div>
     )

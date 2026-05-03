@@ -80,7 +80,23 @@ export default function AddFindPage() {
   }, [])
   const scrollToPhotos = () => photosCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
-  const handleApplyAI = (fields: { title?: string; description?: string; category?: string; condition?: string; price?: number }) => {
+  const handleApplyAI = (
+    fields: { title?: string; description?: string; category?: string; condition?: string; price?: number },
+    outcomes: Record<string, 'kept' | 'rejected'>,
+  ) => {
+    // Snapshot the suggestion before we clear it so we can log it.
+    const suggestionAtApply = form.aiAutoFill ? {
+      title: form.aiAutoFill.title,
+      description: form.aiAutoFill.description,
+      category: form.aiAutoFill.category,
+      condition: form.aiAutoFill.condition,
+      suggestedQuery: form.aiAutoFill.suggestedQuery,
+      suggestedPrice: form.aiAutoFill.suggestedPrice,
+      confidence: form.aiAutoFill.confidence,
+    } : null
+    const photoCount = form.formData.photoPreviews.length
+    const confidence = form.aiAutoFill?.confidence
+
     if (fields.title) handlers.handleInputChange('title', fields.title)
     if (fields.description) handlers.handleInputChange('description', fields.description)
     if (fields.category) handlers.handleInputChange('category', fields.category)
@@ -89,6 +105,21 @@ export default function AddFindPage() {
     form.setAiAutoFill(null)
     form.setDismissedAutoFill(true)
     form.setAutoDetectedCategory(null)
+
+    // Fire-and-forget log of what was kept vs rejected.
+    if (suggestionAtApply) {
+      fetch('/api/ai/log-correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'applied',
+          suggestion: suggestionAtApply,
+          fieldOutcomes: outcomes,
+          confidence,
+          photoCount,
+        }),
+      }).catch(() => { /* logging must not break flow */ })
+    }
   }
 
   return (
@@ -168,6 +199,8 @@ export default function AddFindPage() {
               form.setDismissedAutoFill(true)
               form.setAiAutoFill(null)
             }}
+            onRefine={form.refinePhotos}
+            isRefining={form.isRefining}
           />
         </div>
 
