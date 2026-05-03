@@ -6,7 +6,7 @@ import { refineToLeafCategory } from '@/lib/ai-category-refine'
 import { modelFor } from '@/lib/ai/router'
 import { withImageCache } from '@/lib/ai/image-cache'
 
-const PROMPT_VERSION = 2 // bump when system prompt changes meaningfully — v2: anti-hallucination clause for unread maker marks
+const PROMPT_VERSION = 3 // v3: forbid name-substitution of unclear marks ("Grindley"→"Shelley")
 
 export const POST = withAuth(async (request, user) => {
   const { success } = await checkRateLimit(`identify-photo:${user.id}`, 10)
@@ -81,16 +81,19 @@ export const POST = withAuth(async (request, user) => {
                   type: 'text',
                   text: `You are an expert vintage and antiques dealer in the UK. Identify this item for a reseller.
 
-CRITICAL: Only name a maker, brand, designer, or artist if you can directly READ a name from a visible mark, signature, label, or printed text in the photo. Do NOT guess based on style, era, or visual similarity to known makers. If no name is visible, omit the maker entirely — say "Vintage Bone China Plate" rather than inventing "Royal Doulton Plate". Inventing names is far worse than describing what you can see.
+CRITICAL — naming makers and reading marks:
+1. Only name a maker, brand, designer, or artist if you can directly READ the name from a visible mark, signature, label, or printed text.
+2. NEVER substitute a famous maker for an unclear one. If a stamp looks roughly like "G_____Y" or "______LEY" do NOT pattern-match to "Shelley", "Wedgwood", "Royal Doulton" etc. Real example: a "GRINDLEY ENGLAND" stamp must NOT be reported as "Shelley". If letters are uncertain, transcribe what you literally see (e.g. "stamp begins with G, ends with -LEY") and treat the maker as unread.
+3. If no name is visible OR the mark is too blurry/small to transcribe letter-by-letter with confidence, omit the maker entirely. Generic descriptions ("Vintage Bone China Egg Cups") are far better than confident misattribution.
 
 Return ONLY valid JSON:
 {
-  "title": "concise marketplace title. Use a maker name ONLY if you can read it in the photo (e.g. 'Hornsea Saffron Coffee Mug 1970s' if the Hornsea backstamp is visible). Otherwise describe the item generically (e.g. 'Vintage Iridescent Lustreware Bowl & Vase Set').",
-  "description": "2-3 sentences. Note maker/era/style ONLY when readable from the photo; otherwise describe materials, pattern, era estimate, and condition observations.",
+  "title": "concise marketplace title. Use a maker name ONLY if you can read every letter of it clearly. Otherwise describe the item generically.",
+  "description": "2-3 sentences. Note maker/era/style ONLY when readable from the photo. If a stamp is visible but you can't read it cleanly, say so ('a blue maker's stamp is visible on the base but is too small/blurred to transcribe').",
   "suggestedQuery": "best search query for comparable sold items on eBay UK. Skip the maker name if you couldn't read it.",
   "category": "one of: ${TOP_LEVEL_LIST}",
   "condition": "one of: new_with_tags, new_without_tags, very_good, good, fair, poor — assess from visible wear, patina, chips, cracks, stains, fading. Default to good if unclear.",
-  "confidence": "high ONLY if a maker mark/brand label/signature is readable in the photo. medium if you can identify the type but no maker mark is visible. low if you're guessing the type itself."
+  "confidence": "high ONLY when a maker mark, brand label, or signature is readable letter-by-letter. medium if you can identify the type and material but the mark is unreadable, partially obscured, or absent. low if you're guessing the item type itself."
 }`,
                 },
               ],

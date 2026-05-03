@@ -90,14 +90,15 @@ export default function PhotosAIInline({
           <WrenIcon size="sm" />
           Ask Wren about {photoCount === 1 ? 'this photo' : `these ${photoCount} photos`}
         </button>
-        {/* Maker marks on ceramics/silver/etc. live on the base. With one
-            hero shot Wren has nothing to read — measured ~17% maker-name
-            accuracy on single-photo identifications. Two-shot runs scored
-            much higher, so it's worth nudging the user to add a base
-            close-up before they pay for a vision call. */}
-        {photoCount <= 2 && (
+        {/* Maker marks on ceramics/silver/etc. live on the base. With a
+            small/blurry mark Wren has been observed pattern-matching to
+            famous similar-shape makers (e.g. confidently calling a Grindley
+            stamp "Shelley"). A tight macro shot of the actual mark is what
+            gets a confident, correct read. Soft nudge here; the prompt also
+            now refuses to guess unclear stamps. */}
+        {photoCount <= 4 && (
           <p className="text-xs text-sage-dim text-center px-2">
-            Tip: include a close-up of any maker's mark on the base for far better identification.
+            Tip: a close-up of the maker's mark on the base lifts identification dramatically.
           </p>
         )}
       </div>
