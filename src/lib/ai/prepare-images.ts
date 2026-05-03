@@ -35,6 +35,13 @@ export async function prepareImagesForAI(previews: string[], maxImages = 3): Pro
 }
 
 async function resizeToDataUrl(src: string, max = 1024): Promise<string | null> {
+  // Note: modern Chrome (≥81) and Safari auto-apply EXIF orientation when
+  // an image is loaded into an <img> element, so the canvas drawImage call
+  // below will already see the correctly-oriented bitmap. Older browsers
+  // (Firefox <77) won't, but we don't support those targets.
+  // HEIC handling: only Safari can natively decode HEIC. On Chrome/Firefox,
+  // a HEIC upload will fail in the onerror branch and the whole image gets
+  // skipped. Followup: handle this with heic2any conversion in PhotoUpload.
   const img = new Image()
   img.crossOrigin = 'anonymous'
   await new Promise<void>((resolve, reject) => {

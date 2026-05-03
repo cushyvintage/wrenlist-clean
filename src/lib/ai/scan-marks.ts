@@ -22,7 +22,7 @@
 import { withImageCache } from './image-cache'
 import { modelFor } from './router'
 
-export const SCAN_MARKS_PROMPT_VERSION = 1
+export const SCAN_MARKS_PROMPT_VERSION = 2 // v2: emphasise distinguishing maker marks from stickers/watermarks/price-tags
 
 export interface DetectedMark {
   text: string
@@ -85,7 +85,15 @@ export async function scanMarks({ userId, images, apiKey }: ScanArgs): Promise<M
 
 Your only job is to transcribe what you literally see, letter by letter. Do not interpret, identify, or infer. If a stamp is partially obscured, transcribe the visible characters and use _ for unreadable letters (e.g. 'GR_NDL_Y ENGLAND'). If a mark is visible but too small or blurred to attempt, label it 'illegible'.
 
-CRITICAL: Never substitute a famous similar-looking maker. A stamp shaped like 'G____Y' is not 'Shelley' — it's '<6 letters, starts with G, ends with Y, illegible middle>'. Verbatim only.`,
+CRITICAL — distinguish what kind of mark this is. The 'location' field must make clear whether the text is:
+  - on the item itself (the actual base/back/bottom/handle) — these are MAKER MARKS
+  - on a sticker, price tag, or paper label attached to the item — NOT maker marks
+  - on packaging (a box, tag, sleeve) shown alongside — packaging branding, NOT maker marks
+  - on a watermark, retailer sticker, or barcode — NOT maker marks
+  - on another item visible in the photo (a comparison piece, the seller's hand, a measuring tape) — NOT marks of the primary item
+Be specific. "Base of plate, blue underglaze stamp" is a maker mark. "White price-tag sticker stuck to the base" is not. The downstream identifier needs this to decide what counts.
+
+NEVER substitute a famous similar-looking maker. A stamp shaped like 'G____Y' is not 'Shelley' — it's '<6 letters, starts with G, ends with Y, illegible middle>'. Verbatim only.`,
               },
               {
                 role: 'user',
@@ -97,10 +105,11 @@ CRITICAL: Never substitute a famous similar-looking maker. A stamp shaped like '
 
 {
   "marks": [
-    { "text": "GRINDLEY ENGLAND", "location": "base of egg cup, blue stamp under crown logo", "legibility": "clear" },
-    { "text": "BONE CHINA", "location": "base of egg cup, below maker stamp", "legibility": "clear" },
-    { "text": "Made in ___ny", "location": "white sticker on side", "legibility": "partial" },
-    { "text": "", "location": "back of plate, oval blue stamp", "legibility": "illegible" }
+    { "text": "GRINDLEY ENGLAND", "location": "base of egg cup, blue underglaze stamp under crown logo (maker mark)", "legibility": "clear" },
+    { "text": "BONE CHINA", "location": "base of egg cup, below maker stamp (maker mark)", "legibility": "clear" },
+    { "text": "£10", "location": "white price-tag sticker on side (price tag, not a maker mark)", "legibility": "clear" },
+    { "text": "Made in ___ny", "location": "white retailer sticker on box (packaging, not on the item itself)", "legibility": "partial" },
+    { "text": "", "location": "back of plate, oval blue stamp (maker mark)", "legibility": "illegible" }
   ]
 }
 

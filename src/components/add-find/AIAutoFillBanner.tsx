@@ -200,6 +200,13 @@ export default function AIAutoFillBanner({
       ? 'Wren suggests'
       : "Wren isn't sure"
 
+  // High-value over-claim warning. When Wren is highly confident and the
+  // price is non-trivial, a misattribution becomes a real marketplace
+  // policy issue (false-attribution counterfeit). A nudge here costs the
+  // seller five seconds and saves them an account suspension.
+  const showHighValueWarning =
+    data.confidence === 'high' && (data.suggestedPrice ?? 0) >= 50
+
   return (
     <div className={`rounded-lg border p-4 ${confidenceColor}`}>
       <div className="flex items-start justify-between mb-3">
@@ -215,6 +222,12 @@ export default function AIAutoFillBanner({
           Dismiss
         </button>
       </div>
+
+      {showHighValueWarning && (
+        <div className="mb-3 text-xs px-2 py-1.5 rounded bg-amber-50 border border-amber-200 text-amber-800">
+          High-value identification — please verify the maker mark on the base of the item before publishing.
+        </div>
+      )}
 
       <div className="space-y-2 mb-3">
         {fields.map((field) => (
