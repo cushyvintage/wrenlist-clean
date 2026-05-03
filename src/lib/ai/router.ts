@@ -17,6 +17,7 @@
 
 export type AIPurpose =
   | 'identify_from_photo'   // vision-heavy: vintage backstamps, brand labels — needs the good model
+  | 'scan_marks'            // pre-pass for identify: extract verbatim text from any visible stamp/label/signature
   | 'classify_photo'        // category classification from photo — vision but coarser, premium for accuracy
   | 'generate_title'        // text reasoning over identified data
   | 'generate_description'  // text reasoning over identified data
@@ -34,6 +35,7 @@ export type AIModel = 'gpt-4o' | 'gpt-4o-mini'
 const MODEL_FOR: Record<AIPurpose, AIModel> = {
   // Premium vision — vintage/antique recognition is the differentiator
   identify_from_photo:  'gpt-4o',
+  scan_marks:           'gpt-4o',
   classify_photo:       'gpt-4o',
 
   // Text-only or coarse — mini is plenty
@@ -58,5 +60,5 @@ export function modelFor(purpose: AIPurpose): AIModel {
  * to decide whether to compute an image hash before calling OpenAI.
  */
 export function isVisionPurpose(purpose: AIPurpose): boolean {
-  return purpose === 'identify_from_photo' || purpose === 'classify_photo'
+  return purpose === 'identify_from_photo' || purpose === 'classify_photo' || purpose === 'scan_marks'
 }
