@@ -67,7 +67,7 @@ export function buildSubscriptionWelcomeEmail(args: {
               <ol style="margin:0 0 32px 0;padding-left:20px;font-size:15px;line-height:1.8;color:#4a4a4a;">
                 <li>Connect a marketplace (Vinted, eBay, Etsy, Depop — all included)</li>
                 <li>Add your first find — drop a photo and the AI does the rest</li>
-                <li>Install the Chrome extension for one-click crosslisting</li>
+                <li><a href="https://chromewebstore.google.com/detail/wrenlist-marketplace-sy/aahdngccjdbaliejnbmhbacjgecldffn" style="color:#5a7a4a;">Install the Chrome extension</a> for one-click crosslisting</li>
               </ol>
 
               <!-- Primary CTA -->
@@ -117,7 +117,7 @@ Thank you. Genuinely. You just unlocked ${args.tier} — ${args.findsLimit.toLoc
 ${args.isFoundingMember ? `You're a Founding Flock member — your price is locked for life, even after the standard rate kicks in on 30 June 2026.\n\n` : ''}Three things to do first:
 1. Connect a marketplace (Vinted, eBay, Etsy, Depop — all included)
 2. Add your first find — drop a photo and the AI does the rest
-3. Install the Chrome extension for one-click crosslisting
+3. Install the Chrome extension for one-click crosslisting: https://chromewebstore.google.com/detail/wrenlist-marketplace-sy/aahdngccjdbaliejnbmhbacjgecldffn
 
 Open Wrenlist: ${onboardingUrl}
 

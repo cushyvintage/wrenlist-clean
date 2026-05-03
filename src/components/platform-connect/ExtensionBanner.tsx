@@ -78,16 +78,20 @@ export function ExtensionBanner({
           }
         </div>
       </div>
-      <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0 hidden sm:block">
-        {showOutdated
-          ? 'Restart Chrome to update'
-          : isMobileOrNonChrome
-            ? extensionDetected
-              ? 'Manage from Chrome on your desktop'
-              : 'Install in Chrome on your desktop'
-            : 'Open extension from your browser toolbar'
-        }
-      </span>
+      {extensionDetected && !showOutdated ? (
+        <span className="px-4 py-2 text-sm text-ink-lt flex-shrink-0 hidden sm:block">
+          Open extension from your browser toolbar
+        </span>
+      ) : (
+        <a
+          href="https://chromewebstore.google.com/detail/wrenlist-marketplace-sy/aahdngccjdbaliejnbmhbacjgecldffn"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 text-sm font-medium text-sage underline flex-shrink-0 hidden sm:block"
+        >
+          {showOutdated ? 'Reinstall from Web Store' : 'Install extension'}
+        </a>
+      )}
     </div>
   )
 }

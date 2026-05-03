@@ -13,7 +13,7 @@ interface MarketplaceData {
   platform_listed_at: string | null
 }
 
-const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
 
 type ChromeRuntime = {
   sendMessage?: (id: string, msg: unknown, cb: (resp: unknown) => void) => void

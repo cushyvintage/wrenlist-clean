@@ -372,7 +372,7 @@ function InventoryPageContent() {
     setBulkPublishing(true)
     setBulkPublishError(null)
 
-    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+    const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
     const chromeExt = typeof window !== 'undefined' ? (window as any).chrome : null
     const hasExtension = !!(chromeExt?.runtime?.sendMessage)
 

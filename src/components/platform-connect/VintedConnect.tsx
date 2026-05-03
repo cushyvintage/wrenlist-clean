@@ -7,7 +7,7 @@ import { Badge } from '@/components/wren/Badge'
 import { VintedDebugPanel } from '@/components/wren/VintedDebugPanel'
 import { fetchApi } from '@/lib/api-utils'
 
-const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
 
 interface VintedShopStats {
   connected: boolean
@@ -409,7 +409,7 @@ export function VintedConnect({
         </button>
       </div>
 
-      {showDebug && <VintedDebugPanel extensionId="nblnainobllgbjkdkpeodjpopkgnpfgb" />}
+      {showDebug && <VintedDebugPanel extensionId="aahdngccjdbaliejnbmhbacjgecldffn" />}
     </div>
   )
 }

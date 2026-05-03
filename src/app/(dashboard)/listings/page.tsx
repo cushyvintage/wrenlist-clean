@@ -572,7 +572,7 @@ export default function ListingsPage() {
           const extResp = await new Promise<{ success?: boolean; message?: string }>((resolve) => {
             const timeout = setTimeout(() => resolve({}), 8000)
             chrome.runtime.sendMessage(
-              'nblnainobllgbjkdkpeodjpopkgnpfgb',
+              'aahdngccjdbaliejnbmhbacjgecldffn',
               { action: 'set_etsy_auto_renew', listingId, autoRenew: !currentValue },
               (resp) => {
                 clearTimeout(timeout)

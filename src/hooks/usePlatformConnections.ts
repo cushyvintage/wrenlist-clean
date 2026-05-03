@@ -6,7 +6,7 @@ import type { Find } from '@/types'
 import { EXTENSION_ID } from '@/hooks/useExtensionInfo'
 import { useConfirm } from '@/components/wren/ConfirmProvider'
 
-const VINTED_EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+const VINTED_EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
 
 interface EbayPolicy {
   id: string

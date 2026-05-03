@@ -89,7 +89,7 @@ export function FindNotificationBanners({
               ? 'Wrenlist extension is out of date — restart Chrome to auto-update, or '
               : 'Wrenlist extension not detected — crosslisting requires the Chrome extension. '}
             <a
-              href="https://chromewebstore.google.com/detail/wrenlist/nblnainobllgbjkdkpeodjpopkgnpfgb"
+              href="https://chromewebstore.google.com/detail/wrenlist/aahdngccjdbaliejnbmhbacjgecldffn"
               target="_blank"
               rel="noopener noreferrer"
               className="underline font-medium"

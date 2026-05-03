@@ -413,7 +413,7 @@ export default function InventoryDetailPage() {
       const vintedListingId = vintedData?.listingId
       if (vintedListingId && typeof window !== 'undefined') {
         try {
-          const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+          const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
           const chrome = (window as unknown as { chrome?: { runtime?: { sendMessage?: (id: string, msg: unknown, cb: (resp: unknown) => void) => void; lastError?: { message: string } } } }).chrome
           if (chrome?.runtime) {
             chrome.runtime.sendMessage?.(EXTENSION_ID, {
@@ -486,7 +486,7 @@ export default function InventoryDetailPage() {
                 try {
                   const vintedListingId = find.platform_fields?.vinted?.['listingId']
                   if (vintedListingId) {
-                    const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+                    const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
                     const chromeExt = (window as unknown as { chrome?: { runtime?: { sendMessage?: (id: string, msg: unknown, cb: (resp: unknown) => void) => void; lastError?: { message: string } } } }).chrome
                     if (chromeExt?.runtime?.sendMessage) {
                       chromeExt.runtime.sendMessage(EXTENSION_ID, { action: 'delistlistingfrommarketplace', marketplace: 'vinted', listingId: vintedListingId }, (resp: unknown) => {

@@ -121,11 +121,11 @@ export default function ExtensionPage() {
             <p className="hero-fade-3 mb-7 max-w-sm font-light leading-relaxed text-[#6B7D6A]">
               Import finds from any marketplace with one click. Crosslist to Vinted, eBay, Etsy, Depop & Shopify. Auto-delist when something sells. All from your browser.
             </p>
-            {/* Pre-launch: extension is in Chrome Web Store review. Send people to the
-                waitlist instead of a 404 chrome store URL. */}
             <div className="flex flex-col sm:flex-row gap-3 items-start">
-              <Link
-                href="/?waitlist=1"
+              <a
+                href="https://chromewebstore.google.com/detail/wrenlist-marketplace-sy/aahdngccjdbaliejnbmhbacjgecldffn"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 bg-[#3D5C3A] text-[#F5F0E8] px-7 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2C4428] rounded"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -133,9 +133,9 @@ export default function ExtensionPage() {
                   <circle cx="8" cy="8" r="2.5" fill="#F5F0E8" />
                   <path d="M8 1a7 7 0 014.9 2H8" stroke="#F5F0E8" strokeWidth="1" />
                 </svg>
-                Notify me when it&apos;s live
-              </Link>
-              <span className="text-xs font-light text-[#8A9E88] self-center">Pending Chrome Web Store review</span>
+                Add to Chrome — free
+              </a>
+              <span className="text-xs font-light text-[#8A9E88] self-center">Requires a Wrenlist account</span>
             </div>
           </div>
 
@@ -279,15 +279,17 @@ export default function ExtensionPage() {
             Ready to <em className="italic">connect</em>?
           </h2>
           <p className="text-sm font-light text-[#6B7D6A] mb-7">
-            The extension is in Chrome Web Store review. Join the waitlist and you&apos;ll be among the first to install it the moment it&apos;s approved.
+            Install the free Chrome extension and connect your marketplaces in under two minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <Link
-              href="/?waitlist=1"
+            <a
+              href="https://chromewebstore.google.com/detail/wrenlist-marketplace-sy/aahdngccjdbaliejnbmhbacjgecldffn"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2.5 bg-[#3D5C3A] text-[#F5F0E8] px-7 py-3 text-xs font-medium uppercase tracking-widest hover:bg-[#2C4428] rounded"
             >
-              Notify me when it&apos;s live
-            </Link>
+              Add to Chrome — free
+            </a>
             <Link href="/pricing" className="text-sm font-light text-[#5A7A57] underline hover:text-[#3D5C3A]">
               or see pricing
             </Link>

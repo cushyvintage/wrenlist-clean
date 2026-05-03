@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { compareVersions } from '@/lib/version-compare'
 
-export const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+export const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
 
 /**
  * Minimum extension version the web app will accept.

@@ -6,7 +6,7 @@ import { MarketplaceIcon } from '@/components/wren/MarketplaceIcon'
 import { Badge } from '@/components/wren/Badge'
 import { fetchApi } from '@/lib/api-utils'
 
-const EXTENSION_ID = 'nblnainobllgbjkdkpeodjpopkgnpfgb'
+const EXTENSION_ID = 'aahdngccjdbaliejnbmhbacjgecldffn'
 
 interface QualityIssue {
   component: string
