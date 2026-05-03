@@ -86,16 +86,26 @@ export function useAddFindForm() {
   // banner dismissal so we can offer "reset to original" and so the final
   // log row diffs against what the model actually said first time.
   const [originalSuggestion, setOriginalSuggestion] = useState<AIAutoFillData | null>(null)
+  // Top-level category from the original identify ("clothing", "books_media"
+  // etc.). Held so refine can skip the leaf-refine OpenAI call when its
+  // top-level guess is unchanged — small but free cost saving.
+  const [originalTopLevel, setOriginalTopLevel] = useState<string | null>(null)
+  // True when the banner is showing a refined suggestion rather than the
+  // original. Tracked as a single boolean so the page doesn't have to
+  // diff suggestion fields to know whether to show "Reset to original".
+  const [isRefined, setIsRefined] = useState(false)
   const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
   const [isIdentifying, setIsIdentifying] = useState(false)
   const [isRefining, setIsRefining] = useState(false)
   const [refineError, setRefineError] = useState<string | null>(null)
-  // AbortController for the in-flight refine request. Cancelled when the
-  // user dismisses the banner, asks Wren again, or removes all photos —
-  // prevents the stale response from racing in and re-showing the banner.
+  // AbortControllers for in-flight identify/refine. Cancelled when the
+  // user dismisses, asks Wren again, or removes all photos — prevents
+  // stale responses from racing in and re-setting state behind the user's back.
+  const identifyAbortRef = useRef<AbortController | null>(null)
   const refineAbortRef = useRef<AbortController | null>(null)
   // Guards against ultra-fast double-clicks on Send before isRefining flips.
   const refineInFlightRef = useRef(false)
+  const identifyInFlightRef = useRef(false)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -228,10 +238,11 @@ export function useAddFindForm() {
     return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
-  // Run a price research lookup for the given query and patch the banner
-  // state with the result. Shared between identify and refine — avoids
-  // duplicating the same fetch + null-guard dance in two places.
-  const fetchPriceForBanner = async (query: string) => {
+  // Run a price research lookup for the given query, patch the banner state
+  // with the result, and return the price patch so callers can mirror it
+  // onto other state (e.g. originalSuggestion). Shared between identify
+  // and refine.
+  const fetchPriceForBanner = async (query: string): Promise<{ suggestedPrice?: number; priceReasoning?: string } | null> => {
     try {
       const priceRes = await fetch('/api/price-research', {
         method: 'POST',
@@ -242,68 +253,94 @@ export function useAddFindForm() {
         const priceData = await priceRes.json()
         const suggested = priceData?.recommendation?.suggested_price
         const reasoning = priceData?.recommendation?.reasoning
-        setAiAutoFill(prev => prev ? {
-          ...prev,
+        const patch = {
           suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
           priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
-          priceLoading: false,
-        } : null)
-      } else {
-        setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+        }
+        setAiAutoFill(prev => prev ? { ...prev, ...patch, priceLoading: false } : null)
+        return patch
       }
-    } catch {
-      setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-    }
+    } catch { /* fall through */ }
+    setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+    return null
   }
 
   // Translate an AI identify/refine response into the AIAutoFillData shape
-  // the banner consumes. Centralising it keeps identify and refine in lock-step.
-  const aiResponseToBannerData = (data: {
-    title?: string
-    description?: string
-    category?: string
-    condition?: string
-    suggestedQuery?: string
-    confidence: 'high' | 'medium' | 'low'
-  }): AIAutoFillData => ({
+  // the banner consumes. priceLoading is the caller's call — identify always
+  // wants the spinner, refine only wants it when the search query changed.
+  const aiResponseToBannerData = (
+    data: {
+      title?: string
+      description?: string
+      category?: string
+      condition?: string
+      suggestedQuery?: string
+      confidence: 'high' | 'medium' | 'low'
+    },
+    priceLoading: boolean,
+  ): AIAutoFillData => ({
     title: data.title,
     description: data.description,
     category: data.category,
     condition: data.condition,
     suggestedQuery: typeof data.suggestedQuery === 'string' ? data.suggestedQuery : undefined,
     confidence: data.confidence,
-    priceLoading: !!data.suggestedQuery,
+    priceLoading,
   })
 
   // ── Explicit AI identification (triggered by user button click) ──
   const identifyPhotos = async () => {
-    if (!formData.photoPreviews.length || isIdentifying) return
+    if (!formData.photoPreviews.length || identifyInFlightRef.current) return
+    identifyInFlightRef.current = true
 
-    // New identify run invalidates any in-flight refine and prior original.
+    // New identify run invalidates any in-flight refine, prior original,
+    // and any in-flight prior identify (rapid double-clicks).
     refineAbortRef.current?.abort()
+    identifyAbortRef.current?.abort()
     setRefineError(null)
     setOriginalSuggestion(null)
+    setOriginalTopLevel(null)
+    setIsRefined(false)
 
     const images = await prepareImagesForAI(formData.photoPreviews)
-    if (images.length === 0) return
+    if (images.length === 0) {
+      identifyInFlightRef.current = false
+      return
+    }
 
+    const controller = new AbortController()
+    identifyAbortRef.current = controller
     setIsIdentifying(true)
     try {
       const response = await fetch('/api/ai/identify-from-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images }),
+        signal: controller.signal,
       })
       if (!response.ok) return
       const data = await response.json()
-      const banner = aiResponseToBannerData(data)
+      if (controller.signal.aborted) return
+
+      const banner = aiResponseToBannerData(data, !!data.suggestedQuery)
       setAiAutoFill(banner)
       setOriginalSuggestion(banner)
-      if (banner.suggestedQuery) await fetchPriceForBanner(banner.suggestedQuery)
+      setOriginalTopLevel(typeof data.topLevel === 'string' ? data.topLevel : null)
+      if (banner.suggestedQuery) {
+        const pricePatch = await fetchPriceForBanner(banner.suggestedQuery)
+        // Mirror the price onto originalSuggestion so resetToOriginal keeps
+        // the price chip — without this it'd disappear after a refine+reset.
+        if (pricePatch) {
+          setOriginalSuggestion(prev => prev ? { ...prev, ...pricePatch, priceLoading: false } : prev)
+        }
+      }
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
       console.error('Failed to identify from photo:', err)
     } finally {
       setIsIdentifying(false)
+      identifyInFlightRef.current = false
+      if (identifyAbortRef.current === controller) identifyAbortRef.current = null
     }
   }
 
@@ -344,7 +381,12 @@ export function useAddFindForm() {
       const response = await fetch('/api/ai/refine-from-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images, previousSuggestion, userFeedback }),
+        body: JSON.stringify({
+          images,
+          previousSuggestion,
+          previousTopLevel: originalTopLevel,
+          userFeedback,
+        }),
         signal: controller.signal,
       })
       if (!response.ok) {
@@ -373,23 +415,25 @@ export function useAddFindForm() {
         }),
       }).catch(() => { /* logging must not break flow */ })
 
-      const banner = aiResponseToBannerData(data)
-      setAiAutoFill(banner)
+      // Decide loading state ONCE, before we set state, so there's no
+      // "Loading price…" flicker when the query hasn't actually changed.
+      const queryChanged = !!data.suggestedQuery && data.suggestedQuery !== previousSuggestion.suggestedQuery
+      const banner = aiResponseToBannerData(data, queryChanged)
 
-      // Skip price re-research when the search query didn't change — the
-      // existing price still applies and a second call costs money for nothing.
-      const queryChanged = banner.suggestedQuery && banner.suggestedQuery !== previousSuggestion.suggestedQuery
-      if (queryChanged && banner.suggestedQuery) {
-        await fetchPriceForBanner(banner.suggestedQuery)
+      if (queryChanged) {
+        setAiAutoFill(banner)
+        await fetchPriceForBanner(banner.suggestedQuery!)
       } else {
-        // Carry the previous price across so the banner doesn't go blank.
-        setAiAutoFill(prev => prev ? {
-          ...prev,
+        // Same search query → previous price still applies. Set everything
+        // in one go to avoid a render with a blank price field.
+        setAiAutoFill({
+          ...banner,
           suggestedPrice: aiAutoFill.suggestedPrice,
           priceReasoning: aiAutoFill.priceReasoning,
           priceLoading: false,
-        } : null)
+        })
       }
+      setIsRefined(true)
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return
       console.error('Failed to refine identification:', err)
@@ -407,13 +451,18 @@ export function useAddFindForm() {
     refineAbortRef.current?.abort()
     setRefineError(null)
     setAiAutoFill(originalSuggestion)
+    setIsRefined(false)
   }
 
-  // Clearing photos / dismissing should also kill any in-flight refine.
+  // Clearing photos abandons every in-flight AI call and resets the
+  // session-scoped state (original suggestion, refined flag, error).
   useEffect(() => {
     if (formData.photoPreviews.length === 0) {
       refineAbortRef.current?.abort()
+      identifyAbortRef.current?.abort()
       setOriginalSuggestion(null)
+      setOriginalTopLevel(null)
+      setIsRefined(false)
       setRefineError(null)
     }
   }, [formData.photoPreviews.length])
@@ -454,6 +503,7 @@ export function useAddFindForm() {
     refineError,
     setRefineError,
     originalSuggestion,
+    isRefined,
     resetToOriginal,
     sourcingTripName,
     setSourcingTripName,

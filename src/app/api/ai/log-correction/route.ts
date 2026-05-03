@@ -32,7 +32,9 @@ const MAX_BODY_BYTES = 32_000
 export const POST = withAuth(async (request, user) => {
   try {
     const raw = await request.text()
-    if (raw.length > MAX_BODY_BYTES) {
+    // .length counts UTF-16 code units, not bytes; use byteLength for the
+    // honest size so multi-byte characters don't sneak past the cap.
+    if (Buffer.byteLength(raw, 'utf8') > MAX_BODY_BYTES) {
       return NextResponse.json({ ok: false, reason: 'too_large' }, { status: 200 })
     }
     let body: LogBody

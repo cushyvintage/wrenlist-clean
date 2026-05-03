@@ -17,6 +17,10 @@ interface RefineBody {
     suggestedQuery?: string
     confidence?: 'high' | 'medium' | 'low'
   }
+  // Top-level category from the prior identify ("clothing", "books_media").
+  // If the model returns the same top-level after refining, we reuse the
+  // previous canonical leaf instead of paying for another OpenAI call.
+  previousTopLevel?: string
   userFeedback: string
 }
 
@@ -45,7 +49,7 @@ export const POST = withAuth(async (request, user) => {
     const TOP_LEVEL_LIST = VALID_TOP_LEVELS.join(', ')
 
     const body = (await request.json()) as RefineBody
-    const { images, previousSuggestion, userFeedback } = body
+    const { images, previousSuggestion, previousTopLevel, userFeedback } = body
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: 'At least one image is required' }, { status: 400 })
@@ -148,12 +152,24 @@ Return ONLY valid JSON:
     const condition = VALID_CONDITIONS.includes(result.condition ?? '') ? result.condition : undefined
     const topLevel = VALID_TOP_LEVELS.includes(result.category) ? result.category : 'other'
 
-    const category = await refineToLeafCategory(
-      topLevel,
-      images[0] ?? '',
-      process.env.OPENAI_API_KEY!,
-      result.title,
-    )
+    // Skip the leaf-refine OpenAI call when the top-level didn't change AND
+    // we already have a canonical leaf from the previous identify. Saves a
+    // round-trip to OpenAI on the common "Wren got the right top-level,
+    // just needs nudging on era/maker" refinement.
+    const canReuseCategory =
+      typeof previousTopLevel === 'string' &&
+      previousTopLevel === topLevel &&
+      typeof previousSuggestion.category === 'string' &&
+      previousSuggestion.category.length > 0
+
+    const category = canReuseCategory
+      ? previousSuggestion.category!
+      : await refineToLeafCategory(
+        topLevel,
+        images[0] ?? '',
+        process.env.OPENAI_API_KEY!,
+        result.title,
+      )
 
     return NextResponse.json({
       ...result,

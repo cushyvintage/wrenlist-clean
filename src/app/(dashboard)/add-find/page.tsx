@@ -61,29 +61,41 @@ export default function AddFindPage() {
   // After a save or publish succeeds, log what actually shipped vs what
   // Wren originally suggested. This is the most informative correction
   // signal — captures any edits the user made AFTER the apply step too.
+  //
+  // Uses sendBeacon so the request survives the immediate router.push
+  // navigation that follows on save. Falls back to fetch + keepalive,
+  // and finally a plain fetch — all silent failures by contract.
   const logFinalCorrection = (findId: string) => {
     const orig = form.originalSuggestion
     if (!orig) return
     const f = form.formData
-    fetch('/api/ai/log-correction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'final',
-        findId,
-        suggestion: orig,
-        finalValues: {
-          title: f.title,
-          description: f.description,
-          category: f.category,
-          condition: f.condition,
-          price: f.price,
-          brand: f.brand,
-        },
-        confidence: orig.confidence,
-        photoCount: f.photoPreviews.length,
-      }),
-    }).catch(() => { /* logging must not break flow */ })
+    const body = JSON.stringify({
+      action: 'final',
+      findId,
+      suggestion: orig,
+      finalValues: {
+        title: f.title,
+        description: f.description,
+        category: f.category,
+        condition: f.condition,
+        price: f.price,
+        brand: f.brand,
+      },
+      confidence: orig.confidence,
+      photoCount: f.photoPreviews.length,
+    })
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob([body], { type: 'application/json' })
+        if (navigator.sendBeacon('/api/ai/log-correction', blob)) return
+      }
+      fetch('/api/ai/log-correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch(() => { /* logging must not break flow */ })
+    } catch { /* never throw out of a logging path */ }
   }
 
   const { handleSaveDraft, handlePublish } = useAddFindSubmit({
@@ -235,16 +247,8 @@ export default function AddFindPage() {
             onRefine={form.refinePhotos}
             isRefining={form.isRefining}
             refineError={form.refineError}
-            isRefined={
-              !!form.originalSuggestion && !!form.aiAutoFill &&
-              form.originalSuggestion !== form.aiAutoFill &&
-              (
-                form.originalSuggestion.title !== form.aiAutoFill.title ||
-                form.originalSuggestion.description !== form.aiAutoFill.description ||
-                form.originalSuggestion.category !== form.aiAutoFill.category ||
-                form.originalSuggestion.condition !== form.aiAutoFill.condition
-              )
-            }
+            onClearRefineError={() => form.setRefineError(null)}
+            isRefined={form.isRefined}
             onResetToOriginal={form.resetToOriginal}
           />
         </div>

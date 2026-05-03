@@ -37,6 +37,9 @@ interface AIAutoFillBannerProps {
   onRefine?: (feedback: string) => Promise<void> | void
   isRefining?: boolean
   refineError?: string | null
+  // Called when the user retypes or cancels — lets the parent clear a
+  // stale error message instead of showing it next to fresh input.
+  onClearRefineError?: () => void
   // True when the current banner data is a refined version, not the
   // first identify result. Drives the "Reset to original" affordance.
   isRefined?: boolean
@@ -59,6 +62,7 @@ export default function AIAutoFillBanner({
   onRefine,
   isRefining,
   refineError,
+  onClearRefineError,
   isRefined,
   onResetToOriginal,
 }: AIAutoFillBannerProps) {
@@ -272,7 +276,12 @@ export default function AIAutoFillBanner({
             <div className="rounded border border-sage/20 bg-white p-2 space-y-2">
               <textarea
                 value={refineText}
-                onChange={(e) => setRefineText(e.target.value)}
+                onChange={(e) => {
+                  setRefineText(e.target.value)
+                  // Stale error next to fresh input is confusing — drop it
+                  // the moment the user starts typing again.
+                  if (refineError) onClearRefineError?.()
+                }}
                 placeholder="e.g. it's actually 1970s Hornsea, not Denby. The mark on the base says Saffron."
                 rows={2}
                 maxLength={500}
@@ -284,7 +293,11 @@ export default function AIAutoFillBanner({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => { setRefineOpen(false); setRefineText('') }}
+                    onClick={() => {
+                      setRefineOpen(false)
+                      setRefineText('')
+                      onClearRefineError?.()
+                    }}
                     disabled={isRefining}
                     className="text-xs text-sage-dim hover:text-ink transition-colors disabled:opacity-50"
                   >

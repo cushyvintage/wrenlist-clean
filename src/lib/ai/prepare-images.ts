@@ -23,9 +23,12 @@ export async function prepareImagesForAI(previews: string[], maxImages = 3): Pro
     try {
       const dataUrl = await resizeToDataUrl(preview)
       if (dataUrl) out.push(dataUrl)
-    } catch {
+      else console.warn('prepareImagesForAI: dropped image (no canvas context)')
+    } catch (err) {
       // Single image failure shouldn't break the whole identify call —
-      // just skip it and let the others through.
+      // skip it and let the others through, but log so dev can spot
+      // CORS/CSP regressions on remote URLs.
+      console.warn('prepareImagesForAI: dropped image', err)
     }
   }
   return out

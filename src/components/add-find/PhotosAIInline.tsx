@@ -21,6 +21,7 @@ interface Props {
   onRefine?: (feedback: string) => Promise<void> | void
   isRefining?: boolean
   refineError?: string | null
+  onClearRefineError?: () => void
   isRefined?: boolean
   onResetToOriginal?: () => void
 }
@@ -40,6 +41,7 @@ export default function PhotosAIInline({
   onRefine,
   isRefining,
   refineError,
+  onClearRefineError,
   isRefined,
   onResetToOriginal,
 }: Props) {
@@ -69,6 +71,7 @@ export default function PhotosAIInline({
           onRefine={onRefine}
           isRefining={isRefining}
           refineError={refineError}
+          onClearRefineError={onClearRefineError}
           isRefined={isRefined}
           onResetToOriginal={onResetToOriginal}
         />
