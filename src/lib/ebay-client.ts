@@ -252,6 +252,45 @@ export class eBayClient {
   }
 
   /**
+   * Fetch eBay seller account info including account type and business type
+   */
+  async fetchAccountInfo(): Promise<{
+    accountType?: string
+    sellerBusinessType?: string
+    positiveFeedbackPercent?: number
+    feedbackScore?: number
+  } | null> {
+    if (!this.tokens?.accessToken) return null
+
+    try {
+      // /sell/account/v1/account endpoint returns account business type
+      const response = await undiciFetch(`${this.baseUrl}/sell/account/v1/account`, {
+        headers: new UndiciHeaders({
+          'Authorization': `Bearer ${this.tokens.accessToken}`,
+          'Accept': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': this.config.marketplaceId,
+        }),
+      })
+
+      if (!response.ok) {
+        console.log('[eBay] Account API status:', response.status)
+        return null
+      }
+
+      const data = await response.json() as any
+      return {
+        accountType: data.account_type || 'Individual',
+        sellerBusinessType: data.seller_business_type || undefined,
+        positiveFeedbackPercent: data.positive_feedback_percent || undefined,
+        feedbackScore: data.feedback_score || undefined,
+      }
+    } catch (err) {
+      console.log('[eBay] Account info fetch error:', err instanceof Error ? err.message : err)
+      return null
+    }
+  }
+
+  /**
    * Check if token needs refresh
    */
   isTokenExpired(): boolean {

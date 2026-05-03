@@ -62,6 +62,7 @@ export default function ImportPage() {
 
   // Import state
   const vintedImport = useMarketplaceImport()
+  const importAbortRef = useRef<boolean>(false)
 
   // Load items when platform is selected
   useEffect(() => {
@@ -1217,6 +1218,7 @@ export default function ImportPage() {
     const totalItems = selectedIds.length
     let totalImported = 0, totalSkipped = 0, totalErrors = 0
     let consecutiveFailures = 0
+    importAbortRef.current = false
 
     vintedImport.runImportProgress(0, 0, 0, totalItems)
 
@@ -1282,6 +1284,11 @@ export default function ImportPage() {
 
         vintedImport.runImportProgress(totalImported, totalSkipped, totalErrors, totalItems)
 
+        if (importAbortRef.current) {
+          vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
+          return
+        }
+
         // Refresh imported status so list updates live
         try {
           const importedData = await fetchApi<{ importedIds: string[] }>('/api/import/vinted-imported')
@@ -1295,6 +1302,29 @@ export default function ImportPage() {
       }
 
       vintedImport.setDone(totalImported, totalSkipped, totalErrors, totalItems)
+
+      // Phase 2: mirror CDN photos → Supabase Storage in chunks (non-blocking loop)
+      if (totalImported > 0) {
+        vintedImport.startMirroring(totalImported)
+        let mirrorDone = 0
+        const MIRROR_BATCH = 30
+        while (true) {
+          if (vintedImport.mirroringAbortRef.current) break
+          try {
+            const res = await fetch('/api/import/mirror-photos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ batch: MIRROR_BATCH }),
+            })
+            if (!res.ok) break
+            const data = await res.json() as { mirrored: number; skipped: number; remaining: number }
+            mirrorDone += data.mirrored + data.skipped
+            vintedImport.updateMirroring(Math.min(mirrorDone, totalImported))
+            if (data.remaining === 0 || data.mirrored === 0) break
+          } catch { break }
+        }
+        vintedImport.finishMirroring()
+      }
     } catch (err) {
       vintedImport.setError(err instanceof Error ? err.message : 'Import failed')
     }
@@ -2111,8 +2141,13 @@ export default function ImportPage() {
       />
 
       {/* Import progress */}
-      {vintedImport.state.phase !== 'idle' && (
-        <ImportProgressBar state={vintedImport.state} />
+      {(vintedImport.state.phase !== 'idle' || vintedImport.mirroringState.active || vintedImport.mirroringState.finished) && (
+        <ImportProgressBar
+          state={vintedImport.state}
+          onCancel={vintedImport.state.phase === 'importing' ? () => { importAbortRef.current = true } : undefined}
+          mirroringState={vintedImport.mirroringState.active || vintedImport.mirroringState.finished ? vintedImport.mirroringState : undefined}
+          onDismissMirroring={vintedImport.dismissMirroring}
+        />
       )}
 
       {/* Error */}

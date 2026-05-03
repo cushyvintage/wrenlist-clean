@@ -14,6 +14,8 @@ export interface EbayConnectionStatus {
   needsReconnect: boolean
   setupComplete: boolean
   username: string | null
+  accountType: string | null
+  sellerBusinessType: string | null
   expiresAt: string | null
   isLoading: boolean
   error: string | null
@@ -34,6 +36,8 @@ export function useEbayConnection(): UseEbayConnectionReturn {
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [setupComplete, setSetupComplete] = useState(false)
   const [username, setUsername] = useState<string | null>(null)
+  const [accountType, setAccountType] = useState<string | null>(null)
+  const [sellerBusinessType, setSellerBusinessType] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +53,8 @@ export function useEbayConnection(): UseEbayConnectionReturn {
         setNeedsReconnect(data.data?.needsReconnect || false)
         setSetupComplete(data.data?.setupComplete || false)
         setUsername(data.data?.username || null)
+        setAccountType(data.data?.accountType || null)
+        setSellerBusinessType(data.data?.sellerBusinessType || null)
         setExpiresAt(data.data?.expiresAt || null)
       }
     } catch (err) {
@@ -114,6 +120,8 @@ export function useEbayConnection(): UseEbayConnectionReturn {
       setNeedsReconnect(false)
       setSetupComplete(false)
       setUsername(null)
+      setAccountType(null)
+      setSellerBusinessType(null)
       setExpiresAt(null)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to disconnect from eBay'
@@ -128,6 +136,8 @@ export function useEbayConnection(): UseEbayConnectionReturn {
     needsReconnect,
     setupComplete,
     username,
+    accountType,
+    sellerBusinessType,
     expiresAt,
     isLoading,
     error,

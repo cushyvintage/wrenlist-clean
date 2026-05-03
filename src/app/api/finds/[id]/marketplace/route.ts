@@ -169,6 +169,9 @@ export async function PATCH(
       status: body.status || 'needs_delist',
       updated_at: new Date().toISOString(),
     }
+    // Allow callers (e.g. handleRelistOnVinted) to update listing ID/URL in the same PATCH
+    if (body.platform_listing_id !== undefined) updatePayload.platform_listing_id = body.platform_listing_id || null
+    if (body.platform_listing_url !== undefined) updatePayload.platform_listing_url = body.platform_listing_url || null
     if (body.status === 'needs_publish' || body.status === 'needs_delist') {
       updatePayload.error_message = null
 

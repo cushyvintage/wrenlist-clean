@@ -1,0 +1,56 @@
+/**
+ * Take the photoPreviews array (a mix of blob:, data:, and https: URLs)
+ * and turn it into a list of inputs the AI vision endpoints can accept.
+ *
+ * - blob: / data: URLs are resized to <=1024px on the longest edge and
+ *   re-encoded as JPEG data URLs (keeps payloads under ~1MB per image).
+ * - https: URLs are passed through unchanged.
+ * - Anything else is dropped (the AI route would reject it anyway).
+ *
+ * Used by both `identify-from-photo` and `refine-from-photo` callers — DRY
+ * the canvas-resize dance instead of inlining it twice.
+ */
+export async function prepareImagesForAI(previews: string[], maxImages = 3): Promise<string[]> {
+  const out: string[] = []
+  for (const preview of previews.slice(0, maxImages)) {
+    if (!preview) continue
+    if (preview.startsWith('http')) {
+      out.push(preview)
+      continue
+    }
+    if (!preview.startsWith('blob:') && !preview.startsWith('data:')) continue
+
+    try {
+      const dataUrl = await resizeToDataUrl(preview)
+      if (dataUrl) out.push(dataUrl)
+    } catch {
+      // Single image failure shouldn't break the whole identify call —
+      // just skip it and let the others through.
+    }
+  }
+  return out
+}
+
+async function resizeToDataUrl(src: string, max = 1024): Promise<string | null> {
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = reject
+    img.src = src
+  })
+
+  let { width, height } = img
+  if (width > max || height > max) {
+    const scale = max / Math.max(width, height)
+    width = Math.round(width * scale)
+    height = Math.round(height * scale)
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(img, 0, 0, width, height)
+  return canvas.toDataURL('image/jpeg', 0.8)
+}

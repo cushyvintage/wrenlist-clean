@@ -18,10 +18,14 @@ interface SubmitDeps {
   setUploadProgress: Dispatch<SetStateAction<number>>
   setPublishProgress: Dispatch<SetStateAction<PublishProgress | null>>
   setIncompleteRequiredFields: Dispatch<SetStateAction<Set<string>>>
+  // Called once a find has been created (save or publish) and we have an
+  // id. Lets the page log the AI-vs-final-values diff. Failure is silent
+  // by contract — must never disrupt the save/publish flow.
+  onSaveSuccess?: (findId: string) => void
 }
 
 export function useAddFindSubmit(deps: SubmitDeps) {
-  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress, setIncompleteRequiredFields } = deps
+  const { formData, fieldConfig, router, setIsLoading, setError, setUploadProgress, setPublishProgress, setIncompleteRequiredFields, onSaveSuccess } = deps
   const { getPlatformId } = useCategoryTree()
 
   const uploadPhotosToStorage = async (findId: string): Promise<string[]> => {
@@ -178,6 +182,7 @@ export function useAddFindSubmit(deps: SubmitDeps) {
         }
       }
       setUploadProgress(100)
+      if (findId) onSaveSuccess?.(findId)
       router.push(`/finds`)
     } catch (err) {
       const message = (err as Error).message || 'Could not save draft. Please try again.'
@@ -302,6 +307,7 @@ export function useAddFindSubmit(deps: SubmitDeps) {
       }
       const data = await response.json()
       const findId = data?.data?.id || data?.id
+      if (findId) onSaveSuccess?.(findId)
 
       // Step 2: Upload photos
       if (findId && formData.photos.length > 0) {

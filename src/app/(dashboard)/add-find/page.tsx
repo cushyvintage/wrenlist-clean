@@ -57,6 +57,35 @@ export default function AddFindPage() {
   // is empty. Without this guard, Publish would queue a job nobody can act
   // on. Save draft still works — it just stores the find in inventory.
   const noPlatformsSelected = form.formData.selectedPlatforms.length === 0
+
+  // After a save or publish succeeds, log what actually shipped vs what
+  // Wren originally suggested. This is the most informative correction
+  // signal — captures any edits the user made AFTER the apply step too.
+  const logFinalCorrection = (findId: string) => {
+    const orig = form.originalSuggestion
+    if (!orig) return
+    const f = form.formData
+    fetch('/api/ai/log-correction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'final',
+        findId,
+        suggestion: orig,
+        finalValues: {
+          title: f.title,
+          description: f.description,
+          category: f.category,
+          condition: f.condition,
+          price: f.price,
+          brand: f.brand,
+        },
+        confidence: orig.confidence,
+        photoCount: f.photoPreviews.length,
+      }),
+    }).catch(() => { /* logging must not break flow */ })
+  }
+
   const { handleSaveDraft, handlePublish } = useAddFindSubmit({
     formData: form.formData,
     fieldConfig: form.fieldConfig,
@@ -66,6 +95,7 @@ export default function AddFindPage() {
     setUploadProgress: form.setUploadProgress,
     setPublishProgress: form.setPublishProgress,
     setIncompleteRequiredFields: form.setIncompleteRequiredFields,
+    onSaveSuccess: logFinalCorrection,
   })
 
   // Track whether photos card has scrolled out of view (for sticky AI bar on mobile)
@@ -84,7 +114,9 @@ export default function AddFindPage() {
     fields: { title?: string; description?: string; category?: string; condition?: string; price?: number },
     outcomes: Record<string, 'kept' | 'rejected'>,
   ) => {
-    // Snapshot the suggestion before we clear it so we can log it.
+    // Snapshot the suggestion before we clear it so we can log it. We
+    // include `originalConfidence` so analytics can tell apart "Wren was
+    // confident from the start" from "Wren got there after a refinement".
     const suggestionAtApply = form.aiAutoFill ? {
       title: form.aiAutoFill.title,
       description: form.aiAutoFill.description,
@@ -93,6 +125,7 @@ export default function AddFindPage() {
       suggestedQuery: form.aiAutoFill.suggestedQuery,
       suggestedPrice: form.aiAutoFill.suggestedPrice,
       confidence: form.aiAutoFill.confidence,
+      originalConfidence: form.originalSuggestion?.confidence,
     } : null
     const photoCount = form.formData.photoPreviews.length
     const confidence = form.aiAutoFill?.confidence
@@ -201,6 +234,18 @@ export default function AddFindPage() {
             }}
             onRefine={form.refinePhotos}
             isRefining={form.isRefining}
+            refineError={form.refineError}
+            isRefined={
+              !!form.originalSuggestion && !!form.aiAutoFill &&
+              form.originalSuggestion !== form.aiAutoFill &&
+              (
+                form.originalSuggestion.title !== form.aiAutoFill.title ||
+                form.originalSuggestion.description !== form.aiAutoFill.description ||
+                form.originalSuggestion.category !== form.aiAutoFill.category ||
+                form.originalSuggestion.condition !== form.aiAutoFill.condition
+              )
+            }
+            onResetToOriginal={form.resetToOriginal}
           />
         </div>
 

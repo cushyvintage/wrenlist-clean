@@ -36,6 +36,11 @@ interface AIAutoFillBannerProps {
   onDismiss: () => void
   onRefine?: (feedback: string) => Promise<void> | void
   isRefining?: boolean
+  refineError?: string | null
+  // True when the current banner data is a refined version, not the
+  // first identify result. Drives the "Reset to original" affordance.
+  isRefined?: boolean
+  onResetToOriginal?: () => void
 }
 
 function formatCondition(value: string): string {
@@ -53,6 +58,9 @@ export default function AIAutoFillBanner({
   onDismiss,
   onRefine,
   isRefining,
+  refineError,
+  isRefined,
+  onResetToOriginal,
 }: AIAutoFillBannerProps) {
   const [refineOpen, setRefineOpen] = useState(false)
   const [refineText, setRefineText] = useState('')
@@ -238,16 +246,28 @@ export default function AIAutoFillBanner({
       </div>
 
       {onRefine && (
-        <div className="mb-3">
+        <div className="mb-3 space-y-2">
           {!refineOpen ? (
-            <button
-              type="button"
-              onClick={() => setRefineOpen(true)}
-              disabled={isRefining}
-              className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2 disabled:opacity-50"
-            >
-              Not quite right? Tell Wren what to fix →
-            </button>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setRefineOpen(true)}
+                disabled={isRefining}
+                className="text-xs text-sage-lt hover:text-sage transition-colors underline underline-offset-2 disabled:opacity-50"
+              >
+                Not quite right? Tell Wren what to fix →
+              </button>
+              {isRefined && onResetToOriginal && (
+                <button
+                  type="button"
+                  onClick={onResetToOriginal}
+                  disabled={isRefining}
+                  className="text-xs text-sage-dim hover:text-ink transition-colors underline underline-offset-2 disabled:opacity-50"
+                >
+                  Reset to original
+                </button>
+              )}
+            </div>
           ) : (
             <div className="rounded border border-sage/20 bg-white p-2 space-y-2">
               <textarea
@@ -281,6 +301,11 @@ export default function AIAutoFillBanner({
                 </div>
               </div>
             </div>
+          )}
+          {refineError && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              {refineError}
+            </p>
           )}
         </div>
       )}

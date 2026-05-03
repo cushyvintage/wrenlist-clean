@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export type ImportPhase = 'idle' | 'fetching' | 'importing' | 'done' | 'error'
 
@@ -11,6 +11,13 @@ export interface ImportState {
   skipped: number
   errors: number
   message: string
+}
+
+export interface MirroringState {
+  active: boolean
+  done: number
+  total: number
+  finished: boolean
 }
 
 interface ImportResult {
@@ -33,6 +40,32 @@ export function useMarketplaceImport() {
     errors: 0,
     message: '',
   })
+
+  const [mirroringState, setMirroringState] = useState<MirroringState>({
+    active: false,
+    done: 0,
+    total: 0,
+    finished: false,
+  })
+  const mirroringAbortRef = useRef(false)
+
+  const startMirroring = useCallback((total: number) => {
+    mirroringAbortRef.current = false
+    setMirroringState({ active: true, done: 0, total, finished: false })
+  }, [])
+
+  const updateMirroring = useCallback((done: number) => {
+    setMirroringState((prev) => ({ ...prev, done }))
+  }, [])
+
+  const finishMirroring = useCallback(() => {
+    setMirroringState((prev) => ({ ...prev, active: false, finished: true }))
+  }, [])
+
+  const dismissMirroring = useCallback(() => {
+    mirroringAbortRef.current = true
+    setMirroringState({ active: false, done: 0, total: 0, finished: false })
+  }, [])
 
   const reset = useCallback(() => {
     setState({
@@ -208,5 +241,8 @@ export function useMarketplaceImport() {
     }
   }, [runImportProgress])
 
-  return { state, runImport, reset, setFetching, setDone, setError, runImportProgress, startPolling }
+  return {
+    state, runImport, reset, setFetching, setDone, setError, runImportProgress, startPolling,
+    mirroringState, mirroringAbortRef, startMirroring, updateMirroring, finishMirroring, dismissMirroring,
+  }
 }

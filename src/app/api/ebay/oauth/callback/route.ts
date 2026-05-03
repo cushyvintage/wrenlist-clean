@@ -89,8 +89,9 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     const tokens = await client.exchangeCodeForTokens(code)
 
-    // Fetch eBay username
+    // Fetch eBay username and account info
     const ebayUsername = await client.fetchUsername()
+    const accountInfo = await client.fetchAccountInfo()
 
     // Upsert tokens — insert or update (encrypt before storing)
     const { error: upsertError } = await supabase
@@ -111,6 +112,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(`${appUrl}/platform-connect?error=db_error`)
       )
+    }
+
+    // Upsert seller config with account type
+    const { error: configError } = await supabase
+      .from('ebay_seller_config')
+      .upsert({
+        user_id: stateRecord.user_id,
+        marketplace_id: marketplace,
+        account_type: accountInfo?.accountType || 'Individual',
+        seller_business_type: accountInfo?.sellerBusinessType || null,
+        positive_feedback_percent: accountInfo?.positiveFeedbackPercent || null,
+        feedback_score: accountInfo?.feedbackScore || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,marketplace_id' })
+
+    if (configError) {
+      console.error('[eBay] Config upsert error:', configError)
+      // Don't fail the OAuth flow if config upsert fails — tokens are already saved
     }
 
     // Redirect to success page

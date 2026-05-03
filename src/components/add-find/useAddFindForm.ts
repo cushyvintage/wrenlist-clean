@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { applyTemplate } from '@/lib/templates/apply-template'
 import { FindCondition, Platform, FieldConfig, ListingTemplate } from '@/types'
 import type { PlatformFieldsData } from '@/types/listing-form'
 import type { AIAutoFillData } from '@/components/add-find/AIAutoFillBanner'
+import { prepareImagesForAI } from '@/lib/ai/prepare-images'
 
 export type { PlatformFieldsData }
 
@@ -81,13 +82,20 @@ export function useAddFindForm() {
   } | null>(null)
   const [dismissedAutoDetection, setDismissedAutoDetection] = useState(false)
   const [aiAutoFill, setAiAutoFill] = useState<AIAutoFillData | null>(null)
+  // First identification result for this set of photos. Survives refine and
+  // banner dismissal so we can offer "reset to original" and so the final
+  // log row diffs against what the model actually said first time.
+  const [originalSuggestion, setOriginalSuggestion] = useState<AIAutoFillData | null>(null)
   const [dismissedAutoFill, setDismissedAutoFill] = useState(false)
   const [isIdentifying, setIsIdentifying] = useState(false)
   const [isRefining, setIsRefining] = useState(false)
-  // Last set of images sent to identify-from-photo, in the same form the
-  // server expects (data URLs or https URLs). Held so the refine endpoint
-  // can be called with the exact same input the user saw a suggestion for.
-  const [lastIdentifiedImages, setLastIdentifiedImages] = useState<string[]>([])
+  const [refineError, setRefineError] = useState<string | null>(null)
+  // AbortController for the in-flight refine request. Cancelled when the
+  // user dismisses the banner, asks Wren again, or removes all photos —
+  // prevents the stale response from racing in and re-showing the banner.
+  const refineAbortRef = useRef<AbortController | null>(null)
+  // Guards against ultra-fast double-clicks on Send before isRefining flips.
+  const refineInFlightRef = useRef(false)
   const [sourcingTripName, setSourcingTripName] = useState<string | null>(null)
   const [isbnLookupOpen, setIsbnLookupOpen] = useState(false)
   const [classifyingPhotoIndex, setClassifyingPhotoIndex] = useState<number | null>(null)
@@ -220,90 +228,78 @@ export function useAddFindForm() {
     return () => controller.abort()
   }, [formData.category, formData.selectedPlatforms])
 
+  // Run a price research lookup for the given query and patch the banner
+  // state with the result. Shared between identify and refine — avoids
+  // duplicating the same fetch + null-guard dance in two places.
+  const fetchPriceForBanner = async (query: string) => {
+    try {
+      const priceRes = await fetch('/api/price-research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      })
+      if (priceRes.ok) {
+        const priceData = await priceRes.json()
+        const suggested = priceData?.recommendation?.suggested_price
+        const reasoning = priceData?.recommendation?.reasoning
+        setAiAutoFill(prev => prev ? {
+          ...prev,
+          suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
+          priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
+          priceLoading: false,
+        } : null)
+      } else {
+        setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+      }
+    } catch {
+      setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
+    }
+  }
+
+  // Translate an AI identify/refine response into the AIAutoFillData shape
+  // the banner consumes. Centralising it keeps identify and refine in lock-step.
+  const aiResponseToBannerData = (data: {
+    title?: string
+    description?: string
+    category?: string
+    condition?: string
+    suggestedQuery?: string
+    confidence: 'high' | 'medium' | 'low'
+  }): AIAutoFillData => ({
+    title: data.title,
+    description: data.description,
+    category: data.category,
+    condition: data.condition,
+    suggestedQuery: typeof data.suggestedQuery === 'string' ? data.suggestedQuery : undefined,
+    confidence: data.confidence,
+    priceLoading: !!data.suggestedQuery,
+  })
+
   // ── Explicit AI identification (triggered by user button click) ──
   const identifyPhotos = async () => {
     if (!formData.photoPreviews.length || isIdentifying) return
 
-    const firstPhoto = formData.photoPreviews[0]
-    if (!firstPhoto) return
-    const additionalPreviews = formData.photoPreviews.slice(1, 3)
+    // New identify run invalidates any in-flight refine and prior original.
+    refineAbortRef.current?.abort()
+    setRefineError(null)
+    setOriginalSuggestion(null)
 
-    let imageUrl = firstPhoto
-    if (firstPhoto.startsWith('blob:') || firstPhoto.startsWith('data:')) {
-      try {
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = reject
-          img.src = firstPhoto
-        })
-        const MAX = 1024
-        let { width, height } = img
-        if (width > MAX || height > MAX) {
-          const scale = MAX / Math.max(width, height)
-          width = Math.round(width * scale)
-          height = Math.round(height * scale)
-        }
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-        ctx.drawImage(img, 0, 0, width, height)
-        imageUrl = canvas.toDataURL('image/jpeg', 0.8)
-      } catch {
-        return
-      }
-    } else if (!firstPhoto.startsWith('http')) {
-      return
-    }
+    const images = await prepareImagesForAI(formData.photoPreviews)
+    if (images.length === 0) return
 
     setIsIdentifying(true)
-    const allImages = [imageUrl, ...additionalPreviews.filter((p) => p.startsWith('http') || p.startsWith('data:'))]
-    setLastIdentifiedImages(allImages)
     try {
       const response = await fetch('/api/ai/identify-from-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: allImages }),
+        body: JSON.stringify({ images }),
       })
-      if (response.ok) {
-        const data = await response.json()
-        setAiAutoFill({
-          title: data.title,
-          description: data.description,
-          category: data.category,
-          condition: data.condition,
-          suggestedQuery: data.suggestedQuery,
-          confidence: data.confidence,
-          priceLoading: !!data.suggestedQuery,
-        })
-        if (data.suggestedQuery) {
-          try {
-            const priceRes = await fetch('/api/price-research', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: data.suggestedQuery }),
-            })
-            if (priceRes.ok) {
-              const priceData = await priceRes.json()
-              const suggested = priceData?.recommendation?.suggested_price
-              const reasoning = priceData?.recommendation?.reasoning
-              setAiAutoFill(prev => prev ? {
-                ...prev,
-                suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
-                priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
-                priceLoading: false,
-              } : null)
-            } else {
-              setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-            }
-          } catch {
-            setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-          }
-        }
-      }
+      if (!response.ok) return
+      const data = await response.json()
+      const banner = aiResponseToBannerData(data)
+      setAiAutoFill(banner)
+      setOriginalSuggestion(banner)
+      if (banner.suggestedQuery) await fetchPriceForBanner(banner.suggestedQuery)
     } catch (err) {
       console.error('Failed to identify from photo:', err)
     } finally {
@@ -315,28 +311,54 @@ export function useAddFindForm() {
   //    AI banner. Re-runs identify with the previous suggestion + their
   //    feedback as extra context. Logs the refinement.
   const refinePhotos = async (userFeedback: string) => {
-    if (!aiAutoFill || lastIdentifiedImages.length === 0 || isRefining) return
+    if (!aiAutoFill || refineInFlightRef.current) return
+    refineInFlightRef.current = true
     setIsRefining(true)
+    setRefineError(null)
+
+    // Re-derive images from the current photo set rather than reusing a
+    // stale list from the original identify call. If the user replaced
+    // photos between Ask Wren and Refine, this ensures Wren actually sees
+    // the new ones.
+    const images = await prepareImagesForAI(formData.photoPreviews)
+    if (images.length === 0) {
+      setRefineError('Add at least one photo before asking Wren to rethink.')
+      setIsRefining(false)
+      refineInFlightRef.current = false
+      return
+    }
+
+    const controller = new AbortController()
+    refineAbortRef.current = controller
+
+    const previousSuggestion = {
+      title: aiAutoFill.title,
+      description: aiAutoFill.description,
+      category: aiAutoFill.category,
+      condition: aiAutoFill.condition,
+      suggestedQuery: aiAutoFill.suggestedQuery,
+      confidence: aiAutoFill.confidence,
+    }
+
     try {
-      const previousSuggestion = {
-        title: aiAutoFill.title,
-        description: aiAutoFill.description,
-        category: aiAutoFill.category,
-        condition: aiAutoFill.condition,
-        suggestedQuery: aiAutoFill.suggestedQuery,
-        confidence: aiAutoFill.confidence,
-      }
       const response = await fetch('/api/ai/refine-from-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: lastIdentifiedImages,
-          previousSuggestion,
-          userFeedback,
-        }),
+        body: JSON.stringify({ images, previousSuggestion, userFeedback }),
+        signal: controller.signal,
       })
-      if (!response.ok) return
+      if (!response.ok) {
+        const msg = response.status === 429
+          ? 'Slow down a moment — Wren is rate-limited. Try again in a few seconds.'
+          : "Wren couldn't rethink that. Try a shorter, clearer description of what's wrong."
+        setRefineError(msg)
+        return
+      }
       const data = await response.json()
+
+      // Drop the result silently if the user dismissed/re-asked while we
+      // were in flight — re-showing a dismissed banner feels broken.
+      if (controller.signal.aborted || dismissedAutoFill) return
 
       // Log the refinement (fire-and-forget — never block UI on this).
       fetch('/api/ai/log-correction', {
@@ -344,56 +366,57 @@ export function useAddFindForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'refined',
-          suggestion: previousSuggestion,
+          suggestion: { ...previousSuggestion, originalConfidence: originalSuggestion?.confidence },
           userFeedback,
           confidence: previousSuggestion.confidence,
-          photoCount: lastIdentifiedImages.length,
+          photoCount: images.length,
         }),
       }).catch(() => { /* logging must not break flow */ })
 
-      // Swap the banner data for the refined suggestion. Price re-research
-      // gets re-triggered if the suggestedQuery changed.
-      const newQuery = typeof data.suggestedQuery === 'string' ? data.suggestedQuery : undefined
-      setAiAutoFill({
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        condition: data.condition,
-        suggestedQuery: newQuery,
-        confidence: data.confidence,
-        priceLoading: !!newQuery,
-      })
+      const banner = aiResponseToBannerData(data)
+      setAiAutoFill(banner)
 
-      if (newQuery) {
-        try {
-          const priceRes = await fetch('/api/price-research', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: newQuery }),
-          })
-          if (priceRes.ok) {
-            const priceData = await priceRes.json()
-            const suggested = priceData?.recommendation?.suggested_price
-            const reasoning = priceData?.recommendation?.reasoning
-            setAiAutoFill(prev => prev ? {
-              ...prev,
-              suggestedPrice: typeof suggested === 'number' ? suggested : undefined,
-              priceReasoning: typeof reasoning === 'string' ? reasoning : undefined,
-              priceLoading: false,
-            } : null)
-          } else {
-            setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-          }
-        } catch {
-          setAiAutoFill(prev => prev ? { ...prev, priceLoading: false } : null)
-        }
+      // Skip price re-research when the search query didn't change — the
+      // existing price still applies and a second call costs money for nothing.
+      const queryChanged = banner.suggestedQuery && banner.suggestedQuery !== previousSuggestion.suggestedQuery
+      if (queryChanged && banner.suggestedQuery) {
+        await fetchPriceForBanner(banner.suggestedQuery)
+      } else {
+        // Carry the previous price across so the banner doesn't go blank.
+        setAiAutoFill(prev => prev ? {
+          ...prev,
+          suggestedPrice: aiAutoFill.suggestedPrice,
+          priceReasoning: aiAutoFill.priceReasoning,
+          priceLoading: false,
+        } : null)
       }
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return
       console.error('Failed to refine identification:', err)
+      setRefineError("Wren couldn't reach the network. Check your connection and try again.")
     } finally {
       setIsRefining(false)
+      refineInFlightRef.current = false
+      if (refineAbortRef.current === controller) refineAbortRef.current = null
     }
   }
+
+  // Reset banner to whatever Wren said first time. Clears any refine error too.
+  const resetToOriginal = () => {
+    if (!originalSuggestion) return
+    refineAbortRef.current?.abort()
+    setRefineError(null)
+    setAiAutoFill(originalSuggestion)
+  }
+
+  // Clearing photos / dismissing should also kill any in-flight refine.
+  useEffect(() => {
+    if (formData.photoPreviews.length === 0) {
+      refineAbortRef.current?.abort()
+      setOriginalSuggestion(null)
+      setRefineError(null)
+    }
+  }, [formData.photoPreviews.length])
 
   return {
     router,
@@ -428,6 +451,10 @@ export function useAddFindForm() {
     identifyPhotos,
     isRefining,
     refinePhotos,
+    refineError,
+    setRefineError,
+    originalSuggestion,
+    resetToOriginal,
     sourcingTripName,
     setSourcingTripName,
     isbnLookupOpen,

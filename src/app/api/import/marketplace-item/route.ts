@@ -177,14 +177,8 @@ async function fetchDepopDetail(listingId: string, bearerToken?: string, depopUs
       used_fair: 'fair',
     }
 
-    // Build category from gender + group + productType
-    const gender = data.isKids ? 'kidswear'
-      : data.gender === 'female' ? 'womenswear'
-      : data.gender === 'male' ? 'menswear'
-      : 'everything-else'
-    const category = data.group && data.productType
-      ? `${gender}|${data.group}|${data.productType}`
-      : undefined
+    // Map Depop gender+group to Wrenlist canonical category
+    const category = mapDepopCategory(data.gender, data.isKids, data.group)
 
     // Extract all photo URLs (highest resolution)
     const photos: string[] = []
@@ -208,6 +202,42 @@ async function fetchDepopDetail(listingId: string, bearerToken?: string, depopUs
   } catch {
     return null
   }
+}
+
+/**
+ * Map Depop's gender/group fields to a Wrenlist canonical category.
+ * Depop's API returns gender ('female'|'male'|null), isKids, and group slug.
+ */
+function mapDepopCategory(gender?: string | null, isKids?: boolean, group?: string | null): string {
+  if (isKids) return 'baby_toddler_general'
+
+  const g = (group || '').toLowerCase()
+
+  // Non-clothing groups from the "everything-else" department
+  if (g === 'home') return 'home_garden_general'
+  if (g === 'beauty') return 'health_beauty_general'
+  if (g === 'books-and-magazines' || g === 'music') return 'books_media_general'
+  if (g === 'cameras-and-film' || g === 'tech-accessories') return 'electronics_general'
+  if (g === 'art') return 'art_general'
+  if (g === 'sports-equipment') return 'sports_outdoors_general'
+  if (g === 'toys') return 'toys_games_general'
+  if (g === 'face-masks-and-coverings') return 'health_beauty_general'
+  if (g === 'party-supplies') return 'other_general'
+
+  // Gender-based clothing
+  if (gender === 'male') return 'clothing_menswear_general'
+  if (gender === 'female') return 'clothing_womenswear_general'
+
+  // Clothing group with unknown gender → default to womenswear_general
+  const CLOTHING_GROUPS = new Set([
+    'tops', 'bottoms', 'dresses', 'footwear', 'coats-and-jackets',
+    'jumpsuits-and-playsuits', 'suits', 'accessories', 'nightwear',
+    'underwear', 'swimwear', 'fancy-dress', 'jewellery',
+    'sleepsuits-and-bodysuits', 'clothing-bundles', 'umbrellas',
+  ])
+  if (CLOTHING_GROUPS.has(g)) return 'clothing_womenswear_general'
+
+  return 'other_general'
 }
 
 /** Map Facebook/extension condition strings to Wrenlist FindCondition */

@@ -28,6 +28,8 @@ interface EbayConnectionState {
   needsReconnect: boolean
   setupComplete: boolean
   username: string | null
+  accountType: string | null
+  sellerBusinessType: string | null
   expiresAt: string | null
   isLoading: boolean
   error: string | null
@@ -235,10 +237,18 @@ export function EbayConnect({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 p-4 bg-cream-md rounded mb-4">
+        <div className="grid grid-cols-3 gap-2 p-4 bg-cream-md rounded mb-4">
           <div>
             <div className="text-xs font-medium text-ink-lt mb-1">Account</div>
-            <div className="text-sm text-ink font-mono">{ebay.username}</div>
+            <div className="text-sm text-ink font-mono">{ebay.username || '—'}</div>
+          </div>
+          <div>
+            <div className="text-xs font-medium text-ink-lt mb-1">Account type</div>
+            {ebay.accountType ? (
+              <div className="text-sm text-ink capitalize">{ebay.accountType === 'Individual' ? 'Personal' : ebay.accountType}</div>
+            ) : (
+              <div className="text-sm text-sage text-xs">Loading…</div>
+            )}
           </div>
           <div>
             <div className="text-xs font-medium text-ink-lt mb-1">Marketplace</div>

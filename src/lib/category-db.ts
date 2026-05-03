@@ -126,6 +126,9 @@ export async function getLeafCategoryByVintedIdFromDb(
     '5196': 'pet_supplies_general',
     '1960': 'home_garden_kitchen_and_dining',
     '1959': 'home_garden_kitchen_and_dining',
+    '3856': 'home_garden_kitchen_and_dining', // Vinted: Tableware > Serveware > Coffee pots & teapots
+    '3857': 'home_garden_kitchen_and_dining', // Vinted: Tableware > Serveware > Jugs
+    '2005': 'home_garden_kitchen_and_dining', // Vinted: Tableware > Drinkware
   }
 
   return VINTED_FALLBACK_ID_TO_LEAF[vintedId]

@@ -24,9 +24,23 @@ interface LogBody {
  * Always returns 200 — we never want a logging failure to break the
  * add-find flow.
  */
+// Hard cap on serialised body size. Suggestions and final form values are
+// small JSON objects — anything bigger is either malformed or abuse, and
+// either way we don't want it taking up jsonb space in Postgres.
+const MAX_BODY_BYTES = 32_000
+
 export const POST = withAuth(async (request, user) => {
   try {
-    const body = (await request.json()) as LogBody
+    const raw = await request.text()
+    if (raw.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ ok: false, reason: 'too_large' }, { status: 200 })
+    }
+    let body: LogBody
+    try {
+      body = JSON.parse(raw) as LogBody
+    } catch {
+      return NextResponse.json({ ok: false, reason: 'invalid_json' }, { status: 200 })
+    }
 
     if (!body.action || !body.suggestion) {
       return NextResponse.json({ ok: false, reason: 'missing_required' }, { status: 200 })

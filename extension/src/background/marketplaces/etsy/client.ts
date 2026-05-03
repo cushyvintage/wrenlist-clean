@@ -215,6 +215,14 @@ export interface EtsyShopConfig {
 const SHOP_CONFIG_CACHE_KEY = "wrenlist_etsy_shop_config";
 const SHOP_CONFIG_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/** Thrown when the API path created a draft but couldn't activate it (fee dialog required). */
+class EtsyDraftActivateFailed extends Error {
+  constructor(msg: string, public readonly draftListingId: string) {
+    super(msg);
+    this.name = "EtsyDraftActivateFailed";
+  }
+}
+
 /** Data passed into the injected form-fill script */
 interface EtsyFormFillData {
   title: string;
@@ -1639,10 +1647,12 @@ export class EtsyClient {
           });
           orphanListingId = null; // success — don't clean up
         } catch (verifyErr) {
-          // Re-throw — the outer catch handles fall-back to form-fill AND the
-          // orphan-draft cleanup we wired up at the top of this method.
+          // Throw EtsyDraftActivateFailed (carries the draft ID) so the outer
+          // catch skips DELETE cleanup and publishProduct can pass the draft ID
+          // to form-fill — which opens the edit URL and avoids scraping entirely.
           clearInterval(keepAlive);
-          throw verifyErr;
+          const verifyMsg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+          throw new EtsyDraftActivateFailed(verifyMsg, listingId);
         }
 
       }
@@ -1675,14 +1685,10 @@ export class EtsyClient {
       });
 
       // Clean up the orphan API-created draft before falling through to
-      // form-fill. Use HTTP DELETE on the listing — verified by direct probe
-      // to return 204 No Content and the subsequent GET returns "Listing not
-      // found" for both state=3 drafts and state=0 active listings. PATCH
-      // state="inactive" was tried first but silent-no-ops on drafts (and
-      // sometimes flips them ACTIVE — really bad) so DELETE it is.
-      // If the cleanup fails for any reason it's non-fatal — we still
-      // propagate the original error so form-fill takes over.
-      if (orphanListingId) {
+      // form-fill — UNLESS this is an EtsyDraftActivateFailed, in which case
+      // the draft is intentionally kept alive so form-fill can open its edit
+      // URL directly (no scraping needed — the ID is already known).
+      if (orphanListingId && !(error instanceof EtsyDraftActivateFailed)) {
         try {
           const shopId = await this.getShopId();
           const csrfNonce = await this.getCsrfNonce();
@@ -2141,6 +2147,7 @@ export class EtsyClient {
     options?: { publishMode?: "draft" | "publish" },
   ): Promise<ListingActionResult> {
     // Try API method first
+    let existingDraftId: string | undefined;
     try {
       const result = await this.publishProductViaApi(product, options);
       return result;
@@ -2148,10 +2155,14 @@ export class EtsyClient {
       const apiMsg = apiError instanceof Error ? apiError.message : String(apiError);
       console.warn(`[Etsy] API publish failed, falling back to form-fill: ${apiMsg}`);
       await remoteLog("warn", "etsy.publish", `API failed, falling back to form-fill: ${apiMsg}`);
+      if (apiError instanceof EtsyDraftActivateFailed) {
+        existingDraftId = apiError.draftListingId;
+        await remoteLog("info", "etsy.publish", `Passing draft ${existingDraftId} to form-fill (edit URL, ID known)`);
+      }
     }
 
-    // Fallback to form-fill
-    return this.publishProductViaForm(product, options);
+    // Fallback to form-fill — pass draft ID if API path pre-created one
+    return this.publishProductViaForm(product, options, { existingDraftId });
   }
 
   /**
@@ -2186,6 +2197,7 @@ export class EtsyClient {
   public async publishProductViaForm(
     product: Product,
     options?: { publishMode?: "draft" | "publish" },
+    formOptions?: { existingDraftId?: string },
   ): Promise<ListingActionResult> {
     // MV3 service worker keepalive: call chrome APIs every 5s to prevent
     // the 30-second inactivity timeout from killing the worker mid-publish.
@@ -2208,16 +2220,21 @@ export class EtsyClient {
       }
 
       const mode = options?.publishMode ?? "draft";
+      const existingDraftId = formOptions?.existingDraftId;
 
       await remoteLog("info", "etsy.publish", `Starting Etsy ${mode} flow`, {
         productTitle: product.title?.substring(0, 60),
+        existingDraftId,
       });
 
       // Open tab active — Etsy's React form needs a visible tab to render properly.
-      // Background tabs are throttled by Chrome and React components may not mount.
-      // Tab is auto-closed after save completes.
+      // If the API path pre-created a draft, open its edit URL directly — the listing
+      // ID is already known so no post-publish scraping is needed.
+      const editorUrl = existingDraftId
+        ? `${ETSY_EDIT_LISTING_URL}/edit/${existingDraftId}`
+        : ETSY_CREATE_LISTING_URL;
       const tab = await chrome.tabs.create({
-        url: ETSY_CREATE_LISTING_URL,
+        url: editorUrl,
         active: true,
       });
 
@@ -2331,11 +2348,12 @@ export class EtsyClient {
         }
 
         // Step 6: Wait for save to complete.
-        // After saving/publishing, Etsy redirects to the listings manager
-        // (/your/shops/me/tools/listings) — the listing ID is NOT in the
-        // redirect URL. We poll for the URL to change away from the create
-        // page, then scrape the most recent draft listing ID from the page.
-        let listingId: string | undefined;
+        // After publish, Etsy either redirects to /tools/listings?newly-listed-listing-id={id}
+        // (ID available directly) or to /tools/listings without the param (scrape needed).
+        // After draft save, redirects to /tools/listings with no listing ID in the URL.
+        // When editing an existing draft, the ID is already known — use it as a fallback
+        // so scraping is only needed if the redirect doesn't carry the ID.
+        let listingId: string | undefined = existingDraftId;
         let listingUrl: string | undefined;
 
         // Poll for redirect (up to 15s)
@@ -2391,7 +2409,16 @@ export class EtsyClient {
                       func: (title: string) => {
                         const links = Array.from(document.querySelectorAll("a"));
                         const titlePrefix = title.slice(0, 30);
-                        // Pass 1: match by title
+                        // Slug words for URL-based matching: Etsy listing URLs embed the title
+                        // as a slug (e.g. /listing/123/victorian-copeland-late-spode-game-birds).
+                        // Strip punctuation and take words >4 chars as reliable slug signals.
+                        const slugWords = title
+                          .toLowerCase()
+                          .replace(/['"''""«»]/g, "")
+                          .split(/[\s\-–—]+/)
+                          .filter((w) => w.length > 4);
+
+                        // Pass 1: listing-editor link with title in link text (drafts)
                         for (const link of links) {
                           const href = link.getAttribute("href") || "";
                           const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
@@ -2399,21 +2426,42 @@ export class EtsyClient {
                             return idMatch[1];
                           }
                         }
-                        // Pass 2: match by listing/{id} link (active listings use public URLs)
+                        // Pass 2: /listing/{id} link whose URL slug contains title keywords.
+                        // On the active listings manager, links say "View on Etsy" so
+                        // textContent is useless — but Etsy embeds the title in the URL slug.
+                        // Use best-match scoring (not first-match) to avoid false positives
+                        // from common words like "vintage" or "pottery" in unrelated listings.
+                        {
+                          let bestId: string | null = null;
+                          let bestCount = 0;
+                          for (const link of links) {
+                            const href = (link.getAttribute("href") || "").toLowerCase();
+                            const idMatch = href.match(/\/listing\/(\d+)/);
+                            if (!idMatch?.[1]) continue;
+                            const count = slugWords.filter((w) => href.includes(w)).length;
+                            if (count > bestCount) { bestCount = count; bestId = idMatch[1]; }
+                          }
+                          if (bestId && bestCount >= 2) return bestId;
+                        }
+                        // Pass 3: /listing/{id} link whose ancestor container contains title text.
+                        // Fallback for cases where the URL slug doesn't carry enough signal.
                         for (const link of links) {
                           const href = link.getAttribute("href") || "";
                           const idMatch = href.match(/\/listing\/(\d+)/);
-                          if (idMatch?.[1] && link.textContent?.includes(titlePrefix)) {
-                            return idMatch[1];
+                          if (!idMatch?.[1]) continue;
+                          let el: Element | null = link.parentElement;
+                          for (let i = 0; i < 6 && el; i++) {
+                            if (el.textContent?.includes(titlePrefix)) return idMatch[1];
+                            el = el.parentElement;
                           }
                         }
-                        // Pass 3: first listing-editor link (most recent by sort order)
+                        // Pass 4: first listing-editor link (most recent draft, sort:update_date)
                         for (const link of links) {
                           const href = link.getAttribute("href") || "";
                           const idMatch = href.match(/listing-editor\/(?:edit\/)?(\d+)/);
                           if (idMatch?.[1]) return idMatch[1];
                         }
-                        // Pass 4: first /listing/{id} link (most recent active listing)
+                        // Pass 5: first /listing/{id} link — last resort, may be wrong
                         for (const link of links) {
                           const href = link.getAttribute("href") || "";
                           const idMatch = href.match(/\/listing\/(\d+)/);

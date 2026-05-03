@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, getServerUser } from '@/lib/supabase-server'
-import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/api-response'
 import { lookupVintedCategory } from '@/lib/vinted-category-lookup'
 import { getLeafCategoryByVintedIdFromDb } from '@/lib/category-db'
@@ -12,84 +11,6 @@ const CONDITION_MAP: Record<string, string> = {
   'New with tags': 'new_with_tags', 'New without tags': 'new_without_tags',
   'Very good': 'very_good', 'Good': 'good',
   'Satisfactory': 'fair', 'Fair': 'fair', 'Poor': 'poor',
-}
-
-/**
- * Mirror a photo from Vinted CDN to Supabase Storage
- */
-async function mirrorPhotoToStorage(
-  photoUrl: string,
-  index: number,
-  userId: string,
-  sku: string
-): Promise<string | null> {
-  try {
-    if (!photoUrl || !photoUrl.startsWith('http')) return null
-
-    const response = await fetch(photoUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/*',
-      },
-    })
-
-    if (!response.ok) return null
-
-    const contentType = response.headers.get('content-type') || 'image/jpeg'
-    const arrayBuffer = await response.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    let extension = 'jpg'
-    if (contentType.includes('png')) extension = 'png'
-    else if (contentType.includes('webp')) extension = 'webp'
-    else if (contentType.includes('heic')) extension = 'heic'
-
-    const filename = `${userId}/${sku}-${index}.${extension}`
-
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('find-photos')
-      .upload(filename, buffer, {
-        contentType,
-        cacheControl: '31536000',
-        upsert: true,
-      })
-
-    if (uploadError) return null
-
-    const { data: urlData } = supabaseAdmin.storage
-      .from('find-photos')
-      .getPublicUrl(filename)
-
-    return urlData.publicUrl
-  } catch {
-    return null
-  }
-}
-
-/**
- * Mirror all Vinted photos to Supabase Storage and return Supabase URLs
- * If all photos fail to mirror, return original Vinted CDN URLs as fallback
- */
-async function mirrorPhotosToStorage(
-  userId: string,
-  sku: string,
-  photoUrls: string[]
-): Promise<string[]> {
-  if (!photoUrls.length) return []
-
-  const mirrorResults = await Promise.all(
-    photoUrls.map((url, index) => mirrorPhotoToStorage(url, index, userId, sku))
-  )
-
-  const mirrored = mirrorResults.filter((url): url is string => Boolean(url))
-
-  // If any photos succeeded, use those; otherwise fall back to original URLs
-  return mirrored.length > 0 ? mirrored : photoUrls
 }
 
 /**
@@ -156,14 +77,15 @@ export async function POST(request: NextRequest) {
         const leafFromDb = catalogIdStr ? await getLeafCategoryByVintedIdFromDb(catalogIdStr) : undefined
         let category = leafFromDb || await lookupVintedCategory(rawCatalogId)
 
-        // If still "other", try text-based fallback from item.category
-        if (category === 'other' && item.category) {
+        // If still "other_general", try text-based fallback from item.category
+        if (category === 'other_general' && item.category) {
           const cat = String(item.category).toLowerCase()
-          if (cat.includes('ceram') || cat.includes('potter') || cat.includes('china') || cat.includes('porcelain') || cat.includes('vase') || cat.includes('plate') || cat.includes('bowl') || cat.includes('glass') || cat.includes('furniture') || cat.includes('chair') || cat.includes('table') || cat.includes('shelf') || cat.includes('cabinet') || cat.includes('sofa') || cat.includes('home') || cat.includes('decor') || cat.includes('kitchen') || cat.includes('linen') || cat.includes('textile') || cat.includes('garden') || cat.includes('cushion') || cat.includes('lamp')) category = 'home_garden'
-          else if (cat.includes('book') || cat.includes('fiction') || cat.includes('novel') || cat.includes('magazine') || cat.includes('literature')) category = 'books_media'
-          else if (cat.includes('jewel') || cat.includes('ring') || cat.includes('necklace') || cat.includes('bracelet') || cat.includes('earring') || cat.includes('cloth') || cat.includes('dress') || cat.includes('shirt') || cat.includes('trouser') || cat.includes('jean') || cat.includes('coat') || cat.includes('jacket') || cat.includes('top') || cat.includes('skirt')) category = 'clothing'
-          else if (cat.includes('toy') || cat.includes('game') || cat.includes('puzzle') || cat.includes('children')) category = 'toys_games'
-          else if (cat.includes('medal') || cat.includes('militaria') || cat.includes('badge') || cat.includes('military') || cat.includes('collect') || cat.includes('antique') || cat.includes('vintage') || cat.includes('curio')) category = 'collectibles'
+          if (cat.includes('ceram') || cat.includes('potter') || cat.includes('china') || cat.includes('porcelain') || cat.includes('vase') || cat.includes('plate') || cat.includes('bowl') || cat.includes('furniture') || cat.includes('chair') || cat.includes('table') || cat.includes('shelf') || cat.includes('cabinet') || cat.includes('sofa') || cat.includes('kitchen') || cat.includes('linen') || cat.includes('textile') || cat.includes('cushion') || cat.includes('lamp')) category = 'home_garden_kitchen_and_dining'
+          else if (cat.includes('home') || cat.includes('decor') || cat.includes('garden') || cat.includes('glass')) category = 'home_garden_general'
+          else if (cat.includes('book') || cat.includes('fiction') || cat.includes('novel') || cat.includes('magazine') || cat.includes('literature')) category = 'books_media_books'
+          else if (cat.includes('jewel') || cat.includes('ring') || cat.includes('necklace') || cat.includes('bracelet') || cat.includes('earring') || cat.includes('cloth') || cat.includes('dress') || cat.includes('shirt') || cat.includes('trouser') || cat.includes('jean') || cat.includes('coat') || cat.includes('jacket') || cat.includes('top') || cat.includes('skirt')) category = 'clothing_womenswear_general'
+          else if (cat.includes('toy') || cat.includes('game') || cat.includes('puzzle') || cat.includes('children')) category = 'toys_games_general'
+          else if (cat.includes('medal') || cat.includes('militaria') || cat.includes('badge') || cat.includes('military') || cat.includes('collect') || cat.includes('antique') || cat.includes('vintage') || cat.includes('curio')) category = 'collectibles_general'
         }
 
         const brand = (item.brand_title || item.brand || null) as string | null
@@ -230,18 +152,8 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Mirror photos to Supabase Storage (sync, not fire-and-forget)
-        const mirroredPhotos = await mirrorPhotosToStorage(user.id, sku, photos)
-        if (mirroredPhotos.length > 0 && mirroredPhotos !== photos) {
-          const { error: updateError } = await supabase
-            .from('finds')
-            .update({ photos: mirroredPhotos })
-            .eq('id', find.id)
-          // Non-fatal: if mirroring fails, proceed with original photos
-          if (updateError) {
-            console.warn(`[Vinted Import] Photo mirroring failed for find ${find.id}: ${updateError.message}`)
-          }
-        }
+        // Photos are stored as CDN URLs now; mirroring happens via /api/import/mirror-photos
+        // (called by the client as a background step after bulk import completes)
 
         // Derive platform_listed_at from Vinted's created_at_ts (unix seconds)
         const vintedCreatedTs = item.created_at_ts || item.vintedMetadata?.created_at_ts
@@ -262,7 +174,7 @@ export async function POST(request: NextRequest) {
 
         await logMarketplaceEvent(supabase, user.id, {
           findId: find.id, marketplace: 'vinted', eventType: 'imported', source: 'api',
-          details: { listingId, sku, pmdStatus, photoCount: photos.length, mirroredPhotoCount: mirroredPhotos.length },
+          details: { listingId, sku, pmdStatus, photoCount: photos.length },
         })
         imported++
       } catch (err) {
