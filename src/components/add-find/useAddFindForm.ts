@@ -7,6 +7,7 @@ import { FindCondition, Platform, FieldConfig, ListingTemplate } from '@/types'
 import type { PlatformFieldsData } from '@/types/listing-form'
 import type { AIAutoFillData } from '@/components/add-find/AIAutoFillBanner'
 import { prepareImagesForAI } from '@/lib/ai/prepare-images'
+import { pickSuggestionForLog } from '@/lib/ai/log-suggestion'
 
 export type { PlatformFieldsData }
 
@@ -368,7 +369,9 @@ export function useAddFindForm() {
     const controller = new AbortController()
     refineAbortRef.current = controller
 
-    const previousSuggestion = {
+    // Only the fields the OpenAI prompt actually consumes — keeps the
+    // request body small and avoids leaking UI flags into the prompt.
+    const previousSuggestionForPrompt = {
       title: aiAutoFill.title,
       description: aiAutoFill.description,
       category: aiAutoFill.category,
@@ -383,7 +386,7 @@ export function useAddFindForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           images,
-          previousSuggestion,
+          previousSuggestion: previousSuggestionForPrompt,
           previousTopLevel: originalTopLevel,
           userFeedback,
         }),
@@ -403,21 +406,25 @@ export function useAddFindForm() {
       if (controller.signal.aborted || dismissedAutoFill) return
 
       // Log the refinement (fire-and-forget — never block UI on this).
+      // Helper picks the analytics-relevant fields off the full
+      // aiAutoFill state, so price/priceReasoning go in if they exist.
       fetch('/api/ai/log-correction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'refined',
-          suggestion: { ...previousSuggestion, originalConfidence: originalSuggestion?.confidence },
+          suggestion: pickSuggestionForLog(aiAutoFill, {
+            originalConfidence: originalSuggestion?.confidence,
+          }),
           userFeedback,
-          confidence: previousSuggestion.confidence,
+          confidence: aiAutoFill.confidence,
           photoCount: images.length,
         }),
       }).catch(() => { /* logging must not break flow */ })
 
       // Decide loading state ONCE, before we set state, so there's no
       // "Loading price…" flicker when the query hasn't actually changed.
-      const queryChanged = !!data.suggestedQuery && data.suggestedQuery !== previousSuggestion.suggestedQuery
+      const queryChanged = !!data.suggestedQuery && data.suggestedQuery !== previousSuggestionForPrompt.suggestedQuery
       const banner = aiResponseToBannerData(data, queryChanged)
 
       if (queryChanged) {

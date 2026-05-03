@@ -25,6 +25,7 @@ import CategoryPlatformStatus from '@/components/add-find/CategoryPlatformStatus
 import { useConnectedPlatforms } from '@/hooks/useConnectedPlatforms'
 import { useExtensionInfo } from '@/hooks/useExtensionInfo'
 import { SessionExpiryBanner } from '@/components/layout/SessionExpiryBanner'
+import { pickSuggestionForLog } from '@/lib/ai/log-suggestion'
 import Link from 'next/link'
 
 declare const chrome: any
@@ -69,22 +70,12 @@ export default function AddFindPage() {
     const orig = form.originalSuggestion
     if (!orig) return
     const f = form.formData
-    // Project the original suggestion to analytics-relevant fields only —
-    // priceLoading is a UI render flag, not data, and shouldn't pollute
-    // the jsonb blob we'll be querying later.
     const body = JSON.stringify({
       action: 'final',
       findId,
-      suggestion: {
-        title: orig.title,
-        description: orig.description,
-        category: orig.category,
-        condition: orig.condition,
-        suggestedQuery: orig.suggestedQuery,
-        suggestedPrice: orig.suggestedPrice,
-        priceReasoning: orig.priceReasoning,
-        confidence: orig.confidence,
-      },
+      // No originalConfidence here — `orig` IS the original, so its own
+      // `confidence` field already serves that role.
+      suggestion: pickSuggestionForLog(orig),
       finalValues: {
         title: f.title,
         description: f.description,
@@ -138,19 +129,14 @@ export default function AddFindPage() {
     fields: { title?: string; description?: string; category?: string; condition?: string; price?: number },
     outcomes: Record<string, 'kept' | 'rejected'>,
   ) => {
-    // Snapshot the suggestion before we clear it so we can log it. We
-    // include `originalConfidence` so analytics can tell apart "Wren was
-    // confident from the start" from "Wren got there after a refinement".
-    const suggestionAtApply = form.aiAutoFill ? {
-      title: form.aiAutoFill.title,
-      description: form.aiAutoFill.description,
-      category: form.aiAutoFill.category,
-      condition: form.aiAutoFill.condition,
-      suggestedQuery: form.aiAutoFill.suggestedQuery,
-      suggestedPrice: form.aiAutoFill.suggestedPrice,
-      confidence: form.aiAutoFill.confidence,
-      originalConfidence: form.originalSuggestion?.confidence,
-    } : null
+    // Snapshot the suggestion before we clear it so we can log it.
+    // pickSuggestionForLog projects to analytics-relevant fields only and
+    // is the single source of truth — keeps applied/refined/final rows
+    // structurally consistent.
+    const suggestionAtApply = form.aiAutoFill ? pickSuggestionForLog(
+      form.aiAutoFill,
+      { originalConfidence: form.originalSuggestion?.confidence },
+    ) : null
     const photoCount = form.formData.photoPreviews.length
     const confidence = form.aiAutoFill?.confidence
 
