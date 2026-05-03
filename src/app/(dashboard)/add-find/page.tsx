@@ -69,10 +69,22 @@ export default function AddFindPage() {
     const orig = form.originalSuggestion
     if (!orig) return
     const f = form.formData
+    // Project the original suggestion to analytics-relevant fields only —
+    // priceLoading is a UI render flag, not data, and shouldn't pollute
+    // the jsonb blob we'll be querying later.
     const body = JSON.stringify({
       action: 'final',
       findId,
-      suggestion: orig,
+      suggestion: {
+        title: orig.title,
+        description: orig.description,
+        category: orig.category,
+        condition: orig.condition,
+        suggestedQuery: orig.suggestedQuery,
+        suggestedPrice: orig.suggestedPrice,
+        priceReasoning: orig.priceReasoning,
+        confidence: orig.confidence,
+      },
       finalValues: {
         title: f.title,
         description: f.description,
